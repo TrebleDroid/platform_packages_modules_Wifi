@@ -1067,7 +1067,8 @@ public class SoftApManager implements ActiveModeManager {
                             // Checking STA status only when device supports STA + AP concurrency
                             // since STA would be dropped when device doesn't support it.
                             if (cmms.size() != 0 && mWifiNative.isStaApConcurrencySupported()) {
-                                if (ApConfigUtil.isStaWithBridgedModeSupported(mContext)) {
+                                if (ApConfigUtil.isStaWithBridgedModeSupported(mContext,
+                                        mWifiNative)) {
                                     for (ClientModeManager cmm
                                             : mActiveModeWarden.getClientModeManagers()) {
                                         WifiInfo wifiConnectedInfo = cmm.getConnectionInfo();

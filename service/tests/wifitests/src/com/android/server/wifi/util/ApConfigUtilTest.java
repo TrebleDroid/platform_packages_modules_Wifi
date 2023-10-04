@@ -16,6 +16,9 @@
 
 package com.android.server.wifi.util;
 
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -23,6 +26,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -41,6 +45,7 @@ import android.net.wifi.SoftApConfiguration.Builder;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
+import android.util.SparseArray;
 import android.util.SparseIntArray;
 
 import androidx.test.filters.SmallTest;
@@ -155,6 +160,8 @@ public class ApConfigUtilTest extends WifiBaseTest {
     @Mock WifiNative mWifiNative;
     @Mock CoexManager mCoexManager;
     private SoftApCapability mCapability;
+    private boolean mApBridgeIfaceCobinationSupported = false;
+    private boolean mApBridgeWithStaIfaceCobinationSupported = false;
     /**
      * Setup test.
      */
@@ -168,11 +175,91 @@ public class ApConfigUtilTest extends WifiBaseTest {
         mCapability.setSupportedChannelList(SoftApConfiguration.BAND_2GHZ, ALLOWED_2G_CHANS);
         mCapability.setSupportedChannelList(SoftApConfiguration.BAND_5GHZ, ALLOWED_5G_CHANS);
         mCapability.setSupportedChannelList(SoftApConfiguration.BAND_60GHZ, ALLOWED_60G_CHANS);
+        when(mContext.getResources()).thenReturn(mResources);
         when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
         when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
         when(mResources.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(true);
         when(mResources.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(true);
+        when(mResources.getBoolean(R.bool.config_wifiBridgedSoftApSupported)).thenReturn(true);
+        when(mResources.getBoolean(
+                R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported)).thenReturn(true);
         when(mWifiNative.getUsableChannels(anyInt(), anyInt(), anyInt())).thenReturn(null);
+        when(mWifiNative.canDeviceSupportCreateTypeCombo(any()))
+                .thenAnswer(answer -> {
+                    SparseArray<Integer> combo = answer.getArgument(0);
+                    if (combo.contentEquals(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                        }})) {
+                        return mApBridgeIfaceCobinationSupported;
+                    }
+                    if (combo.contentEquals(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                            put(HDM_CREATE_IFACE_STA, 1);
+                        }})) {
+                        return mApBridgeWithStaIfaceCobinationSupported;
+                    }
+                    return false;
+                });
+    }
+
+    /**
+     * Verify Bridge AP support when Iface combination for AP bridge is allowed.
+     */
+    @Test
+    public void testIsBridgeApSupportedWhenIfaceCombinationForBridgeIsEnabled() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        mApBridgeIfaceCobinationSupported = true;
+        assertTrue("Bridge AP is not supported even when Combination is allowed.",
+                ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative));
+    }
+
+    /**
+     * Verify Bridge AP support when Iface combination for AP bridge is not allowed.
+     */
+    @Test
+    public void testIsBridgeApSupportedWhenIfaceCombinationForBridgeIsDisabled() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        mApBridgeIfaceCobinationSupported = false;
+        assertFalse("Bridge AP is supported even when Combination is not allowed.",
+                ApConfigUtil.isStaWithBridgedModeSupported(mContext, mWifiNative));
+    }
+
+    /**
+     * Verify Bridge AP + STA support when Iface combination for AP bridge with Sta is allowed.
+     */
+    @Test
+    public void testIsBridgeApWithStaSupportedWhenIfaceCombinationForStaBridgeApIsEnabled()
+            throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        mApBridgeWithStaIfaceCobinationSupported = true;
+        assertTrue("Bridge AP with Sta is not supported even when Combination is allowed.",
+                ApConfigUtil.isStaWithBridgedModeSupported(mContext, mWifiNative));
+    }
+
+    /**
+     * Verify Bridge AP + STA support when Iface combination for AP bridge with Sta is not allowed.
+     */
+    @Test
+    public void testIsBridgeApWithStaSupportedWhenIfaceCombinationForStaBridgeApIsDisabled()
+            throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        mApBridgeWithStaIfaceCobinationSupported = false;
+        assertFalse("Bridge AP with Sta is supported even when Combination is not allowed.",
+                ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative));
+    }
+
+    /**
+     * Verify Bridge AP not supported for pre-S.
+     */
+    @Test
+    public void testIsBridgeApSupportedReturnsFalseForPreS() throws Exception {
+        assumeTrue(!SdkLevel.isAtLeastS());
+        mApBridgeIfaceCobinationSupported = true;
+        mApBridgeWithStaIfaceCobinationSupported = true;
+        assertFalse("Bridge AP is supported even for pre-S platform.",
+                ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative));
+        assertFalse("Bridge AP with Sta is supported even for pre-S platform.",
+                ApConfigUtil.isStaWithBridgedModeSupported(mContext, mWifiNative));
     }
 
     /**
@@ -679,7 +766,6 @@ public class ApConfigUtilTest extends WifiBaseTest {
     public void updateApChannelConfigWithAcsDisabledOemConfigured() throws Exception {
         Builder configBuilder = new SoftApConfiguration.Builder();
         configBuilder.setBand(SoftApConfiguration.BAND_5GHZ | SoftApConfiguration.BAND_2GHZ);
-        when(mContext.getResources()).thenReturn(mResources);
         when(mResources.getString(R.string.config_wifiSoftap2gChannelList))
                 .thenReturn("6");
         when(mResources.getString(R.string.config_wifiSoftap5gChannelList))
@@ -739,7 +825,6 @@ public class ApConfigUtilTest extends WifiBaseTest {
         int test_max_client = 10;
         capability.setMaxSupportedClients(test_max_client);
 
-        when(mContext.getResources()).thenReturn(mResources);
         when(mResources.getInteger(R.integer.config_wifiHardwareSoftapMaxClientCount))
                 .thenReturn(test_max_client);
         when(mResources.getBoolean(R.bool.config_wifi_softap_acs_supported))
@@ -930,7 +1015,6 @@ public class ApConfigUtilTest extends WifiBaseTest {
     public void testUpdateBandInConfigOnFindingUnavailableChannels() throws Exception {
         SoftApConfiguration config;
         SoftApCapability testSoftApCapability = new SoftApCapability(0);
-        when(mContext.getResources()).thenReturn(mResources);
 
         if (SdkLevel.isAtLeastS()) {
             // 6GHz channels not available - {2GHz|6GHz, 5GHz} => {2GHz, 5GHz}
