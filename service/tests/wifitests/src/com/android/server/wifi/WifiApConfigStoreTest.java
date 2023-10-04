@@ -22,6 +22,8 @@ import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA2_PSK;
 import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_SAE;
 import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION;
 
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -50,6 +52,7 @@ import android.net.wifi.WifiInfo;
 import android.os.Build;
 import android.os.Handler;
 import android.os.test.TestLooper;
+import android.util.SparseArray;
 
 import androidx.test.filters.SmallTest;
 
@@ -97,6 +100,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
 
     @Mock private Context mContext;
     @Mock private WifiInjector mWifiInjector;
+    @Mock private WifiNative mWifiNative;
     @Mock private WifiMetrics mWifiMetrics;
     private TestLooper mLooper;
     private Handler mHandler;
@@ -141,8 +145,20 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
 
         mRandom = new Random();
         when(mWifiInjector.getMacAddressUtil()).thenReturn(mMacAddressUtil);
+        when(mWifiInjector.getWifiNative()).thenReturn(mWifiNative);
         when(mMacAddressUtil.calculatePersistentMacForSap(any(), anyInt()))
                 .thenReturn(TEST_RANDOMIZED_MAC);
+        when(mWifiNative.canDeviceSupportCreateTypeCombo(any()))
+                .thenAnswer(answer -> {
+                    SparseArray<Integer> combo = answer.getArgument(0);
+                    if (combo.contentEquals(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                        }})) {
+                        return true;
+                    }
+                    return false;
+                });
+
         mResources.setBoolean(R.bool.config_wifi_ap_mac_randomization_supported, true);
         mResources.setBoolean(
                 R.bool.config_wifiSoftapAutoAppendLowerBandsToBandConfigurationEnabled, true);
@@ -527,7 +543,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         // Default, new feature doesn't supported
         WifiApConfigStore store = createWifiApConfigStore();
         SoftApConfiguration config = store.getApConfiguration();
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
     }
 
     /**
@@ -543,7 +560,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 SoftApConfiguration.BAND_2GHZ);
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
     }
 
     /**
@@ -551,6 +569,29 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
      */
     @Test
     public void generateLocalOnlyHotspotConfigWhenOverlayConfigureTo5G() throws Exception {
+        //leslea
+        when(mPackageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)).thenReturn(true);
+        when(mSoftApCapability.getSupportedChannelList(SoftApConfiguration.BAND_5GHZ))
+                .thenReturn(new int[] {36});
+        mResources.setBoolean(R.bool.config_wifi_local_only_hotspot_5ghz, true);
+        WifiApConfigStore store = createWifiApConfigStore();
+        SoftApConfiguration config = store
+                .generateLocalOnlyHotspotConfig(mContext, null, mSoftApCapability);
+        verifyDefaultLocalOnlyApConfig(config, TEST_DEFAULT_HOTSPOT_SSID,
+                SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ);
+
+        // verify that the config passes the validateApWifiConfiguration check
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
+    }
+
+    /**
+     * Verify a proper local only hotspot config is generated for 2Ghz band when overlay configured
+     * but there is no available 5g channel.
+     */
+    @Test
+    public void generateLocalOnlyHotspotConfigWhenOverlayConfigureTo5GButNoAvailable5GChannel()
+            throws Exception {
         when(mPackageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)).thenReturn(true);
         mResources.setBoolean(R.bool.config_wifi_local_only_hotspot_5ghz, true);
         WifiApConfigStore store = createWifiApConfigStore();
@@ -560,7 +601,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ);
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
     }
 
     /**
@@ -581,7 +623,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 .build();
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(updatedConfig, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(updatedConfig, true, mContext,
+                mWifiNative));
     }
 
     /**
@@ -605,7 +648,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 .build();
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(updatedConfig, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
     }
 
     @Test
@@ -765,12 +809,12 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         configBuilder.setSsid(null);
         // Invalid due to null SSID.
         assertFalse(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
 
         // SSID is set, so the config is now valid.
         configBuilder.setSsid("ssid");
         assertTrue(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
     }
 
     /**
@@ -785,23 +829,23 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         // OPEN
         configBuilder.setPassphrase(null, SoftApConfiguration.SECURITY_TYPE_OPEN);
         assertFalse(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
 
         // WPA2
         configBuilder.setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK);
         assertFalse(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
 
         // WPA3 SAE (should succeed)
         configBuilder.setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA3_SAE);
         assertTrue(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
 
         // WPA3 SAE-Transition
         configBuilder.setPassphrase("somepassword",
                 SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION);
         assertFalse(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
 
         if (SdkLevel.isAtLeastT()) {
             // WPA3 OWE-Transition
@@ -809,7 +853,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 configBuilder.setPassphrase(null,
                         SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION);
                 assertFalse(WifiApConfigStore.validateApWifiConfiguration(
-                        configBuilder.build(), true, mContext));
+                        configBuilder.build(), true, mContext, mWifiNative));
             }
         }
     }
@@ -826,7 +870,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         assertTrue(WifiApConfigStore.validateApWifiConfiguration(
                 new SoftApConfiguration.Builder()
                 .setSsid(TEST_DEFAULT_HOTSPOT_SSID)
-                .build(), true, mContext));
+                .build(), true, mContext, mWifiNative));
     }
 
     /**
@@ -848,7 +892,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 generateRandomString(mRandom.nextInt(maxLen - minLen) + minLen),
                 SoftApConfiguration.SECURITY_TYPE_WPA2_PSK);
         assertTrue(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
     }
 
     @Test
@@ -862,7 +906,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 generateRandomString(maxLen + 1),
                 SoftApConfiguration.SECURITY_TYPE_WPA3_SAE);
         assertFalse(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
 
     }
 
@@ -882,11 +926,11 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 "測試測試測試測試",
                 SoftApConfiguration.SECURITY_TYPE_WPA2_PSK);
         assertFalse(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
         // Disable ascii encodable check
         mResources.setBoolean(R.bool.config_wifiSoftapPassphraseAsciiEncodableCheck, false);
         assertTrue(WifiApConfigStore.validateApWifiConfiguration(
-                configBuilder.build(), true, mContext));
+                configBuilder.build(), true, mContext, mWifiNative));
     }
 
 
@@ -915,7 +959,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 SoftApConfiguration.BAND_2GHZ, true);
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
     }
 
@@ -933,7 +978,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 SoftApConfiguration.BAND_2GHZ, true, true);
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
     }
 
     /**
@@ -952,7 +998,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 SoftApConfiguration.BAND_2GHZ, true, false);
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
     }
 
     /**
@@ -976,7 +1023,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 SoftApConfiguration.BAND_2GHZ, true, false);
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
     }
 
 
@@ -1165,7 +1213,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
             configBuilder.setMacRandomizationSetting(SoftApConfiguration.RANDOMIZATION_NONE);
         }
         assertFalse(WifiApConfigStore.validateApWifiConfiguration(configBuilder.build(),
-                false, mContext));
+                false, mContext, mWifiNative));
     }
 
     /**
@@ -1181,7 +1229,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
             configBuilder.setMacRandomizationSetting(SoftApConfiguration.RANDOMIZATION_NONE);
         }
         assertTrue(WifiApConfigStore.validateApWifiConfiguration(configBuilder.build(),
-                true, mContext));
+                true, mContext, mWifiNative));
     }
 
     @Test
@@ -1190,38 +1238,47 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         SoftApConfiguration config = new SoftApConfiguration.Builder(store.getApConfiguration())
                 .setBand(mBand25660G).build();
         // Default is all bands supported.
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
         mResources.setBoolean(R.bool.config_wifi24ghzSupport, false);
-        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
         setupAllBandsSupported();
         mResources.setBoolean(R.bool.config_wifiSoftap24ghzSupported, false);
-        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
         setupAllBandsSupported();
         mResources.setBoolean(R.bool.config_wifi5ghzSupport, false);
-        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
         setupAllBandsSupported();
         mResources.setBoolean(R.bool.config_wifiSoftap5ghzSupported, false);
-        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
         setupAllBandsSupported();
         mResources.setBoolean(R.bool.config_wifi6ghzSupport, false);
-        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
         setupAllBandsSupported();
         mResources.setBoolean(R.bool.config_wifiSoftap6ghzSupported, false);
-        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
         setupAllBandsSupported();
         mResources.setBoolean(R.bool.config_wifi60ghzSupport, false);
-        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
 
         setupAllBandsSupported();
         mResources.setBoolean(R.bool.config_wifiSoftap60ghzSupported, false);
-        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertFalse(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext,
+                mWifiNative));
     }
 
     @Test
