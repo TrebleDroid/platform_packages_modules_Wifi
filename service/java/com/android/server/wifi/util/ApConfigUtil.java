@@ -29,6 +29,9 @@ import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_OWE;
 import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_OWE_TRANSITION;
 import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_SAE;
 
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -1071,22 +1074,33 @@ public class ApConfigUtil {
      * Helper function to get HAL support bridged AP or not.
      *
      * @param context the caller context used to get value from resource file.
+     * @param wifiNative to get the Iface combination from device.
      * @return true if supported, false otherwise.
      */
-    public static boolean isBridgedModeSupported(@NonNull Context context) {
+    public static boolean isBridgedModeSupported(
+            @NonNull Context context, @NonNull WifiNative wifiNative) {
         return SdkLevel.isAtLeastS() && context.getResources().getBoolean(
-                    R.bool.config_wifiBridgedSoftApSupported);
+                    R.bool.config_wifiBridgedSoftApSupported)
+                    && wifiNative.canDeviceSupportCreateTypeCombo(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                        }});
     }
 
     /**
      * Helper function to get HAL support STA + bridged AP or not.
      *
      * @param context the caller context used to get value from resource file.
+     * @param wifiNative to get the Iface combination from device.
      * @return true if supported, false otherwise.
      */
-    public static boolean isStaWithBridgedModeSupported(@NonNull Context context) {
+    public static boolean isStaWithBridgedModeSupported(
+            @NonNull Context context, @NonNull WifiNative wifiNative) {
         return SdkLevel.isAtLeastS() && context.getResources().getBoolean(
-                    R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported);
+                    R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported)
+                    && wifiNative.canDeviceSupportCreateTypeCombo(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                            put(HDM_CREATE_IFACE_STA, 1);
+                        }});
     }
 
     /**
