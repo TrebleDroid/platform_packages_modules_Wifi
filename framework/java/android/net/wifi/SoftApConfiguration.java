@@ -1018,14 +1018,6 @@ public final class SoftApConfiguration implements Parcelable {
     }
 
     /**
-     * @see #isIeee80211beEnabled()
-     * @hide
-     */
-    public boolean isIeee80211beEnabledInternal() {
-        return mIeee80211beEnabled;
-    }
-
-    /**
      * Returns whether or not the Soft AP is configured to enable 802.11be.
      * This is an indication that if the device support 802.11be AP then to enable or disable
      * that feature. If the device does not support 802.11be AP then this flag is ignored.
@@ -1038,7 +1030,7 @@ public final class SoftApConfiguration implements Parcelable {
         if (!SdkLevel.isAtLeastT()) {
             throw new UnsupportedOperationException();
         }
-        return isIeee80211beEnabledInternal();
+        return mIeee80211beEnabled;
     }
 
     /**
