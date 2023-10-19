@@ -2044,6 +2044,8 @@ public class WifiServiceImpl extends BaseWifiService {
             synchronized (mLock) {
                 if (mSoftApCapability == null) {
                     mSoftApCapability = ApConfigUtil.updateCapabilityFromResource(mContext);
+                    mSoftApCapability = ApConfigUtil.updateCapabilityFromConfigStore(
+                            mSoftApCapability, mWifiInjector.getSettingsConfigStore());
                     // Default country code
                     mSoftApCapability = updateSoftApCapabilityWithAvailableChannelList(
                             mSoftApCapability, mCountryCode.getCountryCode());
