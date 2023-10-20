@@ -6533,6 +6533,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     }
                     else {
                         mRssiMonitor.setShortPollRssiInterval();
+                        removeMessages(CMD_RSSI_POLL);
                     }
                     break;
                 }
