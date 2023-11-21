@@ -2056,6 +2056,19 @@ public class WifiShellCommand extends BasicShellCommandHandler {
 
                     return 0;
                 }
+                case "get-cached-scan-data":
+                    WifiScanner.ScanData scanData =
+                            mWifiNative.getCachedScanResultsFromAllClientIfaces();
+
+                    if (scanData.getResults().length > 0) {
+                        pw.println("Successfully get cached scan data: ");
+                        for (ScanResult scanResult : scanData.getResults()) {
+                            pw.println(scanResult);
+                        }
+                    } else {
+                        pw.println("Cached scan data is empty");
+                    }
+                    return 0;
                 case "configure-afc-server":
                     final String url = getNextArgRequired();
 
@@ -2948,6 +2961,9 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("       '15' - band 2.4, 5, and 6 GHz with DFS channels");
         pw.println("       '16' - band 60 GHz");
         pw.println("       '31' - band 2.4, 5, 6 and 60 GHz with DFS channels");
+        pw.println("  get-cached-scan-data");
+        pw.println("    Gets scan data cached by the firmware");
+
     }
 
     private void onHelpPrivileged(PrintWriter pw) {

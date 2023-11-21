@@ -236,6 +236,16 @@ public class WifiStaIface implements WifiHal.WifiInterface {
     }
 
     /**
+     * See comments for {@link IWifiStaIface#getCachedScanData()}
+     */
+    @Nullable
+    public WifiScanner.ScanData getCachedScanData() {
+        return validateAndCall("getCachedScanData", null,
+                () -> mWifiStaIface.getCachedScanData());
+    }
+
+
+    /**
      * See comments for {@link IWifiStaIface#getLinkLayerStats()}
      */
     @Nullable

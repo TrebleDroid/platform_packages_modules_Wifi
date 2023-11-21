@@ -19,11 +19,14 @@ package com.android.server.wifi.hal;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.hardware.wifi.CachedScanData;
+import android.hardware.wifi.CachedScanResult;
 import android.hardware.wifi.IWifiStaIface;
 import android.hardware.wifi.StaLinkLayerIfaceContentionTimeStats;
 import android.hardware.wifi.StaLinkLayerIfacePacketStats;
@@ -36,6 +39,7 @@ import android.hardware.wifi.StaRateStat;
 import android.hardware.wifi.StaRoamingCapabilities;
 import android.hardware.wifi.WifiChannelInfo;
 import android.hardware.wifi.WifiChannelStats;
+import android.hardware.wifi.WifiChannelWidthInMhz;
 import android.hardware.wifi.WifiDebugPacketFateFrameInfo;
 import android.hardware.wifi.WifiDebugPacketFateFrameType;
 import android.hardware.wifi.WifiDebugRxPacketFate;
@@ -43,7 +47,11 @@ import android.hardware.wifi.WifiDebugRxPacketFateReport;
 import android.hardware.wifi.WifiDebugTxPacketFate;
 import android.hardware.wifi.WifiDebugTxPacketFateReport;
 import android.hardware.wifi.WifiRateInfo;
+import android.hardware.wifi.WifiRatePreamble;
+import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
+import android.net.wifi.WifiScanner.ScanData;
+import android.net.wifi.WifiSsid;
 
 import com.android.server.wifi.SsidTranslator;
 import com.android.server.wifi.WifiBaseTest;
@@ -57,6 +65,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Random;
 
@@ -311,6 +320,41 @@ public class WifiStaIfaceAidlImplTest extends WifiBaseTest {
         final int badState = WifiNative.DISABLE_FIRMWARE_ROAMING
                 + WifiNative.ENABLE_FIRMWARE_ROAMING + 1;
         assertEquals(WifiNative.SET_FIRMWARE_ROAMING_FAILURE, mDut.setRoamingState(badState));
+    }
+
+    /**
+     * Test the retrieval of cached scan data
+     */
+    @Test
+    public void testGetCachedScanData() throws Exception {
+        CachedScanData halData = new CachedScanData();
+        CachedScanResult[] halResults = new CachedScanResult[2];
+        CachedScanResult halResult = new CachedScanResult();
+        halData.cachedScanResults = halResults;
+        halResults[0] = halResult;
+        halResult.timeStampInUs = 10_000_000;
+        halResult.bssid = new byte[]{0x61, 0x52, 0x43, 0x34, 0x25, 0x16};
+        String test_ssid = "Test SSID";
+        halResult.ssid = test_ssid.getBytes(StandardCharsets.UTF_8);
+        halResult.rssiDbm = -80;
+        halResult.frequencyMhz = 5260;
+        halResult.channelWidthMhz = WifiChannelWidthInMhz.WIDTH_80;
+        halResult.preambleType = WifiRatePreamble.HE;
+
+        when(mIWifiStaIfaceMock.getCachedScanData())
+                .thenReturn(halData);
+        when(mSsidTranslatorMock.getTranslatedSsidAndRecordBssidCharset(any(), any()))
+                .thenReturn(WifiSsid.fromBytes(halResult.ssid));
+
+        ScanData scanData = mDut.getCachedScanData();
+        ScanResult[] scanResults = scanData.getResults();
+        assertEquals(1, scanResults.length);
+        assertEquals(10_000_000, scanResults[0].timestamp);
+        assertEquals(-80, scanResults[0].level);
+        assertEquals(5260, scanResults[0].frequency);
+        assertEquals(ScanResult.CHANNEL_WIDTH_80MHZ, scanResults[0].channelWidth);
+        assertEquals(ScanResult.WIFI_STANDARD_11AX, scanResults[0].getWifiStandard());
+        assertEquals("61:52:43:34:25:16", scanResults[0].BSSID);
     }
 
 
