@@ -617,6 +617,7 @@ package android.net.wifi {
     method public int getScore();
     method public double getSuccessfulRxPacketsPerSecond();
     method public double getSuccessfulTxPacketsPerSecond();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
     method public boolean isApTidToLinkMappingNegotiationSupported();
     method public boolean isCarrierMerged();
     method public boolean isEphemeral();
@@ -627,6 +628,7 @@ package android.net.wifi {
     method @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public boolean isPrimary();
     method public boolean isTrusted();
     method @Nullable public static String sanitizeSsid(@Nullable String);
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
     field public static final String DEFAULT_MAC_ADDRESS = "02:00:00:00:00:00";
     field public static final int INVALID_RSSI = -127; // 0xffffff81
   }

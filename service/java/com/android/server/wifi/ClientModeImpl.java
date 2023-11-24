@@ -3402,6 +3402,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             updateMloLinkAddrAndStates(mWifiNative.getConnectionMloLinksInfo(mInterfaceName));
             updateBlockListAffiliatedBssids();
         }
+        if (SdkLevel.isAtLeastV() && mLastConnectionCapabilities.vendorData != null) {
+            mWifiInfo.setVendorData(mLastConnectionCapabilities.vendorData);
+        }
         if (mVerboseLoggingEnabled) {
             StringBuilder sb = new StringBuilder();
             logd(sb.append("WifiStandard: ").append(ScanResult.wifiStandardToString(
