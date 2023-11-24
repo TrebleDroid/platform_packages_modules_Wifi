@@ -486,6 +486,7 @@ package android.net.wifi {
     method @Deprecated @NonNull public String getPrintableSsid();
     method @Deprecated @NonNull public String getProfileKey();
     method @Deprecated public int getRecentFailureReason();
+    method @Deprecated @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
     method @Deprecated public boolean hasNoInternetAccess();
     method @Deprecated public boolean isEphemeral();
     method @Deprecated public static boolean isMetered(@Nullable android.net.wifi.WifiConfiguration, @Nullable android.net.wifi.WifiInfo);
@@ -495,6 +496,7 @@ package android.net.wifi {
     method @Deprecated public void setDeletionPriority(int) throws java.lang.IllegalArgumentException;
     method @Deprecated public void setNetworkSelectionStatus(@NonNull android.net.wifi.WifiConfiguration.NetworkSelectionStatus);
     method @Deprecated @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void setRepeaterEnabled(boolean);
+    method @Deprecated @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
     field @Deprecated @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.WifiConfiguration> CREATOR;
     field @Deprecated public static final int INVALID_NETWORK_ID = -1; // 0xffffffff
     field @Deprecated public static final int METERED_OVERRIDE_METERED = 1; // 0x1

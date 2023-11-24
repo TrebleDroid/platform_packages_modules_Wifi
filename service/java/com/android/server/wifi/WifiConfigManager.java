@@ -61,6 +61,7 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.MacAddressUtils;
 import com.android.server.wifi.hotspot2.PasspointManager;
 import com.android.server.wifi.proto.nano.WifiMetricsProto.UserActionEvent;
@@ -1660,6 +1661,12 @@ public class WifiConfigManager {
         }
         if (config == null) {
             Log.e(TAG, "Cannot add/update network with null config");
+            return new NetworkUpdateResult(WifiConfiguration.INVALID_NETWORK_ID);
+        }
+        if (SdkLevel.isAtLeastV() && config.getVendorData() != null
+                && !config.getVendorData().isEmpty()
+                && !mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(uid)) {
+            Log.e(TAG, "UID " + uid + " does not have permission to include vendor data");
             return new NetworkUpdateResult(WifiConfiguration.INVALID_NETWORK_ID);
         }
         if (mPendingStoreRead) {

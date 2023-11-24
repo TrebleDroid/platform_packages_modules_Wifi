@@ -16,6 +16,7 @@
 
 package com.android.server.wifi;
 
+import android.annotation.NonNull;
 import android.content.Context;
 import android.hardware.wifi.supplicant.AuthAlgMask;
 import android.hardware.wifi.supplicant.DppConnectionKeys;
@@ -33,6 +34,7 @@ import android.hardware.wifi.supplicant.PairwiseCipherMask;
 import android.hardware.wifi.supplicant.ProtoMask;
 import android.hardware.wifi.supplicant.SaeH2eMode;
 import android.hardware.wifi.supplicant.TlsVersion;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
@@ -44,6 +46,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.util.ArrayUtils;
 import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
@@ -59,6 +62,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -511,6 +515,14 @@ public class SupplicantStaNetworkHalAidlImpl {
                     Log.e(TAG, "failed to set H2E preference.");
                     return false;
                 }
+            }
+            // Vendor data
+            if (SdkLevel.isAtLeastV() && isServiceVersionIsAtLeast(3)
+                    && config.getVendorData() != null
+                    && !config.getVendorData().isEmpty()
+                    && !setVendorData(config.getVendorData())) {
+                Log.e(TAG, "Failed to set vendor data.");
+                return false;
             }
             // Finish here if no EAP config to set
             if (config.enterpriseConfig != null
@@ -3736,6 +3748,31 @@ public class SupplicantStaNetworkHalAidlImpl {
                     return false;
                 }
                 mISupplicantStaNetwork.setStrictConservativePeerMode(true);
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
+    private boolean setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+        synchronized (mLock) {
+            final String methodStr = "setVendorData";
+            if (!checkStaNetworkAndLogFailure(methodStr)) {
+                return false;
+            }
+            try {
+                if (!isServiceVersionIsAtLeast(3)) {
+                    return false;
+                }
+                if (vendorData == null || vendorData.isEmpty()) {
+                    return false;
+                }
+                mISupplicantStaNetwork.setVendorData(
+                        HalAidlUtil.frameworkToHalOuiKeyedDataList(vendorData));
                 return true;
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);
