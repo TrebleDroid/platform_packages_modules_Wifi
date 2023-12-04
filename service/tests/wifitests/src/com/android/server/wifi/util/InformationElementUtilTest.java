@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import android.net.MacAddress;
 import android.net.wifi.ScanResult;
 import android.net.wifi.ScanResult.InformationElement;
+import android.util.SparseIntArray;
 
 import androidx.test.filters.SmallTest;
 
@@ -461,33 +462,38 @@ public class InformationElementUtilTest extends WifiBaseTest {
     }
 
     private void verifyCapabilityStringFromIes(
-            InformationElement[] ies, int beaconCap, boolean isOweSupported,
-            String capsStr) {
+            InformationElement[] ies,
+            int beaconCap,
+            boolean isOweSupported,
+            String capsStr,
+            SparseIntArray unknownAkmMap) {
         InformationElementUtil.Capabilities capabilities =
                 new InformationElementUtil.Capabilities();
-        capabilities.from(ies, beaconCap, isOweSupported, 2400);
+        capabilities.from(ies, beaconCap, isOweSupported, 2400, unknownAkmMap);
         String result = capabilities.generateCapabilitiesString();
 
         assertEquals(capsStr, result);
     }
 
     private void verifyCapabilityStringFromIe(
-            InformationElement ie, int beaconCap, boolean isOweSupported,
-            String capsStr) {
+            InformationElement ie,
+            int beaconCap,
+            boolean isOweSupported,
+            String capsStr,
+            SparseIntArray unknownAkmMap) {
         InformationElement[] ies = new InformationElement[] { ie };
-        verifyCapabilityStringFromIes(new InformationElement[] { ie },
-                beaconCap, isOweSupported, capsStr);
-
+        verifyCapabilityStringFromIes(
+                new InformationElement[] {ie}, beaconCap, isOweSupported, capsStr, unknownAkmMap);
     }
 
     private void verifyCapabilityStringFromIeWithoutOweSupported(
             InformationElement ie, String capsStr) {
-        verifyCapabilityStringFromIe(ie, 0x1 << 4, false, capsStr);
+        verifyCapabilityStringFromIe(ie, 0x1 << 4, false, capsStr, null);
     }
 
     private void verifyCapabilityStringFromIeWithOweSupported(
-            InformationElement ie, String capsStr) {
-        verifyCapabilityStringFromIe(ie, 0x1 << 4, true, capsStr);
+            InformationElement ie, String capsStr, SparseIntArray unknownAkmMap) {
+        verifyCapabilityStringFromIe(ie, 0x1 << 4, true, capsStr, unknownAkmMap);
     }
 
     /**
@@ -790,10 +796,12 @@ public class InformationElementUtilTest extends WifiBaseTest {
                                    (byte) 0xF2, (byte) 0x02, (byte) 0x00, (byte) 0x00 };
 
         InformationElement[] ies = new InformationElement[] { ieWpa, ieRsn };
-        verifyCapabilityStringFromIes(ies,
+        verifyCapabilityStringFromIes(
+                ies,
                 0x1 << 4,
                 false,
-                "[WPA-PSK-CCMP+TKIP][WPA2-PSK-CCMP+TKIP][RSN-PSK-CCMP+TKIP]");
+                "[WPA-PSK-CCMP+TKIP][WPA2-PSK-CCMP+TKIP][RSN-PSK-CCMP+TKIP]",
+                null);
     }
 
     /**
@@ -821,8 +829,8 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x08,
                 // Padding
                 (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIeWithOweSupported(ieRsn,
-                "[WPA2-PSK-CCMP][RSN-PSK+SAE-CCMP]");
+        verifyCapabilityStringFromIeWithOweSupported(
+                ieRsn, "[WPA2-PSK-CCMP][RSN-PSK+SAE-CCMP]", null);
     }
 
     /**
@@ -850,8 +858,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x09,
                 // Padding
                 (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIeWithOweSupported(ieRsn,
-                "[RSN-SAE+FT/SAE-CCMP]");
+        verifyCapabilityStringFromIeWithOweSupported(ieRsn, "[RSN-SAE+FT/SAE-CCMP]", null);
     }
 
     /**
@@ -879,8 +886,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x18,
                 // Padding
                 (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIeWithOweSupported(ieRsn,
-                "[RSN-SAE+SAE_EXT_KEY-CCMP]");
+        verifyCapabilityStringFromIeWithOweSupported(ieRsn, "[RSN-SAE+SAE_EXT_KEY-CCMP]", null);
     }
 
     /**
@@ -909,8 +915,8 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x19,
                 // Padding
                 (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIeWithOweSupported(ieRsn,
-                "[RSN-SAE_EXT_KEY+FT/SAE_EXT_KEY-CCMP]");
+        verifyCapabilityStringFromIeWithOweSupported(
+                ieRsn, "[RSN-SAE_EXT_KEY+FT/SAE_EXT_KEY-CCMP]", null);
     }
 
     /**
@@ -936,8 +942,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x12,
                 // Padding
                 (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIeWithOweSupported(ieRsn,
-                "[RSN-OWE-CCMP]");
+        verifyCapabilityStringFromIeWithOweSupported(ieRsn, "[RSN-OWE-CCMP]", null);
     }
 
     /**
@@ -953,8 +958,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x50, (byte) 0x6F, (byte) 0x9A, (byte) 0x1C,
                 // OWE IE contains BSSID, SSID and channel of other BSS, but we don't parse it.
                 (byte) 0x00, (byte) 0x000, (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIe(ieOwe, 0x1 << 0, true,
-                "[RSN-OWE_TRANSITION-CCMP][ESS]");
+        verifyCapabilityStringFromIe(ieOwe, 0x1 << 0, true, "[RSN-OWE_TRANSITION-CCMP][ESS]", null);
     }
 
     /**
@@ -970,8 +974,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x50, (byte) 0x6F, (byte) 0x9A, (byte) 0x1C,
                 // OWE IE contains BSSID, SSID and channel of other BSS, but we don't parse it.
                 (byte) 0x00, (byte) 0x000, (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIe(ieOwe, 0x1 << 0, false,
-                "[ESS]");
+        verifyCapabilityStringFromIe(ieOwe, 0x1 << 0, false, "[ESS]", null);
     }
 
     /**
@@ -1034,9 +1037,11 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x0E,
                 // RSN capabilities
                 (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIeWithOweSupported(ieRsn,
+        verifyCapabilityStringFromIeWithOweSupported(
+                ieRsn,
                 "[WPA2-EAP/SHA1+EAP/SHA256+EAP-FILS-SHA256-CCMP]"
-                        + "[RSN-EAP/SHA1+EAP/SHA256+EAP-FILS-SHA256-CCMP]");
+                        + "[RSN-EAP/SHA1+EAP/SHA256+EAP-FILS-SHA256-CCMP]",
+                null);
     }
 
     /**
@@ -1067,9 +1072,60 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x0F,
                 // RSN capabilities
                 (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIeWithOweSupported(ieRsn,
+        verifyCapabilityStringFromIeWithOweSupported(
+                ieRsn,
                 "[WPA2-EAP/SHA1+EAP/SHA256+EAP-FILS-SHA384-CCMP]"
-                    + "[RSN-EAP/SHA1+EAP/SHA256+EAP-FILS-SHA384-CCMP]");
+                        + "[RSN-EAP/SHA1+EAP/SHA256+EAP-FILS-SHA384-CCMP]",
+                null);
+    }
+
+    /**
+     * Test Capabilities.generateCapabilitiesString() with RSN IE, CCMP and unknown AKM suite
+     * selector. Expect the function to return a capability string with the mapped AKM scheme.
+     */
+    @Test
+    public void buildCapabilities_rsnIeUnknownAkmMapping() {
+        // unknown AKM (0x00, 0x40, 0x96, 0x00) -> known AKM (0x00, 0x0F, 0xAC, 0x18) - SAE_EXT_KEY
+        SparseIntArray unknownAkmMap =
+                new SparseIntArray() {
+                    {
+                        put(0x00964000, 0x12);
+                    }
+                };
+        InformationElement ieRsn = new InformationElement();
+        ieRsn.id = InformationElement.EID_RSN;
+        ieRsn.bytes =
+                new byte[] {
+                    // RSNE Version (0x0001)
+                    (byte) 0x01,
+                    (byte) 0x00,
+                    // Group cipher suite: CCMP
+                    (byte) 0x00,
+                    (byte) 0x0F,
+                    (byte) 0xAC,
+                    (byte) 0x04,
+                    // Number of cipher suites (1)
+                    (byte) 0x01,
+                    (byte) 0x00,
+                    // Cipher suite: CCMP
+                    (byte) 0x00,
+                    (byte) 0x0F,
+                    (byte) 0xAC,
+                    (byte) 0x04,
+                    // Number of AKMs (1)
+                    (byte) 0x01,
+                    (byte) 0x00,
+                    // unknown AKM (0x00, 0x40, 0x96, 0x00)
+                    (byte) 0x00,
+                    (byte) 0x40,
+                    (byte) 0x96,
+                    (byte) 0x00,
+                    // RSN capabilities
+                    (byte) 0x00,
+                    (byte) 0x00
+                };
+        verifyCapabilityStringFromIeWithOweSupported(
+                ieRsn, "[RSN-SAE_EXT_KEY-CCMP]", unknownAkmMap);
     }
 
     /**
@@ -1091,10 +1147,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0xF2, (byte) 0x02, (byte) 0x02, (byte) 0x00,
                 (byte) 0x00, (byte) 0x50 };
         InformationElement[] ies = new InformationElement[] { ieWpa, ieRsn };
-        verifyCapabilityStringFromIes(ies,
-                0x1 << 4,
-                false,
-                "[WPA][RSN]");
+        verifyCapabilityStringFromIes(ies, 0x1 << 4, false, "[WPA][RSN]", null);
     }
 
     /**
@@ -1118,10 +1171,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
         ieWps.bytes = new byte[] { (byte) 0x00, (byte) 0x50, (byte) 0xF2, (byte) 0x04 };
 
         InformationElement[] ies = new InformationElement[] { ieWpa, ieWps };
-        verifyCapabilityStringFromIes(ies,
-                0x1 << 4,
-                false,
-                "[WPA-PSK-CCMP+TKIP][WPS]");
+        verifyCapabilityStringFromIes(ies, 0x1 << 4, false, "[WPA-PSK-CCMP+TKIP][WPS]", null);
     }
 
     /**
@@ -1155,7 +1205,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
         ie.bytes = new byte[] { (byte) 0x00, (byte) 0x04, (byte) 0x0E, (byte) 0x01,
                                 (byte) 0x01, (byte) 0x02, (byte) 0x01, (byte) 0x00,
                                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIe(ie, 0, false, "");
+        verifyCapabilityStringFromIe(ie, 0, false, "", null);
     }
 
     /**
@@ -1171,7 +1221,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
         ie.bytes = new byte[] { (byte) 0x00, (byte) 0x04, (byte) 0x0E, (byte) 0x01,
                                 (byte) 0x01, (byte) 0x02, (byte) 0x01, (byte) 0x00,
                                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIe(ie, 0x1 << 0, false, "[ESS]");
+        verifyCapabilityStringFromIe(ie, 0x1 << 0, false, "[ESS]", null);
     }
 
     /**
@@ -1188,7 +1238,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
         ie.bytes = new byte[] { (byte) 0x00, (byte) 0x04, (byte) 0x0E, (byte) 0x01,
                                 (byte) 0x01, (byte) 0x02, (byte) 0x01, (byte) 0x00,
                                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        verifyCapabilityStringFromIe(ie, 0, false, "");
+        verifyCapabilityStringFromIe(ie, 0, false, "", null);
     }
 
     /**
@@ -1202,7 +1252,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
 
         InformationElementUtil.Capabilities capabilities =
                 new InformationElementUtil.Capabilities();
-        capabilities.from(new InformationElement[0], beaconCap, false, 2400);
+        capabilities.from(new InformationElement[0], beaconCap, false, 2400, null);
         String result = capabilities.generateCapabilitiesString();
 
         assertEquals("[IBSS]", result);
@@ -1219,7 +1269,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
 
         InformationElementUtil.Capabilities capabilities =
                 new InformationElementUtil.Capabilities();
-        capabilities.from(new InformationElement[0], beaconCap, false, 58320);
+        capabilities.from(new InformationElement[0], beaconCap, false, 58320, null);
         String result = capabilities.generateCapabilitiesString();
 
         assertEquals("[IBSS]", result);
@@ -1236,7 +1286,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
 
         InformationElementUtil.Capabilities capabilities =
                 new InformationElementUtil.Capabilities();
-        capabilities.from(new InformationElement[0], beaconCap, false, 58320);
+        capabilities.from(new InformationElement[0], beaconCap, false, 58320, null);
         String result = capabilities.generateCapabilitiesString();
 
         assertEquals("[ESS]", result);
