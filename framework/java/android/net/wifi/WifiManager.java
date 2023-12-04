@@ -61,6 +61,7 @@ import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.hotspot2.PasspointConfiguration;
 import android.net.wifi.hotspot2.ProvisioningCallback;
 import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Binder;
 import android.os.Build;
@@ -531,7 +532,8 @@ public class WifiManager {
             API_P2P_SET_CHANNELS,
             API_WIFI_SCANNER_START_SCAN,
             API_SET_TDLS_ENABLED,
-            API_SET_TDLS_ENABLED_WITH_MAC_ADDRESS
+            API_SET_TDLS_ENABLED_WITH_MAC_ADDRESS,
+            API_P2P_DISCOVER_PEERS_WITH_CONFIG_PARAMS
     })
     public @interface ApiType {}
 
@@ -893,10 +895,21 @@ public class WifiManager {
     public static final int API_SET_PNO_SCAN_ENABLED = 36;
 
     /**
+     * A constant used in {@link WifiManager#getLastCallerInfoForApi(int, Executor, BiConsumer)}
+     * Tracks usage of {@link WifiP2pManager#discoverPeersWithConfigParams(
+     * WifiP2pManager.Channel, WifiP2pDiscoveryConfig, WifiP2pManager.ActionListener)}
+     *
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @SystemApi
+    public static final int API_P2P_DISCOVER_PEERS_WITH_CONFIG_PARAMS = 37;
+
+    /**
      * Used internally to keep track of boundary.
      * @hide
      */
-    public static final int API_MAX = 37;
+    public static final int API_MAX = 38;
 
     /**
      * Broadcast intent action indicating that a Passpoint provider icon has been received.
