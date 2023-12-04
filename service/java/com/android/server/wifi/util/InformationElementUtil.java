@@ -28,6 +28,7 @@ import android.net.wifi.nl80211.NativeScanResult;
 import android.net.wifi.nl80211.WifiNl80211Manager;
 import android.net.wifi.util.HexEncoding;
 import android.util.Log;
+import android.util.SparseIntArray;
 
 import com.android.server.wifi.ByteBufferReader;
 import com.android.server.wifi.MboOceConstants;
@@ -1926,7 +1927,7 @@ public class InformationElementUtil {
         //
         // Note: InformationElement.bytes has 'Element ID' and 'Length'
         //       stripped off already
-        private void parseRsnElement(InformationElement ie) {
+        private void parseRsnElement(InformationElement ie, SparseIntArray unknownAkmMap) {
             ByteBuffer buf = ByteBuffer.wrap(ie.bytes).order(ByteOrder.LITTLE_ENDIAN);
 
             try {
@@ -2007,9 +2008,13 @@ public class InformationElementUtil {
                         case RSN_AKM_DPP:
                             rsnKeyManagement.add(ScanResult.KEY_MGMT_DPP);
                             break;
-                        default:
-                            rsnKeyManagement.add(ScanResult.KEY_MGMT_UNKNOWN);
+                        default: {
+                            int akmScheme =
+                                    getScanResultAkmSchemeOfUnknownAkmIfConfigured(
+                                            akm, unknownAkmMap);
+                            rsnKeyManagement.add(akmScheme);
                             break;
+                        }
                     }
                 }
                 // Default AKM
@@ -2041,6 +2046,27 @@ public class InformationElementUtil {
                 groupManagementCipher.add(parseRsnCipher(buf.getInt()));
             } catch (BufferUnderflowException e) {
                 Log.e("IE_Capabilities", "Couldn't parse RSNE, buffer underflow");
+            }
+        }
+
+        /**
+         * Get the ScanResult security key management scheme (ScanResult.KEY_MGMT_XX) corresponding
+         * to the unknown AKMs configured in overlay config item
+         * config_wifiUnknownAkmToKnownAkmMapping
+         *
+         * @param unknownAkm unknown AKM seen in the received beacon or probe response.
+         * @param unknownAkmMap unknownAkmMap Mapping of unknown AKMs configured in overlay config
+         *     item config_wifiUnknownAkmToKnownAkmMapping to ScanResult security key management
+         *     scheme (ScanResult.KEY_MGMT_XX).
+         * @return A valid ScanResult.KEY_MGMT_XX if unknownAkm is configured in the overlay,
+         *     ScanResult.KEY_MGMT_UNKNOWN otherwise
+         */
+        private int getScanResultAkmSchemeOfUnknownAkmIfConfigured(
+                int unknownAkm, SparseIntArray unknownAkmMap) {
+            if (unknownAkmMap != null) {
+                return unknownAkmMap.get(unknownAkm, ScanResult.KEY_MGMT_UNKNOWN);
+            } else {
+                return ScanResult.KEY_MGMT_UNKNOWN;
             }
         }
 
@@ -2123,7 +2149,7 @@ public class InformationElementUtil {
         // Note: InformationElement.bytes has 'Element ID' and 'Length'
         //       stripped off already
         //
-        private void parseWpaOneElement(InformationElement ie) {
+        private void parseWpaOneElement(InformationElement ie, SparseIntArray unknownAkmMap) {
             ByteBuffer buf = ByteBuffer.wrap(ie.bytes).order(ByteOrder.LITTLE_ENDIAN);
 
             try {
@@ -2168,7 +2194,10 @@ public class InformationElementUtil {
                             wpaKeyManagement.add(ScanResult.KEY_MGMT_PSK);
                             break;
                         default:
-                            wpaKeyManagement.add(ScanResult.KEY_MGMT_UNKNOWN);
+                            int akmScheme =
+                                    getScanResultAkmSchemeOfUnknownAkmIfConfigured(
+                                            akm, unknownAkmMap);
+                            wpaKeyManagement.add(akmScheme);
                             break;
                     }
                 }
@@ -2183,19 +2212,24 @@ public class InformationElementUtil {
         }
 
         /**
-         * Parse the Information Element and the 16-bit Capability Information field
-         * to build the InformationElemmentUtil.capabilities object.
+         * Parse the Information Element and the 16-bit Capability Information field to build the
+         * InformationElemmentUtil.capabilities object.
          *
-         * @param ies            -- Information Element array
-         * @param beaconCap      -- 16-bit Beacon Capability Information field
+         * @param ies -- Information Element array
+         * @param beaconCap -- 16-bit Beacon Capability Information field
          * @param isOweSupported -- Boolean flag to indicate if OWE is supported by the device
-         * @param freq           -- Frequency on which frame/beacon was transmitted.
-         *                          Some parsing may be affected such as DMG parameters in
-         *                          DMG (60GHz) beacon.
+         * @param freq -- Frequency on which frame/beacon was transmitted. Some parsing may be
+         *     affected such as DMG parameters in DMG (60GHz) beacon.
+         * @param unknownAkmMap -- unknown AKM to known AKM mapping (Internally converted to
+         *     security key management scheme(ScanResult.KEY_MGMT_XX)) configured in overlay config
+         *     item config_wifiUnknownAkmToKnownAkmMapping.
          */
-
-        public void from(InformationElement[] ies, int beaconCap, boolean isOweSupported,
-                int freq) {
+        public void from(
+                InformationElement[] ies,
+                int beaconCap,
+                boolean isOweSupported,
+                int freq,
+                SparseIntArray unknownAkmMap) {
             protocol = new ArrayList<>();
             keyManagement = new ArrayList<>();
             groupCipher = new ArrayList<>();
@@ -2231,12 +2265,12 @@ public class InformationElementUtil {
                 }
 
                 if (ie.id == InformationElement.EID_RSN) {
-                    parseRsnElement(ie);
+                    parseRsnElement(ie, unknownAkmMap);
                 }
 
                 if (ie.id == InformationElement.EID_VSA) {
                     if (isWpaOneElement(ie)) {
-                        parseWpaOneElement(ie);
+                        parseWpaOneElement(ie, unknownAkmMap);
                     }
                     if (isWpsElement(ie)) {
                         // TODO(b/62134557): parse WPS IE to provide finer granularity information.
@@ -2267,6 +2301,48 @@ public class InformationElementUtil {
                         keyManagement.add(oweKeyManagement);
                     }
                 }
+            }
+        }
+
+        /** Convert the AKM suite selector to scan result Security key management scheme */
+        public static int akmToScanResultKeyManagementScheme(int akm) {
+            switch (akm) {
+                case RSN_AKM_EAP:
+                case WPA_AKM_EAP:
+                    return ScanResult.KEY_MGMT_EAP;
+                case RSN_AKM_PSK:
+                case WPA_AKM_PSK:
+                    return ScanResult.KEY_MGMT_PSK;
+                case RSN_AKM_FT_EAP:
+                    return ScanResult.KEY_MGMT_FT_EAP;
+                case RSN_AKM_FT_PSK:
+                    return ScanResult.KEY_MGMT_FT_PSK;
+                case RSN_AKM_EAP_SHA256:
+                    return ScanResult.KEY_MGMT_EAP_SHA256;
+                case RSN_AKM_PSK_SHA256:
+                    return ScanResult.KEY_MGMT_PSK_SHA256;
+                case RSN_AKM_SAE:
+                    return ScanResult.KEY_MGMT_SAE;
+                case RSN_AKM_FT_SAE:
+                    return ScanResult.KEY_MGMT_FT_SAE;
+                case RSN_AKM_SAE_EXT_KEY:
+                    return ScanResult.KEY_MGMT_SAE_EXT_KEY;
+                case RSN_AKM_FT_SAE_EXT_KEY:
+                    return ScanResult.KEY_MGMT_FT_SAE_EXT_KEY;
+                case RSN_AKM_OWE:
+                    return ScanResult.KEY_MGMT_OWE;
+                case RSN_AKM_EAP_SUITE_B_192:
+                    return ScanResult.KEY_MGMT_EAP_SUITE_B_192;
+                case RSN_OSEN:
+                    return ScanResult.KEY_MGMT_OSEN;
+                case RSN_AKM_EAP_FILS_SHA256:
+                    return ScanResult.KEY_MGMT_FILS_SHA256;
+                case RSN_AKM_EAP_FILS_SHA384:
+                    return ScanResult.KEY_MGMT_FILS_SHA384;
+                case RSN_AKM_DPP:
+                    return ScanResult.KEY_MGMT_DPP;
+                default:
+                    return ScanResult.KEY_MGMT_UNKNOWN;
             }
         }
 
