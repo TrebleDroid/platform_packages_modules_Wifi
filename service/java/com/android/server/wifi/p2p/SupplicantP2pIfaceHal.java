@@ -20,6 +20,7 @@ import android.annotation.NonNull;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.ScanResult;
 import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -233,6 +234,21 @@ public class SupplicantP2pIfaceHal {
                 return handleNullHal(methodStr);
             }
             return mP2pIfaceHal.find(type, freq, timeout);
+        }
+    }
+
+    /**
+     * Initiate P2P device discovery with config params.
+     *
+     * See comments for {@link ISupplicantP2pIfaceHal#findWithParams(WifiP2pDiscoveryConfig, int)}.
+     */
+    public boolean findWithParams(WifiP2pDiscoveryConfig config, int timeout) {
+        synchronized (mLock) {
+            String methodStr = "findWithParams";
+            if (mP2pIfaceHal == null) {
+                return handleNullHal(methodStr);
+            }
+            return mP2pIfaceHal.findWithParams(config, timeout);
         }
     }
 

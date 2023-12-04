@@ -26,7 +26,9 @@ import android.hardware.wifi.supplicant.ISupplicantP2pNetwork;
 import android.hardware.wifi.supplicant.IfaceInfo;
 import android.hardware.wifi.supplicant.IfaceType;
 import android.hardware.wifi.supplicant.MiracastMode;
+import android.hardware.wifi.supplicant.P2pDiscoveryInfo;
 import android.hardware.wifi.supplicant.P2pFrameTypeMask;
+import android.hardware.wifi.supplicant.P2pScanType;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.hardware.wifi.supplicant.WpsProvisionMethod;
 import android.net.wifi.CoexUnsafeChannel;
@@ -34,6 +36,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -51,6 +54,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.util.ArrayUtils;
+import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -523,6 +527,65 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
         }
     }
 
+    private static int frameworkToHalScanType(@WifiP2pManager.WifiP2pScanType int scanType) {
+        switch (scanType) {
+            case WifiP2pManager.WIFI_P2P_SCAN_FULL:
+                return P2pScanType.FULL;
+            case WifiP2pManager.WIFI_P2P_SCAN_SOCIAL:
+                return P2pScanType.SOCIAL;
+            case WifiP2pManager.WIFI_P2P_SCAN_SINGLE_FREQ:
+                return P2pScanType.SPECIFIC_FREQ;
+            default:
+                Log.e(TAG, "Invalid discovery scan type: " + scanType);
+                return -1;
+        }
+    }
+
+    /**
+     * Initiate P2P device discovery with config params.
+     *
+     * See comments for {@link ISupplicantP2pIfaceHal#findWithParams(WifiP2pDiscoveryConfig, int)}.
+     */
+    public boolean findWithParams(WifiP2pDiscoveryConfig config, int timeout) {
+        synchronized (mLock) {
+            String methodStr = "findWithParams";
+            if (!checkP2pIfaceAndLogFailure(methodStr)) {
+                return false;
+            }
+            if (getCachedServiceVersion() < 3) {
+                // HAL does not support findWithParams before V3.
+                return find(config.getScanType(), config.getFrequencyMhz(), timeout);
+            }
+
+            P2pDiscoveryInfo halInfo = new P2pDiscoveryInfo();
+            halInfo.scanType = frameworkToHalScanType(config.getScanType());
+            halInfo.timeoutInSec = timeout;
+            halInfo.frequencyMhz = config.getFrequencyMhz();
+            if (halInfo.scanType == -1) {
+                return false;
+            }
+            if (halInfo.frequencyMhz < 0) {
+                Log.e(TAG, "Invalid freq value: " +  halInfo.frequencyMhz);
+                return false;
+            }
+
+            if (!config.getVendorData().isEmpty()) {
+                halInfo.vendorData =
+                        HalAidlUtil.frameworkToHalOuiKeyedDataList(config.getVendorData());
+            }
+
+            try {
+                mISupplicantP2pIface.findWithParams(halInfo);
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
     /**
      * Stop an ongoing P2P service discovery.
      *
@@ -710,7 +773,8 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
      */
     public String connect(WifiP2pConfig config, boolean joinExistingGroup) {
         synchronized (mLock) {
-            String methodStr = "setSsidPostfix";
+            String methodStr = "connect";
+
             if (!checkP2pIfaceAndLogFailure(methodStr)) {
                 return null;
             }
