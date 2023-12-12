@@ -512,10 +512,10 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
 
     @Override
     public boolean initiateNanBootstrappingRequest(short transactionId, int peerId, MacAddress peer,
-            int method, byte[] cookie) {
+            int method, byte[] cookie, byte pubSubId, boolean isComeBack) {
         String methodStr = "initiateNanBootstrappingRequest";
         NanBootstrappingRequest request = createNanBootstrappingRequest(peerId, peer, method,
-                cookie);
+                cookie, pubSubId, isComeBack);
         synchronized (mLock) {
             try {
                 if (!checkIfaceAndLogFailure(methodStr)) return false;
@@ -532,9 +532,10 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
 
     @Override
     public boolean respondToNanBootstrappingRequest(short transactionId, int bootstrappingId,
-            boolean accept) {
+            boolean accept, byte pubSubId) {
         String methodStr = "respondToNanBootstrappingRequest";
-        NanBootstrappingResponse request = createNanBootstrappingResponse(bootstrappingId, accept);
+        NanBootstrappingResponse request = createNanBootstrappingResponse(bootstrappingId, accept,
+                pubSubId);
         synchronized (mLock) {
             try {
                 if (!checkIfaceAndLogFailure(methodStr)) return false;
@@ -587,20 +588,23 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
     // Utilities
 
     private static NanBootstrappingResponse createNanBootstrappingResponse(int bootstrappingId,
-            boolean accept) {
+            boolean accept, byte pubSubId) {
         NanBootstrappingResponse request = new NanBootstrappingResponse();
         request.acceptRequest = accept;
         request.bootstrappingInstanceId = bootstrappingId;
+        request.discoverySessionId = pubSubId;
         return request;
     }
 
     private static NanBootstrappingRequest createNanBootstrappingRequest(int peerId,
-            MacAddress peer, int method, byte[] cookie) {
+            MacAddress peer, int method, byte[] cookie, byte pubSubId, boolean isComeBack) {
         NanBootstrappingRequest request = new NanBootstrappingRequest();
         request.peerId = peerId;
         request.peerDiscMacAddr = peer.toByteArray();
         request.requestBootstrappingMethod = method;
         request.cookie = copyArray(cookie);
+        request.discoverySessionId = pubSubId;
+        request.isComeback = isComeBack;
         return request;
     }
 

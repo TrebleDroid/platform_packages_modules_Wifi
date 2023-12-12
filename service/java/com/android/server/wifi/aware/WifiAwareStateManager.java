@@ -2834,8 +2834,10 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                     int method = data.getInt(MESSAGE_BUNDLE_KEY_BOOTSTRAPPING_METHOD);
                     byte[] cookie = data.getByteArray(
                             MESSAGE_BUNDLE_KEY_BOOTSTRAPPING_COME_BACK_COOKIE);
+                    boolean isComeBack = data
+                            .getBoolean(MESSAGE_BUNDLE_KEY_BOOTSTRAPPING_IS_COME_BACK_REQUEST);
                     waitForResponse = initiateBootstrappingRequestLocal(mCurrentTransactionId,
-                            clientId, sessionId, peerId, method, cookie);
+                            clientId, sessionId, peerId, method, cookie, isComeBack);
                     break;
                 }
                 case COMMAND_TYPE_RESPONSE_BOOTSTRAPPING_REQUEST: {
@@ -3963,7 +3965,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     }
 
     private boolean initiateBootstrappingRequestLocal(short transactionId, int clientId,
-            int sessionId, int peerId, int method, byte[] cookie) {
+            int sessionId, int peerId, int method, byte[] cookie, boolean isComeBack) {
         String methodString = "initiateBootstrappingRequestLocal";
         if (mVdbg) {
             Log.v(TAG, methodString + ": transactionId=" + transactionId
@@ -3974,7 +3976,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         if (session == null) {
             return false;
         }
-        return session.initiateBootstrapping(transactionId, peerId, method, cookie);
+        return session.initiateBootstrapping(transactionId, peerId, method, cookie, isComeBack);
     }
 
     private boolean respondToBootstrappingRequestLocal(short transactionId, int clientId,
