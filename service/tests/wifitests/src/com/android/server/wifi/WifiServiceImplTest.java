@@ -1903,7 +1903,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mWifiConfigManager).loadFromStore();
         verify(mActiveModeWarden).start();
         verify(mActiveModeWarden, never()).wifiToggled(any());
-        verify(mWifiDeviceStateChangeManager).handleBootCompleted();
     }
 
     @Test
@@ -1935,7 +1934,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiConfigManager).loadFromStore();
         verify(mActiveModeWarden).start();
-        verify(mWifiDeviceStateChangeManager).handleBootCompleted();
     }
 
     @Test
@@ -1959,6 +1957,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Test
     public void testSetPulledAtomCallbacks() {
         mWifiServiceImpl.checkAndStartWifi();
+        mWifiServiceImpl.handleBootCompleted();
         mLooper.dispatchAll();
         verify(mWifiPulledAtomLogger).setPullAtomCallback(WifiStatsLog.WIFI_MODULE_INFO);
         verify(mWifiPulledAtomLogger).setPullAtomCallback(WifiStatsLog.WIFI_SETTING_INFO);
@@ -8455,6 +8454,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mPasspointManager).initializeProvisioner(any());
         verify(mWifiP2pConnection).handleBootCompleted();
         verify(mWifiCountryCode).registerListener(any(WifiCountryCode.ChangeListener.class));
+        verify(mWifiDeviceStateChangeManager).handleBootCompleted();
     }
 
     /**

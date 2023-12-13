@@ -697,7 +697,6 @@ public class WifiServiceImpl extends BaseWifiService {
                 mWifiTetheringDisallowed = mUserManager.getUserRestrictions()
                         .getBoolean(UserManager.DISALLOW_WIFI_TETHERING);
             }
-            setPulledAtomCallbacks();
 
             // Adding optimizations of only receiving broadcasts when wifi is enabled
             // can result in race conditions when apps toggle wifi in the background
@@ -708,7 +707,6 @@ public class WifiServiceImpl extends BaseWifiService {
             mActiveModeWarden.start();
             registerForCarrierConfigChange();
             mWifiInjector.getAdaptiveConnectivityEnabledSettingObserver().initialize();
-            mWifiInjector.getWifiDeviceStateChangeManager().handleBootCompleted();
             mIsWifiServiceStarted = true;
         });
     }
@@ -858,6 +856,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 mWifiConfigManager.updateTrustOnFirstUseFlag(isTrustOnFirstUseSupported());
             }
             updateVerboseLoggingEnabled();
+            mWifiInjector.getWifiDeviceStateChangeManager().handleBootCompleted();
+            setPulledAtomCallbacks();
         });
     }
 
