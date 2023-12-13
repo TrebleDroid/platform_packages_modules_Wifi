@@ -175,6 +175,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
             "set-mock-wifimodem-service",
             "get-mock-wifimodem-service",
             "set-mock-wifimodem-methods",
+            "force-overlay-config-value",
     };
 
     private static final Map<String, Pair<NetworkRequest, ConnectivityManager.NetworkCallback>>
@@ -1837,6 +1838,17 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         return -1;
                     }
                     return 0;
+                case "force-overlay-config-value":
+                    String value = getNextArgRequired();
+                    String configString = getNextArgRequired();
+                    boolean isEnabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
+                    if (mWifiService.forceOverlayConfigValue(configString, value, isEnabled)) {
+                        pw.print("true");
+                    } else {
+                        pw.print("fail to force overlay config value: " + configString);
+                        return -1;
+                    }
+                    return 0;
                 default:
                     return handleDefaultCommands(cmd);
             }
@@ -2618,6 +2630,16 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println(
                 "    get allowed channels in each operation mode from wifiManager if available. "
                         + "Otherwise, it returns from wifiScanner.");
+        pw.println("  force-overlay-config-value <overlayName> <configString> enabled|disabled");
+        pw.println("    Force overlay to a specified value. See below for supported overlays.");
+        pw.println("    <overlayName> - name of the overlay whose value is overridden.");
+        pw.println("        - Currently supports:");
+        pw.println("            - config_wifi_background_scan_support: accepts boolean"
+                + "<configString> = true|false.");
+        pw.println("    <configString> - override value of the overlay. See above for accepted"
+                + "values per overlay.");
+        pw.println("    enabled|disabled: enable the override or disable it and revert to using"
+                + "the built-in value.");
     }
 
     private void onHelpPrivileged(PrintWriter pw) {
