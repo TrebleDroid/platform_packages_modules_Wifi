@@ -640,6 +640,8 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApNotPossibleToCreateApInterfaceIncrementsMetrics()
             throws Exception {
+        when(mWifiNative.setupInterfaceForSoftApMode(
+                    any(), any(), anyInt(), anyBoolean(), any())).thenReturn(null);
         when(mWifiNative.isItPossibleToCreateApIface(any())).thenReturn(false);
         Builder configBuilder = new SoftApConfiguration.Builder();
         configBuilder.setBand(SoftApConfiguration.BAND_2GHZ);
@@ -648,6 +650,7 @@ public class SoftApManagerTest extends WifiBaseTest {
                 IFACE_IP_MODE_LOCAL_ONLY, configBuilder.build(),
                 mTestSoftApCapability, TEST_COUNTRY_CODE);
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_TETHERED);
+        verify(mWifiNative).isItPossibleToCreateApIface(any());
         verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
                 WifiManager.SAP_START_FAILURE_GENERAL);
         verify(mListener).onStartFailure(mSoftApManager);
@@ -687,6 +690,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         mSoftApManager = createSoftApManager(nullApConfig, ROLE_SOFTAP_TETHERED);
         verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
                 WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mWifiNative).isItPossibleToCreateApIface(any());
         verify(mListener).onStartFailure(mSoftApManager);
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         if (SdkLevel.isAtLeastSv2()) {
@@ -2462,7 +2466,6 @@ public class SoftApManagerTest extends WifiBaseTest {
                     mWifiNativeInterfaceCallbackCaptor.capture(), eq(TEST_WORKSOURCE),
                     eq(expectedConfig.getBand()), eq(expectedConfig.getBands().length > 1),
                     eq(mSoftApManager));
-
             // Simulate user approval
             ArgumentCaptor<StateMachine> stateMachineCaptor =
                     ArgumentCaptor.forClass(StateMachine.class);
@@ -2476,6 +2479,9 @@ public class SoftApManagerTest extends WifiBaseTest {
             stateMachineCaptor.getValue().sendMessage(Message.obtain(messageCaptor.getValue()));
             mLooper.dispatchAll();
         }
+        // isItPossibleToCreateApIface should never happen in normal case since it may fail in
+        // normal use case
+        verify(mWifiNative, never()).isItPossibleToCreateApIface(any());
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         verify(mFakeSoftApNotifier).dismissSoftApShutdownTimeoutExpiredNotification();
         order.verify(mWifiNative).setupInterfaceForSoftApMode(
