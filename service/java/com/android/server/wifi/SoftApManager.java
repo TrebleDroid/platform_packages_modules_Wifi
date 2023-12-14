@@ -1291,12 +1291,6 @@ public class SoftApManager implements ActiveModeManager {
                             break;
                         }
 
-                        // Only check if it's possible to create single AP, since a DBS request
-                        // already falls back to single AP if we can't create DBS.
-                        if (!mWifiNative.isItPossibleToCreateApIface(mRequestorWs)) {
-                            handleStartSoftApFailure(START_RESULT_FAILURE_INTERFACE_CONFLICT);
-                            break;
-                        }
                         if (SdkLevel.isAtLeastT()
                                 && mCurrentSoftApConfiguration.isIeee80211beEnabled()
                                 && !mCurrentSoftApCapability.areFeaturesSupported(
@@ -1313,7 +1307,13 @@ public class SoftApManager implements ActiveModeManager {
                                 SoftApManager.this, getVendorData());
                         if (TextUtils.isEmpty(mApInterfaceName)) {
                             Log.e(getTag(), "setup failure when creating ap interface.");
-                            handleStartSoftApFailure(START_RESULT_FAILURE_CREATE_INTERFACE);
+                            // Only check if it's possible to create single AP, since a DBS request
+                            // already falls back to single AP if we can't create DBS.
+                            if (!mWifiNative.isItPossibleToCreateApIface(mRequestorWs)) {
+                                handleStartSoftApFailure(START_RESULT_FAILURE_INTERFACE_CONFLICT);
+                            } else {
+                                handleStartSoftApFailure(START_RESULT_FAILURE_CREATE_INTERFACE);
+                            }
                             break;
                         }
                         mSoftApNotifier.dismissSoftApShutdownTimeoutExpiredNotification();
