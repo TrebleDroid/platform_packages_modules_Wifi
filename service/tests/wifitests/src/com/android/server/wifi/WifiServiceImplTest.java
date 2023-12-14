@@ -11648,4 +11648,20 @@ public class WifiServiceImplTest extends WifiBaseTest {
         }
         assertTrue(entries == supportedBandsSet.size());
     }
+
+    /**
+     * Verify that Pno is supported.
+     */
+    @Test
+    public void testIsPnoSupported() {
+        when(mWifiGlobals.isBackgroundScanSupported()).thenReturn(false);
+        assertFalse(mWifiServiceImpl.isPnoSupported());
+        when(mActiveModeWarden.getSupportedFeatureSet()).thenReturn(0L);
+        assertFalse(mWifiServiceImpl.isPnoSupported());
+
+        when(mActiveModeWarden.getSupportedFeatureSet()).thenReturn(WifiManager.WIFI_FEATURE_PNO);
+        assertTrue(mWifiServiceImpl.isPnoSupported());
+        when(mWifiGlobals.isBackgroundScanSupported()).thenReturn(true);
+        assertTrue(mWifiServiceImpl.isPnoSupported());
+    }
 }
