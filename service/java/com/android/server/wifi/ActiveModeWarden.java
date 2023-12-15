@@ -2750,12 +2750,12 @@ public class ActiveModeWarden {
             additionalFeatureSet |= WifiManager.WIFI_FEATURE_AP_RAND_MAC;
         }
 
-        if (ApConfigUtil.isBridgedModeSupported(mContext)) {
+        if (ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative)) {
             // The bridged mode requires the kernel network modules support.
             // It doesn't relate the vendor HAL, set if overlay enables it.
             additionalFeatureSet |= WifiManager.WIFI_FEATURE_BRIDGED_AP;
         }
-        if (ApConfigUtil.isStaWithBridgedModeSupported(mContext)) {
+        if (ApConfigUtil.isStaWithBridgedModeSupported(mContext, mWifiNative)) {
             // The bridged mode requires the kernel network modules support.
             // It doesn't relate the vendor HAL, set if overlay enables it.
             additionalFeatureSet |= WifiManager.WIFI_FEATURE_STA_BRIDGED_AP;
