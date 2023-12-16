@@ -26,6 +26,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
@@ -546,6 +547,12 @@ public class SoftApManager implements ActiveModeManager {
         long timeout = mCurrentSoftApConfiguration
                 .getBridgedModeOpportunisticShutdownTimeoutMillisInternal();
         return timeout > 0 ? timeout : mDefaultShutdownIdleInstanceInBridgedModeTimeoutMillis;
+    }
+
+    private List<OuiKeyedData> getVendorData() {
+        return (SdkLevel.isAtLeastV() && mCurrentSoftApConfiguration != null)
+                ? mCurrentSoftApConfiguration.getVendorData()
+                : new ArrayList<>();
     }
 
     private String getHighestFrequencyInstance(Set<String> candidateInstances) {
@@ -1175,7 +1182,8 @@ public class SoftApManager implements ActiveModeManager {
                             // Checking STA status only when device supports STA + AP concurrency
                             // since STA would be dropped when device doesn't support it.
                             if (cmms.size() != 0 && mWifiNative.isStaApConcurrencySupported()) {
-                                if (ApConfigUtil.isStaWithBridgedModeSupported(mContext)) {
+                                if (ApConfigUtil.isStaWithBridgedModeSupported(mContext,
+                                        mWifiNative)) {
                                     for (ClientModeManager cmm
                                             : mActiveModeWarden.getClientModeManagers()) {
                                         WifiInfo wifiConnectedInfo = cmm.getConnectionInfo();
@@ -1284,19 +1292,29 @@ public class SoftApManager implements ActiveModeManager {
                             break;
                         }
 
-                        // Only check if it's possible to create single AP, since a DBS request
-                        // already falls back to single AP if we can't create DBS.
-                        if (!mWifiNative.isItPossibleToCreateApIface(mRequestorWs)) {
-                            handleStartSoftApFailure(START_RESULT_FAILURE_INTERFACE_CONFLICT);
-                            break;
+                        if (SdkLevel.isAtLeastT()
+                                && mCurrentSoftApConfiguration.isIeee80211beEnabled()
+                                && !mCurrentSoftApCapability.areFeaturesSupported(
+                                SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE)) {
+                            Log.d(getTag(), "11BE is not supported, removing from configuration");
+                            mCurrentSoftApConfiguration = new SoftApConfiguration
+                                    .Builder(mCurrentSoftApConfiguration)
+                                    .setIeee80211beEnabled(false)
+                                    .build();
                         }
                         mApInterfaceName = mWifiNative.setupInterfaceForSoftApMode(
                                 mWifiNativeInterfaceCallback, mRequestorWs,
                                 mCurrentSoftApConfiguration.getBand(), isBridgeRequired(),
-                                SoftApManager.this);
+                                SoftApManager.this, getVendorData());
                         if (TextUtils.isEmpty(mApInterfaceName)) {
                             Log.e(getTag(), "setup failure when creating ap interface.");
-                            handleStartSoftApFailure(START_RESULT_FAILURE_CREATE_INTERFACE);
+                            // Only check if it's possible to create single AP, since a DBS request
+                            // already falls back to single AP if we can't create DBS.
+                            if (!mWifiNative.isItPossibleToCreateApIface(mRequestorWs)) {
+                                handleStartSoftApFailure(START_RESULT_FAILURE_INTERFACE_CONFLICT);
+                            } else {
+                                handleStartSoftApFailure(START_RESULT_FAILURE_CREATE_INTERFACE);
+                            }
                             break;
                         }
                         mSoftApNotifier.dismissSoftApShutdownTimeoutExpiredNotification();
@@ -1408,7 +1426,7 @@ public class SoftApManager implements ActiveModeManager {
                             mApInterfaceName = mWifiNative.setupInterfaceForSoftApMode(
                                     mWifiNativeInterfaceCallback, mRequestorWs,
                                     mCurrentSoftApConfiguration.getBand(), isBridgeRequired(),
-                                    SoftApManager.this);
+                                    SoftApManager.this, getVendorData());
                             if (TextUtils.isEmpty(mApInterfaceName)) {
                                 Log.e(getTag(), "setup failure when creating single AP iface");
                                 handleStartSoftApFailure(START_RESULT_FAILURE_GENERAL);
@@ -2222,9 +2240,9 @@ public class SoftApManager implements ActiveModeManager {
                 getRole(),
                 band1,
                 band2,
-                ApConfigUtil.isBridgedModeSupported(mContext),
+                ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative),
                 mWifiNative.isStaApConcurrencySupported(),
-                ApConfigUtil.isStaWithBridgedModeSupported(mContext),
+                ApConfigUtil.isStaWithBridgedModeSupported(mContext, mWifiNative),
                 getCurrentStaFreqMhz(),
                 securityType);
     }
@@ -2249,7 +2267,7 @@ public class SoftApManager implements ActiveModeManager {
                 band,
                 isBridgedMode(),
                 mWifiNative.isStaApConcurrencySupported(),
-                ApConfigUtil.isStaWithBridgedModeSupported(mContext),
+                ApConfigUtil.isStaWithBridgedModeSupported(mContext, mWifiNative),
                 getCurrentStaFreqMhz(),
                 mDefaultShutdownTimeoutMillis > 0,
                 -1,

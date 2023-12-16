@@ -1172,7 +1172,15 @@ public class WifiConfigManager {
         }
         internalConfig.BSSID = externalConfig.BSSID == null ? null
                 : externalConfig.BSSID.toLowerCase();
-        internalConfig.hiddenSSID = externalConfig.hiddenSSID;
+        if (externalConfig.hiddenSSID) {
+            internalConfig.hiddenSSID = true;
+        } else if (internalConfig.getSecurityParams(
+                externalConfig.getDefaultSecurityParams().getSecurityType()) != null) {
+            // Only set hiddenSSID to false if we're updating an existing config.
+            // This is to prevent users from mistakenly converting an existing hidden config to
+            // unhidden when adding a new config of the same security family.
+            internalConfig.hiddenSSID = false;
+        }
 
         if (externalConfig.preSharedKey != null
                 && !externalConfig.preSharedKey.equals(PASSWORD_MASK)) {
@@ -2610,6 +2618,7 @@ public class WifiConfigManager {
         config.validatedInternetAccess = validated;
         if (validated) {
             config.numNoInternetAccessReports = 0;
+            config.getNetworkSelectionStatus().setHasEverValidatedInternetAccess(true);
         }
         saveToStore(false);
         return true;
@@ -4523,5 +4532,16 @@ public class WifiConfigManager {
             }
         }
         return new ArrayList<>(results);
+    }
+
+    /**
+     * Handle the device shutdown, should write all cached data to the storage
+     */
+    public void handleShutDown() {
+        if (mPendingStoreRead) {
+            Log.e(TAG, "Cannot save to store before store is read!");
+            return;
+        }
+        writeBufferedData(true);
     }
 }

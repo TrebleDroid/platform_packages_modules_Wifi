@@ -4054,6 +4054,9 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 .switchUserStoresAndRead(any(List.class));
         mContextConfigStoreMockOrder.verify(mWifiConfigStore).write(true);
         verify(mWifiMetrics).wifiConfigStored(anyInt());
+        // Verify shut down handling
+        mWifiConfigManager.handleShutDown();
+        mContextConfigStoreMockOrder.verify(mWifiConfigStore).write(true);
     }
 
     /**
@@ -6862,6 +6865,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         assertTrue(mergedNetwork.isSecurityType(upgradableSecurityType));
         assertEquals(upgradableConfig.getDefaultSecurityParams().isAddedByAutoUpgrade(),
                 mergedNetwork.getSecurityParams(upgradableSecurityType).isAddedByAutoUpgrade());
+        assertEquals(upgradableConfig.hiddenSSID, mergedNetwork.hiddenSSID);
     }
 
     /**
@@ -6898,6 +6902,47 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         upgradedConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
         upgradedConfig.preSharedKey = "\"Passw0rd\"";
         upgradedConfig.getDefaultSecurityParams().setIsAddedByAutoUpgrade(true);
+
+        verifyAddUpgradableNetwork(baseConfig, upgradedConfig);
+    }
+
+    /**
+     * Verifies that adding an unhidden upgraded config will update the existing network to
+     * unhidden.
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddUnhiddenUpgradedNetworkOverwritesHiddenSsidValue() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"upgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
+        baseConfig.preSharedKey = "\"Passw0rd\"";
+        baseConfig.hiddenSSID = true;
+        WifiConfiguration upgradedConfig = new WifiConfiguration();
+        upgradedConfig.SSID = "\"upgradableNetwork\"";
+        upgradedConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
+        upgradedConfig.preSharedKey = "\"Passw0rd\"";
+        upgradedConfig.hiddenSSID = false;
+
+        verifyAddUpgradableNetwork(baseConfig, upgradedConfig);
+    }
+
+    /**
+     * Verifies that adding a hidden upgraded config will update the existing network to hidden.
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddHiddenUpgradedNetworkOverwritesHiddenSsidValue() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"upgradableNetwork\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
+        baseConfig.preSharedKey = "\"Passw0rd\"";
+        baseConfig.hiddenSSID = false;
+        WifiConfiguration upgradedConfig = new WifiConfiguration();
+        upgradedConfig.SSID = "\"upgradableNetwork\"";
+        upgradedConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
+        upgradedConfig.preSharedKey = "\"Passw0rd\"";
+        upgradedConfig.hiddenSSID = true;
 
         verifyAddUpgradableNetwork(baseConfig, upgradedConfig);
     }
@@ -6971,7 +7016,14 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         assertTrue(mergedNetwork.isSecurityType(downgradableSecurityType));
         assertFalse(mergedNetwork.getSecurityParams(baseSecurityType)
                 .isAddedByAutoUpgrade());
+        if (baseConfig.hiddenSSID && !downgradableConfig.hiddenSSID) {
+            // Merged network should still be hidden if the base config is hidden.
+            assertTrue(mergedNetwork.hiddenSSID);
+        } else {
+            assertEquals(downgradableConfig.hiddenSSID, mergedNetwork.hiddenSSID);
+        }
     }
+
     /**
      * Verifies the addition of a downgradable network using
      * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
@@ -7028,6 +7080,48 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         verifyAddDowngradableNetwork(
                 baseConfig,
                 downgradableConfig);
+    }
+
+    /**
+     * Verifies that adding an unhidden downgraded config won't update a hidden existing network to
+     * unhidden. This is to prevent the case where a user adds a downgraded network that's only
+     * visible due to scanning for a hidden SSID from an existing upgradeable config.
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddUnhiddenDowngradedNetworkDoesntOverwriteHiddenSsidValue() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"downgradableConfig\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
+        baseConfig.preSharedKey = "\"Passw0rd\"";
+        baseConfig.hiddenSSID = true;
+        WifiConfiguration downgradableConfig = new WifiConfiguration();
+        downgradableConfig.SSID = "\"downgradableConfig\"";
+        downgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
+        downgradableConfig.preSharedKey = "\"Passw0rd\"";
+        downgradableConfig.hiddenSSID = false;
+
+        verifyAddDowngradableNetwork(baseConfig, downgradableConfig);
+    }
+
+    /**
+     * Verifies that adding an hidden downgraded config updates an existing network to hidden.
+     * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)}
+     */
+    @Test
+    public void testAddHiddenDowngradedNetworkOverwritesHiddenSsidValueToTrue() {
+        WifiConfiguration baseConfig = new WifiConfiguration();
+        baseConfig.SSID = "\"downgradableConfig\"";
+        baseConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
+        baseConfig.preSharedKey = "\"Passw0rd\"";
+        baseConfig.hiddenSSID = false;
+        WifiConfiguration downgradableConfig = new WifiConfiguration();
+        downgradableConfig.SSID = "\"downgradableConfig\"";
+        downgradableConfig.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
+        downgradableConfig.preSharedKey = "\"Passw0rd\"";
+        downgradableConfig.hiddenSSID = true;
+
+        verifyAddDowngradableNetwork(baseConfig, downgradableConfig);
     }
 
     private void verifyLoadFromStoreMergeUpgradableConfigurations(
@@ -7771,6 +7865,29 @@ public class WifiConfigManagerTest extends WifiBaseTest {
 
         // Permissions should only be checked once per unique creator.
         verify(mWifiPermissionsUtil, times(2)).isProfileOwner(anyInt(), any());
+    }
+
+    @Test
+    public void testNetworkValidation() {
+        ArgumentCaptor<WifiConfiguration> wifiConfigCaptor =
+                ArgumentCaptor.forClass(WifiConfiguration.class);
+        WifiConfiguration openNetwork = WifiConfigurationTestUtil.createOpenNetwork();
+
+        NetworkUpdateResult result = verifyAddNetworkToWifiConfigManager(openNetwork);
+
+        // Set internet to be validated and verify internet validation tracking is updated.
+        int networkId = result.getNetworkId();
+        mWifiConfigManager.setNetworkValidatedInternetAccess(networkId, true);
+        WifiConfiguration updatedConfig = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertTrue(updatedConfig.getNetworkSelectionStatus().hasEverValidatedInternetAccess());
+        assertTrue(updatedConfig.validatedInternetAccess);
+
+        // Set internet validation failed now and verify again. hasEverValidatedInternetAccess
+        // should still be true but validatedInternetAccess should be false.
+        mWifiConfigManager.setNetworkValidatedInternetAccess(networkId, false);
+        updatedConfig = mWifiConfigManager.getConfiguredNetwork(networkId);
+        assertTrue(updatedConfig.getNetworkSelectionStatus().hasEverValidatedInternetAccess());
+        assertFalse(updatedConfig.validatedInternetAccess);
     }
 
     /**

@@ -52,6 +52,8 @@ public class WifiGlobals {
     private final AtomicInteger mPollRssiIntervalMillis = new AtomicInteger(-1);
     private final AtomicBoolean mIpReachabilityDisconnectEnabled = new AtomicBoolean(true);
     private final AtomicBoolean mIsBluetoothConnected = new AtomicBoolean(false);
+    // Set default to false to check if the value will be overridden by WifiSettingConfigStore.
+    private final AtomicBoolean mIsWepAllowed = new AtomicBoolean(false);
 
     // These are read from the overlay, cache them after boot up.
     private final boolean mIsWpa3SaeUpgradeEnabled;
@@ -72,6 +74,7 @@ public class WifiGlobals {
     private final int mClientRssiMonitorThresholdDbm;
     private final int mClientRssiMonitorHysteresisDb;
     private boolean mDisableFirmwareRoamingInIdleMode = false;
+    private final boolean mIsSupportMultiInternetDual5G;
     private final boolean mAdjustPollRssiIntervalEnabled;
     private final boolean mWifiInterfaceAddedSelfRecoveryEnabled;
     private final int mNetworkNotFoundEventThreshold;
@@ -83,6 +86,7 @@ public class WifiGlobals {
     private boolean mIsUsingExternalScorer = false;
     private boolean mDisableUnwantedNetworkOnLowRssi = false;
     private final boolean mIsAfcSupportedOnDevice;
+    private boolean mDisableNudDisconnectsForWapiInSpecificCc = false;
     private Set<String> mMacRandomizationUnsupportedSsidPrefixes = new ArraySet<>();
 
     private SparseArray<SparseArray<CarrierSpecificEapFailureConfig>>
@@ -132,10 +136,14 @@ public class WifiGlobals {
                 R.bool.config_wifiAdjustPollRssiIntervalEnabled);
         mDisableFirmwareRoamingInIdleMode = mContext.getResources()
                 .getBoolean(R.bool.config_wifiDisableFirmwareRoamingInIdleMode);
+        mIsSupportMultiInternetDual5G = mContext.getResources().getBoolean(
+                R.bool.config_wifiAllowMultiInternetConnectDual5GFrequency);
         mWifiInterfaceAddedSelfRecoveryEnabled = mContext.getResources().getBoolean(
                 R.bool.config_wifiInterfaceAddedSelfRecoveryEnabled);
         mDisableUnwantedNetworkOnLowRssi = mContext.getResources().getBoolean(
                 R.bool.config_wifiDisableUnwantedNetworkOnLowRssi);
+        mDisableNudDisconnectsForWapiInSpecificCc = mContext.getResources().getBoolean(
+                R.bool.config_wifiDisableNudDisconnectsForWapiInSpecificCc);
         mNetworkNotFoundEventThreshold = mContext.getResources().getInteger(
                 R.integer.config_wifiNetworkNotFoundEventThreshold);
         mIsWepDeprecated = mContext.getResources()
@@ -318,7 +326,16 @@ public class WifiGlobals {
      * @return boolean true if WEP networks are deprecated, false otherwise.
      */
     public boolean isWepDeprecated() {
-        return mIsWepDeprecated;
+        return mIsWepDeprecated || !mIsWepAllowed.get();
+    }
+
+    /**
+     * Helper method to check if WEP networks are supported.
+     *
+     * @return boolean true if WEP networks are supported, false otherwise.
+     */
+    public boolean isWepSupported() {
+        return !mIsWepDeprecated;
     }
 
     /**
@@ -336,6 +353,14 @@ public class WifiGlobals {
      */
     public boolean isDisableFirmwareRoamingInIdleMode() {
         return mDisableFirmwareRoamingInIdleMode;
+    }
+
+    /**
+     * Get the configuration for whether Multi-internet are allowed to
+     * connect simultaneously to both 5GHz high and 5GHz low.
+     */
+    public boolean isSupportMultiInternetDual5G() {
+        return mIsSupportMultiInternetDual5G;
     }
 
     /**
@@ -523,10 +548,31 @@ public class WifiGlobals {
     }
 
     /**
+     * Get whether to disable NUD disconnects for WAPI configurations in a specific CC.
+     */
+    public boolean disableNudDisconnectsForWapiInSpecificCc() {
+        return mDisableNudDisconnectsForWapiInSpecificCc;
+    }
+
+    /**
      * Get the threshold to use for blocking a network due to NETWORK_NOT_FOUND_EVENT failure.
      */
     public int getNetworkNotFoundEventThreshold() {
         return mNetworkNotFoundEventThreshold;
+    }
+
+    /**
+     * Set whether wep network is allowed by user.
+     */
+    public void setWepAllowed(boolean isAllowed) {
+        mIsWepAllowed.set(isAllowed);
+    }
+
+    /**
+     * Get whether or not wep network is allowed by user.
+     */
+    public boolean isWepAllowed() {
+        return mIsWepAllowed.get();
     }
 
     /** Dump method for debugging */
@@ -559,6 +605,7 @@ public class WifiGlobals {
         pw.println("mNetworkNotFoundEventThreshold=" + mNetworkNotFoundEventThreshold);
         pw.println("mIsWepDeprecated=" + mIsWepDeprecated);
         pw.println("mIsWpaPersonalDeprecated=" + mIsWpaPersonalDeprecated);
+        pw.println("mIsWepAllowed=" + mIsWepAllowed.get());
         pw.println("mDisableFirmwareRoamingInIdleMode=" + mDisableFirmwareRoamingInIdleMode);
         pw.println("mCarrierSpecificEapFailureConfigMapPerCarrierId mapping below:");
         for (int i = 0; i < mCarrierSpecificEapFailureConfigMapPerCarrierId.size(); i++) {
@@ -574,5 +621,6 @@ public class WifiGlobals {
                         + ", durationMs=" + perFailureMap.valueAt(j).durationMs);
             }
         }
+        pw.println("mIsSupportMultiInternetDual5G=" + mIsSupportMultiInternetDual5G);
     }
 }

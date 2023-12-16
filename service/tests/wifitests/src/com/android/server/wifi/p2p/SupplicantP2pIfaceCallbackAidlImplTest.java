@@ -31,8 +31,10 @@ import static org.mockito.Mockito.verify;
 
 import android.app.test.MockAnswerUtil.AnswerWithArguments;
 import android.hardware.wifi.supplicant.P2pClientEapolIpAddressInfo;
+import android.hardware.wifi.supplicant.P2pDeviceFoundEventParams;
 import android.hardware.wifi.supplicant.P2pGroupStartedEventParams;
 import android.hardware.wifi.supplicant.P2pProvDiscStatusCode;
+import android.hardware.wifi.supplicant.P2pProvisionDiscoveryCompletedEventParams;
 import android.hardware.wifi.supplicant.P2pStatusCode;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.hardware.wifi.supplicant.WpsDevPasswordId;
@@ -581,6 +583,63 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
         assertEquals(WifiP2pProvDiscEvent.PBC_REQ, discEventCaptor.getValue().event);
     }
 
+    /**
+     * Test provision discovery completed callback.
+     */
+    @Test
+    public void testOnProvisionDiscoveryCompletedEvent() throws Exception {
+        P2pProvisionDiscoveryCompletedEventParams params =
+                new P2pProvisionDiscoveryCompletedEventParams();
+        params.p2pDeviceAddress = DEVICE_ADDRESS;
+        params.isRequest = false;
+        params.status = P2pProvDiscStatusCode.SUCCESS;
+        params.configMethods = WpsConfigMethods.DISPLAY;
+        params.generatedPin = "12345678";
+        params.groupInterfaceName = null;
+
+        ArgumentCaptor<WifiP2pProvDiscEvent> discEventCaptor =
+                ArgumentCaptor.forClass(WifiP2pProvDiscEvent.class);
+        mDut.onProvisionDiscoveryCompletedEvent(params);
+        verify(mMonitor).broadcastP2pProvisionDiscoveryEnterPin(
+                anyString(), discEventCaptor.capture());
+        assertEquals(WifiP2pProvDiscEvent.ENTER_PIN, discEventCaptor.getValue().event);
+
+        params.configMethods = WpsConfigMethods.KEYPAD;
+        mDut.onProvisionDiscoveryCompletedEvent(params);
+        verify(mMonitor).broadcastP2pProvisionDiscoveryShowPin(
+                anyString(), discEventCaptor.capture());
+        assertEquals(WifiP2pProvDiscEvent.SHOW_PIN, discEventCaptor.getValue().event);
+        assertEquals("12345678", discEventCaptor.getValue().pin);
+
+        params.isRequest = true;
+        params.configMethods = WpsConfigMethods.KEYPAD;
+        mDut.onProvisionDiscoveryCompletedEvent(params);
+        verify(mMonitor, times(2)).broadcastP2pProvisionDiscoveryEnterPin(
+                anyString(), discEventCaptor.capture());
+        assertEquals(WifiP2pProvDiscEvent.ENTER_PIN, discEventCaptor.getValue().event);
+
+        params.configMethods = WpsConfigMethods.DISPLAY;
+        mDut.onProvisionDiscoveryCompletedEvent(params);
+        verify(mMonitor, times(2)).broadcastP2pProvisionDiscoveryShowPin(
+                anyString(), discEventCaptor.capture());
+        assertEquals(WifiP2pProvDiscEvent.SHOW_PIN, discEventCaptor.getValue().event);
+        assertEquals("12345678", discEventCaptor.getValue().pin);
+
+        params.isRequest = false;
+        params.configMethods = WpsConfigMethods.PUSHBUTTON;
+        mDut.onProvisionDiscoveryCompletedEvent(params);
+        verify(mMonitor).broadcastP2pProvisionDiscoveryPbcResponse(
+                anyString(), discEventCaptor.capture());
+        assertEquals(WifiP2pProvDiscEvent.PBC_RSP, discEventCaptor.getValue().event);
+
+        params.isRequest = true;
+        params.groupInterfaceName = "group name";
+        mDut.onProvisionDiscoveryCompletedEvent(params);
+        verify(mMonitor).broadcastP2pProvisionDiscoveryPbcRequest(
+                anyString(), discEventCaptor.capture());
+        assertEquals(WifiP2pProvDiscEvent.PBC_REQ, discEventCaptor.getValue().event);
+    }
+
     private void verifyProvisionDiscoveryFailureEvent(
             int halStatus, int expectedStatus) throws Exception {
         byte[] p2pDeviceAddr = DEVICE_ADDRESS;
@@ -893,6 +952,42 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
                 mTestDeviceName, mTestConfigMethods,
                 mTestCapabilities, mTestGroupCapabilities,
                 mDeviceInfoBytes, null, testVsieBytes);
+        ArgumentCaptor<WifiP2pDevice> p2pDeviceCaptor =
+                ArgumentCaptor.forClass(WifiP2pDevice.class);
+        verify(mMonitor).broadcastP2pDeviceFound(eq(mIface), p2pDeviceCaptor.capture());
+
+        assertInformationElementListEquals(
+                expectedVsieList, p2pDeviceCaptor.getValue().getVendorElements());
+    }
+
+    /**
+     * Test a successful call to testOnDeviceFoundWithParams.
+     */
+    @Test
+    public void testOnDeviceFoundWithParams() throws Exception {
+        byte[] testVsieBytes = {
+                (byte) ScanResult.InformationElement.EID_VSA, 4, 0x1, 0x2, 0x3, 0x0,
+                (byte) ScanResult.InformationElement.EID_VSA, 4, 0x1, 0x2, 0x3, 0x1};
+        ArrayList<ScanResult.InformationElement> expectedVsieList = new ArrayList<>();
+        expectedVsieList.add(new ScanResult.InformationElement(
+                ScanResult.InformationElement.EID_VSA, 0, new byte[]{0x1, 0x2, 0x3, 0x0}));
+        expectedVsieList.add(new ScanResult.InformationElement(
+                ScanResult.InformationElement.EID_VSA, 0, new byte[]{0x1, 0x2, 0x3, 0x1}));
+
+        P2pDeviceFoundEventParams params = new P2pDeviceFoundEventParams();
+        params.srcAddress = mDeviceAddress1Bytes;
+        params.p2pDeviceAddress = mDeviceAddress2Bytes;
+        params.primaryDeviceType = mTestPrimaryDeviceTypeBytes;
+        params.deviceName = mTestDeviceName;
+        params.configMethods = mTestConfigMethods;
+        params.deviceCapabilities = mTestCapabilities;
+        params.groupCapabilities = mTestGroupCapabilities;
+        params.wfdDeviceInfo = mDeviceInfoBytes;
+        params.wfdR2DeviceInfo = null;
+        params.vendorElemBytes = testVsieBytes;
+        params.vendorData = null;
+
+        mDut.onDeviceFoundWithParams(params);
         ArgumentCaptor<WifiP2pDevice> p2pDeviceCaptor =
                 ArgumentCaptor.forClass(WifiP2pDevice.class);
         verify(mMonitor).broadcastP2pDeviceFound(eq(mIface), p2pDeviceCaptor.capture());

@@ -243,8 +243,6 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         when(mSettingsConfigStore.get(
                 eq(WIFI_NATIVE_SUPPORTED_STA_BANDS))).thenReturn(
                 TEST_SUPPORTED_BANDS);
-        // Default force that WEP is deprecated since the feature set is opposite to the API value.
-        when(mWifiGlobals.isWepDeprecated()).thenReturn(true);
         // Default force that WPA Personal is deprecated since the feature set is opposite to the
         // API value.
         when(mWifiGlobals.isWpaPersonalDeprecated()).thenReturn(true);
@@ -1562,6 +1560,54 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         });
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_WIFI_ENABLED), anyInt(), anyInt(),
                 anyInt(), eq("android_apm"), eq(false));
+    }
+
+    /** Wi-Fi state is restored properly when SoftAp is enabled during airplane mode. */
+    @Test
+    public void testWifiStateRestoredWhenSoftApEnabledDuringApm() throws Exception {
+        enableWifi();
+        assertInEnabledState();
+
+        // enabling airplane mode shuts down wifi
+        assertWifiShutDown(
+                () -> {
+                    when(mSettingsStore.isAirplaneModeOn()).thenReturn(true);
+                    mActiveModeWarden.airplaneModeToggled();
+                    mLooper.dispatchAll();
+                });
+        verify(mLastCallerInfoManager)
+                .put(
+                        eq(WifiManager.API_WIFI_ENABLED),
+                        anyInt(),
+                        anyInt(),
+                        anyInt(),
+                        eq("android_apm"),
+                        eq(false));
+        mClientListener.onStopped(mClientModeManager);
+        mLooper.dispatchAll();
+
+        // start SoftAp
+        mActiveModeWarden.startSoftAp(
+                new SoftApModeConfiguration(
+                        WifiManager.IFACE_IP_MODE_LOCAL_ONLY,
+                        null,
+                        mSoftApCapability,
+                        TEST_COUNTRYCODE),
+                TEST_WORKSOURCE);
+        mLooper.dispatchAll();
+
+        // disabling airplane mode enables wifi
+        when(mSettingsStore.isAirplaneModeOn()).thenReturn(false);
+        mActiveModeWarden.airplaneModeToggled();
+        mLooper.dispatchAll();
+        verify(mLastCallerInfoManager)
+                .put(
+                        eq(WifiManager.API_WIFI_ENABLED),
+                        anyInt(),
+                        anyInt(),
+                        anyInt(),
+                        eq("android_apm"),
+                        eq(true));
     }
 
     /**
@@ -5205,7 +5251,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
 
     @Test
     public void testWepNotDeprecated() throws Exception {
-        when(mWifiGlobals.isWepDeprecated()).thenReturn(false);
+        when(mWifiGlobals.isWepSupported()).thenReturn(true);
         enterClientModeActiveState(false, TEST_FEATURE_SET | WifiManager.WIFI_FEATURE_WEP);
     }
 

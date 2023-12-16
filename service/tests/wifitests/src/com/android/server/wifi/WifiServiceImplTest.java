@@ -20,6 +20,7 @@ import static android.Manifest.permission.ACCESS_WIFI_STATE;
 import static android.Manifest.permission.MANAGE_WIFI_COUNTRY_CODE;
 import static android.Manifest.permission.WIFI_ACCESS_COEX_UNSAFE_CHANNELS;
 import static android.Manifest.permission.WIFI_UPDATE_COEX_UNSAFE_CHANNELS;
+import static android.content.Intent.ACTION_SHUTDOWN;
 import static android.net.wifi.ScanResult.WIFI_BAND_60_GHZ;
 import static android.net.wifi.ScanResult.WIFI_BAND_6_GHZ;
 import static android.net.wifi.WifiAvailableChannel.FILTER_REGULATORY;
@@ -70,6 +71,7 @@ import static com.android.server.wifi.WifiSettingsConfigStore.SHOW_DIALOG_WHEN_T
 import static com.android.server.wifi.WifiSettingsConfigStore.SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_STA_FACTORY_MAC_ADDRESS;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_VERBOSE_LOGGING_ENABLED;
+import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_WEP_ALLOWED;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -618,6 +620,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mScanRequestProxy.startScan(anyInt(), anyString())).thenReturn(true);
         when(mLohsCallback.asBinder()).thenReturn(mock(IBinder.class));
         when(mWifiSettingsConfigStore.get(eq(WIFI_VERBOSE_LOGGING_ENABLED))).thenReturn(true);
+        when(mWifiSettingsConfigStore.get(
+                eq(SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API)))
+                .thenReturn(false);
         when(mWifiPermissionsUtil.isSystem(anyString(), anyInt())).thenReturn(false);
         when(mActiveModeWarden.getClientModeManagersInRoles(
                 ROLE_CLIENT_LOCAL_ONLY, ROLE_CLIENT_SECONDARY_LONG_LIVED))
@@ -662,6 +667,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
             }
         }).when(mMakeBeforeBreakManager).stopAllSecondaryTransientClientModeManagers(any());
 
+        when(mWifiSettingsConfigStore.get(eq(WIFI_WEP_ALLOWED))).thenReturn(true);
         mWifiServiceImpl = makeWifiServiceImpl();
         mDppCallback = new IDppCallback() {
             @Override
@@ -871,9 +877,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetWifiEnabledMetricsNormalAppBelowQSdk() throws Exception {
-        when(mWifiSettingsConfigStore.get(
-                eq(SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API)))
-                .thenReturn(false);
         doReturn(AppOpsManager.MODE_ALLOWED).when(mAppOpsManager)
                 .noteOp(AppOpsManager.OPSTR_CHANGE_WIFI_STATE, Process.myUid(), TEST_PACKAGE_NAME);
         when(mWifiPermissionsUtil.isTargetSdkLessThan(anyString(),
@@ -983,9 +986,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetWifiEnabledSuccessForAppsTargetingBelowQSdk() throws Exception {
-        when(mWifiSettingsConfigStore.get(
-                eq(SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API)))
-                .thenReturn(false);
         doReturn(AppOpsManager.MODE_ALLOWED).when(mAppOpsManager)
                 .noteOp(AppOpsManager.OPSTR_CHANGE_WIFI_STATE, Process.myUid(), TEST_PACKAGE_NAME);
         when(mWifiPermissionsUtil.isTargetSdkLessThan(anyString(),
@@ -1156,9 +1156,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetWifiEnabledDialogForThirdPartyAppsTargetingBelowQSdk() throws Exception {
-        when(mWifiSettingsConfigStore.get(
-                eq(SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API)))
-                .thenReturn(false);
         when(mResources.getBoolean(
                 R.bool.config_showConfirmationDialogForThirdPartyAppsEnablingWifi))
                 .thenReturn(true);
@@ -1325,9 +1322,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetWifiEnabledNoDialogForNonThirdPartyAppsTargetingBelowQSdk() {
-        when(mWifiSettingsConfigStore.get(
-                eq(SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API)))
-                .thenReturn(false);
         when(mResources.getBoolean(
                 R.bool.config_showConfirmationDialogForThirdPartyAppsEnablingWifi))
                 .thenReturn(true);
@@ -1386,10 +1380,10 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     /**
-     * Verify that a call from an app cannot enable wifi if we are in softap mode.
+     * Verify that a call from an app cannot enable wifi if we are in softap mode for Pre-S
      */
     @Test
-    public void testSetWifiEnabledFromAppFailsWhenApEnabled() throws Exception {
+    public void testSetWifiEnabledFromAppFailsWhenApEnabledForPreS() throws Exception {
         doReturn(AppOpsManager.MODE_ALLOWED).when(mAppOpsManager)
                 .noteOp(AppOpsManager.OPSTR_CHANGE_WIFI_STATE, Process.myUid(), TEST_PACKAGE_NAME);
         when(mWifiPermissionsUtil.isTargetSdkLessThan(anyString(),
@@ -1405,9 +1399,16 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 eq(android.Manifest.permission.NETWORK_SETTINGS), anyInt(), anyInt()))
                 .thenReturn(PackageManager.PERMISSION_DENIED);
         when(mSettingsStore.isAirplaneModeOn()).thenReturn(false);
-        assertFalse(mWifiServiceImpl.setWifiEnabled(TEST_PACKAGE_NAME, true));
-        verify(mSettingsStore, never()).handleWifiToggled(anyBoolean());
-        verify(mActiveModeWarden, never()).wifiToggled(any());
+        when(mSettingsStore.handleWifiToggled(eq(true))).thenReturn(true);
+        if (!SdkLevel.isAtLeastS()) {
+            assertFalse(mWifiServiceImpl.setWifiEnabled(TEST_PACKAGE_NAME, true));
+            verify(mSettingsStore, never()).handleWifiToggled(anyBoolean());
+            verify(mActiveModeWarden, never()).wifiToggled(any());
+        } else {
+            assertTrue(mWifiServiceImpl.setWifiEnabled(TEST_PACKAGE_NAME, true));
+            verify(mActiveModeWarden).wifiToggled(
+                    eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
+        }
     }
 
 
@@ -1902,7 +1903,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mWifiConfigManager).loadFromStore();
         verify(mActiveModeWarden).start();
         verify(mActiveModeWarden, never()).wifiToggled(any());
-        verify(mWifiDeviceStateChangeManager).handleBootCompleted();
     }
 
     @Test
@@ -1934,7 +1934,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiConfigManager).loadFromStore();
         verify(mActiveModeWarden).start();
-        verify(mWifiDeviceStateChangeManager).handleBootCompleted();
     }
 
     @Test
@@ -1958,6 +1957,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Test
     public void testSetPulledAtomCallbacks() {
         mWifiServiceImpl.checkAndStartWifi();
+        mWifiServiceImpl.handleBootCompleted();
         mLooper.dispatchAll();
         verify(mWifiPulledAtomLogger).setPullAtomCallback(WifiStatsLog.WIFI_MODULE_INFO);
         verify(mWifiPulledAtomLogger).setPullAtomCallback(WifiStatsLog.WIFI_SETTING_INFO);
@@ -8454,6 +8454,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mPasspointManager).initializeProvisioner(any());
         verify(mWifiP2pConnection).handleBootCompleted();
         verify(mWifiCountryCode).registerListener(any(WifiCountryCode.ChangeListener.class));
+        verify(mWifiDeviceStateChangeManager).handleBootCompleted();
     }
 
     /**
@@ -11796,5 +11797,82 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         // check that we let the AFC Manager know that the country code has changed
         verify(mAfcManager).onCountryCodeChange(newCountryCode);
+    }
+
+    @Test
+    public void testShutDownHandling() {
+        mWifiServiceImpl.checkAndStartWifi();
+        mWifiServiceImpl.handleBootCompleted();
+        mLooper.dispatchAll();
+        verify(mContext).registerReceiver(mBroadcastReceiverCaptor.capture(),
+                argThat((IntentFilter filter) ->
+                        filter.hasAction(ACTION_SHUTDOWN)),
+                isNull(),
+                any(Handler.class));
+        Intent intent = new Intent(ACTION_SHUTDOWN);
+        mBroadcastReceiverCaptor.getValue().onReceive(mContext, intent);
+        verify(mActiveModeWarden).notifyShuttingDown();
+        verify(mWifiScoreCard).resetAllConnectionStates();
+        verify(mWifiConfigManager).handleShutDown();
+    }
+
+    @Test(expected = SecurityException.class)
+    public void testSetWepAllowedWithoutPermission() {
+        // by default no permissions are given so the call should fail.
+        mWifiServiceImpl.setWepAllowed(true);
+    }
+
+    @Test
+    public void testSetWepAllowedWithPermission() {
+        when(mWifiSettingsConfigStore.get(eq(WIFI_WEP_ALLOWED))).thenReturn(false);
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).get(eq(WIFI_WEP_ALLOWED));
+        verify(mWifiGlobals).setWepAllowed(eq(false));
+        // verify setWepAllowed with MANAGE_WIFI_NETWORK_SELECTION
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
+        mWifiServiceImpl.setWepAllowed(true);
+        mLooper.dispatchAll();
+        verify(mWifiGlobals).setWepAllowed(true);
+        verify(mWifiSettingsConfigStore).put(eq(WIFI_WEP_ALLOWED), eq(true));
+
+        mWifiServiceImpl.setWepAllowed(false);
+        mLooper.dispatchAll();
+        verify(mWifiGlobals, times(2)).setWepAllowed(false);
+        verify(mWifiSettingsConfigStore).put(eq(WIFI_WEP_ALLOWED), eq(false));
+    }
+
+    @Test
+    public void testQueryWepAllowedExceptionCases() {
+        // null listener ==> IllegalArgumentException
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.queryWepAllowed(null));
+        // by default no permissions are given so the call should fail.
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.queryWepAllowed(mock(IBooleanListener.class)));
+    }
+
+    @Test
+    public void testQueryWepAllowedNormalCase() throws Exception {
+        when(mWifiSettingsConfigStore.get(eq(WIFI_WEP_ALLOWED))).thenReturn(false);
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).get(eq(WIFI_WEP_ALLOWED));
+        verify(mWifiGlobals).setWepAllowed(eq(false));
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
+        IBooleanListener listener = mock(IBooleanListener.class);
+
+        InOrder inOrder = inOrder(listener);
+        when(mWifiSettingsConfigStore.get(eq(WIFI_WEP_ALLOWED))).thenReturn(true);
+        mWifiServiceImpl.queryWepAllowed(listener);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore, times(2)).get(eq(WIFI_WEP_ALLOWED));
+        inOrder.verify(listener).onResult(true);
+
+        when(mWifiSettingsConfigStore.get(eq(WIFI_WEP_ALLOWED))).thenReturn(false);
+        mWifiServiceImpl.queryWepAllowed(listener);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore, times(3)).get(eq(WIFI_WEP_ALLOWED));
+        inOrder.verify(listener).onResult(false);
     }
 }

@@ -277,6 +277,7 @@
           <item type="integer" name="config_wifiMaxNumWifiConfigurations" />
           <item type="integer" name="config_wifiMaxNumWifiConfigurationsAddedByAllApps" />
           <item type="bool" name="config_wifiAllowInsecureEnterpriseConfigurationsForSettingsAndSUW" />
+          <item type="bool" name="config_wifiAllowMultiInternetConnectDual5GFrequency" />
           <item type="integer" name="config_wifiConnectivityLocalLogMaxLinesLowRam" />
           <item type="integer" name="config_wifiConnectivityLocalLogMaxLinesHighRam" />
           <item type="integer" name="config_wifiClientModeImplNumLogRecs" />
@@ -333,6 +334,7 @@
           <item type="bool" name ="config_aware_vdbg_enable_on_verbose_logging" />
           <item type="bool" name="config_wifiSofapHalMapWpa3TransitionModeToWpa3OnlyIn6GHzBand" />
           <item type="bool" name ="config_wifiRemainConnectedAfterIpProvisionTimeout" />
+          <item type="bool" name ="config_wifiDisableNudDisconnectsForWapiInSpecificCc" />
 
           <!-- Params from config.xml that can be overlayed -->
 

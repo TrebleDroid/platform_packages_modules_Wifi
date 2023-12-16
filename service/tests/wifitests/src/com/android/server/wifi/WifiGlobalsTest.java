@@ -244,4 +244,35 @@ public class WifiGlobalsTest extends WifiBaseTest {
         mWifiGlobals = new WifiGlobals(mContext);
         assertNull(mWifiGlobals.getAfcServerUrlsForCountry("US"));
     }
+
+    @Test
+    public void testSetWepAllowedWhenWepIsDeprecated() {
+        mResources.setBoolean(R.bool.config_wifiWepDeprecated, true);
+        mWifiGlobals = new WifiGlobals(mContext);
+        assertTrue(mWifiGlobals.isWepDeprecated());
+        assertFalse(mWifiGlobals.isWepSupported());
+
+        mWifiGlobals.setWepAllowed(true);
+        assertTrue(mWifiGlobals.isWepDeprecated());
+        assertTrue(mWifiGlobals.isWepAllowed());
+
+        mWifiGlobals.setWepAllowed(false);
+        assertTrue(mWifiGlobals.isWepDeprecated());
+        assertFalse(mWifiGlobals.isWepAllowed());
+    }
+
+    @Test
+    public void testSetWepAllowedWhenWepIsNotDeprecated() {
+        assertTrue(mWifiGlobals.isWepSupported());
+        // Default is not allow
+        assertFalse(mWifiGlobals.isWepAllowed());
+        assertTrue(mWifiGlobals.isWepDeprecated());
+        mWifiGlobals.setWepAllowed(true);
+        assertFalse(mWifiGlobals.isWepDeprecated());
+        assertTrue(mWifiGlobals.isWepAllowed());
+
+        mWifiGlobals.setWepAllowed(false);
+        assertTrue(mWifiGlobals.isWepDeprecated());
+        assertFalse(mWifiGlobals.isWepAllowed());
+    }
 }

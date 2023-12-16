@@ -29,6 +29,9 @@ import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_OWE;
 import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_OWE_TRANSITION;
 import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_SAE;
 
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -52,6 +55,7 @@ import android.util.SparseIntArray;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.SoftApManager;
 import com.android.server.wifi.WifiNative;
+import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.coex.CoexManager;
 import com.android.wifi.resources.R;
 
@@ -1001,6 +1005,27 @@ public class ApConfigUtil {
     }
 
     /**
+     * Helper function to update SoftApCapability instance based on config store.
+     *
+     * @param capability the original softApCapability
+     * @param configStore where we stored the Capability after first time fetch from driver.
+     * @return SoftApCapability which updated from the config store.
+     */
+    @NonNull
+    public static SoftApCapability updateCapabilityFromConfigStore(
+            SoftApCapability capability,
+            WifiSettingsConfigStore configStore) {
+        if (capability == null) {
+            return null;
+        }
+        if (capability.areFeaturesSupported(SOFTAP_FEATURE_IEEE80211_BE)) {
+            capability.setSupportedFeatures(isIeee80211beEnabledInConfig(configStore),
+                    SOFTAP_FEATURE_IEEE80211_BE);
+        }
+        return capability;
+    }
+
+    /**
      * Helper function to get device support 802.11 AX on Soft AP or not
      *
      * @param context the caller context used to get value from resource file.
@@ -1023,6 +1048,18 @@ public class ApConfigUtil {
     }
 
     /**
+     * Helper function to check Config supports 802.11 BE on Soft AP or not
+     *
+     * @param configStore to check the support from WifiSettingsConfigStore
+     * @return true if supported, false otherwise.
+     */
+    public static boolean isIeee80211beEnabledInConfig(
+            WifiSettingsConfigStore configStore) {
+        return configStore.get(
+                    WifiSettingsConfigStore.WIFI_WIPHY_11BE_SUPPORTED);
+    }
+
+    /**
      * Helper function to get device support AP MAC randomization or not.
      *
      * @param context the caller context used to get value from resource file.
@@ -1037,22 +1074,33 @@ public class ApConfigUtil {
      * Helper function to get HAL support bridged AP or not.
      *
      * @param context the caller context used to get value from resource file.
+     * @param wifiNative to get the Iface combination from device.
      * @return true if supported, false otherwise.
      */
-    public static boolean isBridgedModeSupported(@NonNull Context context) {
+    public static boolean isBridgedModeSupported(
+            @NonNull Context context, @NonNull WifiNative wifiNative) {
         return SdkLevel.isAtLeastS() && context.getResources().getBoolean(
-                    R.bool.config_wifiBridgedSoftApSupported);
+                    R.bool.config_wifiBridgedSoftApSupported)
+                    && wifiNative.canDeviceSupportCreateTypeCombo(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                        }});
     }
 
     /**
      * Helper function to get HAL support STA + bridged AP or not.
      *
      * @param context the caller context used to get value from resource file.
+     * @param wifiNative to get the Iface combination from device.
      * @return true if supported, false otherwise.
      */
-    public static boolean isStaWithBridgedModeSupported(@NonNull Context context) {
+    public static boolean isStaWithBridgedModeSupported(
+            @NonNull Context context, @NonNull WifiNative wifiNative) {
         return SdkLevel.isAtLeastS() && context.getResources().getBoolean(
-                    R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported);
+                    R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported)
+                    && wifiNative.canDeviceSupportCreateTypeCombo(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                            put(HDM_CREATE_IFACE_STA, 1);
+                        }});
     }
 
     /**

@@ -377,10 +377,12 @@
     <!-- Indicates that AP mode MAC randomization is supported on this device -->
     <bool translatable="false" name="config_wifi_ap_mac_randomization_supported">true</bool>
 
-    <!-- Indicates that bridged AP mode is supported on this device -->
+    <!-- Indicates that bridged AP mode is supported on this device provided that
+     the device interface combination allows for it -->
     <bool translatable="false" name="config_wifiBridgedSoftApSupported">false</bool>
 
-    <!-- Indicates that STA + bridged AP concurrency mode is supported on this device -->
+    <!-- Indicates that STA + bridged AP concurrency mode is supported on this device provided
+     that the device interface combination allows for it-->
     <bool translatable="false" name="config_wifiStaWithBridgedSoftApConcurrencySupported">false</bool>
 
     <!-- Indicates that dynamic country code update in AP mode is supported on this device -->
@@ -985,6 +987,9 @@
          name. It is STRONGLY RECOMMENDED to be set to false -->
     <bool translatable="false" name="config_wifiAllowInsecureEnterpriseConfigurationsForSettingsAndSUW">false</bool>
 
+    <!-- Configuration that allows Multi-internet to connect simultaneously to both 5GHz high and 5GHz low -->
+    <bool translatable="false" name="config_wifiAllowMultiInternetConnectDual5GFrequency">false</bool>
+
     <!-- Indicate the max lines for connectivity local log based on the device ram size -->
     <integer translatable="false" name="config_wifiConnectivityLocalLogMaxLinesLowRam">256</integer>
     <integer translatable="false" name="config_wifiConnectivityLocalLogMaxLinesHighRam">512</integer>
@@ -1259,4 +1264,10 @@
         connection will not be torn down if the DHCP server does not respond. As a result the device
         will be discoverable and reachable via the local-only IPv6 address. -->
     <bool translatable="false" name ="config_wifiRemainConnectedAfterIpProvisionTimeout">false</bool>
+    <!-- Boolean indicating whether to disable disconnects on NUD failures. Such a configuration
+         is limited to WAPI and to a specific country code.
+     true: do not disconnect IF the connection type is WAPI and in the specific country code
+           regulatory domain.
+     false: disconnect on NUD failures (normal/default action). -->
+    <bool translatable="false" name ="config_wifiDisableNudDisconnectsForWapiInSpecificCc">false</bool>
 </resources>
