@@ -178,6 +178,8 @@
           <item type="integer" name="config_wifiDisableReasonByWrongPasswordDurationMs" />
           <item type="integer" name="config_wifiDisableReasonAuthenticationNoSubscriptionDurationMs" />
           <item type="integer" name="config_wifiDisableReasonConsecutiveFailuresDurationMs" />
+          <item type="integer" name="config_wifiDisableReasonRepeatedNudFailuresThreshold" />
+          <item type="integer" name="config_wifiDisableReasonRepeatedNudFailuresWindowMs" />
 
           <item type="integer" name="config_wifiBssidBlocklistMonitorApUnableToHandleNewStaThreshold" />
           <item type="integer" name="config_wifiBssidBlocklistMonitorNetworkValidationFailureThreshold" />

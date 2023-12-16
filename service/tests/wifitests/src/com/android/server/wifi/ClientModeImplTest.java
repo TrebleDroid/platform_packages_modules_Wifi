@@ -691,6 +691,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         when(mWifiGlobals.getPollRssiIntervalMillis()).thenReturn(3000);
         when(mWifiGlobals.getIpReachabilityDisconnectEnabled()).thenReturn(true);
+        when(mWifiGlobals.getRepeatedNudFailuresThreshold()).thenReturn(Integer.MAX_VALUE);
 
         when(mFrameworkFacade.getIntegerSetting(mContext,
                 Settings.Global.WIFI_FREQUENCY_BAND,
@@ -7570,6 +7571,57 @@ public class ClientModeImplTest extends WifiBaseTest {
                 new ReachabilityLossInfoParcelable("", ReachabilityLossReason.ORGANIC);
         mIpClientCallback.onReachabilityFailure(lossInfo);
         mLooper.dispatchAll();
+        verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
+    }
+
+    /**
+     * Verify that when HandleRssiOrganicKernelFailuresEnabled, multiple IP reachability failures
+     * within a specified time window will lead to disconnect and network disabled.
+     */
+    @Test
+    public void testRepeatedIpReachabilityFailureDisableNetwork() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastU());
+        when(mDeviceConfigFacade.isHandleRssiOrganicKernelFailuresEnabled()).thenReturn(true);
+        int failureThreshold = 5;
+        int failureWindowMs = 60000;
+        when(mWifiGlobals.getRepeatedNudFailuresThreshold()).thenReturn(failureThreshold);
+        when(mWifiGlobals.getRepeatedNudFailuresWindowMs()).thenReturn(failureWindowMs);
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(0L);
+
+        connect();
+        expectRegisterNetworkAgent((agentConfig) -> { }, (cap) -> { });
+        reset(mWifiNetworkAgent);
+
+        for (int i = 0; i < failureThreshold; i++) {
+            // increment time outside the failure window. Failure counter should never add up and
+            // thus not trigger blocking.
+            when(mClock.getElapsedSinceBootMillis()).thenReturn(
+                    (long) (i + 1) * (failureWindowMs + 1));
+            verify(mWifiNative, never()).disconnect(WIFI_IFACE_NAME);
+            verify(mWifiConfigManager, never()).updateNetworkSelectionStatus(anyInt(),
+                    eq(WifiConfiguration.NetworkSelectionStatus.DISABLED_REPEATED_NUD_FAILURES));
+            ReachabilityLossInfoParcelable lossInfo =
+                    new ReachabilityLossInfoParcelable("", ReachabilityLossReason.ORGANIC);
+            mIpClientCallback.onReachabilityFailure(lossInfo);
+            mLooper.dispatchAll();
+        }
+
+        // Now trigger NUD failure within the failure window and verify the network is blocked.
+        for (int i = 0; i < failureThreshold - 1; i++) {
+            when(mClock.getElapsedSinceBootMillis()).thenReturn(
+                    (long) (i + failureThreshold + 1) * (failureWindowMs));
+            verify(mWifiNative, never()).disconnect(WIFI_IFACE_NAME);
+            verify(mWifiConfigManager, never()).updateNetworkSelectionStatus(anyInt(),
+                    eq(WifiConfiguration.NetworkSelectionStatus.DISABLED_REPEATED_NUD_FAILURES));
+            ReachabilityLossInfoParcelable lossInfo =
+                    new ReachabilityLossInfoParcelable("", ReachabilityLossReason.ORGANIC);
+            mIpClientCallback.onReachabilityFailure(lossInfo);
+            mLooper.dispatchAll();
+        }
+
+        // Should disconnect and block network after the last iteration.
+        verify(mWifiConfigManager).updateNetworkSelectionStatus(anyInt(),
+                eq(WifiConfiguration.NetworkSelectionStatus.DISABLED_REPEATED_NUD_FAILURES));
         verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
     }
 
