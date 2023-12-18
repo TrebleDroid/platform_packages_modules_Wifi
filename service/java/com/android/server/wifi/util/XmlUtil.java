@@ -424,7 +424,7 @@ public class XmlUtil {
             EncryptedData[] encryptedDataArray = new EncryptedData[len];
             for (int i = 0; i < len; i++) {
                 if (wepKeys[i] == null) {
-                    encryptedDataArray[i] = new EncryptedData(null, null);
+                    encryptedDataArray[i] = new EncryptedData(new byte[0], new byte[0]);
                 } else {
                     encryptedDataArray[i] = encryptionUtil.encrypt(wepKeys[i].getBytes());
                     if (encryptedDataArray[i] == null) {
@@ -735,7 +735,12 @@ public class XmlUtil {
             List<String> wepKeyList = new ArrayList<>();
             final List<EncryptedData> encryptedDataList =
                     XmlUtil.EncryptedDataXmlUtil.parseListFromXml(in, outerTagDepth);
+            EncryptedData emptyData = new EncryptedData(new byte[0], new byte[0]);
             for (int i = 0; i < encryptedDataList.size(); i++) {
+                if (encryptedDataList.get(i).equals(emptyData)) {
+                    wepKeyList.add(null);
+                    continue;
+                }
                 byte[] passphraseBytes = encryptionUtil.decrypt(encryptedDataList.get(i));
                 if (passphraseBytes == null) {
                     Log.wtf(TAG, "Decryption of passphraseBytes failed");
