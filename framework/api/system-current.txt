@@ -745,6 +745,7 @@ package android.net.wifi {
     field public static final int API_P2P_DISCOVER_PEERS = 21; // 0x15
     field public static final int API_P2P_DISCOVER_PEERS_ON_SOCIAL_CHANNELS = 22; // 0x16
     field public static final int API_P2P_DISCOVER_PEERS_ON_SPECIFIC_FREQUENCY = 23; // 0x17
+    field @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final int API_P2P_DISCOVER_PEERS_WITH_CONFIG_PARAMS = 37; // 0x25
     field public static final int API_P2P_REMOVE_GROUP = 29; // 0x1d
     field public static final int API_P2P_SET_CHANNELS = 32; // 0x20
     field public static final int API_P2P_START_LISTENING = 30; // 0x1e
@@ -1455,6 +1456,14 @@ package android.net.wifi.p2p {
 
   public static final class WifiP2pConfig.Builder {
     method @NonNull public android.net.wifi.p2p.WifiP2pConfig.Builder setJoinExistingGroup(boolean);
+  }
+
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public final class WifiP2pDiscoveryConfig implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
+  }
+
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final class WifiP2pDiscoveryConfig.Builder {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.p2p.WifiP2pDiscoveryConfig.Builder setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
   }
 
   public final class WifiP2pGroupList implements android.os.Parcelable {

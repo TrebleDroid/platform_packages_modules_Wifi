@@ -17,6 +17,7 @@
 package android.net.wifi.p2p;
 
 import android.annotation.CallbackExecutor;
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -224,6 +225,13 @@ public class WifiP2pManager {
      */
     public static final String EXTRA_PARAM_KEY_INFORMATION_ELEMENT_LIST =
             "android.net.wifi.p2p.EXTRA_PARAM_KEY_INFORMATION_ELEMENT_LIST";
+
+    /**
+     * Extra for transporting discovery config with vendor-specific data
+     * @hide
+     */
+    public static final String EXTRA_PARAM_KEY_DISCOVERY_CONFIG =
+            "android.net.wifi.p2p.EXTRA_PARAM_KEY_DISCOVERY_CONFIG";
 
     /**
      * Key for transporting a bundle of extra information.
@@ -522,21 +530,28 @@ public class WifiP2pManager {
 
     /**
      * Run P2P scan on all channels.
-     * @hide
      */
+    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
     public static final int WIFI_P2P_SCAN_FULL = 0;
 
     /**
      * Run P2P scan only on social channels.
-     * @hide
      */
+    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
     public static final int WIFI_P2P_SCAN_SOCIAL = 1;
 
     /**
      * Run P2P scan only on a specific channel.
+     */
+    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    public static final int WIFI_P2P_SCAN_SINGLE_FREQ = 2;
+
+    /**
+     * Run P2P scan with config Params.
      * @hide
      */
-    public static final int WIFI_P2P_SCAN_SINGLE_FREQ = 2;
+    public static final int WIFI_P2P_SCAN_WITH_CONFIG_PARAMS = 3;
+
 
     /** @hide */
     @IntDef(prefix = {"WIFI_P2P_SCAN_"}, value = {
@@ -1818,6 +1833,38 @@ public class WifiP2pManager {
         Bundle extras = prepareExtrasBundle(channel);
         extras.putInt(EXTRA_PARAM_KEY_PEER_DISCOVERY_FREQ, frequencyMhz);
         channel.mAsyncChannel.sendMessage(prepareMessage(DISCOVER_PEERS, WIFI_P2P_SCAN_SINGLE_FREQ,
+                channel.putListener(listener), extras, channel.mContext));
+    }
+
+    /**
+     * Initiate peer discovery. A discovery process involves scanning for available Wi-Fi peers
+     * for the purpose of establishing a connection. See {@link #discoverPeers} for more details.
+     *
+     * This method accepts a {@link WifiP2pDiscoveryConfig} object specifying the desired
+     * parameters for the peer discovery. The configuration object allows the specification of the
+     * scan type (ex. FULL, SOCIAL) and the inclusion of vendor-specific configuration data.
+     *
+     * @param channel is the channel created at {@link #initialize}
+     * @param config is the configuration for this peer discovery
+     * @param listener for callbacks on success or failure.
+     */
+    @RequiresPermission(allOf = {
+            android.Manifest.permission.NEARBY_WIFI_DEVICES,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+            }, conditional = true)
+    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    public void discoverPeers(
+            @NonNull Channel channel,
+            @Nullable WifiP2pDiscoveryConfig config,
+            @Nullable ActionListener listener) {
+        if (!isChannelConstrainedDiscoverySupported()) {
+            throw new UnsupportedOperationException();
+        }
+        checkChannel(channel);
+        Bundle extras = prepareExtrasBundle(channel);
+        extras.putParcelable(EXTRA_PARAM_KEY_DISCOVERY_CONFIG, config);
+        channel.mAsyncChannel.sendMessage(prepareMessage(DISCOVER_PEERS,
+                WIFI_P2P_SCAN_WITH_CONFIG_PARAMS,
                 channel.putListener(listener), extras, channel.mContext));
     }
 

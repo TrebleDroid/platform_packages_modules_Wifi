@@ -1299,6 +1299,20 @@ package android.net.wifi.p2p {
     field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.p2p.WifiP2pDeviceList> CREATOR;
   }
 
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public final class WifiP2pDiscoveryConfig implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public int getFrequencyMhz();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public int getScanType();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.p2p.WifiP2pDiscoveryConfig> CREATOR;
+  }
+
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final class WifiP2pDiscoveryConfig.Builder {
+    ctor @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public WifiP2pDiscoveryConfig.Builder(int);
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.p2p.WifiP2pDiscoveryConfig build();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.p2p.WifiP2pDiscoveryConfig.Builder setFrequencyMhz(@IntRange(from=0) int);
+  }
+
   public class WifiP2pGroup implements android.os.Parcelable {
     ctor public WifiP2pGroup();
     ctor public WifiP2pGroup(android.net.wifi.p2p.WifiP2pGroup);
@@ -1339,6 +1353,7 @@ package android.net.wifi.p2p {
     method @RequiresPermission(allOf={android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.ACCESS_FINE_LOCATION}, conditional=true) public void createGroup(android.net.wifi.p2p.WifiP2pManager.Channel, android.net.wifi.p2p.WifiP2pManager.ActionListener);
     method @RequiresPermission(allOf={android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.ACCESS_FINE_LOCATION}, conditional=true) public void createGroup(@NonNull android.net.wifi.p2p.WifiP2pManager.Channel, @Nullable android.net.wifi.p2p.WifiP2pConfig, @Nullable android.net.wifi.p2p.WifiP2pManager.ActionListener);
     method @RequiresPermission(allOf={android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.ACCESS_FINE_LOCATION}, conditional=true) public void discoverPeers(android.net.wifi.p2p.WifiP2pManager.Channel, android.net.wifi.p2p.WifiP2pManager.ActionListener);
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @RequiresPermission(allOf={android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.ACCESS_FINE_LOCATION}, conditional=true) public void discoverPeers(@NonNull android.net.wifi.p2p.WifiP2pManager.Channel, @Nullable android.net.wifi.p2p.WifiP2pDiscoveryConfig, @Nullable android.net.wifi.p2p.WifiP2pManager.ActionListener);
     method @RequiresPermission(allOf={android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.ACCESS_FINE_LOCATION}, conditional=true) public void discoverPeersOnSocialChannels(@NonNull android.net.wifi.p2p.WifiP2pManager.Channel, @Nullable android.net.wifi.p2p.WifiP2pManager.ActionListener);
     method @RequiresPermission(allOf={android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.ACCESS_FINE_LOCATION}, conditional=true) public void discoverPeersOnSpecificFrequency(@NonNull android.net.wifi.p2p.WifiP2pManager.Channel, int, @Nullable android.net.wifi.p2p.WifiP2pManager.ActionListener);
     method @RequiresPermission(allOf={android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.ACCESS_FINE_LOCATION}, conditional=true) public void discoverServices(android.net.wifi.p2p.WifiP2pManager.Channel, android.net.wifi.p2p.WifiP2pManager.ActionListener);
@@ -1398,6 +1413,9 @@ package android.net.wifi.p2p {
     field public static final int WIFI_P2P_LISTEN_STARTED = 2; // 0x2
     field public static final int WIFI_P2P_LISTEN_STOPPED = 1; // 0x1
     field public static final String WIFI_P2P_PEERS_CHANGED_ACTION = "android.net.wifi.p2p.PEERS_CHANGED";
+    field @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final int WIFI_P2P_SCAN_FULL = 0; // 0x0
+    field @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final int WIFI_P2P_SCAN_SINGLE_FREQ = 2; // 0x2
+    field @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final int WIFI_P2P_SCAN_SOCIAL = 1; // 0x1
     field public static final String WIFI_P2P_STATE_CHANGED_ACTION = "android.net.wifi.p2p.STATE_CHANGED";
     field public static final int WIFI_P2P_STATE_DISABLED = 1; // 0x1
     field public static final int WIFI_P2P_STATE_ENABLED = 2; // 0x2
