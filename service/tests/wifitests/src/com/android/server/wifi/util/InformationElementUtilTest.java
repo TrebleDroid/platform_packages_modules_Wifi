@@ -2519,11 +2519,10 @@ public class InformationElementUtilTest extends WifiBaseTest {
     }
 
     /**
-     * Verify that the expected EHT Operation information element is parsed and
-     * DisabledSubchannelBitmap is present.
+     * Verify that the expected EHT Operation information element is parsed correctly.
      */
     @Test
-    public void testEhtOperationElementWithDisabledSubchannelBitmapPresent() throws Exception {
+    public void testEhtOperationElement() throws Exception {
         InformationElement ie = new InformationElement();
         ie.id = InformationElement.EID_EXTENSION_PRESENT;
         ie.idExt = InformationElement.EID_EXT_EHT_OPERATION;
@@ -2549,8 +2548,28 @@ public class InformationElementUtilTest extends WifiBaseTest {
         ehtOperation.from(ie);
 
         assertTrue(ehtOperation.isPresent());
+        assertTrue(ehtOperation.isEhtOperationInfoPresent());
         assertTrue(ehtOperation.isDisabledSubchannelBitmapPresent());
         assertArrayEquals(new byte[]{(byte) 0x3, (byte) 0x0},
                 ehtOperation.getDisabledSubchannelBitmap());
+        assertEquals(ScanResult.CHANNEL_WIDTH_160MHZ, ehtOperation.getChannelWidth());
+        assertEquals(5250, ehtOperation.getCenterFreq0(ScanResult.WIFI_BAND_5_GHZ));
+        assertEquals(5250, ehtOperation.getCenterFreq0(ScanResult.WIFI_BAND_5_GHZ));
+
+        ie.bytes = new byte[]{(byte) 0x01, //EHT Operation Param
+                (byte) 0x44, (byte) 0x44, (byte) 0x44, (byte) 0x44, //EHT-MCS
+                (byte) 0x04, (byte) 0x2f, (byte) 0x1f}; //EHT Operation Info: Control, CCFS0, CCFS1
+
+        ehtOperation.from(ie);
+
+        assertTrue(ehtOperation.isPresent());
+        assertTrue(ehtOperation.isEhtOperationInfoPresent());
+        assertFalse(ehtOperation.isDisabledSubchannelBitmapPresent());
+        assertEquals(ScanResult.CHANNEL_WIDTH_320MHZ, ehtOperation.getChannelWidth());
+        // Center frequency of channel index 47 (0x2F), 160 Mhz
+        assertEquals(6185, ehtOperation.getCenterFreq0(ScanResult.WIFI_BAND_6_GHZ));
+        // Center frequency of channel index 31 (0x1F), 320 Mhz
+        assertEquals(6105, ehtOperation.getCenterFreq1(ScanResult.WIFI_BAND_6_GHZ));
+
     }
 }
