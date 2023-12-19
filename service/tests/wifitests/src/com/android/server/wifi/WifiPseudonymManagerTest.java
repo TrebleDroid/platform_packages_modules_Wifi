@@ -36,7 +36,8 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.os.Looper;
-import android.test.suitebuilder.annotation.SmallTest;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.server.wifi.entitlement.CarrierSpecificServiceEntitlement;
 import com.android.server.wifi.entitlement.PseudonymInfo;
