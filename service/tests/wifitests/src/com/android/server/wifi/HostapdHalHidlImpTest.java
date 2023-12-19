@@ -1321,9 +1321,9 @@ public class HostapdHalHidlImpTest extends WifiBaseTest {
         verify(mSoftApHalCallback).onInfoChanged(eq(TEST_AP_INSTANCE), eq(testFreq),
                 eq(mHostapdHal.mapHalBandwidthToSoftApInfo(testBandwidth)),
                 eq(mHostapdHal.mapHalGenerationToWifiStandard(testGeneration)),
-                eq(MacAddress.fromString(TEST_CLIENT_MAC)));
+                eq(MacAddress.fromString(TEST_CLIENT_MAC)), anyList());
         verify(mSoftApHalCallback1, never()).onInfoChanged(anyString(), anyInt(), anyInt(),
-                anyInt(), any());
+                anyInt(), any(), anyList());
 
         // Trigger on client connected.
         mIHostapdCallback13.onConnectedClientsChanged(IFACE_NAME, TEST_AP_INSTANCE,

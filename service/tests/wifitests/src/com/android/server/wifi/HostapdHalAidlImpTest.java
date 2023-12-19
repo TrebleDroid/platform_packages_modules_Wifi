@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -165,7 +166,7 @@ public class HostapdHalAidlImpTest extends WifiBaseTest {
             verify(mockSoftApHalCallback).onInfoChanged(eq(TEST_AP_INSTANCE), eq(TEST_FREQ_24G),
                     eq(mHostapdHal.mapHalChannelBandwidthToSoftApInfo(TEST_BANDWIDTH)),
                     eq(mHostapdHal.mapHalGenerationToWifiStandard(TEST_GENERATION)),
-                    eq(MacAddress.fromString(TEST_CLIENT_MAC)));
+                    eq(MacAddress.fromString(TEST_CLIENT_MAC)), anyList());
         } else if (numOfApInfo == 2) {
             apInfo.apIfaceInstance = TEST_AP_INSTANCE_2;
             apInfo.freqMhz = TEST_FREQ_5G;
@@ -173,7 +174,7 @@ public class HostapdHalAidlImpTest extends WifiBaseTest {
             verify(mockSoftApHalCallback).onInfoChanged(eq(TEST_AP_INSTANCE_2), eq(TEST_FREQ_5G),
                     eq(mHostapdHal.mapHalChannelBandwidthToSoftApInfo(TEST_BANDWIDTH)),
                     eq(mHostapdHal.mapHalGenerationToWifiStandard(TEST_GENERATION)),
-                    eq(MacAddress.fromString(TEST_CLIENT_MAC)));
+                    eq(MacAddress.fromString(TEST_CLIENT_MAC)), anyList());
         }
     }
 
@@ -893,7 +894,7 @@ public class HostapdHalAidlImpTest extends WifiBaseTest {
         // Trigger on info changed and verify.
         mockApInfoChangedAndVerify(IFACE_NAME, 1, mIHostapdCallback, mSoftApHalCallback);
         verify(mSoftApHalCallback1, never()).onInfoChanged(anyString(), anyInt(), anyInt(),
-                anyInt(), any());
+                anyInt(), any(), anyList());
 
         // Trigger on client connected.
         ClientInfo clientInfo = new ClientInfo();

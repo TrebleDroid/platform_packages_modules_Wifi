@@ -33,6 +33,7 @@ import android.hardware.wifi.hostapd.Ieee80211ReasonCode;
 import android.hardware.wifi.hostapd.IfaceParams;
 import android.hardware.wifi.hostapd.NetworkParams;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.BandType;
@@ -397,10 +398,13 @@ public class HostapdHalAidlImp implements IHostapdHal {
             try {
                 SoftApHalCallback callback = mSoftApHalCallbacks.get(info.ifaceName);
                 if (callback != null) {
+                    List<OuiKeyedData> vendorData = isServiceVersionAtLeast(2)
+                            ? HalAidlUtil.halToFrameworkOuiKeyedDataList(info.vendorData)
+                            : Collections.emptyList();
                     callback.onInfoChanged(info.apIfaceInstance, info.freqMhz,
                             mapHalChannelBandwidthToSoftApInfo(info.channelBandwidth),
                             mapHalGenerationToWifiStandard(info.generation),
-                            MacAddress.fromBytes(info.apIfaceInstanceMacAddress));
+                            MacAddress.fromBytes(info.apIfaceInstanceMacAddress), vendorData);
                 }
                 mActiveInstances.add(info.apIfaceInstance);
             } catch (IllegalArgumentException iae) {
