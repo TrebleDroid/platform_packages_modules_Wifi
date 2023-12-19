@@ -24,6 +24,7 @@ import android.os.Looper;
 import android.text.TextUtils;
 
 import com.android.server.wifi.Clock;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.WifiMonitor;
 import com.android.server.wifi.WifiNative;
@@ -57,16 +58,17 @@ public abstract class WifiScannerImpl {
                     @NonNull String ifaceName) {
                 WifiNative wifiNative = WifiInjector.getInstance().getWifiNative();
                 WifiMonitor wifiMonitor = WifiInjector.getInstance().getWifiMonitor();
+                WifiGlobals wifiGlobals = WifiInjector.getInstance().getWifiGlobals();
                 if (TextUtils.isEmpty(ifaceName)) {
                     return null;
                 }
                 if (wifiNative.getBgScanCapabilities(
                         ifaceName, new WifiNative.ScanCapabilities())) {
-                    return new HalWifiScannerImpl(context, ifaceName, wifiNative, wifiMonitor,
-                            looper, clock);
+                    return new HalWifiScannerImpl(context, ifaceName, wifiGlobals, wifiNative,
+                            wifiMonitor, looper, clock);
                 } else {
-                    return new WificondScannerImpl(context, ifaceName, wifiNative, wifiMonitor,
-                            new WificondChannelHelper(wifiNative), looper, clock);
+                    return new WificondScannerImpl(context, ifaceName, wifiGlobals, wifiNative,
+                            wifiMonitor, new WificondChannelHelper(wifiNative), looper, clock);
                 }
             }
         };

@@ -137,6 +137,20 @@ public class WifiGlobalsTest extends WifiBaseTest {
         assertEquals(true, mWifiGlobals.isSaveFactoryMacToConfigStoreEnabled());
     }
 
+    /**
+     * Verify background scan is supported
+     */
+    @Test
+    public void testBackgroundScanSupported() throws Exception {
+        mResources.setBoolean(R.bool.config_wifi_background_scan_support, false);
+        mWifiGlobals = new WifiGlobals(mContext);
+        assertFalse(mWifiGlobals.isBackgroundScanSupported());
+
+        mResources.setBoolean(R.bool.config_wifi_background_scan_support, true);
+        mWifiGlobals = new WifiGlobals(mContext);
+        assertTrue(mWifiGlobals.isBackgroundScanSupported());
+    }
+
     @Test
     public void testQuotedStringSsidPrefixParsedCorrectly() throws Exception {
         assertEquals(1, mWifiGlobals.getMacRandomizationUnsupportedSsidPrefixes().size());
