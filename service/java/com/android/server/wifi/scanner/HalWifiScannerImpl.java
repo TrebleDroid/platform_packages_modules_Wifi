@@ -24,6 +24,7 @@ import android.os.Message;
 import android.util.Log;
 
 import com.android.server.wifi.Clock;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiMonitor;
 import com.android.server.wifi.WifiNative;
 
@@ -43,14 +44,15 @@ public class HalWifiScannerImpl extends WifiScannerImpl implements Handler.Callb
     private final ChannelHelper mChannelHelper;
     private final WificondScannerImpl mWificondScannerDelegate;
 
-    public HalWifiScannerImpl(Context context, String ifaceName, WifiNative wifiNative,
-                              WifiMonitor wifiMonitor, Looper looper, Clock clock) {
+    public HalWifiScannerImpl(Context context, String ifaceName, WifiGlobals wifiGlobals,
+                              WifiNative wifiNative, WifiMonitor wifiMonitor,
+                              Looper looper, Clock clock) {
         super(ifaceName);
         mWifiNative = wifiNative;
         mChannelHelper = new WificondChannelHelper(wifiNative);
         mWificondScannerDelegate =
-                new WificondScannerImpl(context, getIfaceName(), wifiNative, wifiMonitor,
-                        mChannelHelper, looper, clock);
+                new WificondScannerImpl(context, getIfaceName(), wifiGlobals, wifiNative,
+                        wifiMonitor, mChannelHelper, looper, clock);
     }
 
     @Override

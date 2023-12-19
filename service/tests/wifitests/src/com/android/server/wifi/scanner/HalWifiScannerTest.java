@@ -42,7 +42,8 @@ public class HalWifiScannerTest extends BaseWifiScannerImplTest {
         when(mWifiNative.getMaxSsidsPerScan(anyString())).thenReturn(
                 WificondScannerTest.MAX_NUM_SCAN_SSIDS + 1);
         mScanner = new HalWifiScannerImpl(mContext, BaseWifiScannerImplTest.IFACE_NAME,
-                mWifiNative, mWifiMonitor, mLooper.getLooper(), mClock);
+                mWifiGlobals, mWifiNative, mWifiMonitor, mLooper.getLooper(),
+                mClock);
     }
 
     // Subtle: tests are inherited from base class.
