@@ -31,6 +31,8 @@ import static android.net.wifi.WifiManager.WIFI_AP_STATE_FAILED;
 
 import static com.android.server.wifi.ActiveModeManager.ROLE_SOFTAP_LOCAL_ONLY;
 import static com.android.server.wifi.ActiveModeManager.ROLE_SOFTAP_TETHERED;
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
 import static com.android.server.wifi.LocalOnlyHotspotRequestInfo.HOTSPOT_NO_ERROR;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -80,6 +82,7 @@ import android.os.test.TestLooper;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.LocalLog;
+import android.util.SparseArray;
 import android.util.SparseIntArray;
 
 import androidx.test.filters.SmallTest;
@@ -160,6 +163,9 @@ public class SoftApManagerTest extends WifiBaseTest {
             | SoftApConfiguration.BAND_6GHZ;
     private static final int[] TEST_SUPPORTED_24G_CHANNELS = new int[] {1, 2};
     private static final int[] TEST_SUPPORTED_5G_CHANNELS = new int[] {36, 149};
+
+    private boolean mApBridgeIfaceCobinationSupported = true;
+    private boolean mApBridgeWithStaIfaceCobinationSupported = true;
 
     private TestLooper mLooper;
     private TestAlarmManager mAlarmManager;
@@ -347,6 +353,22 @@ public class SoftApManagerTest extends WifiBaseTest {
                 .thenReturn(ALLOWED_6G_FREQS);
         when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_60_GHZ))
                 .thenReturn(ALLOWED_60G_FREQS);
+        when(mWifiNative.canDeviceSupportCreateTypeCombo(any()))
+                .thenAnswer(answer -> {
+                    SparseArray<Integer> combo = answer.getArgument(0);
+                    if (combo.contentEquals(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                        }})) {
+                        return mApBridgeIfaceCobinationSupported;
+                    }
+                    if (combo.contentEquals(new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
+                            put(HDM_CREATE_IFACE_STA, 1);
+                        }})) {
+                        return mApBridgeWithStaIfaceCobinationSupported;
+                    }
+                    return false;
+                });
         when(mWifiNative.getApFactoryMacAddress(any())).thenReturn(TEST_INTERFACE_MAC_ADDRESS);
         when(mWifiApConfigStore.randomizeBssidIfUnset(any(), any())).thenAnswer(
                 (invocation) -> invocation.getArgument(1));
@@ -391,7 +413,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 | SoftApCapability.SOFTAP_FEATURE_CLIENT_FORCE_DISCONNECT
                 | SoftApCapability.SOFTAP_FEATURE_ACS_OFFLOAD
                 | SoftApCapability.SOFTAP_FEATURE_WPA3_SAE
-                | SoftApCapability.SOFTAP_FEATURE_MAC_ADDRESS_CUSTOMIZATION;
+                | SoftApCapability.SOFTAP_FEATURE_MAC_ADDRESS_CUSTOMIZATION
+                | SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE;
         mTestSoftApCapability = new SoftApCapability(testSoftApFeature);
         mTestSoftApCapability.setMaxSupportedClients(10);
         mTestSoftApCapability.setSupportedChannelList(
@@ -2394,10 +2417,17 @@ public class SoftApManagerTest extends WifiBaseTest {
                 randomizedBssidConfig = randomizedBssidConfigBuilder.build();
                 when(mWifiApConfigStore.randomizeBssidIfUnset(any(), any())).thenReturn(
                         randomizedBssidConfig);
-                expectedConfig = new SoftApConfiguration.Builder(randomizedBssidConfig)
-                        .build();
+
+                expectedConfig = randomizedBssidConfig;
             } else {
-                expectedConfig = new SoftApConfiguration.Builder(config)
+                expectedConfig = config;
+            }
+            if (SdkLevel.isAtLeastT()
+                    && expectedConfig.isIeee80211beEnabled()
+                    && !softApConfig.getCapability().areFeaturesSupported(
+                            SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE)) {
+                expectedConfig = new SoftApConfiguration.Builder(expectedConfig)
+                        .setIeee80211beEnabled(false)
                         .build();
             }
         }
@@ -2511,8 +2541,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mListener).onStarted(mSoftApManager);
         verify(mWifiMetrics).addSoftApUpChangedEvent(true, softApConfig.getTargetMode(),
                 TEST_DEFAULT_SHUTDOWN_TIMEOUT_MILLIS, expectedConfig.getBands().length > 1);
-        verify(mWifiMetrics).updateSoftApConfiguration(config == null
-                ? randomizedBssidConfig : expectedConfig, softApConfig.getTargetMode(),
+        verify(mWifiMetrics).updateSoftApConfiguration(expectedConfig, softApConfig.getTargetMode(),
                 expectedConfig.getBands().length > 1);
         verify(mWifiMetrics)
                 .updateSoftApCapability(
@@ -3722,11 +3751,30 @@ public class SoftApManagerTest extends WifiBaseTest {
     }
 
     @Test
-    public void testFallbackToSingleModeDueToStaExistButStaWithBridgedApNotSupported()
+    public void testFallbackToSingleModeDueToStaExistButStaWithBridgedApNotSupportedByOverlay()
             throws Exception {
         assumeTrue(SdkLevel.isAtLeastS());
         when(mResources.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
                 .thenReturn(false);
+        Builder configBuilder = new SoftApConfiguration.Builder(
+                generateBridgedModeSoftApConfig(null));
+
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
+                mTestSoftApCapability, TEST_COUNTRY_CODE);
+        // Reset band to 2.4G | 5G to generate expected configuration since it should fallback to
+        // single AP mode
+        configBuilder.setBand(SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ);
+        startSoftApAndVerifyEnabled(apConfig, configBuilder.build(), false);
+    }
+
+    @Test
+    public void testFallbackToSingleModeDueToStaExistButStaWithBridgedApNotSupportedByDriver()
+            throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mResources.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
+                .thenReturn(true);
+        mApBridgeWithStaIfaceCobinationSupported = false;
         Builder configBuilder = new SoftApConfiguration.Builder(
                 generateBridgedModeSoftApConfig(null));
 
@@ -3866,5 +3914,24 @@ public class SoftApManagerTest extends WifiBaseTest {
         startSoftApAndVerifyEnabled(apConfig, configBuilder.build(), false);
     }
 
+    /**
+     * Tests that 11BE is set to disabled in the SoftApConfiguration if it isn't supported by
+     * SoftApCapability.
+     */
+    @Test
+    public void testStartSoftApRemoves11BEIfNotSupported() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastT());
+        mTestSoftApCapability.setSupportedFeatures(false,
+                SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE);
+        Builder configBuilder = new SoftApConfiguration.Builder();
+        configBuilder.setBand(SoftApConfiguration.BAND_2GHZ);
+        configBuilder.setSsid(TEST_SSID);
+        configBuilder.setIeee80211beEnabled(true);
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
+                mTestSoftApCapability, TEST_COUNTRY_CODE);
+        SoftApConfiguration expectedConfig = configBuilder.setIeee80211beEnabled(false).build();
+        startSoftApAndVerifyEnabled(apConfig, expectedConfig, false);
+    }
 }
 

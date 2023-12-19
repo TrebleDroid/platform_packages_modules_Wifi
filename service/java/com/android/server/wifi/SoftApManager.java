@@ -1175,7 +1175,8 @@ public class SoftApManager implements ActiveModeManager {
                             // Checking STA status only when device supports STA + AP concurrency
                             // since STA would be dropped when device doesn't support it.
                             if (cmms.size() != 0 && mWifiNative.isStaApConcurrencySupported()) {
-                                if (ApConfigUtil.isStaWithBridgedModeSupported(mContext)) {
+                                if (ApConfigUtil.isStaWithBridgedModeSupported(mContext,
+                                        mWifiNative)) {
                                     for (ClientModeManager cmm
                                             : mActiveModeWarden.getClientModeManagers()) {
                                         WifiInfo wifiConnectedInfo = cmm.getConnectionInfo();
@@ -1289,6 +1290,16 @@ public class SoftApManager implements ActiveModeManager {
                         if (!mWifiNative.isItPossibleToCreateApIface(mRequestorWs)) {
                             handleStartSoftApFailure(START_RESULT_FAILURE_INTERFACE_CONFLICT);
                             break;
+                        }
+                        if (SdkLevel.isAtLeastT()
+                                && mCurrentSoftApConfiguration.isIeee80211beEnabled()
+                                && !mCurrentSoftApCapability.areFeaturesSupported(
+                                SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE)) {
+                            Log.d(getTag(), "11BE is not supported, removing from configuration");
+                            mCurrentSoftApConfiguration = new SoftApConfiguration
+                                    .Builder(mCurrentSoftApConfiguration)
+                                    .setIeee80211beEnabled(false)
+                                    .build();
                         }
                         mApInterfaceName = mWifiNative.setupInterfaceForSoftApMode(
                                 mWifiNativeInterfaceCallback, mRequestorWs,
@@ -2223,9 +2234,9 @@ public class SoftApManager implements ActiveModeManager {
                 getRole(),
                 band1,
                 band2,
-                ApConfigUtil.isBridgedModeSupported(mContext),
+                ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative),
                 mWifiNative.isStaApConcurrencySupported(),
-                ApConfigUtil.isStaWithBridgedModeSupported(mContext),
+                ApConfigUtil.isStaWithBridgedModeSupported(mContext, mWifiNative),
                 getCurrentStaFreqMhz(),
                 securityType);
     }
@@ -2250,7 +2261,7 @@ public class SoftApManager implements ActiveModeManager {
                 band,
                 isBridgedMode(),
                 mWifiNative.isStaApConcurrencySupported(),
-                ApConfigUtil.isStaWithBridgedModeSupported(mContext),
+                ApConfigUtil.isStaWithBridgedModeSupported(mContext, mWifiNative),
                 getCurrentStaFreqMhz(),
                 mDefaultShutdownTimeoutMillis > 0,
                 -1,
