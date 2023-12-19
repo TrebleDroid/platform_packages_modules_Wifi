@@ -24,6 +24,7 @@ import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.ScanResult;
 import android.net.wifi.nl80211.WifiNl80211Manager;
 import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -466,6 +467,19 @@ public class WifiP2pNative {
      */
     public boolean p2pFind(@WifiP2pManager.WifiP2pScanType int type, int freq, int timeout) {
         return mSupplicantP2pIfaceHal.find(type, freq, timeout);
+    }
+
+    /**
+     * Initiate a P2P service discovery with config parameters.
+     *
+     * @param config The config parameters to initiate P2P discovery.
+     * @param timeout The maximum amount of time to be spent in performing discovery.
+     *        Set to 0 to indefinitely continue discovery until an explicit
+     *        |stopFind| is sent.
+     * @return boolean value indicating whether the operation was successful.
+     */
+    public boolean p2pFindWithParams(@NonNull WifiP2pDiscoveryConfig config, int timeout) {
+        return mSupplicantP2pIfaceHal.findWithParams(config, timeout);
     }
 
     /**

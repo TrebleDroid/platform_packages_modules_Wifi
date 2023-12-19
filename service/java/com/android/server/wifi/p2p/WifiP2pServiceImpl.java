@@ -67,6 +67,7 @@ import android.net.wifi.p2p.IWifiP2pManager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pGroupList.GroupDeleteListener;
@@ -2760,6 +2761,9 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         int freq = extras.getInt(
                                     WifiP2pManager.EXTRA_PARAM_KEY_PEER_DISCOVERY_FREQ,
                                     WifiP2pManager.WIFI_P2P_SCAN_FREQ_UNSPECIFIED);
+                        WifiP2pDiscoveryConfig discoveryConfig = (WifiP2pDiscoveryConfig)
+                                extras.getParcelable(
+                                        WifiP2pManager.EXTRA_PARAM_KEY_DISCOVERY_CONFIG);
                         boolean hasPermission = false;
                         if (scanType != WifiP2pManager.WIFI_P2P_SCAN_FULL
                                 && !isFeatureSupported(WifiP2pManager.FEATURE_FLEXIBLE_DISCOVERY)) {
@@ -2792,12 +2796,14 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                             apiType = WifiManager.API_P2P_DISCOVER_PEERS_ON_SOCIAL_CHANNELS;
                         } else if (scanType == WifiP2pManager.WIFI_P2P_SCAN_SINGLE_FREQ) {
                             apiType = WifiManager.API_P2P_DISCOVER_PEERS_ON_SPECIFIC_FREQUENCY;
+                        } else if (scanType == WifiP2pManager.WIFI_P2P_SCAN_WITH_CONFIG_PARAMS) {
+                            apiType = WifiManager.API_P2P_DISCOVER_PEERS_WITH_CONFIG_PARAMS;
                         }
                         mLastCallerInfoManager.put(apiType, Process.myTid(), uid, 0, packageName,
                                 true);
                         // do not send service discovery request while normal find operation.
                         clearSupplicantServiceRequest();
-                        if (p2pFind(scanType, freq, DISCOVER_TIMEOUT_S)) {
+                        if (p2pFind(scanType, freq, DISCOVER_TIMEOUT_S, discoveryConfig)) {
                             mWifiP2pMetrics.incrementPeerScans();
                             replyToMessage(message, WifiP2pManager.DISCOVER_PEERS_SUCCEEDED);
                             sendP2pDiscoveryChangedBroadcast(true);
@@ -6688,11 +6694,11 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
         private boolean p2pFind(int timeout) {
             return p2pFind(
                     WifiP2pManager.WIFI_P2P_SCAN_FULL,
-                    WifiP2pManager.WIFI_P2P_SCAN_FREQ_UNSPECIFIED, timeout);
+                    WifiP2pManager.WIFI_P2P_SCAN_FREQ_UNSPECIFIED, timeout, null);
         }
 
         private boolean p2pFind(@WifiP2pManager.WifiP2pScanType int scanType, int freq,
-                                int timeout) {
+                                int timeout, @Nullable WifiP2pDiscoveryConfig discoveryConfig) {
             if (isFeatureSupported(WifiP2pManager.FEATURE_SET_VENDOR_ELEMENTS)) {
                 Set<ScanResult.InformationElement> aggregatedVendorElements = new HashSet<>();
                 mVendorElements.forEach((k, v) -> aggregatedVendorElements.addAll(v));
@@ -6710,6 +6716,9 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
             } else if (scanType == WifiP2pManager.WIFI_P2P_SCAN_SINGLE_FREQ
                     && freq != WifiP2pManager.WIFI_P2P_SCAN_FREQ_UNSPECIFIED) {
                 return mWifiNative.p2pFind(scanType, freq, timeout);
+            } else if (scanType == WifiP2pManager.WIFI_P2P_SCAN_WITH_CONFIG_PARAMS
+                    && discoveryConfig != null) {
+                return mWifiNative.p2pFindWithParams(discoveryConfig, timeout);
             }
             return false;
         }
