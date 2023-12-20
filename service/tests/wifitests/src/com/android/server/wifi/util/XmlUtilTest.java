@@ -143,7 +143,9 @@ public class XmlUtilTest extends WifiBaseTest {
             throws IOException, XmlPullParserException {
         mWifiConfigStoreEncryptionUtil = mock(WifiConfigStoreEncryptionUtil.class);
         WifiConfiguration wepNetwork = WifiConfigurationTestUtil.createWepNetwork();
+        wepNetwork.wepKeys = WifiConfigurationTestUtil.TEST_WEP_KEYS_WITH_NULL;
         for (int i = 0; i < wepNetwork.wepKeys.length; i++) {
+            if (wepNetwork.wepKeys[i] == null) continue;
             EncryptedData encryptedData = new EncryptedData(new byte[]{(byte) i},
                     new byte[]{(byte) i});
             when(mWifiConfigStoreEncryptionUtil.encrypt(wepNetwork.wepKeys[i].getBytes()))
@@ -163,7 +165,9 @@ public class XmlUtilTest extends WifiBaseTest {
             throws IOException, XmlPullParserException {
         mWifiConfigStoreEncryptionUtil = mock(WifiConfigStoreEncryptionUtil.class);
         WifiConfiguration wepNetwork = WifiConfigurationTestUtil.createWepNetwork();
+        wepNetwork.wepKeys = WifiConfigurationTestUtil.TEST_WEP_KEYS_WITH_NULL;
         for (int i = 0; i < wepNetwork.wepKeys.length; i++) {
+            if (wepNetwork.wepKeys[i] == null) continue;
             when(mWifiConfigStoreEncryptionUtil.encrypt(wepNetwork.wepKeys[i].getBytes()))
                     .thenReturn(null);
         }
