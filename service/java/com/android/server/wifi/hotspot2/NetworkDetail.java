@@ -378,25 +378,29 @@ public class NetworkDetail {
         int centerFreq0 = mPrimaryFreq;
         int centerFreq1 = 0;
 
-        if (ehtOperation.isPresent()) {
-            //TODO: include parsing of EHT_Operation to collect BW and center freq.
+        // Check if EHT Operation Info is present in EHT operation IE.
+        if (ehtOperation.isEhtOperationInfoPresent()) {
+            int operatingBand = ScanResult.toBand(mPrimaryFreq);
+            channelWidth = ehtOperation.getChannelWidth();
+            centerFreq0 = ehtOperation.getCenterFreq0(operatingBand);
+            centerFreq1 = ehtOperation.getCenterFreq1(operatingBand);
             mDisabledSubchannelBitmap = ehtOperation.getDisabledSubchannelBitmap();
         }
 
-        if (ehtOperation.isPresent()) {
-            //TODO Add impact for using info from EHT capabilities and EHT operation IEs
-        }
-
-        // Check if HE Operation IE is present
-        if (heOperation.isPresent()) {
-            // If 6GHz info is present, then parameters should be acquired from HE Operation IE
-            if (heOperation.is6GhzInfoPresent()) {
-                channelWidth = heOperation.getChannelWidth();
-                centerFreq0 = heOperation.getCenterFreq0();
-                centerFreq1 = heOperation.getCenterFreq1();
-            } else if (heOperation.isVhtInfoPresent()) {
-                // VHT Operation Info could be included inside the HE Operation IE
-                vhtOperation.from(heOperation.getVhtInfoElement());
+        // Proceed to HE Operation IE if channel width and center frequencies were not obtained
+        // from EHT Operation IE
+        if (channelWidth == ScanResult.UNSPECIFIED) {
+            // Check if HE Operation IE is present
+            if (heOperation.isPresent()) {
+                // If 6GHz info is present, then parameters should be acquired from HE Operation IE
+                if (heOperation.is6GhzInfoPresent()) {
+                    channelWidth = heOperation.getChannelWidth();
+                    centerFreq0 = heOperation.getCenterFreq0();
+                    centerFreq1 = heOperation.getCenterFreq1();
+                } else if (heOperation.isVhtInfoPresent()) {
+                    // VHT Operation Info could be included inside the HE Operation IE
+                    vhtOperation.from(heOperation.getVhtInfoElement());
+                }
             }
         }
 
