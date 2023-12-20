@@ -140,13 +140,13 @@ public class TestUtils {
         }
 
         public boolean respondToBootstrappingRequest(short transactionId, int bootstrappingId,
-                boolean accept) {
+                boolean accept, byte pubSubId) {
             addTransactionId(transactionId);
             return true;
         }
 
         public boolean initiateBootstrapping(short transactionId, int peerId, byte[] peer,
-                int method, byte[] cookie) {
+                int method, byte[] cookie, byte pubSubId, boolean isComeBack) {
             addTransactionId(transactionId);
             return true;
         }

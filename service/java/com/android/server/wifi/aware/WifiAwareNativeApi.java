@@ -798,10 +798,12 @@ public class WifiAwareNativeApi implements WifiAwareShellCommand.DelegatedShellC
      *                      indication).
      * @param peer          The MAC address of the peer to create a connection with.
      * @param method        proposed bootstrapping method
+     * @param pubSubId      ID of the publish/subscribe session - obtained when creating a session.
+     * @param isComeBack    If the request is for a previous comeback response
      * @return True if the request send success
      */
     public boolean initiateBootstrapping(short transactionId, int peerId, byte[] peer, int method,
-            byte[] cookie) {
+            byte[] cookie, byte pubSubId, boolean isComeBack) {
         if (mVerboseLoggingEnabled) {
             Log.v(TAG, "initiateBootstrapping: transactionId=" + transactionId
                     + ", peerId=" + peerId + ", method=" + method
@@ -817,7 +819,8 @@ public class WifiAwareNativeApi implements WifiAwareShellCommand.DelegatedShellC
 
         try {
             MacAddress peerMac = MacAddress.fromBytes(peer);
-            return iface.initiateBootstrapping(transactionId, peerId, peerMac, method, cookie);
+            return iface.initiateBootstrapping(transactionId, peerId, peerMac, method, cookie,
+                    pubSubId, isComeBack);
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Invalid peer mac received: " + Arrays.toString(peer));
             return false;
@@ -826,14 +829,17 @@ public class WifiAwareNativeApi implements WifiAwareShellCommand.DelegatedShellC
 
     /**
      * Response to a bootstrapping request for this from this session
-     * @param transactionId Transaction ID for the transaction - used in the
-     *                      async callback to match with the original request.
+     *
+     * @param transactionId   Transaction ID for the transaction - used in the
+     *                        async callback to match with the original request.
      * @param bootstrappingId The id of the current boostraping session
-     * @param accept True is proposed method is accepted
+     * @param accept          True is proposed method is accepte
+     * @param pubSubId        ID of the publish/subscribe session - obtained when creating a
+     *                        session.
      * @return True if the request send success
      */
     public boolean respondToBootstrappingRequest(short transactionId, int bootstrappingId,
-            boolean accept) {
+            boolean accept, byte pubSubId) {
         if (mVerboseLoggingEnabled) {
             Log.v(TAG, "respondToBootstrappingRequest: transactionId=" + transactionId);
         }
@@ -845,7 +851,8 @@ public class WifiAwareNativeApi implements WifiAwareShellCommand.DelegatedShellC
             return false;
         }
 
-        return iface.respondToBootstrappingRequest(transactionId, bootstrappingId, accept);
+        return iface.respondToBootstrappingRequest(transactionId, bootstrappingId, accept,
+                pubSubId);
     }
 
     /**
