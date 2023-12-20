@@ -29,11 +29,11 @@ import android.util.Log;
 
 import com.android.server.wifi.Clock;
 import com.android.server.wifi.ScanDetail;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiMonitor;
 import com.android.server.wifi.WifiNative;
 import com.android.server.wifi.scanner.ChannelHelper.ChannelCollection;
 import com.android.server.wifi.util.NativeUtil;
-import com.android.wifi.resources.R;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -62,6 +62,7 @@ public class WificondScannerImpl extends WifiScannerImpl implements Handler.Call
     private static final int MAX_SCAN_BUCKETS = 16;
 
     private final Context mContext;
+    private final WifiGlobals mWifiGlobals;
     private final WifiNative mWifiNative;
     private final WifiMonitor mWifiMonitor;
     private final AlarmManager mAlarmManager;
@@ -94,11 +95,12 @@ public class WificondScannerImpl extends WifiScannerImpl implements Handler.Call
     @GuardedBy("mSettingsLock")
     private AlarmManager.OnAlarmListener mScanTimeoutListener;
 
-    public WificondScannerImpl(Context context, String ifaceName, WifiNative wifiNative,
-                               WifiMonitor wifiMonitor, ChannelHelper channelHelper,
-                               Looper looper, Clock clock) {
+    public WificondScannerImpl(Context context, String ifaceName, WifiGlobals wifiGlobals,
+                               WifiNative wifiNative, WifiMonitor wifiMonitor,
+                               ChannelHelper channelHelper, Looper looper, Clock clock) {
         super(ifaceName);
         mContext = context;
+        mWifiGlobals = wifiGlobals;
         mWifiNative = wifiNative;
         mWifiMonitor = wifiMonitor;
         mChannelHelper = channelHelper;
@@ -459,7 +461,7 @@ public class WificondScannerImpl extends WifiScannerImpl implements Handler.Call
      */
     private boolean isHwPnoScanRequired(boolean isConnectedPno) {
         return (!isConnectedPno
-                && mContext.getResources().getBoolean(R.bool.config_wifi_background_scan_support));
+                && mWifiGlobals.isBackgroundScanSupported());
     }
 
     @Override

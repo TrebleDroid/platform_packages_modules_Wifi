@@ -72,7 +72,7 @@ public class WificondScannerTest extends BaseWifiScannerImplTest {
         when(mWifiNative.getMaxSsidsPerScan(anyString())).thenReturn(MAX_NUM_SCAN_SSIDS + 1);
         mWifiMonitorSpy = spy(mWifiMonitor);
         mScanner = new WificondScannerImpl(mContext, BaseWifiScannerImplTest.IFACE_NAME,
-                mWifiNative, mWifiMonitorSpy, new WificondChannelHelper(mWifiNative),
+                mWifiGlobals, mWifiNative, mWifiMonitorSpy, new WificondChannelHelper(mWifiNative),
                 mLooper.getLooper(), mClock);
     }
 
@@ -90,7 +90,8 @@ public class WificondScannerTest extends BaseWifiScannerImplTest {
         when(channelCollection.isEmpty()).thenReturn(true);
 
         mScanner = new WificondScannerImpl(mContext, BaseWifiScannerImplTest.IFACE_NAME,
-                mWifiNative, mWifiMonitor, channelHelper, mLooper.getLooper(), mClock);
+                mWifiGlobals, mWifiNative, mWifiMonitor, channelHelper, mLooper.getLooper(),
+                mClock);
 
         WifiNative.ScanSettings settings = new NativeScanSettingsBuilder()
                 .withBasePeriod(10000) // ms

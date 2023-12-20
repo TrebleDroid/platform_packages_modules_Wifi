@@ -40,6 +40,7 @@ import com.android.server.wifi.MockWifiMonitor;
 import com.android.server.wifi.ScanDetail;
 import com.android.server.wifi.ScanResults;
 import com.android.server.wifi.WifiBaseTest;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiMonitor;
 import com.android.server.wifi.WifiNative;
 import com.android.server.wifi.scanner.ChannelHelper.ChannelCollection;
@@ -70,6 +71,7 @@ public abstract class BaseWifiScannerImplTest extends WifiBaseTest {
     @Mock WifiNative mWifiNative;
     MockResources mResources;
     @Mock Clock mClock;
+    @Mock WifiGlobals mWifiGlobals;
 
     /**
      * mScanner implementation should be filled in by derived test class
