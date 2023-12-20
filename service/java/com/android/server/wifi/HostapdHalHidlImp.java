@@ -1278,7 +1278,8 @@ public class HostapdHalHidlImp implements IHostapdHal {
                     callback.onInfoChanged(apIfaceInstance, frequency,
                             mapHalBandwidthToSoftApInfo(bandwidth),
                             mapHalGenerationToWifiStandard(generation),
-                            MacAddress.fromBytes(apIfaceInstanceMacAddress));
+                            MacAddress.fromBytes(apIfaceInstanceMacAddress),
+                            Collections.emptyList());
                 }
             } catch (IllegalArgumentException iae) {
                 Log.e(TAG, " Invalid apIfaceInstanceMacAddress, " + iae);

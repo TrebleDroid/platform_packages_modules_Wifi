@@ -16,6 +16,7 @@
 
 package com.android.server.wifi.util;
 
+import android.annotation.NonNull;
 import android.hardware.wifi.common.OuiKeyedData;
 import android.hardware.wifi.supplicant.KeyMgmtMask;
 import android.net.wifi.WifiConfiguration;
@@ -117,5 +118,27 @@ public class HalAidlUtil {
             halList.add(halData);
         }
         return halList.toArray(new OuiKeyedData[halList.size()]);
+    }
+
+    /**
+     * Convert a list of HAL OuiKeyedData its framework equivalent.
+     */
+    public static List<android.net.wifi.OuiKeyedData> halToFrameworkOuiKeyedDataList(
+            @NonNull OuiKeyedData[] halList) {
+        if (halList == null) {
+            return new ArrayList<>();
+        }
+        List<android.net.wifi.OuiKeyedData> frameworkList = new ArrayList<>();
+        for (OuiKeyedData halData : halList) {
+            try {
+                android.net.wifi.OuiKeyedData frameworkData =
+                        new android.net.wifi.OuiKeyedData.Builder(
+                                halData.oui, halData.vendorData).build();
+                frameworkList.add(frameworkData);
+            } catch (Exception e) {
+                Log.e(TAG, "Invalid HAL OuiKeyedData: " + e);
+            }
+        }
+        return frameworkList;
     }
 }
