@@ -1941,7 +1941,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      */
     public boolean enableTdls(String remoteMacAddress, boolean enable) {
         boolean ret;
-        if (!canEnableTdls()) {
+        if (enable && !canEnableTdls()) {
             return false;
         }
         ret = mWifiNative.startTdls(mInterfaceName, remoteMacAddress, enable);
