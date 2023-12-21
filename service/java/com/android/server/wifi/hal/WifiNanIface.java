@@ -513,22 +513,22 @@ public class WifiNanIface implements WifiHal.WifiInterface {
                         cipherSuite));
     }
     /**
-     * {@link IWifiNanIface#initiateNanBootstrappingRequest(short, int, MacAddress, int, byte[])}
+     * {@link IWifiNanIface#initiateNanBootstrappingRequest(short, int, MacAddress, int, byte[], byte, boolean)}
      */
     public boolean initiateBootstrapping(short transactionId, int peerId, MacAddress peer,
-            int method, byte[] cookie) {
+            int method, byte[] cookie, byte pubSubId, boolean isComeBack) {
         return validateAndCall("initiateBootstrapping", false,
                 () -> mWifiNanIface.initiateNanBootstrappingRequest(transactionId, peerId, peer,
-                        method, cookie));
+                        method, cookie, pubSubId, isComeBack));
     }
     /**
-     * {@link IWifiNanIface#respondToNanBootstrappingRequest(short, int, boolean)}
+     * {@link IWifiNanIface#respondToNanBootstrappingRequest(short, int, boolean, byte)}
      */
     public boolean respondToBootstrappingRequest(short transactionId, int bootstrappingId,
-            boolean accept) {
+            boolean accept, byte pubSubId) {
         return validateAndCall("initiateBootstrapping", false,
                 () -> mWifiNanIface.respondToNanBootstrappingRequest(transactionId, bootstrappingId,
-                        accept));
+                        accept, pubSubId));
     }
 
     /**

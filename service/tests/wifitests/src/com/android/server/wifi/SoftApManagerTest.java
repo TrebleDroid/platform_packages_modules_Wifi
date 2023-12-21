@@ -64,6 +64,7 @@ import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.net.MacAddress;
 import android.net.wifi.CoexUnsafeChannel;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
@@ -105,6 +106,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -229,14 +231,16 @@ public class SoftApManagerTest extends WifiBaseTest {
     /** Old callback event from wificond */
     private void mockChannelSwitchEvent(int frequency, int bandwidth) {
         mSoftApHalCallbackCaptor.getValue().onInfoChanged(
-                TEST_INTERFACE_NAME, frequency, bandwidth, 0, null);
+                TEST_INTERFACE_NAME, frequency, bandwidth, 0, null, Collections.emptyList());
     }
 
     /** New callback event from hostapd */
     private void mockApInfoChangedEvent(SoftApInfo apInfo) {
+        List<OuiKeyedData> vendorData = SdkLevel.isAtLeastV()
+                ? apInfo.getVendorData() : Collections.emptyList();
         mSoftApHalCallbackCaptor.getValue().onInfoChanged(
                 apInfo.getApInstanceIdentifier(), apInfo.getFrequency(), apInfo.getBandwidth(),
-                apInfo.getWifiStandardInternal(), apInfo.getBssidInternal());
+                apInfo.getWifiStandardInternal(), apInfo.getBssidInternal(), vendorData);
         mTestSoftApInfoMap.put(apInfo.getApInstanceIdentifier(), apInfo);
         mTestWifiClientsMap.put(apInfo.getApInstanceIdentifier(), new ArrayList<WifiClient>());
     }

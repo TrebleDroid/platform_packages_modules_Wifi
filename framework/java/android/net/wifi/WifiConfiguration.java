@@ -1192,9 +1192,8 @@ public class WifiConfiguration implements Parcelable {
 
     /**
      * Four WEP keys. For each of the four values, provide either an ASCII
-     * string enclosed in double quotation marks (e.g., {@code "abcdef"}),
-     * a string of hex digits (e.g., {@code 0102030405}), or an empty string
-     * (e.g., {@code ""}).
+     * string enclosed in double quotation marks (e.g., {@code "abcdef"})
+     * or a string of hex digits (e.g., {@code 0102030405}).
      * <p/>
      * When the value of one of these keys is read, the actual key is
      * not returned, just a "*" if the key has a value, or the null

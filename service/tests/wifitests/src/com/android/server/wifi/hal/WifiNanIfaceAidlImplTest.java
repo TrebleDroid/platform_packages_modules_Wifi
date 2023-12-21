@@ -476,10 +476,11 @@ public class WifiNanIfaceAidlImplTest extends WifiBaseTest {
     @Test
     public void testInitiateNanBootstrappingRequest() throws Exception {
         short tid = 251;
+        byte pid = 34;
         MacAddress peer = MacAddress.fromString("00:01:02:03:04:05");
         ArgumentCaptor<NanBootstrappingRequest> reqCaptor = ArgumentCaptor.forClass(
                 NanBootstrappingRequest.class);
-        assertTrue(mDut.initiateNanBootstrappingRequest(tid, 1, peer, 2, null));
+        assertTrue(mDut.initiateNanBootstrappingRequest(tid, 1, peer, 2, null, pid, false));
         verify(mIWifiNanIfaceMock).initiateBootstrappingRequest(eq((char) tid),
                 reqCaptor.capture());
         NanBootstrappingRequest request = reqCaptor.getValue();
@@ -487,19 +488,22 @@ public class WifiNanIfaceAidlImplTest extends WifiBaseTest {
         assertEquals(2, request.requestBootstrappingMethod);
         assertArrayEquals(peer.toByteArray(), request.peerDiscMacAddr);
         assertArrayEquals(new byte[0], request.cookie);
+        assertEquals(pid, request.discoverySessionId);
     }
 
     @Test
     public void testRespondToNanBootstrappingRequest() throws Exception {
         short tid = 251;
+        byte pid = 34;
         ArgumentCaptor<NanBootstrappingResponse> reqCaptor = ArgumentCaptor.forClass(
                 NanBootstrappingResponse.class);
-        assertTrue(mDut.respondToNanBootstrappingRequest(tid, 1, true));
+        assertTrue(mDut.respondToNanBootstrappingRequest(tid, 1, true, pid));
         verify(mIWifiNanIfaceMock).respondToBootstrappingIndicationRequest(eq((char) tid),
                 reqCaptor.capture());
         NanBootstrappingResponse request = reqCaptor.getValue();
         assertEquals(1, request.bootstrappingInstanceId);
         assertTrue(request.acceptRequest);
+        assertEquals(pid, request.discoverySessionId);
     }
 
     // utilities
