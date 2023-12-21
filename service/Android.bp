@@ -42,11 +42,12 @@ java_library {
     name: "wifi-service-pre-jarjar",
     installable: false,
     defaults: ["wifi-service-common"],
-    srcs: [ ":wifi-service-srcs" ],
+    srcs: [":wifi-service-srcs"],
 
     sdk_version: "system_server_current",
     lint: {
         strict_updatability_linting: true,
+        baseline_filename: "lint-baseline.xml",
     },
     libs: [
         "androidx.annotation_annotation",
@@ -159,6 +160,9 @@ java_library {
         "com.android.wifi",
         "test_com.android.wifi",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // Statsd auto-generated code
@@ -167,8 +171,8 @@ genrule {
     name: "statslog-wifi-java-gen",
     tools: ["stats-log-api-gen"],
     cmd: "$(location stats-log-api-gen) --java $(out) --module wifi " +
-         " --javaPackage com.android.server.wifi.proto --javaClass WifiStatsLog" +
-         " --minApiLevel 30",
+        " --javaPackage com.android.server.wifi.proto --javaClass WifiStatsLog" +
+        " --minApiLevel 30",
     out: ["com/android/server/wifi/proto/WifiStatsLog.java"],
 }
 
@@ -176,5 +180,5 @@ genrule {
 prebuilt_etc {
     name: "wifi.rc",
     src: "wifi.rc",
-    sub_dir: "init"
+    sub_dir: "init",
 }
