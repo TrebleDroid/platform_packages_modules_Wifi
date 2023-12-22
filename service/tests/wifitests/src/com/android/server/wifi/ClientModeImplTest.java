@@ -10672,18 +10672,19 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Test
     public void testEnableTdls() throws Exception {
         connect();
-        when(mWifiNative.getMaxSupportedConcurrentTdlsSessions(WIFI_IFACE_NAME)).thenReturn(5);
+        when(mWifiNative.getMaxSupportedConcurrentTdlsSessions(WIFI_IFACE_NAME)).thenReturn(1);
         when(mWifiNative.getSupportedFeatureSet(WIFI_IFACE_NAME))
                 .thenReturn(WifiManager.WIFI_FEATURE_TDLS);
         when(mWifiNative.startTdls(eq(WIFI_IFACE_NAME), eq(TEST_TDLS_PEER_ADDR_STR), anyBoolean()))
                 .thenReturn(true);
-        assertEquals(5, mCmi.getMaxSupportedConcurrentTdlsSessions());
+        assertEquals(1, mCmi.getMaxSupportedConcurrentTdlsSessions());
         assertTrue(mCmi.isTdlsOperationCurrentlyAvailable());
-        mCmi.enableTdls(TEST_TDLS_PEER_ADDR_STR, true);
+        assertTrue(mCmi.enableTdls(TEST_TDLS_PEER_ADDR_STR, true));
         assertEquals(1, mCmi.getNumberOfEnabledTdlsSessions());
         verify(mWifiNative).startTdls(eq(WIFI_IFACE_NAME), eq(TEST_TDLS_PEER_ADDR_STR),
                 eq(true));
-        mCmi.enableTdls(TEST_TDLS_PEER_ADDR_STR, false);
+        assertFalse(mCmi.enableTdls(TEST_TDLS_PEER_ADDR_STR, true));
+        assertTrue(mCmi.enableTdls(TEST_TDLS_PEER_ADDR_STR, false));
         verify(mWifiNative).startTdls(eq(WIFI_IFACE_NAME), eq(TEST_TDLS_PEER_ADDR_STR),
                 eq(false));
         assertEquals(0, mCmi.getNumberOfEnabledTdlsSessions());

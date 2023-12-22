@@ -54,10 +54,11 @@ filegroup {
 
 filegroup {
     name: "wifi_javadoc_only_files",
-    srcs: ["java/android/net/wifi/package.html",
-           "java/android/net/wifi/rtt/package.html",
-           "java/android/net/wifi/p2p/package.html",
-           "java/android/net/wifi/aware/package.html",
+    srcs: [
+        "java/android/net/wifi/package.html",
+        "java/android/net/wifi/rtt/package.html",
+        "java/android/net/wifi/p2p/package.html",
+        "java/android/net/wifi/aware/package.html",
     ],
     path: "java/android/net/wifi",
 }
@@ -92,6 +93,9 @@ java_library {
         "com.android.wifi",
         "test_com.android.wifi",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // defaults shared between `framework-wifi` & `framework-wifi-pre-jarjar`
@@ -141,6 +145,9 @@ java_library {
         "//packages/modules/Wifi/service",
         "//packages/modules/Wifi/service/tests/wifitests",
     ],
+    lint: {
+        baseline_filename: "lint-baseline.xml",
+    },
 }
 
 // post-jarjar version of framework-wifi
@@ -157,13 +164,22 @@ java_sdk_library {
     ],
 
     public: {
-        libs: ["framework-location.stubs", "framework-connectivity.stubs"]
+        libs: [
+            "framework-location.stubs",
+            "framework-connectivity.stubs",
+        ],
     },
     system: {
-        libs: ["framework-location.stubs.system", "framework-connectivity.stubs.system"]
+        libs: [
+            "framework-location.stubs.system",
+            "framework-connectivity.stubs.system",
+        ],
     },
     module_lib: {
-        libs: ["framework-location.stubs.module_lib", "framework-connectivity.stubs.module_lib"]
+        libs: [
+            "framework-location.stubs.module_lib",
+            "framework-connectivity.stubs.module_lib",
+        ],
     },
     api_srcs: [
         ":wifi_javadoc_only_files",
@@ -173,7 +189,7 @@ java_sdk_library {
 
     installable: true,
     optimize: {
-        enabled: false
+        enabled: false,
     },
     hostdex: true, // for hiddenapi check
 
@@ -196,6 +212,7 @@ java_sdk_library {
     ],
     lint: {
         strict_updatability_linting: true,
+        baseline_filename: "lint-baseline.xml",
     },
 }
 
@@ -220,8 +237,7 @@ filegroup {
     srcs: ["jarjar-rules.txt"],
 }
 
-platform_compat_config
-{
+platform_compat_config {
     name: "wifi-compat-config",
     src: ":framework-wifi-pre-jarjar",
 }
