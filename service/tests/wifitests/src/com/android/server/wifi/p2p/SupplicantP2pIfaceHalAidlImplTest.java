@@ -100,6 +100,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
     private @Mock WifiP2pMonitor mWifiMonitor;
     private @Mock WifiInjector mWifiInjector;
     private @Mock IBinder mServiceBinderMock;
+    private @Mock WifiSettingsConfigStore mWifiSettingsConfigStore;
 
     final String mIfaceName = "virtual_interface_name";
     final String mSsid = "\"SSID\"";
@@ -1401,6 +1402,13 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
         assertFalse(mDut.isInitializationComplete());
     }
 
+    private void setCachedServiceVersion(int version) {
+        when(mWifiSettingsConfigStore
+                .get(eq(WifiSettingsConfigStore.SUPPLICANT_HAL_AIDL_SERVICE_VERSION)))
+                .thenReturn(version);
+        when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
+    }
+
     /**
      * Sunny day scenario for configureExtListen()
      */
@@ -1411,6 +1419,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
                 .configureExtListen(anyInt(), anyInt());
         doNothing().when(mISupplicantP2pIfaceMock).configureExtListen(eq(123), eq(456));
         doNothing().when(mISupplicantP2pIfaceMock).configureExtListen(eq(0), eq(0));
+        setCachedServiceVersion(2);
 
         // Default value when service is not initialized.
         assertFalse(mDut.configureExtListen(true, 123, 456));
@@ -1427,6 +1436,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
      */
     @Test
     public void testConfigureExtListen_invalidArguments() throws Exception {
+        setCachedServiceVersion(2);
         executeAndValidateInitializationSequence(false, false);
         doNothing().when(mISupplicantP2pIfaceMock).configureExtListen(anyInt(), anyInt());
         assertFalse(mDut.configureExtListen(true, -1, 1));
@@ -1438,6 +1448,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
      */
     @Test
     public void testConfigureExtListen_failure() throws Exception {
+        setCachedServiceVersion(2);
         executeAndValidateInitializationSequence(false, false);
         doThrow(new ServiceSpecificException(SupplicantStatusCode.FAILURE_UNKNOWN))
                 .when(mISupplicantP2pIfaceMock).configureExtListen(anyInt(), anyInt());
@@ -1452,6 +1463,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
      */
     @Test
     public void testConfigureExtListen_exception() throws Exception {
+        setCachedServiceVersion(2);
         executeAndValidateInitializationSequence(false, false);
         doThrow(new RemoteException()).when(mISupplicantP2pIfaceMock)
                 .configureExtListen(anyInt(), anyInt());
