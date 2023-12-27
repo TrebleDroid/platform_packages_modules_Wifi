@@ -52,6 +52,7 @@ import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.IWifiLowLatencyLockListener;
 import android.net.wifi.IWifiNetworkSelectionConfigListener;
 import android.net.wifi.IWifiVerboseLoggingStatusChangedListener;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApConfiguration;
@@ -472,4 +473,8 @@ interface IWifiManager
     void setWepAllowed(boolean isAllowed);
 
     void queryWepAllowed(in IBooleanListener listener);
+
+    void enableMscs(in MscsParams mscsParams);
+
+    void disableMscs();
 }

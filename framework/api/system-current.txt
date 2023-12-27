@@ -29,6 +29,33 @@ package android.net.wifi {
     field public static final int EASY_CONNECT_EVENT_SUCCESS_CONFIGURATION_SENT = 0; // 0x0
   }
 
+  @FlaggedApi("com.android.wifi.flags.mscs_configuration") public final class MscsParams implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") public int getFrameClassifierFields();
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @IntRange(from=0, to=0x3938700) public int getStreamTimeoutUs();
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") public int getUserPriorityBitmap();
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @IntRange(from=0, to=7) public int getUserPriorityLimit();
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.MscsParams> CREATOR;
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final int FRAME_CLASSIFIER_DSCP = 32; // 0x20
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final int FRAME_CLASSIFIER_DST_IP_ADDR = 4; // 0x4
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final int FRAME_CLASSIFIER_DST_PORT = 16; // 0x10
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final int FRAME_CLASSIFIER_FLOW_LABEL = 128; // 0x80
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final int FRAME_CLASSIFIER_IP_VERSION = 1; // 0x1
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final int FRAME_CLASSIFIER_PROTOCOL_NEXT_HDR = 64; // 0x40
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final int FRAME_CLASSIFIER_SRC_IP_ADDR = 2; // 0x2
+    field @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final int FRAME_CLASSIFIER_SRC_PORT = 8; // 0x8
+  }
+
+  @FlaggedApi("com.android.wifi.flags.mscs_configuration") public static final class MscsParams.Builder {
+    ctor @FlaggedApi("com.android.wifi.flags.mscs_configuration") public MscsParams.Builder();
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @NonNull public android.net.wifi.MscsParams build();
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @NonNull public android.net.wifi.MscsParams.Builder setFrameClassifierFields(int);
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @NonNull public android.net.wifi.MscsParams.Builder setStreamTimeoutUs(@IntRange(from=0, to=0x3938700) int);
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @NonNull public android.net.wifi.MscsParams.Builder setUserPriorityBitmap(int);
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @NonNull public android.net.wifi.MscsParams.Builder setUserPriorityLimit(@IntRange(from=0, to=7) int);
+  }
+
   @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public final class OuiKeyedData implements android.os.Parcelable {
     method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public int describeContents();
     method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.os.PersistableBundle getData();
@@ -617,6 +644,8 @@ package android.net.wifi {
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.NETWORK_STACK}) public void connect(int, @Nullable android.net.wifi.WifiManager.ActionListener);
     method @Deprecated @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.NETWORK_STACK}) public void disable(int, @Nullable android.net.wifi.WifiManager.ActionListener);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK}) public void disableEphemeralNetwork(@NonNull String);
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @RequiresPermission(anyOf={android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION}) public void disableMscs();
+    method @FlaggedApi("com.android.wifi.flags.mscs_configuration") @RequiresPermission(anyOf={android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION}) public void enableMscs(@NonNull android.net.wifi.MscsParams);
     method @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void factoryReset();
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.NETWORK_STACK}) public void forget(int, @Nullable android.net.wifi.WifiManager.ActionListener);
     method @NonNull @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public java.util.List<android.util.Pair<android.net.wifi.WifiConfiguration,java.util.Map<java.lang.Integer,java.util.List<android.net.wifi.ScanResult>>>> getAllMatchingWifiConfigs(@NonNull java.util.List<android.net.wifi.ScanResult>);
