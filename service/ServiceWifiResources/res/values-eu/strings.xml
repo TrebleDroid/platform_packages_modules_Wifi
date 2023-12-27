@@ -40,10 +40,10 @@
     <string name="wifi_suggestion_imsi_privacy_exemption_confirmation_content" msgid="9211241189147807136">"Konektatzen bazara, baliteke <xliff:g id="CARRIERNAME">%s</xliff:g> operadorearen wifi-sareek zure SIM txartelarekin lotutako identifikatzaile esklusiboa atzitzea edo partekatzea. Horrela, baliteke zure gailuaren kokapenaren jarraipena egiteko aukera izatea."</string>
     <string name="wifi_suggestion_action_allow_imsi_privacy_exemption_confirmation" msgid="2168947026413431603">"Konektatu"</string>
     <string name="wifi_suggestion_action_disallow_imsi_privacy_exemption_confirmation" msgid="5156881939985876066">"Ez konektatu"</string>
-    <string name="wifi_wakeup_onboarding_title" msgid="3868826648004934540">"Wi‑Fi konexioa automatikoki aktibatuko da"</string>
+    <string name="wifi_wakeup_onboarding_title" msgid="3868826648004934540">"Wifi-konexioa automatikoki aktibatuko da"</string>
     <string name="wifi_wakeup_onboarding_subtext" msgid="5705886295837387430">"Gordeta daukazun kalitate handiko sare batetik gertu zaudenean"</string>
     <string name="wifi_wakeup_onboarding_action_disable" msgid="6209706680391785825">"Ez aktibatu berriro"</string>
-    <string name="wifi_wakeup_enabled_title" msgid="5043486751612595850">"Automatikoki aktibatu da Wi‑Fi konexioa"</string>
+    <string name="wifi_wakeup_enabled_title" msgid="5043486751612595850">"Automatikoki aktibatu da wifi-konexioa"</string>
     <string name="wifi_wakeup_enabled_content" msgid="3911262526267025882">"Gordetako sare honetatik gertu zaude: <xliff:g id="NETWORK_SSID">%1$s</xliff:g>"</string>
     <string name="wifi_watchdog_network_disabled" msgid="5769226742956006362">"Ezin izan da wifi-sarera konektatu"</string>
     <string name="wifi_watchdog_network_disabled_detailed" msgid="1725243835135539125">" SSIDak Interneteko konexio txarra du."</string>
