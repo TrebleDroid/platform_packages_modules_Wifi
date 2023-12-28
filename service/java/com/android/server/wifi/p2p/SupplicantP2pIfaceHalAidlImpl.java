@@ -27,6 +27,7 @@ import android.hardware.wifi.supplicant.IfaceInfo;
 import android.hardware.wifi.supplicant.IfaceType;
 import android.hardware.wifi.supplicant.MiracastMode;
 import android.hardware.wifi.supplicant.P2pDiscoveryInfo;
+import android.hardware.wifi.supplicant.P2pExtListenInfo;
 import android.hardware.wifi.supplicant.P2pFrameTypeMask;
 import android.hardware.wifi.supplicant.P2pScanType;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
@@ -1312,7 +1313,14 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
             }
 
             try {
-                mISupplicantP2pIface.configureExtListen(periodInMillis, intervalInMillis);
+                if (getCachedServiceVersion() >= 3) {
+                    P2pExtListenInfo extListenInfo = new P2pExtListenInfo();
+                    extListenInfo.periodMs = periodInMillis;
+                    extListenInfo.intervalMs = intervalInMillis;
+                    mISupplicantP2pIface.configureExtListenWithParams(extListenInfo);
+                } else {
+                    mISupplicantP2pIface.configureExtListen(periodInMillis, intervalInMillis);
+                }
                 return true;
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);
