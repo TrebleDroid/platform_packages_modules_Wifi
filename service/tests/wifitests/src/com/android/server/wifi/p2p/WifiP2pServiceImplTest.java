@@ -7014,6 +7014,27 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 WpsInfo.PBC, WifiP2pManager.CONNECTION_REQUEST_ACCEPT);
     }
 
+    /** Verify the failure scenario for setConnectionRequestResult without a saved peer config. */
+    @Test
+    public void testSetConnectionRequestResultFailureWithoutSavedPeerConfig() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(true);
+        when(mWifiPermissionsUtil.checkNearbyDevicesPermission(any(), anyBoolean(), any()))
+                .thenReturn(true);
+        Binder binder = new Binder();
+        mockEnterGroupCreatedState();
+        sendSetConnectionRequestResultMsg(
+                mClientMessenger,
+                MacAddress.fromString(mTestWifiP2pDevice.deviceAddress),
+                WifiP2pManager.CONNECTION_REQUEST_ACCEPT,
+                binder);
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(mClientHandler).sendMessage(messageCaptor.capture());
+        List<Message> messages = messageCaptor.getAllValues();
+        assertEquals(WifiP2pManager.SET_CONNECTION_REQUEST_RESULT_FAILED, messages.get(0).what);
+    }
+
     /**
      * Verify that deferring pin to the framework works normally.
      */
