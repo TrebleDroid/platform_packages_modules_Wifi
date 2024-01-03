@@ -672,14 +672,6 @@ public class ActiveModeWarden {
                         R.bool.config_wifiMultiStaMultiInternetConcurrencyEnabled);
     }
 
-    /**
-     * @return true if this devices supports device-to-device when infra station (STA) is disabled.
-     */
-    public boolean isD2dSupportedWhenInfraStaDisabled() {
-        return !mWifiNative.isP2pStaConcurrencySupported()
-                && mWifiGlobals.isD2dAllowedControlSupportedWhenInfraStaDisabled();
-    }
-
     /** Begin listening to broadcasts and start the internal state machine. */
     public void start() {
         mContext.registerReceiver(new BroadcastReceiver() {
@@ -724,6 +716,7 @@ public class ActiveModeWarden {
                 }
             }, new IntentFilter(TelephonyManager.ACTION_EMERGENCY_CALL_STATE_CHANGED));
         }
+        mWifiGlobals.setD2dStaConcurrencySupported(mWifiNative.isP2pStaConcurrencySupported());
         // Initialize the supported feature set.
         setSupportedFeatureSet(mWifiNative.getSupportedFeatureSet(null),
                 mWifiNative.isStaApConcurrencySupported(),
@@ -2776,7 +2769,7 @@ public class ActiveModeWarden {
             // The WPA didn't be deprecated, set it.
             additionalFeatureSet |= WifiManager.WIFI_FEATURE_WPA_PERSONAL;
         }
-        if (isD2dSupportedWhenInfraStaDisabled()) {
+        if (mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()) {
             additionalFeatureSet |= WifiManager.WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED;
         }
         mSupportedFeatureSet.set(

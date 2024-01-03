@@ -21,6 +21,7 @@ import static android.net.wifi.p2p.WifiP2pConfig.GROUP_CLIENT_IP_PROVISIONING_MO
 
 import static com.android.net.module.util.Inet4AddressUtils.inet4AddressToIntHTL;
 import static com.android.net.module.util.Inet4AddressUtils.netmaskToPrefixLength;
+import static com.android.server.wifi.WifiSettingsConfigStore.D2D_ALLOWED_WHEN_INFRA_STA_DISABLED;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_DEVICE_ADDRESS;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_DEVICE_NAME;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_PENDING_FACTORY_RESET;
@@ -142,6 +143,7 @@ import com.android.server.wifi.util.StringUtil;
 import com.android.server.wifi.util.WaitingState;
 import com.android.server.wifi.util.WifiPermissionsUtil;
 import com.android.server.wifi.util.WifiPermissionsWrapper;
+import com.android.wifi.flags.FeatureFlags;
 import com.android.wifi.resources.R;
 
 import java.io.FileDescriptor;
@@ -242,6 +244,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
     private final WifiP2pNative mWifiNative;
     private final LastCallerInfoManager mLastCallerInfoManager;
     private HalDeviceManager mHalDeviceManager;
+    private final FeatureFlags mFeatureFlags;
 
     private static final Boolean JOIN_GROUP = true;
     private static final Boolean FORM_GROUP = false;
@@ -694,6 +697,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
         mWifiNative = mWifiInjector.getWifiP2pNative();
         mLastCallerInfoManager = mWifiInjector.getLastCallerInfoManager();
         mHalDeviceManager = mWifiInjector.getHalDeviceManager();
+        mFeatureFlags = mWifiInjector.getDeviceConfigFacade().getFeatureFlags();
         mP2pStateMachine = new P2pStateMachine(TAG, wifiP2pThread.getLooper(), mP2pSupported);
         mP2pStateMachine.setDbg(false); // can enable for very verbose logs
         mP2pStateMachine.start();
@@ -1278,8 +1282,17 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                             mIsWifiEnabled = true;
                         } else {
                             mIsWifiEnabled = false;
-                            // Teardown P2P if it's up already.
-                            sendMessage(DISABLE_P2P);
+                            // P2P can be established even when infra STA is disabled.
+                            // This implies that STA might be torn down by P2P
+                            // (e.g., if STA was active initially).
+                            // Check availability to determine whether to stop P2P
+                            // upon receiving a Wi-Fi off signal.
+                            if (!isWifiP2pAvailable()) {
+                                sendMessage(DISABLE_P2P);
+                            } else {
+                                Log.i(TAG, "Infra STA is disabled but keep P2P on since"
+                                        + " d2d is allowed when infra sta is disabled");
+                            }
                         }
                         if (wifistate == WifiManager.WIFI_STATE_ENABLED
                                 || wifistate == WifiManager.WIFI_STATE_DISABLING) {
@@ -1287,6 +1300,8 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         }
                     }
                 }, new IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION));
+
+                // TODO: b/295792510 - Monitor D2D_ALLOWED_WHEN_INFRA_STA_DISABLED value.
                 // Register for location mode on/off broadcasts
                 mContext.registerReceiver(new BroadcastReceiver() {
                     @Override
@@ -5379,7 +5394,13 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
         }
 
         private boolean isWifiP2pAvailable() {
-            return mIsWifiEnabled && !mIsP2pDisallowedByAdmin;
+            if (mIsP2pDisallowedByAdmin) return false;
+            if (mFeatureFlags.d2dUsageWhenWifiOff()) {
+                return mIsWifiEnabled
+                        || (mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)
+                                && mWifiGlobals.isD2dSupportedWhenInfraStaDisabled());
+            }
+            return mIsWifiEnabled;
         }
 
         private void checkAndSendP2pStateChangedBroadcast() {

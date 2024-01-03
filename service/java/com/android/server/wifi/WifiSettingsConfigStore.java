@@ -193,6 +193,11 @@ public class WifiSettingsConfigStore {
     public static final Key<Boolean> WIFI_WIPHY_11BE_SUPPORTED =
             new Key<>("wifi_wiphy_11be_supported", true);
 
+    /**
+     * Whether the D2D is allowed or not when infra sta is disabled.
+     */
+    public static final Key<Boolean> D2D_ALLOWED_WHEN_INFRA_STA_DISABLED =
+            new Key<>("d2d_allowed_when_infra_sta_disabled", false);
     /******** Wifi shared pref keys ***************/
 
     private final Context mContext;

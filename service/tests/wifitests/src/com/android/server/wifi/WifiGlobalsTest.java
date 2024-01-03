@@ -342,14 +342,21 @@ public class WifiGlobalsTest extends WifiBaseTest {
     }
 
     @Test
-    public void isD2dSupportedWhenInfraStaDisabled() {
-        mResources.setBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled,
-                true);
-        mWifiGlobals = new WifiGlobals(mContext);
-        assertTrue(mWifiGlobals.isD2dAllowedControlSupportedWhenInfraStaDisabled());
+    public void testIsD2dSupportedWhenInfraStaDisabled() {
         mResources.setBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled,
                 false);
         mWifiGlobals = new WifiGlobals(mContext);
-        assertFalse(mWifiGlobals.isD2dAllowedControlSupportedWhenInfraStaDisabled());
+        mWifiGlobals.setD2dStaConcurrencySupported(true);
+        assertFalse(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled());
+        mWifiGlobals.setD2dStaConcurrencySupported(false);
+        assertFalse(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled());
+
+        mResources.setBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled,
+                true);
+        mWifiGlobals = new WifiGlobals(mContext);
+        mWifiGlobals.setD2dStaConcurrencySupported(true);
+        assertFalse(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled());
+        mWifiGlobals.setD2dStaConcurrencySupported(false);
+        assertTrue(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled());
     }
 }

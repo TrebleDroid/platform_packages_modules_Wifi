@@ -501,4 +501,8 @@ interface IWifiManager
     void getStatsTwtSession(in int sessionId, in ITwtStatsListener listener, in Bundle extras);
 
     void teardownTwtSession(in int sessionId, in Bundle extras);
+
+    void setD2dAllowedWhenInfraStaDisabled(boolean isAllowed);
+
+    void queryD2dAllowedWhenInfraStaDisabled(in IBooleanListener listener);
 }
