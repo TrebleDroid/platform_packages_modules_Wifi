@@ -30,6 +30,8 @@ import android.hardware.wifi.RttType;
 import android.hardware.wifi.WifiChannelInfo;
 import android.hardware.wifi.WifiChannelWidthInMhz;
 import android.net.MacAddress;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiAnnotations;
 import android.net.wifi.rtt.RangingRequest;
 import android.net.wifi.rtt.RangingResult;
 import android.net.wifi.rtt.ResponderConfig;
@@ -277,9 +279,27 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                     rttResult.successNumber, lci, lcr, responderLocation,
                     rttResult.timeStampInUs /  WifiRttController.CONVERSION_US_TO_MS,
                     rttResult.type == RttType.TWO_SIDED, rttResult.channelFreqMHz,
-                    rttResult.packetBw));
+                    halToFrameworkChannelBandwidth(rttResult.packetBw)));
         }
         return rangingResults;
+    }
+
+    private static @WifiAnnotations.ChannelWidth int halToFrameworkChannelBandwidth(
+            @RttBw int packetBw) {
+        switch (packetBw) {
+            case RttBw.BW_20MHZ:
+                return ScanResult.CHANNEL_WIDTH_20MHZ;
+            case RttBw.BW_40MHZ:
+                return ScanResult.CHANNEL_WIDTH_40MHZ;
+            case RttBw.BW_80MHZ:
+                return ScanResult.CHANNEL_WIDTH_80MHZ;
+            case RttBw.BW_160MHZ:
+                return ScanResult.CHANNEL_WIDTH_160MHZ;
+            case RttBw.BW_320MHZ:
+                return ScanResult.CHANNEL_WIDTH_320MHZ;
+            default:
+                return RangingResult.UNSPECIFIED;
+        }
     }
 
     private static @WifiRttController.FrameworkRttStatus int halToFrameworkRttStatus(
