@@ -596,6 +596,9 @@
     <integer translatable="false" name="config_wifiDisableReasonAuthenticationNoSubscriptionThreshold"> 1 </integer>
     <integer translatable="false" name="config_wifiDisableReasonConsecutiveFailuresThreshold"> 1 </integer>
 
+    <!-- Integer for maximum value of temporarily disabled duration -->
+    <integer translatable="false" name="config_wifiDisableTemporaryMaximumDurationMs"> 64800000 </integer>
+
     <!-- Base duration to set a network disabled after validation failure happen-->
     <integer translatable="false" name="config_wifiDisableReasonAssociationRejectionDurationMs"> 300000 </integer>
     <integer translatable="false" name="config_wifiDisableReasonAuthenticationFailureDurationMs"> 300000 </integer>
