@@ -2734,8 +2734,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         for (MloLink link : mWifiInfo.getAffiliatedMloLinks()) {
-            if (link.getState() == MloLink.MLO_LINK_STATE_IDLE
-                    || link.getState() == MloLink.MLO_LINK_STATE_ACTIVE) {
+            if (pollResults.isAvailable(link.getLinkId())
+                    && (link.getState() == MloLink.MLO_LINK_STATE_IDLE
+                    || link.getState() == MloLink.MLO_LINK_STATE_ACTIVE)) {
                 updateMloLinkFromPollResults(link, pollResults);
             } else {
                 updateMloLinkFromScanResult(link);
