@@ -287,10 +287,17 @@ abstract class SupplicantStaIfaceCallbackHidlImpl extends ISupplicantStaIfaceCal
             WifiConfiguration curConfiguration =
                     mStaIfaceHal.getCurrentNetworkLocalConfig(mIfaceName);
             if (curConfiguration != null) {
+                // In case of PSK networks the disconnection event in the middle of key exchange
+                // happens due to PSK mismatch. But filter out the de-authentication/disassociation
+                // frame from AP with known reason codes which are not related to PSK mismatch from
+                // reporting wrong password error.
                 if (mStateBeforeDisconnect == State.FOURWAY_HANDSHAKE
                         && (WifiConfigurationUtil.isConfigForPskNetwork(curConfiguration)
-                        || WifiConfigurationUtil.isConfigForWapiPskNetwork(curConfiguration))
-                        && (!locallyGenerated || reasonCode != ReasonCode.IE_IN_4WAY_DIFFERS)) {
+                                || WifiConfigurationUtil.isConfigForWapiPskNetwork(
+                                        curConfiguration))
+                        && (!locallyGenerated
+                                || (reasonCode != ReasonCode.IE_IN_4WAY_DIFFERS
+                                        && reasonCode != ReasonCode.DISASSOC_AP_BUSY))) {
                     mWifiMonitor.broadcastAuthenticationFailureEvent(
                             mIfaceName, WifiManager.ERROR_AUTH_FAILURE_WRONG_PSWD, -1,
                             mCurrentSsid, MacAddress.fromBytes(bssid));
