@@ -9930,22 +9930,24 @@ public class ClientModeImplTest extends WifiBaseTest {
         link1.setChannel(TEST_CHANNEL);
         link1.setApMacAddress(MacAddress.fromString(TEST_BSSID_STR));
         link1.setLinkId(TEST_MLO_LINK_ID);
+        link1.setRssi(TEST_RSSI);
         MloLink link2 = new MloLink();
         link2.setBand(WifiScanner.WIFI_BAND_5_GHZ);
         link2.setChannel(TEST_CHANNEL_1);
         link2.setApMacAddress(MacAddress.fromString(TEST_BSSID_STR1));
         link2.setLinkId(TEST_MLO_LINK_ID_1);
+        link2.setRssi(TEST_RSSI);
         mloLinks.add(link1);
         mloLinks.add(link2);
 
         when(mScanResult.getApMldMacAddress()).thenReturn(TEST_AP_MLD_MAC_ADDRESS);
         when(mScanResult.getApMloLinkId()).thenReturn(TEST_MLO_LINK_ID);
         when(mScanResult.getAffiliatedMloLinks()).thenReturn(mloLinks);
+        mScanResult.level = TEST_RSSI;
 
         when(mWifiConfigManager.getScanDetailCacheForNetwork(FRAMEWORK_NETWORK_ID))
                 .thenReturn(mScanDetailCache);
         when(mScanDetailCache.getScanResult(any())).thenReturn(mScanResult);
-
     }
 
     private void setScanResultWithoutMloInfo() {
@@ -10786,6 +10788,15 @@ public class ClientModeImplTest extends WifiBaseTest {
         assertEquals(links.get(1).getBand(), WifiScanner.WIFI_BAND_5_GHZ);
         assertEquals(links.get(1).getChannel(), TEST_CHANNEL_1);
         assertEquals(links.get(1).getLinkId(), TEST_MLO_LINK_ID_1);
+
+        // Make sure the dynamic attributes (Tx link speed, Rx link speed and RSSI) are matching
+        // with poll results for associated links.
+        assertEquals(65, links.get(0).getTxLinkSpeedMbps());
+        assertEquals(54, links.get(0).getRxLinkSpeedMbps());
+        assertEquals(-42, links.get(0).getRssi());
+
+        // Make sure the RSSI is matching with scan cache for un-associated links
+        assertEquals(TEST_RSSI, links.get(1).getRssi());
     }
 
     /**
