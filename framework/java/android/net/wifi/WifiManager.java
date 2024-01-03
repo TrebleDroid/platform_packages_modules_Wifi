@@ -12061,7 +12061,6 @@ public class WifiManager {
      *                        whether wep network support is enabled/disabled.
      *
      * @throws SecurityException if the caller does not have permission.
-     * @throws NullPointerException if the caller provided invalid inputs.
      * @hide
      */
     @FlaggedApi("com.android.wifi.flags.wep_usage")
