@@ -129,7 +129,7 @@ public final class RangingResult implements Parcelable {
             int distanceStdDevMm, int rssi, int numAttemptedMeasurements,
             int numSuccessfulMeasurements, byte[] lci, byte[] lcr,
             ResponderLocation responderLocation, long timestamp, boolean is80211McMeasurement,
-            int frequencyMHz, int packetBw) {
+            int frequencyMHz, @ChannelWidth int packetBw) {
         mStatus = status;
         mMac = mac;
         mPeerHandle = null;
@@ -183,7 +183,7 @@ public final class RangingResult implements Parcelable {
             ResponderLocation responderLocation,
             long timestamp,
             int frequencyMHz,
-            int packetBw) {
+            @ChannelWidth int packetBw) {
         mStatus = status;
         mMac = null;
         mPeerHandle = peerHandle;
