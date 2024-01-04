@@ -38,6 +38,7 @@ import android.hardware.wifi.RttType;
 import android.hardware.wifi.WifiChannelWidthInMhz;
 import android.hardware.wifi.WifiInformationElement;
 import android.net.MacAddress;
+import android.net.wifi.ScanResult;
 import android.net.wifi.rtt.RangingRequest;
 import android.net.wifi.rtt.RangingResult;
 import android.net.wifi.rtt.ResponderConfig;
@@ -286,6 +287,7 @@ public class WifiRttControllerAidlImplTest extends WifiBaseTest {
         res.status = RttStatus.SUCCESS;
         res.distanceInMm = 1500;
         res.timeStampInUs = 6000;
+        res.packetBw = RttBw.BW_80MHZ;
         results[0] = res;
 
         // (1) have the HAL call us with results
@@ -306,7 +308,8 @@ public class WifiRttControllerAidlImplTest extends WifiBaseTest {
                 equalTo(MacAddress.fromString("05:06:07:08:09:0A").toByteArray()));
         collector.checkThat("distanceCm", rttResult.getDistanceMm(), equalTo(1500));
         collector.checkThat("timestamp", rttResult.getRangingTimestampMillis(), equalTo(6L));
-
+        collector.checkThat("channelBw", rttResult.getMeasurementBandwidth(),
+                equalTo(ScanResult.CHANNEL_WIDTH_80MHZ));
         verifyNoMoreInteractions(mIWifiRttControllerMock);
     }
 
