@@ -119,6 +119,7 @@ java_library {
         "wifi-lite-protos",
         "wifi-nano-protos",
     ],
+    apex_available: ["com.android.wifi"],
 }
 
 // wifi-service static library
