@@ -77,6 +77,7 @@ import android.hardware.wifi.supplicant.KeyMgmtMask;
 import android.hardware.wifi.supplicant.LegacyMode;
 import android.hardware.wifi.supplicant.MloLink;
 import android.hardware.wifi.supplicant.MloLinksInfo;
+import android.hardware.wifi.supplicant.MscsParams.FrameClassifierFields;
 import android.hardware.wifi.supplicant.OceRssiBasedAssocRejectAttr;
 import android.hardware.wifi.supplicant.OsuMethod;
 import android.hardware.wifi.supplicant.PmkSaCacheData;
@@ -101,6 +102,7 @@ import android.hardware.wifi.supplicant.WpsErrorIndication;
 import android.net.DscpPolicy;
 import android.net.MacAddress;
 import android.net.NetworkAgent;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
@@ -3121,5 +3123,41 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         reset(mISupplicantMock);
         assertTrue(mDut.startDaemon());
         verify(mISupplicantMock, never()).getInterfaceVersion();
+    }
+
+    /**
+     * Test {@link SupplicantStaIfaceHalAidlImpl#enableMscs(MscsParams, String)} and verify the
+     * conversion from {@link MscsParams} to its HAL equivalent.
+     */
+    @Test
+    public void testEnableMscs() throws Exception {
+        int userPriorityBitmap = (1 << 6) | (1 << 7);
+        int userPriorityLimit = 5;
+        int streamTimeoutUs = 1500;
+        int frameworkFrameClassifierMask =
+                MscsParams.FRAME_CLASSIFIER_IP_VERSION | MscsParams.FRAME_CLASSIFIER_DSCP;
+        byte halFrameClassifierMask =
+                FrameClassifierFields.IP_VERSION | FrameClassifierFields.DSCP;
+
+        ArgumentCaptor<android.hardware.wifi.supplicant.MscsParams> halParamsCaptor =
+                ArgumentCaptor.forClass(android.hardware.wifi.supplicant.MscsParams.class);
+        doNothing().when(mISupplicantStaIfaceMock).configureMscs(any());
+        executeAndValidateInitializationSequence();
+
+        MscsParams frameworkParams = new MscsParams.Builder()
+                .setUserPriorityBitmap(userPriorityBitmap)
+                .setUserPriorityLimit(userPriorityLimit)
+                .setStreamTimeoutUs(streamTimeoutUs)
+                .setFrameClassifierFields(frameworkFrameClassifierMask)
+                .build();
+        mDut.setupIface(WLAN0_IFACE_NAME);
+        mDut.enableMscs(frameworkParams, WLAN0_IFACE_NAME);
+
+        verify(mISupplicantStaIfaceMock).configureMscs(halParamsCaptor.capture());
+        android.hardware.wifi.supplicant.MscsParams halParams = halParamsCaptor.getValue();
+        assertEquals((byte) userPriorityBitmap, halParams.upBitmap);
+        assertEquals((byte) userPriorityLimit, halParams.upLimit);
+        assertEquals(streamTimeoutUs, halParams.streamTimeoutUs);
+        assertEquals(halFrameClassifierMask, halParams.frameClassifierMask);
     }
 }

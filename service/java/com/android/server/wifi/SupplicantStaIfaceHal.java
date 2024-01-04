@@ -19,6 +19,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.net.MacAddress;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
@@ -2361,6 +2362,30 @@ public class SupplicantStaIfaceHal {
         }
         return mStaIfaceHal.setEapAnonymousIdentity(ifaceName, anonymousIdentity,
                 updateToNativeService);
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIfaceHal#enableMscs(MscsParams, String)}
+     */
+    public void enableMscs(@NonNull MscsParams mscsParams, String ifaceName) {
+        String methodStr = "enableMscs";
+        if (mStaIfaceHal == null) {
+            handleNullHal(methodStr);
+            return;
+        }
+        mStaIfaceHal.enableMscs(mscsParams, ifaceName);
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIfaceHal#disableMscs(String)}
+     */
+    public void disableMscs(String ifaceName) {
+        String methodStr = "disableMscs";
+        if (mStaIfaceHal == null) {
+            handleNullHal(methodStr);
+            return;
+        }
+        mStaIfaceHal.disableMscs(ifaceName);
     }
 
     private boolean handleNullHal(String methodStr) {

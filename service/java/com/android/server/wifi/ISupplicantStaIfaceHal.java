@@ -19,6 +19,7 @@ package com.android.server.wifi;
 
 import android.annotation.NonNull;
 import android.net.MacAddress;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
@@ -811,4 +812,20 @@ interface ISupplicantStaIfaceHal {
      */
     boolean setEapAnonymousIdentity(@NonNull String ifaceName, String anonymousIdentity,
             boolean updateToNativeService);
+
+    /**
+     * Enable Mirrored Stream Classification Service (MSCS) and configure using
+     * the provided configuration values.
+     *
+     * @param mscsParams {@link MscsParams} object containing the configuration parameters.
+     * @param ifaceName Name of the interface.
+     */
+    default void enableMscs(@NonNull MscsParams mscsParams, String ifaceName) {}
+
+    /**
+     * Disable Mirrored Stream Classification Service (MSCS).
+     *
+     * @param ifaceName Name of the interface.
+     */
+    default void disableMscs(String ifaceName) {}
 }
