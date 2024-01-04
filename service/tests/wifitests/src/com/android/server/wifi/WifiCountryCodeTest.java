@@ -293,7 +293,7 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         // Wifi get L2 connected.
         mClientModeImplListenerCaptor.getValue().onConnectionStart(mClientModeManager);
 
-        verify(mClientModeManager, times(3)).setCountryCode(anyString());
+        verify(mClientModeManager, times(2)).setCountryCode(anyString());
         assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
     }
 
@@ -318,15 +318,16 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         // Wifi get L2 connected.
         mClientModeImplListenerCaptor.getValue().onConnectionStart(mClientModeManager);
 
-        verify(mClientModeManager, times(3)).setCountryCode(anyString());
+        // Set twice, one is mDefaultCountryCode and another on is mTelephonyCountryCode
+        verify(mClientModeManager, times(2)).setCountryCode(anyString());
         assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
 
         // Remove mode manager.
         mModeChangeCallbackCaptor.getValue().onActiveModeManagerRemoved(mClientModeManager);
 
-        // Send Telephony country code again - should be ignored.
+        // Send Telephony country code again - should be ignored, times keep 2.
         mWifiCountryCode.setTelephonyCountryCodeAndUpdate(mTelephonyCountryCode);
-        verify(mClientModeManager, times(3)).setCountryCode(anyString());
+        verify(mClientModeManager, times(2)).setCountryCode(anyString());
         assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCountryCode());
 
         // Now try removing the mode manager again - should not crash.
@@ -643,7 +644,8 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         mModeChangeCallbackCaptor.getValue().onActiveModeManagerAdded(mClientModeManager);
         // Verify the SoftApManager doesn't impact when client mode changed
         verify(mSoftApManager, never()).updateCountryCode(anyString());
-        verify(mClientModeManager, times(2)).setCountryCode(anyString());
+        // The mode change should not set country code again
+        verify(mClientModeManager).setCountryCode(anyString());
 
         // Override the mClientModeManager.setCountryCode mock in setUp, do not update driver
         // country code, so both client mode manager and ap mode manager will update country code.
