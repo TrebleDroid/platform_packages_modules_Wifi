@@ -48,6 +48,7 @@ import android.util.SparseArray;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.MacAddressUtils;
+import com.android.wifi.flags.Flags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -2204,7 +2205,7 @@ public class WifiConfiguration implements Parcelable {
         /**
          * This network is temporarily disabled because of unwanted network under sufficient rssi.
          */
-        @FlaggedApi("com.android.wifi.flags.disable_reason_unwanted_low_rssi")
+        @FlaggedApi(Flags.FLAG_DISABLE_REASON_UNWANTED_LOW_RSSI)
         public static final int DISABLED_UNWANTED_LOW_RSSI = 14;
         /**
          * This network is temporarily disabled due to repeated IP reachability failures.

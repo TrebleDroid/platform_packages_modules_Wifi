@@ -103,7 +103,7 @@ java_library {
 // `framework-wifi-pre-jarjar`
 java_defaults {
     name: "framework-wifi-defaults",
-    defaults: ["wifi-module-sdk-version-defaults"],
+    defaults: ["wifi-module-sdk-version-defaults", "wifi-framework-aconfig-libraries"],
     static_libs: [
         "framework-wifi-util-lib",
         "android.hardware.wifi-V1.0-java-constants",

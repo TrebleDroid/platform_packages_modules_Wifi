@@ -58,6 +58,7 @@ import androidx.annotation.RequiresApi;
 import com.android.internal.util.AsyncChannel;
 import com.android.internal.util.Protocol;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -531,19 +532,19 @@ public class WifiP2pManager {
     /**
      * Run P2P scan on all channels.
      */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     public static final int WIFI_P2P_SCAN_FULL = 0;
 
     /**
      * Run P2P scan only on social channels.
      */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     public static final int WIFI_P2P_SCAN_SOCIAL = 1;
 
     /**
      * Run P2P scan only on a specific channel.
      */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     public static final int WIFI_P2P_SCAN_SINGLE_FREQ = 2;
 
     /**
@@ -1852,7 +1853,7 @@ public class WifiP2pManager {
             android.Manifest.permission.NEARBY_WIFI_DEVICES,
             android.Manifest.permission.ACCESS_FINE_LOCATION
             }, conditional = true)
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     public void discoverPeers(
             @NonNull Channel channel,
             @Nullable WifiP2pDiscoveryConfig config,
