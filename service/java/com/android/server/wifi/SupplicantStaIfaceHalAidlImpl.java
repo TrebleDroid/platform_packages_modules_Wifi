@@ -55,6 +55,7 @@ import android.hardware.wifi.supplicant.IpVersion;
 import android.hardware.wifi.supplicant.KeyMgmtMask;
 import android.hardware.wifi.supplicant.LegacyMode;
 import android.hardware.wifi.supplicant.MloLinksInfo;
+import android.hardware.wifi.supplicant.MscsParams.FrameClassifierFields;
 import android.hardware.wifi.supplicant.PortRange;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParams;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParamsMask;
@@ -74,6 +75,7 @@ import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.net.DscpPolicy;
 import android.net.MacAddress;
 import android.net.NetworkAgent;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
@@ -3740,6 +3742,95 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
             // Update cached config after setting native data successfully.
             currentConfig.enterpriseConfig.setAnonymousIdentity(anonymousIdentity);
             return true;
+        }
+    }
+
+    private static byte frameworkToHalFrameClassifierMask(int frameworkBitmap) {
+        byte halBitmap = 0;
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_IP_VERSION) != 0) {
+            halBitmap |= FrameClassifierFields.IP_VERSION;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_SRC_IP_ADDR) != 0) {
+            halBitmap |= FrameClassifierFields.SRC_IP_ADDR;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_DST_IP_ADDR) != 0) {
+            halBitmap |= FrameClassifierFields.DST_IP_ADDR;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_SRC_PORT) != 0) {
+            halBitmap |= FrameClassifierFields.SRC_PORT;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_DST_PORT) != 0) {
+            halBitmap |= FrameClassifierFields.DST_PORT;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_DSCP) != 0) {
+            halBitmap |= FrameClassifierFields.DSCP;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_PROTOCOL_NEXT_HDR) != 0) {
+            halBitmap |= FrameClassifierFields.PROTOCOL_NEXT_HDR;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_FLOW_LABEL) != 0) {
+            halBitmap |= FrameClassifierFields.FLOW_LABEL;
+        }
+        return halBitmap;
+    }
+
+    private static android.hardware.wifi.supplicant.MscsParams frameworkToHalMscsParams(
+            MscsParams frameworkParams) {
+        android.hardware.wifi.supplicant.MscsParams halParams =
+                new android.hardware.wifi.supplicant.MscsParams();
+        halParams.upBitmap = (byte) frameworkParams.getUserPriorityBitmap();
+        halParams.upLimit = (byte) frameworkParams.getUserPriorityLimit();
+        halParams.streamTimeoutUs = frameworkParams.getStreamTimeoutUs();
+        halParams.frameClassifierMask =
+                frameworkToHalFrameClassifierMask(frameworkParams.getFrameClassifierFields());
+        return halParams;
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIfaceHal#enableMscs(MscsParams, String)}
+     */
+    @Override
+    public void enableMscs(@NonNull MscsParams mscsParams, String ifaceName) {
+        synchronized (mLock) {
+            if (!isServiceVersionAtLeast(3)) {
+                return;
+            }
+            String methodStr = "enableMscs";
+            ISupplicantStaIface iface = checkStaIfaceAndLogFailure(ifaceName, methodStr);
+            if (iface == null) {
+                return;
+            }
+            try {
+                android.hardware.wifi.supplicant.MscsParams halParams =
+                        frameworkToHalMscsParams(mscsParams);
+                iface.configureMscs(halParams);
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+        }
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIface#disableMscs()}
+     */
+    @Override
+    public void disableMscs(String ifaceName) {
+        if (!isServiceVersionAtLeast(3)) {
+            return;
+        }
+        String methodStr = "disableMscs";
+        ISupplicantStaIface iface = checkStaIfaceAndLogFailure(ifaceName, methodStr);
+        if (iface == null) {
+            return;
+        }
+        try {
+            iface.disableMscs();
+        } catch (RemoteException e) {
+            handleRemoteException(e, methodStr);
+        } catch (ServiceSpecificException e) {
+            handleServiceSpecificException(e, methodStr);
         }
     }
 

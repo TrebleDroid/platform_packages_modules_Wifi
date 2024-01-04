@@ -32,6 +32,7 @@ import android.net.MacAddress;
 import android.net.TrafficStats;
 import android.net.apf.ApfCapabilities;
 import android.net.wifi.CoexUnsafeChannel;
+import android.net.wifi.MscsParams;
 import android.net.wifi.OuiKeyedData;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
@@ -5058,5 +5059,25 @@ public class WifiNative {
      */
     public boolean setAfcChannelAllowance(WifiChip.AfcChannelAllowance afcChannelAllowance) {
         return mWifiVendorHal.setAfcChannelAllowance(afcChannelAllowance);
+    }
+
+    /**
+     * Enable Mirrored Stream Classification Service (MSCS) and configure using
+     * the provided configuration values.
+     *
+     * @param mscsParams {@link MscsParams} object containing the configuration parameters.
+     * @param ifaceName Name of the interface.
+     */
+    public void enableMscs(@NonNull MscsParams mscsParams, String ifaceName) {
+        mSupplicantStaIfaceHal.enableMscs(mscsParams, ifaceName);
+    }
+
+    /**
+     * Disable Mirrored Stream Classification Service (MSCS).
+     *
+     * @param ifaceName Name of the interface.
+     */
+    public void disableMscs(String ifaceName) {
+        mSupplicantStaIfaceHal.disableMscs(ifaceName);
     }
 }
