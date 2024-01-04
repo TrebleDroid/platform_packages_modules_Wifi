@@ -8688,6 +8688,16 @@ public class WifiServiceImplTest extends WifiBaseTest {
         validateWifiActivityEnergyInfo(infoCaptor.getValue());
     }
 
+    /**
+     * Tests that {@link WifiServiceImpl#getWifiActivityEnergyInfoAsync} throws exception when
+     * listener is null
+     */
+    @Test
+    public void getWifiActivityEnergyInfoWithNullListener() throws Exception {
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.getWifiActivityEnergyInfoAsync(null));
+    }
+
     @Test
     public void testCarrierConfigChangeUpdateSoftApCapability() throws Exception {
         lenient().when(SubscriptionManager.getActiveDataSubscriptionId())
