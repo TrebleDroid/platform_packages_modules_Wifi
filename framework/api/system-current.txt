@@ -1588,11 +1588,6 @@ package android.net.wifi.rtt {
     method @NonNull public java.util.List<android.net.wifi.rtt.ResponderConfig> getRttResponders();
   }
 
-  public final class RangingResult implements android.os.Parcelable {
-    method @NonNull public byte[] getLci();
-    method @NonNull public byte[] getLcr();
-  }
-
   public final class ResponderConfig implements android.os.Parcelable {
     ctor public ResponderConfig(@NonNull android.net.MacAddress, int, boolean, int, int, int, int, int);
     ctor public ResponderConfig(@NonNull android.net.wifi.aware.PeerHandle, int, boolean, int, int, int, int, int);

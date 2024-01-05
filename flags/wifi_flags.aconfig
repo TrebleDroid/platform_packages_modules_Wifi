@@ -128,6 +128,13 @@ flag {
 }
 
 flag {
+    name: "ranging_result_builder"
+    namespace: "wifi"
+    description: "Add new Builder API for RangeResult"
+    bug: "318765791"
+}
+
+flag {
     name: "uri_parser"
     namespace: "wifi"
     description: "Control the API for parsing uri"

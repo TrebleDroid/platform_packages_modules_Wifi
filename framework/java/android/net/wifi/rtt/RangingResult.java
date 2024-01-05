@@ -16,10 +16,10 @@
 
 package android.net.wifi.rtt;
 
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.SystemApi;
 import android.net.MacAddress;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiAnnotations.ChannelWidth;
@@ -79,126 +79,298 @@ public final class RangingResult implements Parcelable {
      */
     public static final int UNSPECIFIED = -1;
 
-    /** @hide */
-    public final int mStatus;
+    private final @RangeResultStatus int mStatus;
+    private final MacAddress mMac;
+    private final PeerHandle mPeerHandle;
+    private final int mDistanceMm;
+    private final int mDistanceStdDevMm;
+    private final int mRssi;
+    private final int mNumAttemptedMeasurements;
+    private final int mNumSuccessfulMeasurements;
+    private final byte[] mLci;
+    private final byte[] mLcr;
+    private final ResponderLocation mResponderLocation;
+    private final long mTimestamp;
+    private final boolean mIs80211mcMeasurement;
+    private final int mFrequencyMHz;
+    private final int mPacketBw;
 
-    /** @hide */
-    public final MacAddress mMac;
+    /**
+     * Builder class used to construct {@link RangingResult} objects.
+     */
+    @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+    public static final class Builder {
+        private @RangeResultStatus int mStatus = STATUS_FAIL;
+        private MacAddress mMac = null;
+        private PeerHandle mPeerHandle = null;
+        private int mDistanceMm = 0;
+        private int mDistanceStdDevMm = 0;
+        private int mRssi = UNSPECIFIED;
+        private int mNumAttemptedMeasurements = 0;
+        private int mNumSuccessfulMeasurements = 0;
+        private byte[] mLci = null;
+        private  byte[] mLcr = null;
+        private ResponderLocation mResponderLocation = null;
+        private long mTimestamp = 0;
+        private boolean mIs80211mcMeasurement = false;
+        private int mFrequencyMHz = UNSPECIFIED;
+        private int mPacketBw = UNSPECIFIED;
 
-    /** @hide */
-    public final PeerHandle mPeerHandle;
+        /**
+         * Sets the Range result status from {@link RangeResultStatus}.
+         *
+         * @param status Ranging result status, if not set defaults to
+         *               {@link RangeResultStatus#STATUS_FAIL}.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setStatus(@RangeResultStatus int status) {
+            mStatus = status;
+            return this;
+        }
 
-    /** @hide */
-    public final int mDistanceMm;
+        /**
+         * Sets the MAC address of the ranging result.
+         *
+         * @param macAddress Mac address, if not defaults to null.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setMacAddress(@Nullable MacAddress macAddress) {
+            mMac = macAddress;
+            return this;
+        }
 
-    /** @hide */
-    public final int mDistanceStdDevMm;
 
-    /** @hide */
-    public final int mRssi;
+        /**
+         * Sets the peer handle. Applicable only for NAN Ranging.
+         *
+         * @param peerHandle Opaque object used to represent a Wi-Fi Aware peer. If not set,
+         *                   defaults to null.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setPeerHandle(@Nullable PeerHandle peerHandle) {
+            mPeerHandle = peerHandle;
+            return this;
+        }
 
-    /** @hide */
-    public final int mNumAttemptedMeasurements;
+        /**
+         * Sets the distance in millimeter.
+         *
+         * @param distanceMm distance. If not set, defaults to 0.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setDistanceMm(int distanceMm) {
+            mDistanceMm = distanceMm;
+            return this;
+        }
 
-    /** @hide */
-    public final int mNumSuccessfulMeasurements;
+        /**
+         * Sets the standard deviation of the distance in millimeter.
+         *
+         * @param distanceStdDevMm Standard deviation of the distance measurement. If not set
+         *                         defaults to 0.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setDistanceStdDevMm(int distanceStdDevMm) {
+            mDistanceStdDevMm = distanceStdDevMm;
+            return this;
+        }
 
-    /** @hide */
-    public final byte[] mLci;
+        /**
+         * Sets the average RSSI.
+         *
+         * @param rssi Average RSSI. If not set, defaults to 0.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setRssi(int rssi) {
+            mRssi = rssi;
+            return this;
+        }
 
-    /** @hide */
-    public final byte[] mLcr;
+        /**
+         * Sets the total number of RTT measurements attempted.
+         *
+         * @param numAttemptedMeasurements Number of attempted measurements. If not set, default
+         *                                 to 0.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setNumAttemptedMeasurements(int numAttemptedMeasurements) {
+            mNumAttemptedMeasurements = numAttemptedMeasurements;
+            return this;
+        }
 
-    /** @hide */
-    public final ResponderLocation mResponderLocation;
+        /**
+         * Sets the total number of successful RTT measurements.
+         *
+         * @param numSuccessfulMeasurements Number of successful measurements. If not set, default
+         *                                 to 0.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setNumSuccessfulMeasurements(int numSuccessfulMeasurements) {
+            mNumSuccessfulMeasurements = numSuccessfulMeasurements;
+            return this;
+        }
 
-    /** @hide */
-    public final long mTimestamp;
+        /**
+         * Sets the Location Configuration Information (LCI).
+         *
+         * LCI provides data about the access point's (AP) physical location, such as its
+         * latitude, longitude, and altitude. The format is specified in the IEEE 802.11-2016
+         * specifications, section 9.4.2.22.10.
+         *
+         * @param lci Location configuration information. If not set, defaults to null.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setLci(@Nullable byte[] lci) {
+            mLci = lci;
+            return this;
+        }
 
-    /** @hide */
-    public final boolean mIs80211mcMeasurement;
+        /**
+         * Sets the Location Civic Report (LCR).
+         *
+         * LCR provides additional details about the AP's location in a human-readable format,
+         * such as the street address, building name, or floor number. This can be helpful for
+         * users to understand the context of their location within a building or complex.
+         *
+         * The format is
+         * specified in the IEEE 802.11-2016 specifications, section 9.4.2.22.13.
+         *
+         * @param lcr Location civic report. If not set, defaults to null.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setLcr(@Nullable byte[] lcr) {
+            mLcr = lcr;
+            return this;
+        }
 
-    /** @hide */
-    public final int mFrequencyMHz;
+        /**
+         * Sets Responder Location.
+         *
+         * ResponderLocation is both a Location Configuration Information (LCI) decoder and a
+         * Location Civic Report (LCR) decoder for information received from a Wi-Fi Access Point
+         * (AP) during Wi-Fi RTT ranging process.
+         *
+         * @param responderLocation Responder location. If not set, defaults to null.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setUnverifiedResponderLocation(
+                @Nullable ResponderLocation responderLocation) {
+            mResponderLocation = responderLocation;
+            return this;
+        }
 
-    /** @hide */
-    public final int mPacketBw;
+        /**
+         * Sets the time stamp at which the ranging operation was performed.
+         *
+         * The timestamp is in milliseconds since boot, including time spent in sleep,
+         * corresponding to values provided by {@link android.os.SystemClock#elapsedRealtime()}.
+         *
+         * @param timestamp time stamp in milliseconds
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setRangingTimestampMillis(long timestamp) {
+            mTimestamp = timestamp;
+            return this;
+        }
 
-    /** @hide */
-    public RangingResult(@RangeResultStatus int status, @NonNull MacAddress mac, int distanceMm,
-            int distanceStdDevMm, int rssi, int numAttemptedMeasurements,
-            int numSuccessfulMeasurements, byte[] lci, byte[] lcr,
-            ResponderLocation responderLocation, long timestamp, boolean is80211McMeasurement,
-            int frequencyMHz, @ChannelWidth int packetBw) {
-        mStatus = status;
-        mMac = mac;
-        mPeerHandle = null;
-        mDistanceMm = distanceMm;
-        mDistanceStdDevMm = distanceStdDevMm;
-        mRssi = rssi;
-        mNumAttemptedMeasurements = numAttemptedMeasurements;
-        mNumSuccessfulMeasurements = numSuccessfulMeasurements;
-        mLci = lci == null ? EMPTY_BYTE_ARRAY : lci;
-        mLcr = lcr == null ? EMPTY_BYTE_ARRAY : lcr;
-        mResponderLocation = responderLocation;
-        mTimestamp = timestamp;
-        mIs80211mcMeasurement = is80211McMeasurement;
-        mFrequencyMHz = frequencyMHz;
-        mPacketBw = packetBw;
+
+        /**
+         * Sets whether IEEE 802.11mc measurement or not.
+         *
+         * @param is80211mcMeasurement true for IEEE 802.11mc measure, otherwise false. If not set
+         *                              defaults to false.
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder set80211mcMeasurement(boolean is80211mcMeasurement) {
+            mIs80211mcMeasurement = is80211mcMeasurement;
+            return this;
+        }
+
+        /**
+         * Sets the center frequency of the primary 20 MHz frequency (in MHz) of the channel over
+         * which the measurement frames are sent.
+         *
+         * @param frequencyMHz Frequency. If not set, default to {@link RangingResult#UNSPECIFIED}
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setMeasurementChannelFrequencyMHz(int frequencyMHz) {
+            mFrequencyMHz = frequencyMHz;
+            return this;
+        }
+
+        /**
+         * Sets the bandwidth used to transmit the RTT measurement frame.
+         *
+         * @param measurementBandwidth Measurement bandwidth. If not set, default to
+         *                             {@link RangingResult#UNSPECIFIED}
+         * @return The builder to facilitate chaining.
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public Builder setMeasurementBandwidth(@ChannelWidth int measurementBandwidth) {
+            mPacketBw = measurementBandwidth;
+            return this;
+        }
+
+        /**
+         * Build {@link RangingResult}
+         * @return an instance of {@link RangingResult}
+         */
+        @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+        @NonNull
+        public RangingResult build() {
+            if (mMac == null && mPeerHandle == null) {
+                throw new IllegalArgumentException("Either MAC address or Peer handle is needed");
+            }
+            return new RangingResult(this);
+        }
     }
 
     /** @hide */
-    public RangingResult(@RangeResultStatus int status, @NonNull MacAddress mac, int distanceMm,
-            int distanceStdDevMm, int rssi, int numAttemptedMeasurements,
-            int numSuccessfulMeasurements, byte[] lci, byte[] lcr,
-            ResponderLocation responderLocation, long timestamp, boolean is80211McMeasurement) {
-        mStatus = status;
-        mMac = mac;
-        mPeerHandle = null;
-        mDistanceMm = distanceMm;
-        mDistanceStdDevMm = distanceStdDevMm;
-        mRssi = rssi;
-        mNumAttemptedMeasurements = numAttemptedMeasurements;
-        mNumSuccessfulMeasurements = numSuccessfulMeasurements;
-        mLci = lci == null ? EMPTY_BYTE_ARRAY : lci;
-        mLcr = lcr == null ? EMPTY_BYTE_ARRAY : lcr;
-        mResponderLocation = responderLocation;
-        mTimestamp = timestamp;
-        mIs80211mcMeasurement = is80211McMeasurement;
-        mFrequencyMHz = UNSPECIFIED;
-        mPacketBw = UNSPECIFIED;
-    }
-
-    /** @hide */
-    public RangingResult(
-            @RangeResultStatus int status,
-            PeerHandle peerHandle,
-            int distanceMm,
-            int distanceStdDevMm,
-            int rssi,
-            int numAttemptedMeasurements,
-            int numSuccessfulMeasurements,
-            byte[] lci,
-            byte[] lcr,
-            ResponderLocation responderLocation,
-            long timestamp,
-            int frequencyMHz,
-            @ChannelWidth int packetBw) {
-        mStatus = status;
-        mMac = null;
-        mPeerHandle = peerHandle;
-        mDistanceMm = distanceMm;
-        mDistanceStdDevMm = distanceStdDevMm;
-        mRssi = rssi;
-        mNumAttemptedMeasurements = numAttemptedMeasurements;
-        mNumSuccessfulMeasurements = numSuccessfulMeasurements;
-        mLci = lci == null ? EMPTY_BYTE_ARRAY : lci;
-        mLcr = lcr == null ? EMPTY_BYTE_ARRAY : lcr;
-        mResponderLocation = responderLocation;
-        mTimestamp = timestamp;
-        mIs80211mcMeasurement = true;
-        mFrequencyMHz = frequencyMHz;
-        mPacketBw = packetBw;
+    private RangingResult(Builder builder) {
+        mStatus = builder.mStatus;
+        mMac = builder.mMac;
+        mPeerHandle = builder.mPeerHandle;
+        mDistanceMm = builder.mDistanceMm;
+        mDistanceStdDevMm = builder.mDistanceStdDevMm;
+        mRssi = builder.mRssi;
+        mNumAttemptedMeasurements = builder.mNumAttemptedMeasurements;
+        mNumSuccessfulMeasurements = builder.mNumSuccessfulMeasurements;
+        mLci = (builder.mLci == null) ? EMPTY_BYTE_ARRAY : builder.mLci;
+        mLcr = (builder.mLcr == null) ? EMPTY_BYTE_ARRAY : builder.mLcr;
+        mResponderLocation = builder.mResponderLocation;
+        mTimestamp = builder.mTimestamp;
+        mIs80211mcMeasurement = builder.mIs80211mcMeasurement;
+        mFrequencyMHz = builder.mFrequencyMHz;
+        mPacketBw = builder.mPacketBw;
     }
 
     /**
@@ -351,10 +523,8 @@ public final class RangingResult implements Parcelable {
      * <p>
      * Note: the information is NOT validated - use with caution. Consider validating it with
      * other sources of information before using it.
-     *
-     * @hide
      */
-    @SystemApi
+    @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
     @NonNull
     public byte[] getLci() {
         if (mStatus != STATUS_SUCCESS) {
@@ -370,10 +540,8 @@ public final class RangingResult implements Parcelable {
      * <p>
      * Note: the information is NOT validated - use with caution. Consider validating it with
      * other sources of information before using it.
-     *
-     * @hide
      */
-    @SystemApi
+    @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
     @NonNull
     public byte[] getLcr() {
         if (mStatus != STATUS_SUCCESS) {
@@ -499,62 +667,26 @@ public final class RangingResult implements Parcelable {
 
                 @Override
                 public RangingResult createFromParcel(Parcel in) {
-                    int status = in.readInt();
-                    boolean macAddressPresent = in.readBoolean();
-                    MacAddress mac = null;
-                    if (macAddressPresent) {
-                        mac = MacAddress.CREATOR.createFromParcel(in);
-                    }
-                    boolean peerHandlePresent = in.readBoolean();
-                    PeerHandle peerHandle = null;
-                    if (peerHandlePresent) {
-                        peerHandle = new PeerHandle(in.readInt());
-                    }
-                    int distanceMm = in.readInt();
-                    int distanceStdDevMm = in.readInt();
-                    int rssi = in.readInt();
-                    int numAttemptedMeasurements = in.readInt();
-                    int numSuccessfulMeasurements = in.readInt();
-                    byte[] lci = in.createByteArray();
-                    byte[] lcr = in.createByteArray();
-                    ResponderLocation responderLocation =
-                            in.readParcelable(this.getClass().getClassLoader());
-                    long timestamp = in.readLong();
-                    boolean isllmcMeasurement = in.readBoolean();
-                    int frequencyMHz = in.readInt();
-                    int packetBw = in.readInt();
-                    if (peerHandlePresent) {
-                        return new RangingResult(
-                                status,
-                                peerHandle,
-                                distanceMm,
-                                distanceStdDevMm,
-                                rssi,
-                                numAttemptedMeasurements,
-                                numSuccessfulMeasurements,
-                                lci,
-                                lcr,
-                                responderLocation,
-                                timestamp,
-                                frequencyMHz,
-                                packetBw);
-                    } else {
-                        return new RangingResult(
-                                status,
-                                mac,
-                                distanceMm,
-                                distanceStdDevMm,
-                                rssi,
-                                numAttemptedMeasurements,
-                                numSuccessfulMeasurements,
-                                lci,
-                                lcr,
-                                responderLocation,
-                                timestamp,
-                                isllmcMeasurement,
-                                frequencyMHz,
-                                packetBw);
-                    }
+                    return new Builder()
+                            .setStatus(in.readInt())
+                            .setMacAddress(
+                                    in.readBoolean() ? MacAddress.CREATOR.createFromParcel(in)
+                                            : null)
+                            .setPeerHandle(in.readBoolean() ? new PeerHandle(in.readInt()) : null)
+                            .setDistanceMm(in.readInt())
+                            .setDistanceStdDevMm(in.readInt())
+                            .setRssi(in.readInt())
+                            .setNumAttemptedMeasurements(in.readInt())
+                            .setNumSuccessfulMeasurements(in.readInt())
+                            .setLci(in.createByteArray())
+                            .setLcr(in.createByteArray())
+                            .setUnverifiedResponderLocation(
+                                    in.readParcelable(this.getClass().getClassLoader()))
+                            .setRangingTimestampMillis(in.readLong())
+                            .set80211mcMeasurement(in.readBoolean())
+                            .setMeasurementChannelFrequencyMHz(in.readInt())
+                            .setMeasurementBandwidth(in.readInt())
+                            .build();
                 }
             };
 
