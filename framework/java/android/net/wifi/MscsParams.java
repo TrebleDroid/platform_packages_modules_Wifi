@@ -232,6 +232,7 @@ public final class MscsParams implements Parcelable {
          * classifier fields should be used to build a classifier.
          *
          * @param frameClassifierFields Bitmap indicating the requested fields.
+         * @throws IllegalArgumentException if any bits other than bits 0-7 are set.
          */
         @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
@@ -249,6 +250,7 @@ public final class MscsParams implements Parcelable {
          * bit to UP 7. Setting a bit to 1 indicates that UP should be classified.
          *
          * @param userPriorityBitmap Bitmap indicating which UPs should be classified.
+         * @throws IllegalArgumentException if any bits other than bits 0-7 are set.
          */
         @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
@@ -265,6 +267,8 @@ public final class MscsParams implements Parcelable {
          * Value must be between 0 and 7 (inclusive).
          *
          * @param userPriorityLimit Maximum user priority that can be assigned by MSCS.
+         * @throws IllegalArgumentException if the provided value is outside the expected range of
+         *                                  0-7 (inclusive).
          */
         @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
@@ -281,6 +285,8 @@ public final class MscsParams implements Parcelable {
          * Set the minimum timeout (in microseconds) to keep this request in the MSCS list.
          *
          * @param streamTimeoutUs Minimum timeout in microseconds.
+         * @throws IllegalArgumentException if the provided value is outside the expected range of
+         *                                  0-60 seconds (inclusive).
          */
         @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
