@@ -41,19 +41,6 @@ java_aconfig_library {
 }
 
 java_defaults {
-    name: "wifi-framework-aconfig-libraries",
-    // Add java_aconfig_libraries to here to add them to the AAOS
-    srcs: [
-        ":wifi_aconfig_flags_lib{.generated_srcjars}",
-    ],
-    libs: [
-        // Add aconfig-annotations-lib as a dependency for the optimization
-        "aconfig-annotations-lib",
-        "framework-configinfrastructure",
-    ],
-}
-
-java_defaults {
     name: "wifi-framework-aconfig-java-defaults",
     sdk_version: "core_platform",
     libs: ["fake_device_config"],
