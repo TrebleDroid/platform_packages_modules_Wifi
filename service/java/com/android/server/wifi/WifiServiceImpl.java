@@ -125,6 +125,7 @@ import android.net.wifi.IWifiLowLatencyLockListener;
 import android.net.wifi.IWifiNetworkSelectionConfigListener;
 import android.net.wifi.IWifiNetworkStateChangedListener;
 import android.net.wifi.IWifiVerboseLoggingStatusChangedListener;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApCapability;
@@ -3063,7 +3064,11 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     @Override
-    public void getWifiActivityEnergyInfoAsync(IOnWifiActivityEnergyInfoListener listener) {
+    public void getWifiActivityEnergyInfoAsync(@NonNull IOnWifiActivityEnergyInfoListener
+            listener) {
+        if (listener == null) {
+            throw new IllegalArgumentException("listener should not be null");
+        }
         enforceAccessPermission();
         if (mVerboseLoggingEnabled) {
             mLog.info("getWifiActivityEnergyInfoAsync uid=%")
@@ -8044,6 +8049,45 @@ public class WifiServiceImpl extends BaseWifiService {
                 listener.onResult(mSettingsConfigStore.get(WIFI_WEP_ALLOWED));
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * See {@link WifiManager#enableMscs(MscsParams)}
+     */
+    @Override
+    public void enableMscs(@NonNull MscsParams mscsParams) {
+        int uid = Binder.getCallingUid();
+        if (!mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(uid)) {
+            throw new SecurityException(
+                    "UID=" + uid + " is not allowed to set network selection config");
+        }
+        Objects.requireNonNull(mscsParams);
+        mWifiThreadRunner.post(() -> {
+            List<ClientModeManager> clientModeManagers =
+                    mActiveModeWarden.getInternetConnectivityClientModeManagers();
+            for (ClientModeManager cmm : clientModeManagers) {
+                mWifiNative.enableMscs(mscsParams, cmm.getInterfaceName());
+            }
+        });
+    }
+
+    /**
+     * See {@link WifiManager#disableMscs()}
+     */
+    @Override
+    public void disableMscs() {
+        int uid = Binder.getCallingUid();
+        if (!mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(uid)) {
+            throw new SecurityException(
+                    "UID=" + uid + " is not allowed to set network selection config");
+        }
+        mWifiThreadRunner.post(() -> {
+            List<ClientModeManager> clientModeManagers =
+                    mActiveModeWarden.getInternetConnectivityClientModeManagers();
+            for (ClientModeManager cmm : clientModeManagers) {
+                mWifiNative.disableMscs(cmm.getInterfaceName());
             }
         });
     }

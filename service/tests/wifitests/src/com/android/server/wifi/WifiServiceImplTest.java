@@ -175,6 +175,7 @@ import android.net.wifi.IWifiLowLatencyLockListener;
 import android.net.wifi.IWifiNetworkSelectionConfigListener;
 import android.net.wifi.IWifiNetworkStateChangedListener;
 import android.net.wifi.IWifiVerboseLoggingStatusChangedListener;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
@@ -8688,6 +8689,16 @@ public class WifiServiceImplTest extends WifiBaseTest {
         validateWifiActivityEnergyInfo(infoCaptor.getValue());
     }
 
+    /**
+     * Tests that {@link WifiServiceImpl#getWifiActivityEnergyInfoAsync} throws exception when
+     * listener is null
+     */
+    @Test
+    public void getWifiActivityEnergyInfoWithNullListener() throws Exception {
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.getWifiActivityEnergyInfoAsync(null));
+    }
+
     @Test
     public void testCarrierConfigChangeUpdateSoftApCapability() throws Exception {
         lenient().when(SubscriptionManager.getActiveDataSubscriptionId())
@@ -11874,5 +11885,40 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiSettingsConfigStore, times(3)).get(eq(WIFI_WEP_ALLOWED));
         inOrder.verify(listener).onResult(false);
+    }
+
+    @Test
+    public void testEnableAndDisableMscsSuccess() {
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(true);
+        when(mActiveModeWarden.getInternetConnectivityClientModeManagers())
+                .thenReturn(Arrays.asList(mClientModeManager));
+        when(mClientModeManager.getInterfaceName()).thenReturn(WIFI_IFACE_NAME);
+
+        // Test enableMscs
+        MscsParams mscsParams = new MscsParams.Builder().build();
+        mWifiServiceImpl.enableMscs(mscsParams);
+        mLooper.dispatchAll();
+        verify(mWifiNative).enableMscs(eq(mscsParams), eq(WIFI_IFACE_NAME));
+
+        // Test disableMscs
+        mWifiServiceImpl.disableMscs();
+        mLooper.dispatchAll();
+        verify(mWifiNative).disableMscs(eq(WIFI_IFACE_NAME));
+    }
+
+    @Test
+    public void testEnableAndDisableMscsFailure() {
+        // Verify the permissions check on both methods
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(false);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.enableMscs(mock(MscsParams.class)));
+        assertThrows(SecurityException.class, () -> mWifiServiceImpl.disableMscs());
+
+        // Verify the nullity check on enableMscs
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(true);
+        assertThrows(NullPointerException.class, () -> mWifiServiceImpl.enableMscs(null));
     }
 }

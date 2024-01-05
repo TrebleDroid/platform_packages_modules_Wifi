@@ -1103,4 +1103,14 @@ public class BaseWifiService extends IWifiManager.Stub {
     public void queryWepAllowed(@NonNull IBooleanListener listener) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void enableMscs(@NonNull MscsParams mscsParams) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void disableMscs() {
+        throw new UnsupportedOperationException();
+    }
 }

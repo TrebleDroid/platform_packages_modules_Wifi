@@ -12061,7 +12061,6 @@ public class WifiManager {
      *                        whether wep network support is enabled/disabled.
      *
      * @throws SecurityException if the caller does not have permission.
-     * @throws NullPointerException if the caller provided invalid inputs.
      * @hide
      */
     @FlaggedApi("com.android.wifi.flags.wep_usage")
@@ -12085,6 +12084,50 @@ public class WifiManager {
                             });
                         }
                     });
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Enable Mirrored Stream Classification Service (MSCS) and configure using
+     * the provided configuration values.
+     *
+     * If MSCS has already been enabled/configured, this will override the
+     * existing configuration.
+     *
+     * Note that this API should be considered best-effort.
+     *
+     * @param mscsParams {@link MscsParams} object containing the configuration parameters.
+     * @hide
+     */
+    @SystemApi
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @RequiresPermission(anyOf = {MANAGE_WIFI_NETWORK_SELECTION})
+    public void enableMscs(@NonNull MscsParams mscsParams) {
+        Objects.requireNonNull(mscsParams);
+        try {
+            mService.enableMscs(mscsParams);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Disable Mirrored Stream Classification Service (MSCS).
+     *
+     * If MSCS is enabled/configured, this will send a remove request to the AP.
+     * Note that this API should be considered best-effort.
+     * @hide
+     */
+    @SystemApi
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @RequiresPermission(anyOf = {MANAGE_WIFI_NETWORK_SELECTION})
+    public void disableMscs() {
+        try {
+            mService.disableMscs();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
