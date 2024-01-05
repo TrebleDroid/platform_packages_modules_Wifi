@@ -1586,6 +1586,30 @@ public class SupplicantStaIfaceHalHidlImplTest extends WifiBaseTest {
     }
 
     /**
+     * Tests the handling of incorrect network password for AP_BUSY error code
+     *
+     * If the disconnect reason is "NO_MORE_STAS - Disassociated because AP is unable
+     * to handle all currently associated STAs", do not call it a password mismatch.
+     */
+    @Test
+    public void testApBusy() throws Exception {
+        executeAndValidateInitializationSequence();
+        assertNotNull(mISupplicantStaIfaceCallback);
+
+        int reasonCode = ISupplicantStaIfaceCallback.ReasonCode.DISASSOC_AP_BUSY;
+
+        mISupplicantStaIfaceCallback.onStateChanged(
+                ISupplicantStaIfaceCallback.State.FOURWAY_HANDSHAKE,
+                NativeUtil.macAddressToByteArray(BSSID),
+                SUPPLICANT_NETWORK_ID,
+                NativeUtil.decodeSsid(SUPPLICANT_SSID));
+        mISupplicantStaIfaceCallback.onDisconnected(
+                NativeUtil.macAddressToByteArray(BSSID), true, reasonCode);
+        verify(mWifiMonitor, never()).broadcastAuthenticationFailureEvent(any(), anyInt(),
+                anyInt(), any(), any());
+    }
+
+    /**
      * Tests the handling of eap failure during disconnect.
      */
     @Test
