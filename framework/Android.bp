@@ -44,6 +44,7 @@ filegroup {
         ":framework-wifi-updatable-java-sources",
         ":framework-wifi-updatable-exported-aidl-sources",
         ":module-utils-os-aidls",
+        ":wifi_aconfig_flags_lib{.generated_srcjars}",
     ],
 }
 
@@ -114,6 +115,9 @@ java_defaults {
         "androidx.annotation_annotation",
         "unsupportedappusage", // for android.compat.annotation.UnsupportedAppUsage
         "app-compat-annotations",
+        // Add aconfig-annotations-lib as a dependency for the optimization
+        "aconfig-annotations-lib",
+        "framework-configinfrastructure",
     ],
     aidl: {
         generate_get_transaction_name: true,

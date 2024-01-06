@@ -29,6 +29,7 @@ import androidx.annotation.RequiresApi;
 
 import com.android.internal.util.Preconditions;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -322,7 +323,7 @@ public final class SoftApInfo implements Parcelable {
      * @hide
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     @SystemApi
     public void setVendorData(@NonNull List<OuiKeyedData> vendorData) {
         if (!SdkLevel.isAtLeastV()) {
@@ -341,7 +342,7 @@ public final class SoftApInfo implements Parcelable {
      * @hide
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     @SystemApi
     @NonNull
     public List<OuiKeyedData> getVendorData() {

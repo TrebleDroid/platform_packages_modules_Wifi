@@ -27,6 +27,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +35,7 @@ import java.util.List;
 /**
  * A class representing a Wi-Fi P2P scan configuration for setting up discovery.
  */
-@FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+@FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
 public final class WifiP2pDiscoveryConfig implements Parcelable {
     /** Type of this P2P scan. */
     private final @WifiP2pManager.WifiP2pScanType int mScanType;
@@ -55,7 +56,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
     /**
      * Get the type of this scan. See {@link Builder#Builder(int)}}
      */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     public @WifiP2pManager.WifiP2pScanType int getScanType() {
         return mScanType;
     }
@@ -63,7 +64,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
     /**
      * Get the frequency to scan in MHz. See {@link Builder#setFrequencyMhz(int)}
      */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     public int getFrequencyMhz() {
         return mFrequencyMhz;
     }
@@ -76,7 +77,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
      * @hide
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     @SystemApi
     @NonNull
     public List<OuiKeyedData> getVendorData() {
@@ -86,7 +87,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
         return mVendorData;
     }
 
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     @Override
     public String toString() {
         StringBuffer sbuf = new StringBuffer();
@@ -97,12 +98,12 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
     }
 
     /** Implement the Parcelable interface */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     public int describeContents() {
         return 0;
     }
 
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mScanType);
@@ -130,7 +131,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
     }
 
     /** Implement the Parcelable interface */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     @NonNull
     public static final Creator<WifiP2pDiscoveryConfig> CREATOR =
             new Creator<WifiP2pDiscoveryConfig>() {
@@ -146,7 +147,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
     /**
      * Builder for {@link WifiP2pDiscoveryConfig}.
      */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
     public static final class Builder {
 
         private final int mScanType;
@@ -158,7 +159,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
          *
          * @param scanType Type of this P2P scan.
          */
-        @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
         public Builder(@WifiP2pManager.WifiP2pScanType int scanType) {
             mScanType = scanType;
         }
@@ -170,7 +171,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
          * @param frequencyMhz Frequency to scan in MHz.
          * @return Builder for chaining.
          */
-        @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
         @NonNull
         public Builder setFrequencyMhz(@IntRange(from = 0) int frequencyMhz) {
             if (frequencyMhz <= 0) {
@@ -190,7 +191,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
          * @hide
          */
         @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-        @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
         @SystemApi
         @NonNull
         public Builder setVendorData(@NonNull List<OuiKeyedData> vendorData) {
@@ -208,7 +209,7 @@ public final class WifiP2pDiscoveryConfig implements Parcelable {
          * Build {@link WifiP2pDiscoveryConfig} given the current requests made on the builder.
          * @return {@link WifiP2pDiscoveryConfig} constructed based on builder method calls.
          */
-        @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
         @NonNull
         public WifiP2pDiscoveryConfig build() {
             if (mScanType < WifiP2pManager.WIFI_P2P_SCAN_FULL

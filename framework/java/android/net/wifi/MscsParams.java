@@ -25,6 +25,8 @@ import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.android.wifi.flags.Flags;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Objects;
@@ -35,38 +37,38 @@ import java.util.Objects;
  * @hide
  */
 @SystemApi
-@FlaggedApi("com.android.wifi.flags.mscs_configuration")
+@FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
 public final class MscsParams implements Parcelable {
     /** IP version used by the traffic stream */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final int FRAME_CLASSIFIER_IP_VERSION = 1 << 0;
 
     /** Source IP address used by the traffic stream */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final int FRAME_CLASSIFIER_SRC_IP_ADDR = 1 << 1;
 
     /** Destination IP address used by the traffic stream */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final int FRAME_CLASSIFIER_DST_IP_ADDR = 1 << 2;
 
     /** Source port used by the traffic stream */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final int FRAME_CLASSIFIER_SRC_PORT = 1 << 3;
 
     /** Destination port used by the traffic stream */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final int FRAME_CLASSIFIER_DST_PORT = 1 << 4;
 
     /** DSCP value used by the traffic stream */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final int FRAME_CLASSIFIER_DSCP = 1 << 5;
 
     /** Indicates Protocol if using IPv4, or Next Header if using IPv6 */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final int FRAME_CLASSIFIER_PROTOCOL_NEXT_HDR = 1 << 6;
 
     /** Flow label. Only applicable if using IPv6 */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final int FRAME_CLASSIFIER_FLOW_LABEL = 1 << 7;
 
     /** @hide */
@@ -117,7 +119,7 @@ public final class MscsParams implements Parcelable {
      *
      * @return Bitmap of {@link FrameClassifierField} represented as an int.
      */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public @FrameClassifierField int getFrameClassifierFields() {
         return mFrameClassifierFields;
     }
@@ -127,7 +129,7 @@ public final class MscsParams implements Parcelable {
      *
      * @return Bitmap of user priorities represented as an int.
      */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public int getUserPriorityBitmap() {
         return mUserPriorityBitmap;
     }
@@ -137,7 +139,7 @@ public final class MscsParams implements Parcelable {
      *
      * @return User priority limit.
      */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     @IntRange(from = 0, to = 7)
     public int getUserPriorityLimit() {
         return mUserPriorityLimit;
@@ -148,13 +150,13 @@ public final class MscsParams implements Parcelable {
      *
      * @return Stream timeout in microseconds.
      */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     @IntRange(from = 0, to = MAX_STREAM_TIMEOUT_US)
     public int getStreamTimeoutUs() {
         return mStreamTimeoutUs;
     }
 
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) return true;
@@ -166,7 +168,7 @@ public final class MscsParams implements Parcelable {
                 && mStreamTimeoutUs == that.mStreamTimeoutUs;
     }
 
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     @Override
     public int hashCode() {
         return Objects.hash(mFrameClassifierFields, mUserPriorityBitmap,
@@ -174,14 +176,14 @@ public final class MscsParams implements Parcelable {
     }
 
     @Override
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public int describeContents() {
         return 0;
     }
 
     /** @hide */
     @Override
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mFrameClassifierFields);
         dest.writeInt(mUserPriorityBitmap);
@@ -197,7 +199,7 @@ public final class MscsParams implements Parcelable {
         this.mStreamTimeoutUs = in.readInt();
     }
 
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final @NonNull Parcelable.Creator<MscsParams> CREATOR =
             new Parcelable.Creator<MscsParams>() {
                 @Override
@@ -212,7 +214,7 @@ public final class MscsParams implements Parcelable {
             };
 
     /** Builder for {@link MscsParams}. */
-    @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
     public static final class Builder {
         private int mFrameClassifierFields = DEFAULT_FRAME_CLASSIFIER_FIELDS;
         private int mUserPriorityBitmap = DEFAULT_USER_PRIORITY_BITMAP;
@@ -222,7 +224,7 @@ public final class MscsParams implements Parcelable {
         /**
          * Constructor for {@link Builder}.
          */
-        @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+        @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         public Builder() {}
 
         /**
@@ -231,7 +233,7 @@ public final class MscsParams implements Parcelable {
          *
          * @param frameClassifierFields Bitmap indicating the requested fields.
          */
-        @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+        @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
         public Builder setFrameClassifierFields(@FrameClassifierField int frameClassifierFields) {
             if ((frameClassifierFields & 0xFFFFFF00) != 0) {
@@ -248,7 +250,7 @@ public final class MscsParams implements Parcelable {
          *
          * @param userPriorityBitmap Bitmap indicating which UPs should be classified.
          */
-        @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+        @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
         public Builder setUserPriorityBitmap(int userPriorityBitmap) {
             if ((userPriorityBitmap & 0xFFFFFF00) != 0) {
@@ -264,7 +266,7 @@ public final class MscsParams implements Parcelable {
          *
          * @param userPriorityLimit Maximum user priority that can be assigned by MSCS.
          */
-        @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+        @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
         public Builder setUserPriorityLimit(@IntRange(from = 0, to = 7) int userPriorityLimit) {
             if (userPriorityLimit < 0 || userPriorityLimit > 7) {
@@ -280,7 +282,7 @@ public final class MscsParams implements Parcelable {
          *
          * @param streamTimeoutUs Minimum timeout in microseconds.
          */
-        @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+        @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
         public Builder setStreamTimeoutUs(
                 @IntRange(from = 0, to = MAX_STREAM_TIMEOUT_US) int streamTimeoutUs) {
@@ -294,7 +296,7 @@ public final class MscsParams implements Parcelable {
         /**
          * Construct an MscsParams object using the specified parameters.
          */
-        @FlaggedApi("com.android.wifi.flags.mscs_configuration")
+        @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
         @NonNull
         public MscsParams build() {
             return new MscsParams(mFrameClassifierFields, mUserPriorityBitmap,

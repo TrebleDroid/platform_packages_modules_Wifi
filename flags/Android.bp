@@ -28,6 +28,7 @@ java_aconfig_library {
     name: "wifi_aconfig_flags_lib",
     aconfig_declarations: "wifi_aconfig_flags",
     min_sdk_version: "30",
+    defaults: ["wifi-framework-aconfig-java-defaults"],
     apex_available: [
         "//apex_available:platform",
         "com.android.wifi",
@@ -37,4 +38,10 @@ java_aconfig_library {
         "//packages/modules/Wifi:__subpackages__",
         "//cts/tests/tests/wifi:__subpackages__",
     ],
+}
+
+java_defaults {
+    name: "wifi-framework-aconfig-java-defaults",
+    sdk_version: "core_platform",
+    libs: ["fake_device_config"],
 }
