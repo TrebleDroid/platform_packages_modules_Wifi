@@ -5341,6 +5341,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 pw.println();
                 mWifiConfigManager.dump(fd, pw, args);
                 pw.println();
+                pw.println("WifiApConfigStore config: " + mWifiApConfigStore.getApConfiguration());
+                pw.println();
                 mPasspointManager.dump(pw);
                 pw.println();
                 mWifiInjector.getWifiDiagnostics().captureBugReportData(
