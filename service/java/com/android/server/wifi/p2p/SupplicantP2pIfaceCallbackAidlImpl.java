@@ -33,7 +33,6 @@ import android.hardware.wifi.supplicant.P2pProvisionDiscoveryCompletedEventParam
 import android.hardware.wifi.supplicant.P2pStatusCode;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.hardware.wifi.supplicant.WpsDevPasswordId;
-import android.net.MacAddress;
 import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WpsInfo;
@@ -112,7 +111,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             byte[] wfdDeviceInfo) {
         handleDeviceFound(srcAddress, p2pDeviceAddress, primaryDeviceType, deviceName,
                 configMethods, deviceCapabilities, groupCapabilities, wfdDeviceInfo,
-                null, null);
+                null, null, null);
     }
 
     /**
@@ -182,20 +181,19 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             byte[] srcAddress,
             int passwordId,
             @Nullable List<OuiKeyedData> vendorData) {
-        WifiP2pConfig.Builder builder = new WifiP2pConfig.Builder();
+        WifiP2pConfig config = new WifiP2pConfig();
 
         try {
-            builder.setDeviceAddress(MacAddress.fromBytes(srcAddress));
+            config.deviceAddress = NativeUtil.macAddressFromByteArray(srcAddress);
         } catch (Exception e) {
             Log.e(TAG, "Could not decode device address.", e);
             return;
         }
 
         if (SdkLevel.isAtLeastV() && vendorData != null) {
-            builder.setVendorData(vendorData);
+            config.setVendorData(vendorData);
         }
 
-        WifiP2pConfig config = builder.build();
         config.wps = new WpsInfo();
 
         switch (passwordId) {
@@ -271,7 +269,8 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             int frequency, byte[] psk, String passphrase, byte[] goDeviceAddress,
             boolean isPersistent) {
         onGroupStarted(groupIfName, isGroupOwner, ssid, frequency, psk, passphrase, goDeviceAddress,
-                isPersistent, /* goInterfaceAddress */ null, /*p2pClientIpInfo */ null);
+                isPersistent, /* goInterfaceAddress */ null, /*p2pClientIpInfo */ null,
+                /* vendorData */ null);
     }
 
     /**
@@ -281,19 +280,26 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onGroupStartedWithParams(P2pGroupStartedEventParams groupStartedEventParams) {
+        List<OuiKeyedData> vendorData = null;
+        if (mServiceVersion >= 3 && groupStartedEventParams.vendorData != null) {
+            vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(
+                    groupStartedEventParams.vendorData);
+        }
         onGroupStarted(groupStartedEventParams.groupInterfaceName,
                 groupStartedEventParams.isGroupOwner, groupStartedEventParams.ssid,
                 groupStartedEventParams.frequencyMHz, groupStartedEventParams.psk,
                 groupStartedEventParams.passphrase, groupStartedEventParams.goDeviceAddress,
                 groupStartedEventParams.isPersistent, groupStartedEventParams.goInterfaceAddress,
                 groupStartedEventParams.isP2pClientEapolIpAddressInfoPresent
-                        ? groupStartedEventParams.p2pClientIpInfo : null);
+                        ? groupStartedEventParams.p2pClientIpInfo : null,
+                vendorData);
     }
 
     private void onGroupStarted(String groupIfName, boolean isGroupOwner, byte[] ssid,
             int frequency, byte[] psk, String passphrase, byte[] goDeviceAddress,
             boolean isPersistent, byte[] goInterfaceAddress,
-            P2pClientEapolIpAddressInfo p2pClientIpInfo) {
+            P2pClientEapolIpAddressInfo p2pClientIpInfo,
+            @Nullable List<OuiKeyedData> vendorData) {
         if (groupIfName == null) {
             Log.e(TAG, "Missing group interface name.");
             return;
@@ -349,6 +355,11 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
         } else {
             group.p2pClientEapolIpInfo = null;
         }
+
+        if (SdkLevel.isAtLeastV() && vendorData != null) {
+            group.setVendorData(vendorData);
+        }
+
         mMonitor.broadcastP2pGroupStarted(mInterface, group);
     }
 
@@ -494,7 +505,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
     public void onProvisionDiscoveryCompleted(byte[] p2pDeviceAddress, boolean isRequest,
             byte status, int configMethods, String generatedPin) {
         handleProvisionDiscoveryCompletedEvent(
-                p2pDeviceAddress, isRequest, status, configMethods, generatedPin, null);
+                p2pDeviceAddress, isRequest, status, configMethods, generatedPin, null, null);
     }
 
     /**
@@ -506,13 +517,19 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
     @Override
     public void onProvisionDiscoveryCompletedEvent(
             P2pProvisionDiscoveryCompletedEventParams provisionDiscoveryCompletedEventParams) {
+        List<OuiKeyedData> vendorData = null;
+        if (mServiceVersion >= 3 && provisionDiscoveryCompletedEventParams.vendorData != null) {
+            vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(
+                    provisionDiscoveryCompletedEventParams.vendorData);
+        }
         handleProvisionDiscoveryCompletedEvent(
                 provisionDiscoveryCompletedEventParams.p2pDeviceAddress,
                 provisionDiscoveryCompletedEventParams.isRequest,
                 provisionDiscoveryCompletedEventParams.status,
                 provisionDiscoveryCompletedEventParams.configMethods,
                 provisionDiscoveryCompletedEventParams.generatedPin,
-                provisionDiscoveryCompletedEventParams.groupInterfaceName);
+                provisionDiscoveryCompletedEventParams.groupInterfaceName,
+                vendorData);
     }
 
     private void handleProvisionDiscoveryCompletedEvent(
@@ -521,7 +538,8 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             byte status,
             int configMethods,
             String generatedPin,
-            String groupIfName) {
+            String groupIfName,
+            @Nullable List<OuiKeyedData> vendorData) {
         logd(
                 "Provision discovery "
                         + (isRequest ? "request" : "response")
@@ -550,6 +568,10 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
         }
 
         if (TextUtils.isEmpty(event.device.deviceAddress)) return;
+
+        if (SdkLevel.isAtLeastV() && vendorData != null) {
+            event.setVendorData(vendorData);
+        }
 
         if ((configMethods & WpsConfigMethods.PUSHBUTTON) != 0) {
             if (isRequest) {
@@ -631,7 +653,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onStaAuthorized(byte[] srcAddress, byte[] p2pDeviceAddress) {
-        onP2pApStaConnected(null, srcAddress, p2pDeviceAddress, 0);
+        onP2pApStaConnected(null, srcAddress, p2pDeviceAddress, 0, null);
     }
 
     /**
@@ -641,15 +663,22 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onPeerClientJoined(P2pPeerClientJoinedEventParams clientJoinedEventParams) {
+        List<OuiKeyedData> vendorData = null;
+        if (mServiceVersion >= 3 && clientJoinedEventParams.vendorData != null) {
+            vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(
+                    clientJoinedEventParams.vendorData);
+        }
         onP2pApStaConnected(
                 clientJoinedEventParams.groupInterfaceName,
                 clientJoinedEventParams.clientInterfaceAddress,
                 clientJoinedEventParams.clientDeviceAddress,
-                clientJoinedEventParams.clientIpAddress);
+                clientJoinedEventParams.clientIpAddress,
+                vendorData);
     }
 
     private void onP2pApStaConnected(
-            String groupIfName, byte[] srcAddress, byte[] p2pDeviceAddress, int ipAddress) {
+            String groupIfName, byte[] srcAddress, byte[] p2pDeviceAddress, int ipAddress,
+            @Nullable List<OuiKeyedData> vendorData) {
         logd("STA authorized on " + (TextUtils.isEmpty(groupIfName) ? mInterface : groupIfName));
         if (ipAddress != 0) {
             Inet4Address ipAddressClient = intToInet4AddressHTL(ipAddress);
@@ -658,6 +687,9 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
         WifiP2pDevice device = createStaEventDevice(srcAddress, p2pDeviceAddress);
         if (device == null) {
             return;
+        }
+        if (SdkLevel.isAtLeastV() && vendorData != null) {
+            device.setVendorData(vendorData);
         }
         mMonitor.broadcastP2pApStaConnected(mInterface, device);
     }
@@ -670,7 +702,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onStaDeauthorized(byte[] srcAddress, byte[] p2pDeviceAddress) {
-        onP2pApStaDisconnected(null, srcAddress, p2pDeviceAddress);
+        onP2pApStaDisconnected(null, srcAddress, p2pDeviceAddress, null);
     }
 
     /**
@@ -682,18 +714,28 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
     @Override
     public void onPeerClientDisconnected(
             P2pPeerClientDisconnectedEventParams clientDisconnectedEventParams) {
+        List<OuiKeyedData> vendorData = null;
+        if (mServiceVersion >= 3 && clientDisconnectedEventParams.vendorData != null) {
+            vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(
+                    clientDisconnectedEventParams.vendorData);
+        }
         onP2pApStaDisconnected(
                 clientDisconnectedEventParams.groupInterfaceName,
                 clientDisconnectedEventParams.clientInterfaceAddress,
-                clientDisconnectedEventParams.clientDeviceAddress);
+                clientDisconnectedEventParams.clientDeviceAddress,
+                vendorData);
     }
 
     private void onP2pApStaDisconnected(
-            String groupIfName, byte[] srcAddress, byte[] p2pDeviceAddress) {
+            String groupIfName, byte[] srcAddress, byte[] p2pDeviceAddress,
+            @Nullable List<OuiKeyedData> vendorData) {
         logd("STA deauthorized on " + (TextUtils.isEmpty(groupIfName) ? mInterface : groupIfName));
         WifiP2pDevice device = createStaEventDevice(srcAddress, p2pDeviceAddress);
         if (device == null) {
             return;
+        }
+        if (SdkLevel.isAtLeastV() && vendorData != null) {
+            device.setVendorData(vendorData);
         }
         mMonitor.broadcastP2pApStaDisconnected(mInterface, device);
     }
@@ -810,7 +852,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             byte[] wfdR2DeviceInfo, byte[] vendorElemBytes) {
         handleDeviceFound(srcAddress, p2pDeviceAddress, primaryDeviceType, deviceName,
                 configMethods, deviceCapabilities, groupCapabilities, wfdDeviceInfo,
-                wfdR2DeviceInfo, vendorElemBytes);
+                wfdR2DeviceInfo, vendorElemBytes, null);
     }
 
     /**
@@ -820,6 +862,11 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onDeviceFoundWithParams(P2pDeviceFoundEventParams deviceFoundEventParams) {
+        List<OuiKeyedData> vendorData = null;
+        if (mServiceVersion >= 3 && deviceFoundEventParams.vendorData != null) {
+            vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(
+                    deviceFoundEventParams.vendorData);
+        }
         handleDeviceFound(
                 deviceFoundEventParams.srcAddress,
                 deviceFoundEventParams.p2pDeviceAddress,
@@ -830,13 +877,15 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
                 deviceFoundEventParams.groupCapabilities,
                 deviceFoundEventParams.wfdDeviceInfo,
                 deviceFoundEventParams.wfdR2DeviceInfo,
-                deviceFoundEventParams.vendorElemBytes);
+                deviceFoundEventParams.vendorElemBytes,
+                vendorData);
     }
 
     private void handleDeviceFound(byte[] srcAddress, byte[] p2pDeviceAddress,
             byte[] primaryDeviceType, String deviceName, int configMethods,
             byte deviceCapabilities, int groupCapabilities, byte[] wfdDeviceInfo,
-            @Nullable byte[] wfdR2DeviceInfo, @Nullable byte[] vendorElemBytes) {
+            @Nullable byte[] wfdR2DeviceInfo, @Nullable byte[] vendorElemBytes,
+            @Nullable List<OuiKeyedData> vendorData) {
         WifiP2pDevice device = new WifiP2pDevice();
         device.deviceName = deviceName;
         if (deviceName == null) {
@@ -895,6 +944,10 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
                 vendorElements = null;
             }
             device.setVendorElements(vendorElements);
+        }
+
+        if (SdkLevel.isAtLeastV() && vendorData != null) {
+            device.setVendorData(vendorData);
         }
 
         logd("Device discovered on " + mInterface + ": " + device);
