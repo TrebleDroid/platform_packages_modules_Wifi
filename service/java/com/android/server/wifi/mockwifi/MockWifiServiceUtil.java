@@ -53,7 +53,7 @@ public class MockWifiServiceUtil {
     private ServiceConnection mMockNl80211ServiceConnection;
 
     public MockWifiServiceUtil(Context context, String serviceName, WifiMonitor wifiMonitor) {
-        mContext = context;
+        mContext = context.createContextAsUser(CURRENT, 0);
         mWifiMonitor = wifiMonitor;
         String[] componentInfo = serviceName.split("/", 2);
         mPackageName = componentInfo[0];
@@ -97,8 +97,7 @@ public class MockWifiServiceUtil {
         intent.setComponent(new ComponentName(mPackageName, mServiceName));
         intent.setAction(actionName);
 
-        status = mContext.createContextAsUser(CURRENT, 0)
-                .bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        status = mContext.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
         return status;
     }
 
