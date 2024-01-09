@@ -11846,11 +11846,28 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiGlobals).setWepAllowed(true);
         verify(mWifiSettingsConfigStore).put(eq(WIFI_WEP_ALLOWED), eq(true));
+    }
 
+    @Test
+    public void testSetWepDisAllowedWithPermission() {
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
+        ConcreteClientModeManager cmmWep = mock(ConcreteClientModeManager.class);
+        ConcreteClientModeManager cmmWpa = mock(ConcreteClientModeManager.class);
+        WifiInfo mockWifiInfoWep = mock(WifiInfo.class);
+        WifiInfo mockWifiInfoWpa = mock(WifiInfo.class);
+        List<ClientModeManager> cmms = Arrays.asList(cmmWep, cmmWpa);
+        when(mActiveModeWarden.getClientModeManagers()).thenReturn(cmms);
+        when(mockWifiInfoWep.getCurrentSecurityType()).thenReturn(WifiInfo.SECURITY_TYPE_WEP);
+        when(mockWifiInfoWpa.getCurrentSecurityType()).thenReturn(WifiInfo.SECURITY_TYPE_PSK);
+        when(cmmWep.getConnectionInfo()).thenReturn(mockWifiInfoWep);
+        when(cmmWpa.getConnectionInfo()).thenReturn(mockWifiInfoWpa);
         mWifiServiceImpl.setWepAllowed(false);
         mLooper.dispatchAll();
-        verify(mWifiGlobals, times(2)).setWepAllowed(false);
+        verify(mWifiGlobals).setWepAllowed(false);
         verify(mWifiSettingsConfigStore).put(eq(WIFI_WEP_ALLOWED), eq(false));
+        // Only WEP disconnect
+        verify(cmmWep).disconnect();
+        verify(cmmWpa, never()).disconnect();
     }
 
     @Test
