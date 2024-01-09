@@ -41,6 +41,7 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.mock;
 
 import android.net.MacAddress;
 import android.net.ProxyInfo;
@@ -62,6 +63,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 
@@ -122,6 +124,9 @@ public class WifiConfigurationTest {
         config.setSubscriptionGroup(ParcelUuid.fromString("0000110B-0000-1000-8000-00805F9B34FB"));
         config.getNetworkSelectionStatus().setDisableTime(12333);
         config.getNetworkSelectionStatus().setDisableEndTime(45666);
+        if (SdkLevel.isAtLeastV()) {
+            config.setVendorData(OuiKeyedDataUtil.createTestOuiKeyedDataList(5));
+        }
         assertEquals(12333, config.getNetworkSelectionStatus().getDisableTime());
         assertEquals(45666, config.getNetworkSelectionStatus().getDisableEndTime());
         Parcel parcelW = Parcel.obtain();
@@ -160,6 +165,9 @@ public class WifiConfigurationTest {
                 reconfig.getNetworkSelectionStatus().getDisableTime());
         assertEquals(config.getNetworkSelectionStatus().getDisableEndTime(),
                 reconfig.getNetworkSelectionStatus().getDisableEndTime());
+        if (SdkLevel.isAtLeastV()) {
+            assertTrue(config.getVendorData().equals(reconfig.getVendorData()));
+        }
 
         Parcel parcelWW = Parcel.obtain();
         reconfig.writeToParcel(parcelWW, 0);
@@ -186,6 +194,9 @@ public class WifiConfigurationTest {
         config.restricted = true;
         config.isCurrentlyConnected = true;
         config.setIsUserSelected(true);
+        if (SdkLevel.isAtLeastV()) {
+            config.setVendorData(OuiKeyedDataUtil.createTestOuiKeyedDataList(5));
+        }
 
         WifiConfiguration reconfig = new WifiConfiguration(config);
 
@@ -203,6 +214,9 @@ public class WifiConfigurationTest {
         assertTrue(reconfig.restricted);
         assertTrue(reconfig.isCurrentlyConnected);
         assertTrue(reconfig.isUserSelected());
+        if (SdkLevel.isAtLeastV()) {
+            assertTrue(config.getVendorData().equals(reconfig.getVendorData()));
+        }
     }
 
     @Test
@@ -1405,5 +1419,19 @@ public class WifiConfigurationTest {
         config.setPasspointUniqueId(TEST_PASSPOINT_UNIQUE_ID);
         assertTrue(config.getAllNetworkKeys().contains(
                 config.getNetworkKeyFromSecurityType(SECURITY_TYPE_PASSPOINT_R1_R2)));
+    }
+
+    /**
+     * Verifies that vendor data can be set and retrieved successfully.
+     */
+    @Test
+    public void testSetAndGetVendorData() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        WifiConfiguration config = new WifiConfiguration();
+        assertNotNull(config.getVendorData());  // non-null default value
+
+        List<OuiKeyedData> vendorData = Arrays.asList(mock(OuiKeyedData.class));
+        config.setVendorData(vendorData);
+        assertTrue(vendorData.equals(config.getVendorData()));
     }
 }
