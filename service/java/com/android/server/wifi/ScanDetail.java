@@ -73,8 +73,15 @@ public class ScanDetail {
                             && networkDetail.getHSRelease() != null;
             is80211McResponder = networkDetail.is80211McResponderSupport();
         }
-        mScanResult = new ScanResult(wifiSsid, bssid, hessid, anqpDomainId, osuProviders, caps,
-                level, frequency, tsf);
+        mScanResult = new ScanResult.Builder(wifiSsid, bssid)
+                .setHessid(hessid)
+                .setAnqpDomainId(anqpDomainId)
+                .setOsuProviders(osuProviders)
+                .setCaps(caps)
+                .setRssi(level)
+                .setFrequency(frequency)
+                .setTsf(tsf)
+                .build();
         mSeen = System.currentTimeMillis();
         mScanResult.seen = mSeen;
         mScanResult.channelWidth = channelWidth;
