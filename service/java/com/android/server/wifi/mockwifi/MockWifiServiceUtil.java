@@ -16,6 +16,8 @@
 
 package com.android.server.wifi.mockwifi;
 
+import static android.os.UserHandle.CURRENT;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -51,7 +53,7 @@ public class MockWifiServiceUtil {
     private ServiceConnection mMockNl80211ServiceConnection;
 
     public MockWifiServiceUtil(Context context, String serviceName, WifiMonitor wifiMonitor) {
-        mContext = context;
+        mContext = context.createContextAsUser(CURRENT, 0);
         mWifiMonitor = wifiMonitor;
         String[] componentInfo = serviceName.split("/", 2);
         mPackageName = componentInfo[0];
