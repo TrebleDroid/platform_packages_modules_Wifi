@@ -49,6 +49,7 @@ java_library {
     lint: {
         strict_updatability_linting: true,
         baseline_filename: "lint-baseline.xml",
+
     },
     libs: [
         "androidx.annotation_annotation",
@@ -158,9 +159,6 @@ java_library {
         "com.android.wifi",
         "test_com.android.wifi",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // Statsd auto-generated code
