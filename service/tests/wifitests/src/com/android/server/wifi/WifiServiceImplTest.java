@@ -235,6 +235,7 @@ import com.android.modules.utils.ParceledListSlice;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.WifiServiceImpl.LocalOnlyRequestorCallback;
 import com.android.server.wifi.WifiServiceImpl.SoftApCallbackInternal;
+import com.android.server.wifi.b2b.WifiRoamingModeManager;
 import com.android.server.wifi.coex.CoexManager;
 import com.android.server.wifi.entitlement.PseudonymInfo;
 import com.android.server.wifi.hotspot2.PasspointManager;
@@ -479,6 +480,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Mock Location mLocation;
     @Mock WifiDeviceStateChangeManager mWifiDeviceStateChangeManager;
     @Mock PasspointNetworkNominateHelper mPasspointNetworkNominateHelper;
+    @Mock WifiRoamingModeManager mWifiRoamingModeManager;
     @Captor ArgumentCaptor<Intent> mIntentCaptor;
     @Captor ArgumentCaptor<List> mListCaptor;
 
@@ -661,6 +663,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiInjector.getScoringParams()).thenReturn(mScoringParams);
         when(mWifiInjector.getApplicationQosPolicyRequestHandler())
                 .thenReturn(mApplicationQosPolicyRequestHandler);
+        when(mWifiInjector.getWifiRoamingModeManager()).thenReturn(mWifiRoamingModeManager);
         when(mLocationManager.getProviders(anyBoolean())).thenReturn(List.of(
                 LocationManager.FUSED_PROVIDER, LocationManager.PASSIVE_PROVIDER,
                 LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER));

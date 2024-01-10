@@ -1128,6 +1128,22 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
+    public void setPerSsidRoamingMode(WifiSsid ssid, @WifiManager.RoamingMode int roamingMode,
+            @NonNull String packageName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void removePerSsidRoamingMode(WifiSsid ssid, @NonNull String packageName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void getPerSsidRoamingModes(@NonNull String packageName, IMapListener listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void setupTwtSession(TwtRequest twtRequest, ITwtCallback iTwtCallback, Bundle extras) {
         throw new UnsupportedOperationException();
     }

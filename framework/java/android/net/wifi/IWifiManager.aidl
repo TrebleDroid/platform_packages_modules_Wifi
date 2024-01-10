@@ -34,6 +34,7 @@ import android.net.wifi.ILastCallerListener;
 import android.net.wifi.IListListener;
 import android.net.wifi.ILocalOnlyHotspotCallback;
 import android.net.wifi.ILocalOnlyConnectionStatusListener;
+import android.net.wifi.IMapListener;
 import android.net.wifi.INetworkRequestMatchCallback;
 import android.net.wifi.IOnWifiActivityEnergyInfoListener;
 import android.net.wifi.IOnWifiDriverCountryCodeChangedListener;
@@ -486,6 +487,12 @@ interface IWifiManager
     void setSendDhcpHostnameRestriction(String packageName, int restriction);
 
     void querySendDhcpHostnameRestriction(String packageName, in IIntegerListener listener);
+
+    void setPerSsidRoamingMode(in WifiSsid ssid, int roamingMode, String packageName);
+
+    void removePerSsidRoamingMode(in WifiSsid ssid, String packageName);
+
+    void getPerSsidRoamingModes(String packageName,in IMapListener listener);
 
     void getTwtCapabilities(in ITwtCapabilitiesListener listener, in Bundle extras);
 
