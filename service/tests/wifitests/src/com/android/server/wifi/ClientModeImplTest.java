@@ -10797,6 +10797,19 @@ public class ClientModeImplTest extends WifiBaseTest {
 
         // Make sure the RSSI is matching with scan cache for un-associated links
         assertEquals(TEST_RSSI, links.get(1).getRssi());
+
+        // Send signal poll for un-associated link
+        signalPollResults = new WifiSignalPollResults();
+        signalPollResults.addEntry(TEST_MLO_LINK_ID_1, -42, 65, 54, sFreq);
+        when(mWifiNative.signalPoll(any())).thenReturn(signalPollResults);
+        mCmi.enableRssiPolling(true);
+        mCmi.sendMessage(ClientModeImpl.CMD_RSSI_POLL, 1);
+        mLooper.dispatchAll();
+        links = mWifiInfo.getAffiliatedMloLinks();
+
+        // Make sure the RSSI is matching with scan result for associated link
+        assertEquals(TEST_RSSI, links.get(0).getRssi());
+
     }
 
     /**
