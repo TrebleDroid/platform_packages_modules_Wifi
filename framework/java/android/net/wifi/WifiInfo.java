@@ -1545,7 +1545,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 .append(", Security type: ").append(mSecurityType)
                 .append(", Supplicant state: ")
                 .append(mSupplicantState == null ? none : mSupplicantState)
-                .append(", Wi-Fi standard: ").append(mWifiStandard)
+                .append(", Wi-Fi standard: ").append(ScanResult.wifiStandardToString(mWifiStandard))
                 .append(", RSSI: ").append(mRssi)
                 .append(", Link speed: ").append(mLinkSpeed).append(LINK_SPEED_UNITS)
                 .append(", Tx Link speed: ").append(mTxLinkSpeed).append(LINK_SPEED_UNITS)

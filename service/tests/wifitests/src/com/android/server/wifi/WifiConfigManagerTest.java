@@ -63,6 +63,7 @@ import android.content.pm.PackageManager;
 import android.net.DhcpOption;
 import android.net.IpConfiguration;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
@@ -319,6 +320,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         when(mWifiPermissionsUtil.isProfileOwner(anyInt(), any())).thenReturn(false);
         when(mWifiPermissionsUtil.doesUidBelongToCurrentUserOrDeviceOwner(anyInt()))
                 .thenReturn(true);
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(false);
         when(mWifiPermissionsUtil.isDeviceInDemoMode(any())).thenReturn(false);
         when(mWifiPermissionsUtil.isSystem(any(), anyInt())).thenReturn(true);
         when(mWifiLastResortWatchdog.shouldIgnoreSsidUpdate()).thenReturn(false);
@@ -1288,6 +1291,29 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         // Update the same configuration and ensure that the operation failed.
         NetworkUpdateResult result = updateNetworkToWifiConfigManager(openNetwork);
         assertTrue(result.getNetworkId() == WifiConfiguration.INVALID_NETWORK_ID);
+    }
+
+    /**
+     * Test that configs containing vendor data can only be added/updated if the
+     * caller has the proper permissions.
+     */
+    @Test
+    public void testAddNetworkWithVendorDataPermissionCheck() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        WifiConfiguration configuration = WifiConfigurationTestUtil.createOpenNetwork();
+        configuration.setVendorData(Arrays.asList(mock(OuiKeyedData.class)));
+
+        // Expect failure if the caller does not have the permission.
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(false);
+        NetworkUpdateResult result = addNetworkToWifiConfigManager(configuration,
+                configuration.creatorUid);
+        assertEquals(WifiConfiguration.INVALID_NETWORK_ID, result.getNetworkId());
+
+        // Expect success if the caller has the permission.
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(true);
+        verifyAddNetworkToWifiConfigManager(configuration);
     }
 
     /**

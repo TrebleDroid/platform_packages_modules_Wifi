@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 
 import android.app.test.MockAnswerUtil.AnswerWithArguments;
 import android.content.Context;
+import android.hardware.wifi.common.OuiKeyedData;
 import android.hardware.wifi.supplicant.GroupCipherMask;
 import android.hardware.wifi.supplicant.GsmRand;
 import android.hardware.wifi.supplicant.ISupplicantStaNetwork;
@@ -53,6 +54,7 @@ import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.net.wifi.WifiManager;
+import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
 import android.text.TextUtils;
@@ -74,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -1359,6 +1362,34 @@ public class SupplicantStaNetworkHalAidlImplTest extends WifiBaseTest {
     }
 
     /**
+     * Tests that vendor data is sent to the HAL if included in the WifiConfiguration.
+     */
+    @Test
+    public void testSetVendorData() throws Exception {
+        // Re-initialize DUT to HAL service version 3
+        assumeTrue(SdkLevel.isAtLeastV());
+        mSupplicantNetwork = new SupplicantStaNetworkHalAidlImpl(3,
+                mISupplicantStaNetworkMock, IFACE_NAME, mContext, mWifiMonitor,
+                mWifiGlobals, mAdvanceKeyMgmtFeatures, mWpaDriverFeatures);
+
+        PersistableBundle bundle = new PersistableBundle();
+        bundle.putInt("intFieldKey", 1337);
+        android.net.wifi.OuiKeyedData ouiKeyedData =
+                new android.net.wifi.OuiKeyedData.Builder(0x00aabbcc, bundle).build();
+        List<android.net.wifi.OuiKeyedData> frameworkVendorData = Arrays.asList(ouiKeyedData);
+
+        WifiConfiguration config = WifiConfigurationTestUtil.createPskNetwork();
+        config.setVendorData(frameworkVendorData);
+        testWifiConfigurationSaveLoad(config);
+
+        verify(mISupplicantStaNetworkMock).setVendorData(any(OuiKeyedData[].class));
+        OuiKeyedData[] halVendorData = mSupplicantVariables.vendorData;
+        assertEquals(frameworkVendorData.size(), halVendorData.length);
+        assertEquals(frameworkVendorData.get(0).getOui(), halVendorData[0].oui);
+        assertTrue(frameworkVendorData.get(0).getData().equals(halVendorData[0].vendorData));
+    }
+
+    /**
      * Sets up the AIDL interface mock with all the setters/getter values.
      * Note: This only sets up the mock to return success on all methods.
      */
@@ -1818,6 +1849,13 @@ public class SupplicantStaNetworkHalAidlImplTest extends WifiBaseTest {
                 mSupplicantVariables.selectedRcoi = selectedRcoi;
             }
         }).when(mISupplicantStaNetworkMock).setRoamingConsortiumSelection(any(byte[].class));
+
+        /** Vendor data */
+        doAnswer(new AnswerWithArguments() {
+            public void answer(OuiKeyedData[] vendorData) throws RemoteException {
+                mSupplicantVariables.vendorData = vendorData;
+            }
+        }).when(mISupplicantStaNetworkMock).setVendorData(any(OuiKeyedData[].class));
     }
 
     // Private class to to store/inspect values set via the AIDL mock.
@@ -1860,5 +1898,6 @@ public class SupplicantStaNetworkHalAidlImplTest extends WifiBaseTest {
         public boolean eapErp;
         public byte saeH2eMode;
         public byte[] selectedRcoi;
+        public OuiKeyedData[] vendorData;
     }
 }

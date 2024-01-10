@@ -77,6 +77,7 @@ public class WifiCountryCode {
     private final WifiPermissionsUtil mWifiPermissionsUtil;
     private List<ChangeListener> mListeners = new ArrayList<>();
     private boolean mVerboseLoggingEnabled = false;
+    private boolean mIsCountryCodePendingToUpdateToCmm = true; // default to true for first update.
     /**
      * Map of active ClientModeManager instance to whether it is ready for country code change.
      *
@@ -364,7 +365,7 @@ public class WifiCountryCode {
      */
     private void evaluateAllCmmStateAndApplyIfAllReady() {
         Log.d(TAG, "evaluateAllCmmStateAndApplyIfAllReady: " + mAmmToReadyForChangeMap);
-        if (isAllCmmReady()) {
+        if (isAllCmmReady() && mIsCountryCodePendingToUpdateToCmm) {
             mAllCmmReadyTimestamp = FORMATTER.format(new Date(mClock.getWallClockMillis()));
             // We are ready to set country code now.
             // We need to post pending country code request.
@@ -699,8 +700,12 @@ public class WifiCountryCode {
         Log.d(TAG, "setCountryCodeNative: " + country + ", isClientModeOnly: " + isClientModeOnly
                 + " mDriverCountryCode: " + mDriverCountryCode);
         for (ActiveModeManager am : amms) {
-            if (isNeedToUpdateCCToSta && !isConcreteClientModeManagerUpdated
+            if (!isConcreteClientModeManagerUpdated
                     && am instanceof ConcreteClientModeManager) {
+                mIsCountryCodePendingToUpdateToCmm = !isNeedToUpdateCCToSta;
+                if (!isNeedToUpdateCCToSta) {
+                    continue;
+                }
                 // Set the country code using one of the active mode managers. Since
                 // country code is a chip level global setting, it can be set as long
                 // as there is at least one active interface to communicate to Wifi chip
@@ -768,6 +773,9 @@ public class WifiCountryCode {
         mDriverCountryCode = country;
         mWifiP2pMetrics.setIsCountryCodeWorldMode(isDriverCountryCodeWorldMode());
         notifyListener(country);
+        if (country == null) {
+            mIsCountryCodePendingToUpdateToCmm = true;
+        }
     }
 
     /**
