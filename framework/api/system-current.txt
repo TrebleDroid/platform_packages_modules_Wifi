@@ -69,6 +69,44 @@ package android.net.wifi {
     method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.OuiKeyedData build();
   }
 
+  @FlaggedApi("com.android.wifi.flags.qos_r3_support") public final class QosCharacteristics implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) public int getBurstSizeOctets();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=0, to=15) public int getCountExponent();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) public int getDelayBoundMicros();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") public int getDeliveryRatio();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=1, to=java.lang.Short.MAX_VALUE) public int getMaxMsduSizeOctets();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) public int getMaxServiceIntervalMicros();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) public int getMeanDataRateKbps();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) public int getMinDataRateKbps();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) public int getMinServiceIntervalMicros();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=1, to=java.lang.Short.MAX_VALUE) public int getMsduLifetimeMillis();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") public int getServiceStartTimeLinkId();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @IntRange(from=0, to=java.lang.Integer.MAX_VALUE) public int getServiceStartTimeMicros();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.QosCharacteristics> CREATOR;
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_95 = 0; // 0x0
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_96 = 1; // 0x1
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_97 = 2; // 0x2
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_98 = 3; // 0x3
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_99 = 5; // 0x5
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_99_9 = 6; // 0x6
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_99_99 = 7; // 0x7
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_99_999 = 8; // 0x8
+    field @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final int DELIVERY_RATIO_99_9999 = 9; // 0x9
+  }
+
+  @FlaggedApi("com.android.wifi.flags.qos_r3_support") public static final class QosCharacteristics.Builder {
+    ctor @FlaggedApi("com.android.wifi.flags.qos_r3_support") public QosCharacteristics.Builder(@IntRange(from=1, to=java.lang.Integer.MAX_VALUE) int, @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) int, @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) int, @IntRange(from=1, to=java.lang.Integer.MAX_VALUE) int);
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public android.net.wifi.QosCharacteristics build();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public android.net.wifi.QosCharacteristics.Builder setBurstSizeOctets(@IntRange(from=1, to=java.lang.Integer.MAX_VALUE) int);
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public android.net.wifi.QosCharacteristics.Builder setMaxMsduSizeOctets(@IntRange(from=1, to=java.lang.Short.MAX_VALUE) int);
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public android.net.wifi.QosCharacteristics.Builder setMeanDataRateKbps(@IntRange(from=1, to=java.lang.Integer.MAX_VALUE) int);
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public android.net.wifi.QosCharacteristics.Builder setMsduDeliveryInfo(int, @IntRange(from=0, to=15) int);
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public android.net.wifi.QosCharacteristics.Builder setMsduLifetimeMillis(@IntRange(from=1, to=java.lang.Short.MAX_VALUE) int);
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public android.net.wifi.QosCharacteristics.Builder setServiceStartTimeInfo(@IntRange(from=0, to=java.lang.Integer.MAX_VALUE) int, int);
+  }
+
   public final class QosPolicyParams implements android.os.Parcelable {
     method public int describeContents();
     method @Nullable public java.net.InetAddress getDestinationAddress();
