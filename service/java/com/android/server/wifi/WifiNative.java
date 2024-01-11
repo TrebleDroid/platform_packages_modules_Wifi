@@ -1776,7 +1776,7 @@ public class WifiNative {
             }
         }
         if (mMockWifiModem != null
-                && mMockWifiModem.getIsMethodConfigured(
+                && mMockWifiModem.isMethodConfigured(
                 MockWifiServiceUtil.MOCK_NL80211_SERVICE, "getScanResults")) {
             Log.i(TAG, "getScanResults was called from mock wificond");
             return convertNativeScanResults(ifaceName, mMockWifiModem.getWifiNl80211Manager()
@@ -1834,7 +1834,7 @@ public class WifiNative {
      */
     public ArrayList<ScanDetail> getPnoScanResults(@NonNull String ifaceName) {
         if (mMockWifiModem != null
-                && mMockWifiModem.getIsMethodConfigured(
+                && mMockWifiModem.isMethodConfigured(
                     MockWifiServiceUtil.MOCK_NL80211_SERVICE, "getPnoScanResults")) {
             Log.i(TAG, "getPnoScanResults was called from mock wificond");
             return convertNativeScanResults(ifaceName, mMockWifiModem.getWifiNl80211Manager()
@@ -1950,7 +1950,7 @@ public class WifiNative {
      */
     public boolean startPnoScan(@NonNull String ifaceName, PnoSettings pnoSettings) {
         if (mMockWifiModem != null
-                && mMockWifiModem.getIsMethodConfigured(
+                && mMockWifiModem.isMethodConfigured(
                 MockWifiServiceUtil.MOCK_NL80211_SERVICE, "startPnoScan")) {
             Log.i(TAG, "startPnoScan was called from mock wificond");
             return mMockWifiModem.getWifiNl80211Manager()
@@ -3763,7 +3763,7 @@ public class WifiNative {
     @Nullable
     public WifiSignalPollResults signalPoll(@NonNull String ifaceName) {
         if (mMockWifiModem != null
-                && mMockWifiModem.getIsMethodConfigured(
+                && mMockWifiModem.isMethodConfigured(
                     MockWifiServiceUtil.MOCK_NL80211_SERVICE, "signalPoll")) {
             Log.i(TAG, "signalPoll was called from mock wificond");
             WifiNl80211Manager.SignalPollResult result =

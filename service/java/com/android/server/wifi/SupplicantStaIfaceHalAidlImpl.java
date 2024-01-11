@@ -95,6 +95,7 @@ import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.server.wifi.mockwifi.MockWifiServiceUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.nio.ByteBuffer;
@@ -118,6 +119,7 @@ import java.util.regex.Pattern;
  */
 public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
     private static final String TAG = "SupplicantStaIfaceHalAidlImpl";
+    private static final String ISUPPLICANTSTAIFACE = "ISupplicantStaIface";
     @VisibleForTesting
     private static final String HAL_INSTANCE_NAME = ISupplicant.DESCRIPTOR + "/default";
     @VisibleForTesting
@@ -3029,7 +3031,17 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
         if (!isServiceVersionAtLeast(2)) return null;
         synchronized (mLock) {
             final String methodStr = "getSignalPollResult";
-            ISupplicantStaIface iface = checkStaIfaceAndLogFailure(ifaceName, methodStr);
+            ISupplicantStaIface iface;
+            if (mWifiInjector.getMockWifiServiceUtil() != null
+                    && mWifiInjector.getMockWifiServiceUtil().isMethodConfigured(
+                        MockWifiServiceUtil.MOCK_SUPPLICANT_SERVICE, ISUPPLICANTSTAIFACE
+                            + MockWifiServiceUtil.AIDL_METHOD_IDENTIFIER
+                                + "getSignalPollResults")) {
+                iface = mWifiInjector.getMockWifiServiceUtil().getMockSupplicantManager()
+                        .getMockSupplicantStaIface(ifaceName);
+            } else {
+                iface = checkStaIfaceAndLogFailure(ifaceName, methodStr);
+            }
             if (iface == null) {
                 return null;
             }
