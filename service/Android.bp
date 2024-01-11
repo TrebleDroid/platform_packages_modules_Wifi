@@ -123,6 +123,7 @@ java_library {
         "wifi-nano-protos",
         "wifi_aconfig_flags_lib",
     ],
+    apex_available: ["com.android.wifi"],
 }
 
 // wifi-service static library
