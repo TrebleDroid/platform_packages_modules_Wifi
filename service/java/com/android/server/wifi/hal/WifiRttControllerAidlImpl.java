@@ -29,6 +29,7 @@ import android.hardware.wifi.RttStatus;
 import android.hardware.wifi.RttType;
 import android.hardware.wifi.WifiChannelInfo;
 import android.hardware.wifi.WifiChannelWidthInMhz;
+import android.hardware.wifi.common.OuiKeyedData;
 import android.net.MacAddress;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiAnnotations;
@@ -39,6 +40,9 @@ import android.net.wifi.rtt.ResponderLocation;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
 import android.util.Log;
+
+import com.android.modules.utils.build.SdkLevel;
+import com.android.server.wifi.util.HalAidlUtil;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -271,7 +275,7 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                 }
                 rttResult.distanceSdInMm = 0;
             }
-            rangingResults.add(new RangingResult.Builder()
+            RangingResult.Builder resultBuilder = new RangingResult.Builder()
                     .setStatus(halToFrameworkRttStatus(rttResult.status))
                     .setMacAddress(MacAddress.fromBytes(rttResult.addr))
                     .setDistanceMm(rttResult.distanceInMm)
@@ -293,8 +297,13 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                     .set80211azInitiatorTxLtfRepetitionsCount(rttResult.i2rTxLtfRepetitionCount)
                     .set80211azResponderTxLtfRepetitionsCount(rttResult.r2iTxLtfRepetitionCount)
                     .set80211azNumberOfTxSpatialStreams(rttResult.numTxSpatialStreams)
-                    .set80211azNumberOfRxSpatialStreams(rttResult.numRxSpatialStreams)
-                    .build());
+                    .set80211azNumberOfRxSpatialStreams(rttResult.numRxSpatialStreams);
+            if (SdkLevel.isAtLeastV() && WifiHalAidlImpl.isServiceVersionAtLeast(2)
+                    && rttResult.vendorData != null) {
+                resultBuilder.setVendorData(
+                        HalAidlUtil.halToFrameworkOuiKeyedDataList(rttResult.vendorData));
+            }
+            rangingResults.add(resultBuilder.build());
         }
         return rangingResults;
     }
@@ -388,6 +397,12 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
             RttConfig config = new RttConfig();
             config.addr = responder.macAddress.toByteArray();
 
+            OuiKeyedData[] vendorData = null;
+            if (SdkLevel.isAtLeastV() && request.getVendorData() != null
+                    && !request.getVendorData().isEmpty()) {
+                vendorData = HalAidlUtil.frameworkToHalOuiKeyedDataList(request.getVendorData());
+            }
+
             try {
                 if (cap != null) {
                     if (responder.supports80211azNtb && cap.ntbInitiatorSupported) {
@@ -419,6 +434,9 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                 config.channel.centerFreq1 = responder.centerFreq1;
                 config.bw = frameworkToHalChannelBandwidth(responder.channelWidth);
                 config.preamble = frameworkToHalResponderPreamble(responder.preamble);
+                if (WifiHalAidlImpl.isServiceVersionAtLeast(2) && vendorData != null) {
+                    config.vendorData = vendorData;
+                }
                 validateBwAndPreambleCombination(config.bw, config.preamble);
                 // ResponderConfig#ntbMaxMeasurementTime is in units of 10 milliseconds
                 config.ntbMaxMeasurementTime =

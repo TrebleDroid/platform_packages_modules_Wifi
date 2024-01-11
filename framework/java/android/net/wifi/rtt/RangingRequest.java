@@ -16,21 +16,31 @@
 
 package android.net.wifi.rtt;
 
+import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
+import android.net.wifi.ParcelUtil;
 import android.net.wifi.ScanResult;
 import android.net.wifi.aware.AttachCallback;
 import android.net.wifi.aware.DiscoverySessionCallback;
 import android.net.wifi.aware.IdentityChangedListener;
 import android.net.wifi.aware.PeerHandle;
 import android.net.wifi.aware.WifiAwareManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import androidx.annotation.RequiresApi;
+
+import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
@@ -96,10 +106,17 @@ public final class RangingRequest implements Parcelable {
     /** @hide */
     public final int mRttBurstSize;
 
+    /**
+     * List of {@link OuiKeyedData} providing vendor-specific configuration data.
+     */
+    private @NonNull List<OuiKeyedData> mVendorData;
+
     /** @hide */
-    private RangingRequest(List<ResponderConfig> rttPeers, int rttBurstSize) {
+    private RangingRequest(List<ResponderConfig> rttPeers, int rttBurstSize,
+            @NonNull List<OuiKeyedData> vendorData) {
         mRttPeers = rttPeers;
         mRttBurstSize = rttBurstSize;
+        mVendorData = vendorData;
     }
 
     /**
@@ -124,6 +141,24 @@ public final class RangingRequest implements Parcelable {
         return mRttBurstSize;
     }
 
+    /**
+     * Return the vendor-provided configuration data, if it exists. See also {@link
+     * Builder#setVendorData(List)}
+     *
+     * @return Vendor configuration data, or empty list if it does not exist.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @NonNull
+    @SystemApi
+    public List<OuiKeyedData> getVendorData() {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        return mVendorData;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -133,6 +168,7 @@ public final class RangingRequest implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeList(mRttPeers);
         dest.writeInt(mRttBurstSize);
+        dest.writeList(mVendorData);
     }
 
     public static final @android.annotation.NonNull Creator<RangingRequest> CREATOR = new Creator<RangingRequest>() {
@@ -143,7 +179,8 @@ public final class RangingRequest implements Parcelable {
 
         @Override
         public RangingRequest createFromParcel(Parcel in) {
-            return new RangingRequest(in.readArrayList(null), in.readInt());
+            return new RangingRequest(in.readArrayList(null), in.readInt(),
+                ParcelUtil.readOuiKeyedDataList(in));
         }
     };
 
@@ -155,6 +192,7 @@ public final class RangingRequest implements Parcelable {
             sj.add(rc.toString());
         }
         sj.add("mRttBurstSize=" + mRttBurstSize);
+        sj.add("mVendorData=" + mVendorData);
         return sj.toString();
     }
 
@@ -172,6 +210,9 @@ public final class RangingRequest implements Parcelable {
         if (mRttBurstSize < getMinRttBurstSize() || mRttBurstSize > getMaxRttBurstSize()) {
             throw new IllegalArgumentException("RTT burst size is out of range");
         }
+        if (mVendorData == null) {
+            throw new IllegalArgumentException("Vendor data must be non-null");
+        }
     }
 
     /**
@@ -180,6 +221,7 @@ public final class RangingRequest implements Parcelable {
     public static final class Builder {
         private List<ResponderConfig> mRttPeers = new ArrayList<>();
         private int mRttBurstSize = DEFAULT_RTT_BURST_SIZE;
+        private @NonNull List<OuiKeyedData> mVendorData = Collections.emptyList();
 
         /**
          * Set the RTT Burst size for the ranging request.
@@ -452,13 +494,35 @@ public final class RangingRequest implements Parcelable {
             return addResponder(ResponderConfig.fromWifiAwarePeerHandleWithDefaults(peerHandle));
         }
 
+        /**
+         * Set additional vendor-provided configuration data.
+         *
+         * @param vendorData List of {@link OuiKeyedData} containing the vendor-provided
+         *     configuration data. Note that multiple elements with the same OUI are allowed.
+         * @return Builder for chaining.
+         * @hide
+         */
+        @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @NonNull
+        @SystemApi
+        public Builder setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+            if (!SdkLevel.isAtLeastV()) {
+                throw new UnsupportedOperationException();
+            }
+            if (vendorData == null) {
+                throw new IllegalArgumentException("setVendorData received a null value");
+            }
+            mVendorData = vendorData;
+            return this;
+        }
 
         /**
          * Build {@link RangingRequest} given the current configurations made on the
          * builder.
          */
         public RangingRequest build() {
-            return new RangingRequest(mRttPeers, mRttBurstSize);
+            return new RangingRequest(mRttPeers, mRttBurstSize, mVendorData);
         }
     }
 
@@ -476,11 +540,12 @@ public final class RangingRequest implements Parcelable {
 
         return mRttPeers.size() == lhs.mRttPeers.size()
                 && mRttPeers.containsAll(lhs.mRttPeers)
-                && mRttBurstSize == lhs.mRttBurstSize;
+                && mRttBurstSize == lhs.mRttBurstSize
+                && Objects.equals(mVendorData, lhs.mVendorData);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mRttPeers, mRttBurstSize);
+        return Objects.hash(mRttPeers, mRttBurstSize, mVendorData);
     }
 }
