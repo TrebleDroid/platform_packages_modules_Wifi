@@ -18,6 +18,7 @@ package com.android.server.wifi.mockwifi;
 
 import static android.os.UserHandle.CURRENT;
 
+import android.annotation.IntDef;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -28,29 +29,43 @@ import android.util.Log;
 
 import com.android.server.wifi.WifiMonitor;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /** This class provides wrapper APIs for binding interfaces to mock service. */
 public class MockWifiServiceUtil {
     private static final String TAG = "MockWifiModemUtil";
     private static final String BIND_NL80211 = "android.wifi.mockwifimodem.nl80211";
+    private static final String BIND_SUPPLICANT = "android.wifi.mockwifimodem.supplicant";
+
+    @IntDef({MOCK_NL80211_SERVICE, MOCK_SUPPLICANT_SERVICE})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface MockServiceType {}
 
     public static final int MOCK_NL80211_SERVICE = 0;
+    public static final int MOCK_SUPPLICANT_SERVICE = 1;
     public static final int MIN_SERVICE_IDX = MOCK_NL80211_SERVICE;
-    public static final int NUM_SERVICES = 1;
+    public static final int NUM_SERVICES = 2;
     public static final int BINDER_RETRY_MILLIS = 3 * 100;
     public static final int BINDER_MAX_RETRY = 3;
 
     public static final String METHOD_SEPARATOR = ",";
     public static final String CLASS_IDENTIFIER = "-";
+    public static final String AIDL_METHOD_IDENTIFIER = "#";
 
     private static final String TAG_MOCK_NL80211 = "WifiNL80211ManagerImp";
+    private static final String TAG_MOCK_SUPPLICANT = "ISupplicantImp";
 
     private Context mContext;
     private WifiMonitor mWifiMonitor;
     private String mServiceName;
     private String mPackageName;
     private MockWifiNl80211Manager mMockWifiNl80211Manager;
+    private MockSupplicantManager mMockSupplicantManager;
     private IBinder mMockNl80211Binder;
     private ServiceConnection mMockNl80211ServiceConnection;
+    private IBinder mMockSupplicantBinder;
+    private ServiceConnection mMockSupplicantServiceConnection;
 
     public MockWifiServiceUtil(Context context, String serviceName, WifiMonitor wifiMonitor) {
         mContext = context.createContextAsUser(CURRENT, 0);
@@ -75,6 +90,11 @@ public class MockWifiServiceUtil {
                 mMockWifiNl80211Manager = new MockWifiNl80211Manager(mMockNl80211Binder, mContext,
                         mWifiMonitor);
             }
+            if (mService == MOCK_SUPPLICANT_SERVICE) {
+                mMockSupplicantBinder = binder;
+                mMockSupplicantManager = new MockSupplicantManager(mMockSupplicantBinder,
+                        mWifiMonitor);
+            }
 
         }
 
@@ -85,6 +105,10 @@ public class MockWifiServiceUtil {
             if (mService == MOCK_NL80211_SERVICE) {
                 mMockNl80211Binder = null;
                 mMockWifiNl80211Manager = null;
+            }
+            if (mService == MOCK_SUPPLICANT_SERVICE) {
+                mMockSupplicantBinder = null;
+                mMockSupplicantManager = null;
             }
         }
     }
@@ -106,13 +130,16 @@ public class MockWifiServiceUtil {
      */
     public void unbindMockModemService() {
         mContext.unbindService(mMockNl80211ServiceConnection);
+        mContext.unbindService(mMockSupplicantServiceConnection);
     }
 
     /** waitForBinder */
-    public IBinder getServiceBinder(int service) {
+    public IBinder getServiceBinder(@MockServiceType int service) {
         switch (service) {
             case MOCK_NL80211_SERVICE:
                 return mMockNl80211Binder;
+            case MOCK_SUPPLICANT_SERVICE:
+                return mMockSupplicantBinder;
             default:
                 return null;
         }
@@ -126,7 +153,7 @@ public class MockWifiServiceUtil {
     }
 
     /** bindToMockModemService */
-    public void bindToMockModemService(int service) {
+    public void bindToMockModemService(@MockServiceType int service) {
         // Based on {@code service} to get each mocked HAL binder
         if (service == MOCK_NL80211_SERVICE) {
             mMockNl80211ServiceConnection = new MockModemConnection(MOCK_NL80211_SERVICE);
@@ -138,16 +165,27 @@ public class MockWifiServiceUtil {
                 mMockNl80211ServiceConnection = null;
             }
         }
+        if (service == MOCK_SUPPLICANT_SERVICE) {
+            mMockSupplicantServiceConnection = new MockModemConnection(MOCK_SUPPLICANT_SERVICE);
+            boolean status =
+                    bindModuleToMockModemService(BIND_SUPPLICANT, mMockSupplicantServiceConnection);
+            if (!status) {
+                Log.d(TAG, getModuleName(service) + " bind fail");
+                mMockSupplicantServiceConnection = null;
+            }
+        }
     }
 
     public String getServiceName() {
         return mServiceName;
     }
 
-    private ServiceConnection getServiceConnection(int service) {
+    private ServiceConnection getServiceConnection(@MockServiceType int service) {
         switch (service) {
             case MOCK_NL80211_SERVICE:
                 return mMockNl80211ServiceConnection;
+            case MOCK_SUPPLICANT_SERVICE:
+                return mMockSupplicantServiceConnection;
             default:
                 return null;
         }
@@ -156,10 +194,12 @@ public class MockWifiServiceUtil {
     /**
      * Returns name of the provided service.
      */
-    public String getModuleName(int service) {
+    public String getModuleName(@MockServiceType int service) {
         switch (service) {
             case MOCK_NL80211_SERVICE:
                 return "nl80211";
+            case MOCK_SUPPLICANT_SERVICE:
+                return "supplicant";
             default:
                 return "none";
         }
@@ -178,6 +218,9 @@ public class MockWifiServiceUtil {
         if (mMockWifiNl80211Manager != null) {
             mMockWifiNl80211Manager.resetMockedMethods();
         }
+        if (mMockSupplicantManager != null) {
+            mMockSupplicantManager.resetMockedMethods();
+        }
         String[] mockedMethods = methods.split(METHOD_SEPARATOR);
         for (String mockedMethod : mockedMethods) {
             String[] mockedMethodInfo = mockedMethod.split(CLASS_IDENTIFIER);
@@ -189,8 +232,15 @@ public class MockWifiServiceUtil {
             if (TAG_MOCK_NL80211.equals(mockedClassName) && mMockWifiNl80211Manager != null) {
                 mMockWifiNl80211Manager.addMockedMethod(mockedMethodName);
             }
+            if (TAG_MOCK_SUPPLICANT.equals(mockedClassName) && mMockSupplicantManager != null) {
+                mMockSupplicantManager.addMockedMethod(mockedMethodName);
+            }
         }
         return true;
+    }
+
+    public MockSupplicantManager getMockSupplicantManager() {
+        return mMockSupplicantManager;
     }
 
     public MockWifiNl80211Manager getMockWifiNl80211Manager() {
@@ -205,11 +255,14 @@ public class MockWifiServiceUtil {
     /**
      * Get method configured status based on service.
      */
-    public boolean getIsMethodConfigured(int service, String methodName) {
+    public boolean isMethodConfigured(@MockServiceType int service, String methodName) {
         switch (service) {
             case MOCK_NL80211_SERVICE:
                 return getWifiNl80211Manager() != null
                         && getMockWifiNl80211Manager().isMethodConfigured(methodName);
+            case MOCK_SUPPLICANT_SERVICE:
+                return mMockSupplicantManager != null
+                        && getMockSupplicantManager().isMethodConfigured(methodName);
             default:
                 return false;
         }
