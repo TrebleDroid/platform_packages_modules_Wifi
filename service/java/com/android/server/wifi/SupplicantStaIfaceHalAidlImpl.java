@@ -96,6 +96,7 @@ import android.util.Pair;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.mockwifi.MockWifiServiceUtil;
+import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.nio.ByteBuffer;
@@ -3010,6 +3011,9 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
                 capOut.maxNumberTxSpatialStreams = cap.maxNumberTxSpatialStreams;
                 capOut.maxNumberRxSpatialStreams = cap.maxNumberRxSpatialStreams;
                 capOut.apTidToLinkMapNegotiationSupported = cap.apTidToLinkMapNegotiationSupported;
+                if (isServiceVersionAtLeast(3) && cap.vendorData != null) {
+                    capOut.vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(cap.vendorData);
+                }
                 return capOut;
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);
