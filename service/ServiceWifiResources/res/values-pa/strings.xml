@@ -25,9 +25,9 @@
     <string name="wifi_available_action_connect" msgid="5636634933476946222">"ਕਨੈਕਟ ਕਰੋ"</string>
     <string name="wifi_available_action_all_networks" msgid="8491109932336522211">"ਸਾਰੇ ਨੈੱਟਵਰਕ"</string>
     <string name="notification_channel_network_status" msgid="1631786866932924838">"ਨੈੱਟਵਰਕ ਅਵਸਥਾ"</string>
-    <string name="notification_channel_network_alerts" msgid="1391603215241200880">"ਨੈੱਟਵਰਕ ਸੁਚੇਤਨਾਵਾਂ"</string>
+    <string name="notification_channel_network_alerts" msgid="1391603215241200880">"ਨੈੱਟਵਰਕ ਅਲਰਟ"</string>
     <string name="notification_channel_network_available" msgid="8454366142428864948">"ਨੈੱਟਵਰਕ ਉਪਲਬਧ ਹੈ"</string>
-    <string name="notification_channel_apm_alerts" msgid="6775293475896473489">"APM ਸੁਚੇਤਨਾਵਾਂ"</string>
+    <string name="notification_channel_apm_alerts" msgid="6775293475896473489">"APM ਅਲਰਟ"</string>
     <string name="wifi_suggestion_title" msgid="2564179935989099139">"ਕੀ ਸੁਝਾਏ ਵਾਈ-ਫਾਈ ਨੈੱਟਵਰਕ ਵਰਤਣੇ ਹਨ?"</string>
     <string name="wifi_suggestion_content" msgid="6985149577828091835">"<xliff:g id="NAME">%s</xliff:g> ਦੇ ਸੁਝਾਏ ਨੈੱਟਵਰਕ। ਸ਼ਾਇਦ ਡੀਵਾਈਸ ਸਵੈਚਲਿਤ ਤੌਰ \'ਤੇ ਕਨੈਕਟ ਹੋਵੇ।"</string>
     <string name="wifi_suggestion_action_allow_app" msgid="7757859972144671588">"ਵਰਤਣ ਦਿਓ"</string>
