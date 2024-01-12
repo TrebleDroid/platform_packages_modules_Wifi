@@ -19,6 +19,7 @@ package com.android.server.wifi.rtt;
 import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE;
 import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_LCI;
 import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_LCR;
+import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_NTB_INITIATOR;
 import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_ONE_SIDED_RTT;
 import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_STA_RESPONDER;
 
@@ -237,6 +238,8 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                             j.put("lcrSupported", mCapabilities.lcrSupported);
                             j.put("responderSupported", mCapabilities.responderSupported);
                             j.put("mcVersion", mCapabilities.mcVersion);
+                            j.put("ntbInitiatorSupported", mCapabilities.ntbInitiatorSupported);
+                            j.put("ntbResponderSupported", mCapabilities.ntbResponderSupported);
                         } catch (JSONException e) {
                             Log.e(TAG, "onCommand: get_capabilities e=" + e);
                         }
@@ -478,7 +481,27 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
         characteristics.putBoolean(CHARACTERISTICS_KEY_BOOLEAN_LCR, capabilities.lcrSupported);
         characteristics.putBoolean(CHARACTERISTICS_KEY_BOOLEAN_STA_RESPONDER,
                 capabilities.responderSupported);
+        characteristics.putBoolean(CHARACTERISTICS_KEY_BOOLEAN_NTB_INITIATOR,
+                capabilities.ntbInitiatorSupported);
         return characteristics;
+    }
+
+    /**
+     * Override IEEE 802.11az parameters with overlay values.
+     */
+    private void override11azOverlays(RangingRequest rangingRequest) {
+        int minNtbTime = mContext.getResources().getInteger(
+                R.integer.config_wifi80211azMinTimeBetweenNtbMeasurementsMicros);
+        int maxNtbTime = mContext.getResources().getInteger(
+                R.integer.config_wifi80211azMaxTimeBetweenNtbMeasurementsMicros);
+        if (minNtbTime > 0 || maxNtbTime > 0) {
+            for (ResponderConfig peer : rangingRequest.mRttPeers) {
+                if (peer.is80211azNtbSupported()) {
+                    if (maxNtbTime > 0) peer.setNtbMaxTimeBetweenMeasurementsMicros(maxNtbTime);
+                    if (minNtbTime > 0) peer.setNtbMinTimeBetweenMeasurementsMicros(minNtbTime);
+                }
+            }
+        }
     }
 
     /**
@@ -583,6 +606,8 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
             Log.e(TAG, "Error on linkToDeath - " + e);
             return;
         }
+
+        override11azOverlays(request);
 
         mRttServiceSynchronized.mHandler.post(() -> {
             WorkSource sourceToUse = ws;
@@ -1177,6 +1202,7 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                             .setPeerHandle(rttPeer.peerHandle)
                             .setResponderType(rttPeer.getResponderType())
                             .set80211mcSupported(rttPeer.is80211mcSupported())
+                            .set80211azNtbSupported(rttPeer.is80211azNtbSupported())
                             .setChannelWidth(rttPeer.getChannelWidth())
                             .setFrequencyMhz(rttPeer.getFrequencyMhz())
                             .setCenterFreq1Mhz(rttPeer.getCenterFreq1Mhz())
@@ -1320,7 +1346,20 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                             .set80211mcMeasurement(resultForRequest.is80211mcMeasurement())
                             .setMeasurementChannelFrequencyMHz(
                                     resultForRequest.getMeasurementChannelFrequencyMHz())
-                            .setMeasurementBandwidth(resultForRequest.getMeasurementBandwidth());
+                            .setMeasurementBandwidth(resultForRequest.getMeasurementBandwidth())
+                            .set80211azNtbMeasurement(resultForRequest.is80211azNtbMeasurement())
+                            .setMinTimeBetweenNtbMeasurementsMicros(
+                                    resultForRequest.getMinTimeBetweenNtbMeasurementsMicros())
+                            .setMaxTimeBetweenNtbMeasurementsMicros(
+                                    resultForRequest.getMaxTimeBetweenNtbMeasurementsMicros())
+                            .set80211azInitiatorTxLtfRepetitionsCount(
+                                    resultForRequest.get80211azInitiatorTxLtfRepetitionsCount())
+                            .set80211azResponderTxLtfRepetitionsCount(
+                                    resultForRequest.get80211azResponderTxLtfRepetitionsCount())
+                            .set80211azNumberOfTxSpatialStreams(
+                                    resultForRequest.get80211azNumberOfTxSpatialStreams())
+                            .set80211azNumberOfRxSpatialStreams(
+                                    resultForRequest.get80211azNumberOfRxSpatialStreams());
                     if (peer.peerHandle == null) {
                         builder.setMacAddress(peer.getMacAddress());
                     } else {
