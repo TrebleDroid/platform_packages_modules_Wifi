@@ -390,6 +390,7 @@ package android.net.wifi {
     method public int getNetworkId();
     method @Nullable public String getPasspointFqdn();
     method @Nullable public String getPasspointProviderFriendlyName();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @Nullable public String getPasspointUniqueId();
     method public int getRssi();
     method @IntRange(from=0xffffffff) public int getRxLinkSpeedMbps();
     method public String getSSID();

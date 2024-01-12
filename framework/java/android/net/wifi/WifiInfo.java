@@ -1758,8 +1758,8 @@ public class WifiInfo implements TransportInfo, Parcelable {
      * Get the Passpoint unique identifier for the current connection
      *
      * @return Passpoint unique identifier
-     * @hide
      */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public @Nullable String getPasspointUniqueId() {
         return mPasspointUniqueId;
     }
