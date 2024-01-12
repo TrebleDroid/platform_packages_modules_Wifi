@@ -8030,6 +8030,20 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mSettingsConfigStore.put(WIFI_WEP_ALLOWED, isAllowed);
             mWifiGlobals.setWepAllowed(isAllowed);
+            if (!isAllowed) {
+                for (ClientModeManager clientModeManager
+                        : mActiveModeWarden.getClientModeManagers()) {
+                    if (!(clientModeManager instanceof ConcreteClientModeManager)) {
+                        continue;
+                    }
+                    ConcreteClientModeManager cmm = (ConcreteClientModeManager) clientModeManager;
+                    WifiInfo info = cmm.getConnectionInfo();
+                    if (info != null
+                            && info.getCurrentSecurityType() == WifiInfo.SECURITY_TYPE_WEP) {
+                        clientModeManager.disconnect();
+                    }
+                }
+            }
         });
     }
 
