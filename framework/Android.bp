@@ -44,7 +44,7 @@ filegroup {
         ":framework-wifi-updatable-java-sources",
         ":framework-wifi-updatable-exported-aidl-sources",
         ":module-utils-os-aidls",
-        ":wifi_aconfig_flags_lib{.generated_srcjars}",
+        ":wifi_framework_aconfig_flags_lib{.generated_srcjars}",
     ],
 }
 
@@ -94,9 +94,6 @@ java_library {
         "com.android.wifi",
         "test_com.android.wifi",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // defaults shared between `framework-wifi` & `framework-wifi-pre-jarjar`
@@ -149,9 +146,6 @@ java_library {
         "//packages/modules/Wifi/service",
         "//packages/modules/Wifi/service/tests/wifitests",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // post-jarjar version of framework-wifi
@@ -216,7 +210,7 @@ java_sdk_library {
     ],
     lint: {
         strict_updatability_linting: true,
-        baseline_filename: "lint-baseline.xml",
+
     },
 }
 

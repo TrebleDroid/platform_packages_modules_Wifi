@@ -48,6 +48,7 @@ java_library {
     lint: {
         strict_updatability_linting: true,
         baseline_filename: "lint-baseline.xml",
+
     },
     libs: [
         "androidx.annotation_annotation",
@@ -121,7 +122,6 @@ java_library {
         "service-entitlement",
         "wifi-lite-protos",
         "wifi-nano-protos",
-        "wifi_aconfig_flags_lib",
     ],
     apex_available: ["com.android.wifi"],
 }
@@ -161,9 +161,6 @@ java_library {
         "com.android.wifi",
         "test_com.android.wifi",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // Statsd auto-generated code
