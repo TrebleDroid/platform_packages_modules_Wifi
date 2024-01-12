@@ -28,6 +28,8 @@ import static com.android.server.wifi.WifiCarrierInfoManager.NOTIFICATION_USER_C
 import static com.android.server.wifi.WifiCarrierInfoManager.NOTIFICATION_USER_DISALLOWED_CARRIER_INTENT_ACTION;
 import static com.android.server.wifi.WifiCarrierInfoManager.NOTIFICATION_USER_DISMISSED_INTENT_ACTION;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -110,6 +112,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import javax.crypto.BadPaddingException;
@@ -156,6 +159,9 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
     @Mock SubscriptionInfo mNonDataSubscriptionInfo;
     @Mock WifiConfigStore mWifiConfigStore;
     @Mock WifiInjector mWifiInjector;
+    @Mock WifiNetworkFactory mWifiNetworkFactory;
+    @Mock UntrustedWifiNetworkFactory mUntrustedWifiNetworkFactory;
+    @Mock RestrictedWifiNetworkFactory mRestrictedWifiNetworkFactory;
     @Mock WifiConfigManager mWifiConfigManager;
     @Mock
     WifiCarrierInfoStoreManagerData mWifiCarrierInfoStoreManagerData;
@@ -224,6 +230,11 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
         when(mWifiInjector.getWifiNetworkSuggestionsManager())
                 .thenReturn(mWifiNetworkSuggestionsManager);
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
+        when(mWifiInjector.getWifiNetworkFactory()).thenReturn(mWifiNetworkFactory);
+        when(mWifiInjector.getUntrustedWifiNetworkFactory())
+                .thenReturn(mUntrustedWifiNetworkFactory);
+        when(mWifiInjector.getRestrictedWifiNetworkFactory())
+                 .thenReturn(mRestrictedWifiNetworkFactory);
         when(mContext.getStringResourceWrapper(anyInt(), anyInt()))
                 .thenReturn(mWifiStringResourceWrapper);
         mWifiCarrierInfoManager = new WifiCarrierInfoManager(mTelephonyManager,
@@ -2495,5 +2506,29 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
                 .thenReturn(true);
 
         assertTrue(mWifiCarrierInfoManager.isOobPseudonymFeatureEnabled(1));
+    }
+
+    @Test
+    public void testActiveSubsChangeUpdateWifiNetworkFactory() {
+        SubscriptionInfo subInfo1 = mock(SubscriptionInfo.class);
+        when(subInfo1.getSubscriptionId()).thenReturn(DATA_SUBID);
+        SubscriptionInfo subInfo2 = mock(SubscriptionInfo.class);
+        when(subInfo2.getSubscriptionId()).thenReturn(NON_DATA_SUBID);
+        when(mSubscriptionManager.getCompleteActiveSubscriptionInfoList())
+                .thenReturn(Arrays.asList(subInfo1, subInfo2));
+        mListenerArgumentCaptor.getValue().onSubscriptionsChanged();
+        mLooper.dispatchAll();
+        ArgumentCaptor<Set<Integer>> restrictedWifiCaptor = ArgumentCaptor.forClass(Set.class);
+        ArgumentCaptor<Set<Integer>> untrustedWifiCaptor = ArgumentCaptor.forClass(Set.class);
+        ArgumentCaptor<Set<Integer>> wifiCaptor = ArgumentCaptor.forClass(Set.class);
+        verify(mRestrictedWifiNetworkFactory, times(2)).updateSubIdsInCapabilitiesFilter(
+                restrictedWifiCaptor.capture());
+        assertThat(restrictedWifiCaptor.getValue()).containsExactly(DATA_SUBID, NON_DATA_SUBID);
+        verify(mUntrustedWifiNetworkFactory, times(2)).updateSubIdsInCapabilitiesFilter(
+                untrustedWifiCaptor.capture());
+        assertThat(restrictedWifiCaptor.getValue()).containsExactly(DATA_SUBID, NON_DATA_SUBID);
+        verify(mWifiNetworkFactory, times(2)).updateSubIdsInCapabilitiesFilter(
+                wifiCaptor.capture());
+        assertThat(wifiCaptor.getValue()).containsExactly(DATA_SUBID, NON_DATA_SUBID);
     }
 }

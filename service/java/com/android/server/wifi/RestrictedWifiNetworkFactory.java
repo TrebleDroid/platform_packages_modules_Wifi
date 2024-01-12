@@ -16,13 +16,17 @@
 
 package com.android.server.wifi;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.NetworkCapabilities;
 import android.net.NetworkFactory;
 import android.net.NetworkRequest;
+import android.os.Build;
 import android.os.Looper;
 import android.util.ArraySet;
 import android.util.Log;
+
+import com.android.modules.utils.build.SdkLevel;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -38,13 +42,25 @@ public class RestrictedWifiNetworkFactory extends NetworkFactory {
 
     private final WifiConnectivityManager mWifiConnectivityManager;
     private Set<Integer> mRequestUids = new ArraySet<>();
+    private final NetworkCapabilities mCapabilitiesFilter;
 
     public RestrictedWifiNetworkFactory(Looper l, Context c, NetworkCapabilities f,
                                        WifiConnectivityManager connectivityManager) {
         super(l, c, TAG, f);
         mWifiConnectivityManager = connectivityManager;
-
+        mCapabilitiesFilter = f;
         setScoreFilter(SCORE_FILTER);
+    }
+
+    // package-private
+    @TargetApi(Build.VERSION_CODES.S)
+    void updateSubIdsInCapabilitiesFilter(Set<Integer> subIds) {
+        if (SdkLevel.isAtLeastS()) {
+            NetworkCapabilities newFilter =
+                    new NetworkCapabilities.Builder(mCapabilitiesFilter)
+                            .setSubscriptionIds(subIds).build();
+            setCapabilityFilter(newFilter);
+        }
     }
 
     @Override
