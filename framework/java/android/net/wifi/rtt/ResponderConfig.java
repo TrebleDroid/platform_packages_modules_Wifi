@@ -139,7 +139,6 @@ public final class ResponderConfig implements Parcelable {
     @SystemApi
     public static final int CHANNEL_WIDTH_320MHZ = 5;
 
-
     /** @hide */
     @IntDef({PREAMBLE_LEGACY, PREAMBLE_HT, PREAMBLE_VHT, PREAMBLE_HE, PREAMBLE_EHT})
     @Retention(RetentionPolicy.SOURCE)
@@ -248,6 +247,27 @@ public final class ResponderConfig implements Parcelable {
      */
     @SystemApi
     public final int preamble;
+
+    /**
+     * Constructs Responder configuration from the builder
+     * @param builder See {@link Builder}
+     * @hide
+     */
+    public ResponderConfig(Builder builder) {
+        if (builder.mMacAddress == null && builder.mPeerHandle == null) {
+            throw new IllegalArgumentException(
+                    "Invalid ResponderConfig - must specify a MAC address or Peer handle");
+        }
+        this.macAddress = builder.mMacAddress;
+        this.peerHandle = builder.mPeerHandle;
+        this.responderType = builder.mResponderType;
+        this.supports80211mc = builder.mSupports80211Mc;
+        this.channelWidth = builder.mChannelWidth;
+        this.frequency = builder.mFrequency;
+        this.centerFreq0 = builder.mCenterFreq0;
+        this.centerFreq1 = builder.mCenterFreq1;
+        this.preamble = builder.mPreamble;
+    }
 
     /**
      * Constructs Responder configuration, using a MAC address to identify the Responder.
@@ -378,7 +398,7 @@ public final class ResponderConfig implements Parcelable {
         MacAddress macAddress = MacAddress.fromString(scanResult.BSSID);
         int responderType = RESPONDER_AP;
         boolean supports80211mc = scanResult.is80211mcResponder();
-        int channelWidth = translateFromScanResultToLocalChannelWidth(scanResult.channelWidth);
+        int channelWidth = scanResult.channelWidth;
         int frequency = scanResult.frequency;
         int centerFreq0 = scanResult.centerFreq0;
         int centerFreq1 = scanResult.centerFreq1;
@@ -403,30 +423,38 @@ public final class ResponderConfig implements Parcelable {
             }
 
             if (ehtCapabilitiesPresent && ScanResult.is6GHz(frequency)) {
-                preamble = PREAMBLE_EHT;
+                preamble = ScanResult.PREAMBLE_EHT;
             } else if (heCapabilitiesPresent && ScanResult.is6GHz(frequency)) {
-                preamble = PREAMBLE_HE;
+                preamble = ScanResult.PREAMBLE_HE;
             } else if (vhtCapabilitiesPresent) {
-                preamble = PREAMBLE_VHT;
+                preamble = ScanResult.PREAMBLE_VHT;
             } else if (htCapabilitiesPresent) {
-                preamble = PREAMBLE_HT;
+                preamble = ScanResult.PREAMBLE_HT;
             } else {
-                preamble = PREAMBLE_LEGACY;
+                preamble = ScanResult.PREAMBLE_LEGACY;
             }
         } else {
             Log.e(TAG, "Scan Results do not contain IEs - using backup method to select preamble");
-            if (channelWidth == CHANNEL_WIDTH_320MHZ) {
-                preamble = PREAMBLE_EHT;
-            } else if (channelWidth == CHANNEL_WIDTH_80MHZ
-                    || channelWidth == CHANNEL_WIDTH_160MHZ) {
-                preamble = PREAMBLE_VHT;
+            if (channelWidth == ScanResult.CHANNEL_WIDTH_320MHZ) {
+                preamble = ScanResult.PREAMBLE_EHT;
+            } else if (channelWidth == ScanResult.CHANNEL_WIDTH_80MHZ
+                    || channelWidth == ScanResult.CHANNEL_WIDTH_160MHZ) {
+                preamble = ScanResult.PREAMBLE_VHT;
             } else {
-                preamble = PREAMBLE_HT;
+                preamble = ScanResult.PREAMBLE_HT;
             }
         }
 
-        return new ResponderConfig(macAddress, responderType, supports80211mc, channelWidth,
-                frequency, centerFreq0, centerFreq1, preamble);
+        return new ResponderConfig.Builder()
+                .setMacAddress(macAddress)
+                .setResponderType(responderType)
+                .set80211mcSupported(supports80211mc)
+                .setChannelWidth(channelWidth)
+                .setFrequencyMhz(frequency)
+                .setCenterFreq0Mhz(centerFreq0)
+                .setCenterFreq1Mhz(centerFreq1)
+                .setPreamble(preamble)
+                .build();
     }
 
     /**
@@ -443,8 +471,10 @@ public final class ResponderConfig implements Parcelable {
          * (i.e. Band 5 @ 80MHz). A Responder is brought up on the peer by starting an Aware
          * Unsolicited Publisher with Ranging enabled.
          */
-        return new ResponderConfig(macAddress, RESPONDER_AWARE, true, CHANNEL_WIDTH_20MHZ,
-                AWARE_BAND_2_DISCOVERY_CHANNEL, 0, 0, PREAMBLE_HT);
+        return new ResponderConfig.Builder()
+                .setMacAddress(macAddress)
+                .setResponderType(RESPONDER_AWARE)
+                .build();
     }
 
     /**
@@ -461,8 +491,24 @@ public final class ResponderConfig implements Parcelable {
          * (i.e. Band 5 @ 80MHz). A Responder is brought up on the peer by starting an Aware
          * Unsolicited Publisher with Ranging enabled.
          */
-        return new ResponderConfig(peerHandle, RESPONDER_AWARE, true, CHANNEL_WIDTH_20MHZ,
-                AWARE_BAND_2_DISCOVERY_CHANNEL, 0, 0, PREAMBLE_HT);
+        return new ResponderConfig.Builder()
+                .setPeerHandle(peerHandle)
+                .setResponderType(RESPONDER_AWARE)
+                .build();
+    }
+
+    private static boolean isResponderTypeSupported(@ResponderType int responderType) {
+        switch (responderType) {
+            case RESPONDER_AP:
+            case RESPONDER_STA:
+            case RESPONDER_AWARE:
+                break;
+            case RESPONDER_P2P_GO:
+            case RESPONDER_P2P_CLIENT:
+            default:
+                return false;
+        }
+        return true;
     }
 
     /**
@@ -473,6 +519,7 @@ public final class ResponderConfig implements Parcelable {
      * @hide
      */
     public boolean isValid(boolean awareSupported) {
+        if (!isResponderTypeSupported(responderType)) return false;
         if (macAddress == null && peerHandle == null || macAddress != null && peerHandle != null) {
             return false;
         }
@@ -488,6 +535,16 @@ public final class ResponderConfig implements Parcelable {
     @Nullable
     public MacAddress getMacAddress() {
         return macAddress;
+    }
+
+    /**
+     * @return the peer handle of the responder
+     *
+     * @hide
+     */
+    @Nullable
+    public PeerHandle getPeerHandle() {
+        return peerHandle;
     }
 
     /**
@@ -563,6 +620,7 @@ public final class ResponderConfig implements Parcelable {
      */
     public static final class Builder {
         private MacAddress mMacAddress;
+        private PeerHandle mPeerHandle;
         private @ResponderType int mResponderType = RESPONDER_AP;
         private boolean mSupports80211Mc = true;
         private @ChannelWidth int mChannelWidth = CHANNEL_WIDTH_20MHZ;
@@ -581,6 +639,20 @@ public final class ResponderConfig implements Parcelable {
         @NonNull
         public Builder setMacAddress(@NonNull MacAddress macAddress) {
             this.mMacAddress = macAddress;
+            return this;
+        }
+
+        /**
+         * Sets the Responder Peer handle.
+         *
+         * @param peerHandle Peer handle of the resposnde
+         * @return the builder to facilitate chaining
+         *         {@code builder.setXXX(..).setXXX(..)}.
+         * @hide
+         */
+        @NonNull
+        public Builder setPeerHandle(@NonNull PeerHandle peerHandle) {
+            this.mPeerHandle = peerHandle;
             return this;
         }
 
@@ -679,7 +751,8 @@ public final class ResponderConfig implements Parcelable {
         }
 
         /**
-         * Sets the responder type, can be {@link #RESPONDER_AP} or {@link #RESPONDER_STA}
+         * Sets the responder type, can be {@link #RESPONDER_AP} or {@link #RESPONDER_STA} or
+         * {@link #RESPONDER_AWARE}
          *
          * @param responderType the type of the responder, if not set defaults to
          * {@link #RESPONDER_AP}
@@ -687,8 +760,8 @@ public final class ResponderConfig implements Parcelable {
          */
         @NonNull
         public Builder setResponderType(@ResponderType int responderType) {
-            if (responderType != RESPONDER_STA && responderType != RESPONDER_AP) {
-                throw new IllegalArgumentException("invalid responder type");
+            if (!isResponderTypeSupported(responderType)) {
+                throw new IllegalArgumentException("invalid responder type " + responderType);
             }
             mResponderType = responderType;
             return this;
@@ -700,12 +773,20 @@ public final class ResponderConfig implements Parcelable {
          */
         @NonNull
         public ResponderConfig build() {
-            if (mMacAddress == null) {
+            if ((mMacAddress == null && mPeerHandle == null)
+                    || (mMacAddress != null && mPeerHandle != null)) {
                 throw new IllegalArgumentException(
-                        "Invalid ResponderConfig - must specify a MAC address");
+                        "Invalid ResponderConfig - must specify a MAC address or peer handle but "
+                                + "not both");
             }
-            return new ResponderConfig(mMacAddress, mResponderType, mSupports80211Mc, mChannelWidth,
-                    mFrequency, mCenterFreq0, mCenterFreq1, mPreamble);
+            // For Aware, use supported default values
+            if (mResponderType == RESPONDER_AWARE) {
+                mSupports80211Mc = true;
+                mFrequency = AWARE_BAND_2_DISCOVERY_CHANNEL;
+                mChannelWidth = CHANNEL_WIDTH_20MHZ;
+                mPreamble = PREAMBLE_HT;
+            }
+            return new ResponderConfig(this);
         }
     }
 
@@ -729,7 +810,7 @@ public final class ResponderConfig implements Parcelable {
             dest.writeInt(peerHandle.peerId);
         }
         dest.writeInt(responderType);
-        dest.writeInt(supports80211mc ? 1 : 0);
+        dest.writeBoolean(supports80211mc);
         dest.writeInt(channelWidth);
         dest.writeInt(frequency);
         dest.writeInt(centerFreq0);
@@ -756,20 +837,24 @@ public final class ResponderConfig implements Parcelable {
                 peerHandle = new PeerHandle(in.readInt());
             }
             int responderType = in.readInt();
-            boolean supports80211mc = in.readInt() == 1;
+            boolean supports80211mc = in.readBoolean();
             int channelWidth = in.readInt();
             int frequency = in.readInt();
             int centerFreq0 = in.readInt();
             int centerFreq1 = in.readInt();
             int preamble = in.readInt();
 
-            if (peerHandle == null) {
-                return new ResponderConfig(macAddress, responderType, supports80211mc, channelWidth,
-                        frequency, centerFreq0, centerFreq1, preamble);
-            } else {
-                return new ResponderConfig(peerHandle, responderType, supports80211mc, channelWidth,
-                        frequency, centerFreq0, centerFreq1, preamble);
-            }
+            return new ResponderConfig.Builder()
+                    .setMacAddress(macAddress)
+                    .setPeerHandle(peerHandle)
+                    .setResponderType(responderType)
+                    .set80211mcSupported(supports80211mc)
+                    .setChannelWidth(channelWidth)
+                    .setFrequencyMhz(frequency)
+                    .setCenterFreq0Mhz(centerFreq0)
+                    .setCenterFreq1Mhz(centerFreq1)
+                    .setPreamble(preamble)
+                    .build();
         }
     };
 

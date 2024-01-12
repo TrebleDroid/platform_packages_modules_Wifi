@@ -555,9 +555,15 @@ public class WifiRttManagerTest {
     @Test
     public void testResponderConfigParcel() {
         // ResponderConfig constructed with a MAC address
-        ResponderConfig config = new ResponderConfig(MacAddress.fromString("00:01:02:03:04:05"),
-                ResponderConfig.RESPONDER_AP, true, ResponderConfig.CHANNEL_WIDTH_80MHZ, 2134, 2345,
-                2555, ResponderConfig.PREAMBLE_LEGACY);
+        ResponderConfig config = new ResponderConfig.Builder()
+                .setMacAddress(MacAddress.fromString("00:01:02:03:04:05"))
+                .set80211mcSupported(true)
+                .setChannelWidth(ScanResult.CHANNEL_WIDTH_80MHZ)
+                .setFrequencyMhz(2134)
+                .setCenterFreq0Mhz(2345)
+                .setCenterFreq1Mhz(2555)
+                .setPreamble(ScanResult.PREAMBLE_LEGACY)
+                .build();
 
         Parcel parcelW = Parcel.obtain();
         config.writeToParcel(parcelW, 0);
@@ -572,9 +578,16 @@ public class WifiRttManagerTest {
         assertEquals(config, rereadConfig);
 
         // ResponderConfig constructed with a PeerHandle
-        config = new ResponderConfig(new PeerHandle(10), ResponderConfig.RESPONDER_AWARE, false,
-                ResponderConfig.CHANNEL_WIDTH_80MHZ_PLUS_MHZ, 5555, 6666, 7777,
-                ResponderConfig.PREAMBLE_VHT);
+        config = new ResponderConfig.Builder()
+                .setPeerHandle(new PeerHandle(10))
+                .setResponderType(ResponderConfig.RESPONDER_AWARE)
+                .set80211mcSupported(false)
+                .setChannelWidth(ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ)
+                .setFrequencyMhz(5555)
+                .setCenterFreq0Mhz(6666)
+                .setCenterFreq1Mhz(7777)
+                .setPreamble(ScanResult.PREAMBLE_VHT)
+                .build();
 
         parcelW = Parcel.obtain();
         config.writeToParcel(parcelW, 0);

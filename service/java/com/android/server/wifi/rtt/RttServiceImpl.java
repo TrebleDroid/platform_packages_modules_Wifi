@@ -1166,11 +1166,23 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                                 + "address for peerId=" + rttPeer.peerHandle.peerId);
                         continue;
                     }
-                    newRequestBuilder.addResponder(new ResponderConfig(
-                            MacAddress.fromBytes(mac),
-                            rttPeer.peerHandle, rttPeer.responderType, rttPeer.supports80211mc,
-                            rttPeer.channelWidth, rttPeer.frequency, rttPeer.centerFreq0,
-                            rttPeer.centerFreq1, rttPeer.preamble));
+                    // To create a ResponderConfig object with both a MAC address and peer
+                    // handler, we're bypassing the standard Builder pattern and directly using
+                    // the constructor. This is because the SDK's Builder.build() method has a
+                    // built-in restriction that prevents setting both properties simultaneously.
+                    // To avoid triggering this exception, we're directly invoking the
+                    // constructor to accommodate both values.
+                    ResponderConfig.Builder responderConfigBuilder = new ResponderConfig.Builder()
+                            .setMacAddress(MacAddress.fromBytes(mac))
+                            .setPeerHandle(rttPeer.peerHandle)
+                            .setResponderType(rttPeer.getResponderType())
+                            .set80211mcSupported(rttPeer.is80211mcSupported())
+                            .setChannelWidth(rttPeer.getChannelWidth())
+                            .setFrequencyMhz(rttPeer.getFrequencyMhz())
+                            .setCenterFreq1Mhz(rttPeer.getCenterFreq1Mhz())
+                            .setCenterFreq0Mhz(rttPeer.getCenterFreq0Mhz())
+                            .setPreamble(rttPeer.getPreamble());
+                    newRequestBuilder.addResponder(new ResponderConfig(responderConfigBuilder));
                 } else {
                     newRequestBuilder.addResponder(rttPeer);
                 }
