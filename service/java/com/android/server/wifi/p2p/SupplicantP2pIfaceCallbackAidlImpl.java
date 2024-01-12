@@ -23,7 +23,9 @@ import android.annotation.Nullable;
 import android.hardware.wifi.supplicant.ISupplicantP2pIfaceCallback;
 import android.hardware.wifi.supplicant.P2pClientEapolIpAddressInfo;
 import android.hardware.wifi.supplicant.P2pDeviceFoundEventParams;
+import android.hardware.wifi.supplicant.P2pGoNegotiationReqEventParams;
 import android.hardware.wifi.supplicant.P2pGroupStartedEventParams;
+import android.hardware.wifi.supplicant.P2pInvitationEventParams;
 import android.hardware.wifi.supplicant.P2pPeerClientDisconnectedEventParams;
 import android.hardware.wifi.supplicant.P2pPeerClientJoinedEventParams;
 import android.hardware.wifi.supplicant.P2pProvDiscStatusCode;
@@ -147,6 +149,26 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onGoNegotiationRequest(byte[] srcAddress, int passwordId) {
+        handleGoNegotiationRequestEvent(srcAddress, passwordId);
+    }
+
+    /**
+     * Used to indicate the reception of a P2P Group Owner negotiation request.
+     *
+     * @param goNegotiationReqEventParams Parameters associated with
+     *     GO negotiation request.
+     */
+    @Override
+    public void onGoNegotiationRequestWithParams(
+                P2pGoNegotiationReqEventParams goNegotiationReqEventParams) {
+        handleGoNegotiationRequestEvent(
+                goNegotiationReqEventParams.srcAddress,
+                goNegotiationReqEventParams.passwordId);
+    }
+
+    private void handleGoNegotiationRequestEvent(
+            byte[] srcAddress,
+            int passwordId) {
         WifiP2pConfig config = new WifiP2pConfig();
 
         try {
@@ -344,6 +366,31 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
     @Override
     public void onInvitationReceived(byte[] srcAddress, byte[] goDeviceAddress,
             byte[] bssid, int persistentNetworkId, int operatingFrequency) {
+        handleInvitationReceivedEvent(srcAddress, goDeviceAddress, bssid,
+                           persistentNetworkId, operatingFrequency);
+    }
+    /**
+     * Used to indicate the reception of a P2P invitation.
+     *
+     * @param invitationEventParams Parameters of the invitation event.
+     */
+    @Override
+    public void onInvitationReceivedWithParams(
+                 P2pInvitationEventParams invitationEventParams) {
+        handleInvitationReceivedEvent(
+                 invitationEventParams.srcAddress,
+                 invitationEventParams.goDeviceAddress,
+                 invitationEventParams.bssid,
+                 invitationEventParams.persistentNetworkId,
+                 invitationEventParams.operatingFrequencyMHz);
+    }
+
+    private void handleInvitationReceivedEvent(
+            byte[] srcAddress,
+            byte[] goDeviceAddress,
+            byte[] bssid,
+            int persistentNetworkId,
+            int operatingFrequency) {
         WifiP2pGroup group = new WifiP2pGroup();
         group.setNetworkId(persistentNetworkId);
 
