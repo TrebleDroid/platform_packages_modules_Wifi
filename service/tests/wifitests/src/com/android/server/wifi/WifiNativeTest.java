@@ -52,6 +52,7 @@ import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.WifiScanner.ScanData;
 import android.net.wifi.WifiSsid;
 import android.net.wifi.nl80211.NativeScanResult;
 import android.net.wifi.nl80211.RadioChainInfo;
@@ -1640,6 +1641,48 @@ public class WifiNativeTest extends WifiBaseTest {
     public void testIsSoftApInstanceDiedHandlerSupported() throws Exception {
         mWifiNative.isSoftApInstanceDiedHandlerSupported();
         verify(mHostapdHal).isSoftApInstanceDiedHandlerSupported();
+    }
+
+    @Test
+    public void testGetCachedScanResultsLocationDisabledOrInvalidTimestamp() throws Exception {
+        ScanResult[] scanResults = new ScanResult[2];
+        for (int i = 0; i < 2; i++) {
+            ScanResult scanResult = new ScanResult();
+            scanResult.timestamp = 0;
+            scanResults[i] = scanResult;
+        }
+        ScanData testScanData = new ScanData(0, 0,
+                0, WifiScanner.WIFI_BAND_UNSPECIFIED, scanResults);
+        when(mWifiVendorHal.getCachedScanData(any())).thenReturn(testScanData);
+
+        mWifiNative.setLocationModeEnabled(false);
+        ScanData scanData = mWifiNative.getCachedScanResults(WIFI_IFACE_NAME);
+        // Get no scan result because the location mode is disabled
+        assertEquals(0, scanData.getResults().length);
+
+        mWifiNative.setLocationModeEnabled(true);
+        scanData = mWifiNative.getCachedScanResults(WIFI_IFACE_NAME);
+        // Get no scan result because the scan timestamp is too new
+        assertEquals(0, scanData.getResults().length);
+    }
+
+    @Test
+    public void testGetCachedScanResultsLocationEnabledValidTimestamp() throws Exception {
+        ScanResult[] scanResults = new ScanResult[3];
+        for (int i = 0; i < 3; i++) {
+            ScanResult scanResult = new ScanResult();
+            // 1st ScanResult has invalid timestamp
+            scanResult.timestamp = (i > 0) ? Long.MAX_VALUE : 0;
+            scanResults[i] = scanResult;
+        }
+        ScanData testScanData = new ScanData(0, 0,
+                0, WifiScanner.WIFI_BAND_UNSPECIFIED, scanResults);
+        when(mWifiVendorHal.getCachedScanData(any())).thenReturn(testScanData);
+
+        mWifiNative.setLocationModeEnabled(true);
+        ScanData scanData = mWifiNative.getCachedScanResults(WIFI_IFACE_NAME);
+        // Get the last two scan results which has the valid timestamp
+        assertEquals(2, scanData.getResults().length);
     }
 
     @Test

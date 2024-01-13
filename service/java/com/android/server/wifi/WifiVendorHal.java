@@ -716,6 +716,20 @@ public class WifiVendorHal {
     }
 
     /**
+     * Gets the cached scan data.
+     *
+     * @param ifaceName Name of the interface.
+     */
+    @Nullable
+    public WifiScanner.ScanData getCachedScanData(@NonNull String ifaceName) {
+        synchronized (sLock) {
+            WifiStaIface iface = getStaIface(ifaceName);
+            if (iface == null) return null;
+            return iface.getCachedScanData();
+        }
+    }
+
+    /**
      * Get the link layer statistics
      *
      * Note - we always enable link layer stats on a STA interface.

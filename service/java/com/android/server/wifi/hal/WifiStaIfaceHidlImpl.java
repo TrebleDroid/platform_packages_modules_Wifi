@@ -191,6 +191,15 @@ public class WifiStaIfaceHidlImpl implements IWifiStaIface {
     }
 
     /**
+     * See comments for {@link IWifiStaIface#getCachedScanData()}
+     */
+    @Nullable
+    public WifiScanner.ScanData getCachedScanData() {
+        Log.d(TAG, "getCachedScanData is not implemented by HIDL");
+        return null;
+    }
+
+    /**
      * See comments for {@link IWifiStaIface#getLinkLayerStats()}
      */
     @Nullable

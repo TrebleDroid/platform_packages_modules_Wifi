@@ -722,6 +722,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private void updateLocationMode() {
         mIsLocationModeEnabled = mWifiPermissionsUtil.isLocationModeEnabled();
         mWifiConnectivityManager.setLocationModeEnabled(mIsLocationModeEnabled);
+        mWifiNative.setLocationModeEnabled(mIsLocationModeEnabled);
     }
 
     /**

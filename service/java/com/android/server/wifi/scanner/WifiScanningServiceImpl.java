@@ -28,6 +28,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.wifi.IScanDataListener;
 import android.net.wifi.IWifiScanner;
 import android.net.wifi.IWifiScannerListener;
 import android.net.wifi.ScanResult;
@@ -88,6 +89,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -454,6 +456,28 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
         }
         return mWifiThreadRunner.call(() -> mSingleScanStateMachine.filterCachedScanResultsByAge(),
                 new ArrayList<ScanResult>());
+    }
+
+
+    /**
+     * See {@link WifiScanner#getCachedScanData(Executor, Consumer)}.
+     */
+    @Override
+    public void getCachedScanData(String packageName, String featureId,
+            IScanDataListener listener) {
+        localLog("get single scan result: package " + packageName
+                + " AttributionTag " + featureId);
+        final int uid = Binder.getCallingUid();
+        Objects.requireNonNull(listener, "listener cannot be null");
+        enforcePermission(uid, packageName, featureId, false, false, false);
+
+        mWifiThreadRunner.post(() -> {
+            try {
+                listener.onResult(mWifiNative.getCachedScanResultsFromAllClientIfaces());
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage());
+            }
+        });
     }
 
     @Override
