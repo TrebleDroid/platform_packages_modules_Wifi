@@ -122,6 +122,7 @@ import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.MboOceController.BtmFrameData;
+import com.android.server.wifi.hal.HalTestUtils;
 import com.android.server.wifi.hotspot2.AnqpEvent;
 import com.android.server.wifi.hotspot2.IconEvent;
 import com.android.server.wifi.hotspot2.WnmData;
@@ -2032,6 +2033,9 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         halCap.channelBandwidth = WifiChannelWidthInMhz.WIDTH_20;
         halCap.maxNumberTxSpatialStreams = 1;
         halCap.maxNumberRxSpatialStreams = 1;
+        if (SdkLevel.isAtLeastV()) {
+            halCap.vendorData = HalTestUtils.createHalOuiKeyedDataList(5);
+        }
 
         doReturn(halCap).when(mISupplicantStaIfaceMock).getConnectionCapabilities();
         WifiNative.ConnectionCapabilities expectedCap =
@@ -2041,6 +2045,12 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         assertEquals(testChannelBandwidth, expectedCap.channelBandwidth);
         assertEquals(maxNumberTxSpatialStreams, expectedCap.maxNumberTxSpatialStreams);
         assertEquals(maxNumberRxSpatialStreams, expectedCap.maxNumberRxSpatialStreams);
+        if (SdkLevel.isAtLeastV()) {
+            assertTrue(HalTestUtils.ouiKeyedDataListEquals(
+                    halCap.vendorData, expectedCap.vendorData));
+        } else {
+            assertTrue(expectedCap.vendorData.isEmpty());
+        }
     }
 
     /**

@@ -465,6 +465,18 @@ package android.net.wifi {
     field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.SoftApInfo> CREATOR;
   }
 
+  @FlaggedApi("com.android.wifi.flags.uri_parser") public final class UriParserResults implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.uri_parser") public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.uri_parser") @Nullable public String getInformation();
+    method @FlaggedApi("com.android.wifi.flags.uri_parser") @Nullable public String getPublicKey();
+    method @FlaggedApi("com.android.wifi.flags.uri_parser") public int getUriScheme();
+    method @FlaggedApi("com.android.wifi.flags.uri_parser") @Nullable public android.net.wifi.WifiConfiguration getWifiConfiguration();
+    method @FlaggedApi("com.android.wifi.flags.uri_parser") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.wifi.flags.uri_parser") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.UriParserResults> CREATOR;
+    field @FlaggedApi("com.android.wifi.flags.uri_parser") public static final int URI_SCHEME_DPP = 2; // 0x2
+    field @FlaggedApi("com.android.wifi.flags.uri_parser") public static final int URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG = 1; // 0x1
+  }
+
   public final class WifiClient implements android.os.Parcelable {
     method public int describeContents();
     method @NonNull public android.net.MacAddress getMacAddress();
@@ -617,6 +629,7 @@ package android.net.wifi {
     method public int getScore();
     method public double getSuccessfulRxPacketsPerSecond();
     method public double getSuccessfulTxPacketsPerSecond();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
     method public boolean isApTidToLinkMappingNegotiationSupported();
     method public boolean isCarrierMerged();
     method public boolean isEphemeral();
@@ -627,6 +640,7 @@ package android.net.wifi {
     method @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public boolean isPrimary();
     method public boolean isTrusted();
     method @Nullable public static String sanitizeSsid(@Nullable String);
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
     field public static final String DEFAULT_MAC_ADDRESS = "02:00:00:00:00:00";
     field public static final int INVALID_RSSI = -127; // 0xffffff81
   }
@@ -1212,6 +1226,10 @@ package android.net.wifi {
     field @Deprecated public int periodInMs;
     field @Deprecated public int rssiSampleSize;
     field @Deprecated public int unchangedSampleSize;
+  }
+
+  @FlaggedApi("com.android.wifi.flags.uri_parser") public class WifiUriParser {
+    method @FlaggedApi("com.android.wifi.flags.uri_parser") @NonNull public static android.net.wifi.UriParserResults parseUri(@NonNull String);
   }
 
   public final class WifiUsabilityStatsEntry implements android.os.Parcelable {

@@ -3734,12 +3734,14 @@ public class WifiNative {
         public boolean is11bMode;
         /** Indicates the AP support for TID-to-link mapping negotiation. */
         public boolean apTidToLinkMapNegotiationSupported;
+        public @NonNull List<OuiKeyedData> vendorData;
         ConnectionCapabilities() {
             wifiStandard = ScanResult.WIFI_STANDARD_UNKNOWN;
             channelBandwidth = ScanResult.CHANNEL_WIDTH_20MHZ;
             maxNumberTxSpatialStreams = 1;
             maxNumberRxSpatialStreams = 1;
             is11bMode = false;
+            vendorData = Collections.emptyList();
         }
     }
 

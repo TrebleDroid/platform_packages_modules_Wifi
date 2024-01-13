@@ -119,3 +119,10 @@ flag {
     description: "Add new API to configure MSCS in the supplicant"
     bug: "300870302"
 }
+
+flag {
+    name: "uri_parser"
+    namespace: "wifi"
+    description: "Control the API for parsing uri"
+    bug: "279169417"
+}

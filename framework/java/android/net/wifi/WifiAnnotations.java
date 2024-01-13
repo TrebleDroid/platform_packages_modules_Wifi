@@ -166,4 +166,11 @@ public final class WifiAnnotations {
             WifiInfo.SECURITY_TYPE_DPP,
     })
     public @interface SecurityType {}
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = {"URI_SCHEME_"}, value = {
+            UriParserResults.URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG,
+            UriParserResults.URI_SCHEME_DPP,
+    })
+    public @interface UriScheme {}
 }

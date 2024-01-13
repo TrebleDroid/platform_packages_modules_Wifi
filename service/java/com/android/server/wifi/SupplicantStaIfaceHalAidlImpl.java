@@ -36,7 +36,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
 
 import android.annotation.NonNull;
 import android.content.Context;
-import android.hardware.wifi.V1_6.WifiChannelWidthInMhz;
+import android.hardware.wifi.WifiChannelWidthInMhz;
 import android.hardware.wifi.supplicant.BtCoexistenceMode;
 import android.hardware.wifi.supplicant.ConnectionCapabilities;
 import android.hardware.wifi.supplicant.DebugLevel;
@@ -96,6 +96,7 @@ import android.util.Pair;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.mockwifi.MockWifiServiceUtil;
+import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.nio.ByteBuffer;
@@ -3010,6 +3011,9 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
                 capOut.maxNumberTxSpatialStreams = cap.maxNumberTxSpatialStreams;
                 capOut.maxNumberRxSpatialStreams = cap.maxNumberRxSpatialStreams;
                 capOut.apTidToLinkMapNegotiationSupported = cap.apTidToLinkMapNegotiationSupported;
+                if (isServiceVersionAtLeast(3) && cap.vendorData != null) {
+                    capOut.vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(cap.vendorData);
+                }
                 return capOut;
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);
