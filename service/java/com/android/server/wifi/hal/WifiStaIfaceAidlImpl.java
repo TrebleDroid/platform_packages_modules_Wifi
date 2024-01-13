@@ -19,6 +19,8 @@ package com.android.server.wifi.hal;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
+import android.hardware.wifi.CachedScanData;
+import android.hardware.wifi.CachedScanResult;
 import android.hardware.wifi.IWifiStaIfaceEventCallback;
 import android.hardware.wifi.Ssid;
 import android.hardware.wifi.StaApfPacketFilterCapabilities;
@@ -47,10 +49,12 @@ import android.hardware.wifi.WifiDebugRxPacketFate;
 import android.hardware.wifi.WifiDebugRxPacketFateReport;
 import android.hardware.wifi.WifiDebugTxPacketFate;
 import android.hardware.wifi.WifiDebugTxPacketFateReport;
+import android.hardware.wifi.WifiRatePreamble;
 import android.hardware.wifi.WifiStatusCode;
 import android.net.MacAddress;
 import android.net.apf.ApfCapabilities;
 import android.net.wifi.ScanResult;
+import android.net.wifi.WifiAnnotations;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
@@ -65,6 +69,7 @@ import com.android.server.wifi.WifiLinkLayerStats;
 import com.android.server.wifi.WifiLoggerHal;
 import com.android.server.wifi.WifiNative;
 import com.android.server.wifi.util.BitMask;
+import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 import com.android.wifi.resources.R;
 
@@ -367,6 +372,28 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
             return null;
         }
     }
+
+    /**
+     * See comments for {@link IWifiStaIface#getCachedScanData()}
+     */
+    @Override
+    @Nullable
+    public WifiScanner.ScanData getCachedScanData() {
+        final String methodStr = "getCachedScanData";
+        synchronized (mLock) {
+            try {
+                if (!checkIfaceAndLogFailure(methodStr)) return null;
+                CachedScanData scanData = mWifiStaIface.getCachedScanData();
+                return halToFrameworkCachedScanData(scanData);
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return null;
+        }
+    }
+
 
     /**
      * See comments for {@link IWifiStaIface#getLinkLayerStats()}
@@ -828,6 +855,76 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
                             WifiScanner.WIFI_BAND_UNSPECIFIED, frameworkScanResults);
         }
         return frameworkScanDatas;
+    }
+
+    @WifiAnnotations.WifiStandard
+    private static int wifiRatePreambleToWifiStandard(int wifiRatePreamble) {
+        switch (wifiRatePreamble) {
+            case WifiRatePreamble.CCK:
+            case WifiRatePreamble.OFDM:
+                return ScanResult.WIFI_STANDARD_LEGACY;
+            case WifiRatePreamble.HT:
+                return ScanResult.WIFI_STANDARD_11N;
+            case WifiRatePreamble.VHT:
+                return ScanResult.WIFI_STANDARD_11AC;
+            case WifiRatePreamble.HE:
+                return ScanResult.WIFI_STANDARD_11AX;
+            case WifiRatePreamble.EHT:
+                return ScanResult.WIFI_STANDARD_11BE;
+            default:
+                return ScanResult.WIFI_STANDARD_UNKNOWN;
+        }
+    }
+
+    private ScanResult halToFrameworkCachedScanResult(CachedScanResult scanResult) {
+        if (scanResult == null) return null;
+        WifiSsid originalSsid = WifiSsid.fromBytes(scanResult.ssid);
+        MacAddress bssid;
+        try {
+            bssid = MacAddress.fromString(NativeUtil.macAddressFromByteArray(scanResult.bssid));
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Failed to get BSSID of scan result: " + e);
+            return null;
+        }
+        ScanResult frameworkScanResult = new ScanResult();
+        frameworkScanResult.setWifiSsid(mSsidTranslator.getTranslatedSsidAndRecordBssidCharset(
+                originalSsid, bssid));
+        frameworkScanResult.BSSID = bssid.toString();
+        frameworkScanResult.level = scanResult.rssiDbm;
+        frameworkScanResult.frequency = scanResult.frequencyMhz;
+        frameworkScanResult.timestamp = scanResult.timeStampInUs;
+        frameworkScanResult.channelWidth = HalAidlUtil
+                .getChannelBandwidthFromHal(scanResult.channelWidthMhz);
+        frameworkScanResult.setWifiStandard(
+                wifiRatePreambleToWifiStandard(scanResult.preambleType));
+        return frameworkScanResult;
+    }
+
+    private ScanResult[] aidlToFrameworkCachedScanResults(CachedScanResult[] cachedScanResults) {
+        if (cachedScanResults == null) return new ScanResult[0];
+        List<ScanResult> frameworkScanResults = new ArrayList<>();
+        for (CachedScanResult cachedScanResult : cachedScanResults) {
+            ScanResult frameworkScanResult = halToFrameworkCachedScanResult(cachedScanResult);
+            if (frameworkScanResult == null) {
+                Log.e(TAG, "aidlToFrameworkCachedScanResults: unable to convert aidl to framework "
+                        + "scan result!");
+                continue;
+            }
+            frameworkScanResults.add(frameworkScanResult);
+        }
+        return frameworkScanResults.toArray(new ScanResult[0]);
+    }
+
+    private WifiScanner.ScanData halToFrameworkCachedScanData(CachedScanData cachedScanData) {
+        if (cachedScanData == null) return null;
+        ScanResult[] scanResults = aidlToFrameworkCachedScanResults(
+                cachedScanData.cachedScanResults);
+
+        // Todo b/319658055: map cachedScanData.scannedFrequenciesMhz to WifiScanner.WifiBand
+        WifiScanner.ScanData frameworkScanData = new WifiScanner.ScanData(0, 0,
+                0, WifiScanner.WIFI_BAND_UNSPECIFIED, scanResults);
+
+        return frameworkScanData;
     }
 
     private static StaRoamingConfig frameworkToHalStaRoamingConfig(List<MacAddress> bssidBlocklist,

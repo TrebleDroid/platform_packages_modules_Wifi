@@ -19,6 +19,7 @@ package com.android.server.wifi.hal;
 import android.annotation.Nullable;
 import android.net.MacAddress;
 import android.net.apf.ApfCapabilities;
+import android.net.wifi.WifiScanner;
 
 import com.android.server.wifi.WifiLinkLayerStats;
 import com.android.server.wifi.WifiLoggerHal;
@@ -121,6 +122,14 @@ public interface IWifiStaIface {
      */
     @Nullable
     MacAddress getFactoryMacAddress();
+
+    /**
+     * Retrieve the cached scan data.
+     *
+     * @return Instance of {@link ScanData}, or null on error.
+     */
+    @Nullable
+    WifiScanner.ScanData getCachedScanData();
 
     /**
      * Retrieve the latest link layer stats.

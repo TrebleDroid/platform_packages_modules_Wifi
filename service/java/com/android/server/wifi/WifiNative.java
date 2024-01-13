@@ -44,6 +44,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.WifiScanner.ScanData;
 import android.net.wifi.WifiSsid;
 import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.net.wifi.nl80211.NativeScanResult;
@@ -135,6 +136,8 @@ public class WifiNative {
     private InterfaceObserverInternal mInterfaceObserver;
     private InterfaceEventCallback mInterfaceListener;
     private @WifiManager.MloMode int mCachedMloMode = WifiManager.MLO_MODE_DEFAULT;
+    private boolean mIsLocationModeEnabled = false;
+    private long mLastLocationModeEnabledTimeMs = 0;
 
     public WifiNative(WifiVendorHal vendorHal,
                       SupplicantStaIfaceHal staIfaceHal, HostapdHal hostapdHal,
@@ -3465,6 +3468,62 @@ public class WifiNative {
     }
 
     /**
+     * Sets whether global location mode is enabled.
+     */
+    public void setLocationModeEnabled(boolean enabled) {
+        if (!mIsLocationModeEnabled && enabled) {
+            mLastLocationModeEnabledTimeMs = SystemClock.elapsedRealtime();
+        }
+        Log.d(TAG, "mIsLocationModeEnabled " + enabled
+                + " mLastLocationModeEnabledTimeMs " + mLastLocationModeEnabledTimeMs);
+        mIsLocationModeEnabled = enabled;
+    }
+
+    @NonNull
+    private ScanResult[] getCachedScanResultsFilteredByLocationModeEnabled(
+            @NonNull ScanResult[] scanResults) {
+        List<ScanResult> resultList = new ArrayList<ScanResult>();
+        for (ScanResult scanResult : scanResults) {
+            if (mIsLocationModeEnabled
+                     && scanResult.timestamp >=  mLastLocationModeEnabledTimeMs * 1000) {
+                resultList.add(scanResult);
+            }
+        }
+        return resultList.toArray(new ScanResult[0]);
+    }
+
+    /**
+     * Gets the cached scan data from the given client interface
+     */
+    @Nullable
+    ScanData getCachedScanResults(String ifaceName) {
+        ScanData scanData = mWifiVendorHal.getCachedScanData(ifaceName);
+        if (scanData == null || scanData.getResults() == null) {
+            return null;
+        }
+        ScanResult[] results = getCachedScanResultsFilteredByLocationModeEnabled(
+                scanData.getResults());
+        return new ScanData(0, 0, 0, scanData.getScannedBands(), results);
+    }
+
+    /**
+     * Gets the cached scan data from all client interfaces
+     */
+    @NonNull
+    public ScanData getCachedScanResultsFromAllClientIfaces() {
+        ScanData consolidatedScanData = new ScanData();
+        Set<String> ifaceNames = getClientInterfaceNames();
+        for (String ifaceName : ifaceNames) {
+            ScanData scanData = getCachedScanResults(ifaceName);
+            if (scanData == null) {
+                continue;
+            }
+            consolidatedScanData.addResults(scanData.getResults());
+        }
+        return consolidatedScanData;
+    }
+
+    /**
      * Gets the latest link layer stats
      * @param ifaceName Name of the interface.
      */
@@ -4119,6 +4178,9 @@ public class WifiNative {
      * @param pw PrintWriter to write dump to
      */
     protected void dump(PrintWriter pw) {
+        pw.println("Dump of " + TAG);
+        pw.println("mIsLocationModeEnabled: " + mIsLocationModeEnabled);
+        pw.println("mLastLocationModeEnabledTimeMs: " + mLastLocationModeEnabledTimeMs);
         mHostapdHal.dump(pw);
     }
 
@@ -5082,4 +5144,5 @@ public class WifiNative {
     public void disableMscs(String ifaceName) {
         mSupplicantStaIfaceHal.disableMscs(ifaceName);
     }
+
 }
