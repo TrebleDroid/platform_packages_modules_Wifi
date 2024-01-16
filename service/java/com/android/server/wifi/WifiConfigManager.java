@@ -1273,6 +1273,8 @@ public class WifiConfigManager {
                 externalConfig.getNetworkSelectionStatus().getConnectChoiceRssi());
         internalConfig.setBssidAllowlist(externalConfig.getBssidAllowlistInternal());
         internalConfig.setRepeaterEnabled(externalConfig.isRepeaterEnabled());
+        internalConfig.setDhcpHostnameSetting(
+                externalConfig.getDhcpHostnameSetting());
     }
 
     /**
@@ -1510,6 +1512,17 @@ public class WifiConfigManager {
                     + "NETWORK_SETTINGS or NETWORK_SETUP_WIZARD or be in Demo Mode "
                     + "or be the creator adding or updating a passpoint network "
                     + "or be an admin updating their own network.");
+            return new Pair<>(
+                    new NetworkUpdateResult(WifiConfiguration.INVALID_NETWORK_ID),
+                    existingInternalConfig);
+        }
+
+        if (WifiConfigurationUtil.hasDhcpHostnameSettingChanged(existingInternalConfig,
+                newInternalConfig) && !mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)
+                && !mWifiPermissionsUtil.checkNetworkSetupWizardPermission(uid)) {
+            Log.e(TAG, "UID " + uid + " does not have permission to modify DHCP hostname "
+                    + "setting " + config.getProfileKey() + ". Must have "
+                    + "NETWORK_SETTINGS or NETWORK_SETUP_WIZARD.");
             return new Pair<>(
                     new NetworkUpdateResult(WifiConfiguration.INVALID_NETWORK_ID),
                     existingInternalConfig);

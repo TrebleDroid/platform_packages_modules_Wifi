@@ -363,6 +363,7 @@ public class XmlUtil {
         public static final String XML_TAG_ROAMING_CONSORTIUM_OIS = "RoamingConsortiumOIs";
         public static final String XML_TAG_RANDOMIZED_MAC_ADDRESS = "RandomizedMacAddress";
         public static final String XML_TAG_MAC_RANDOMIZATION_SETTING = "MacRandomizationSetting";
+        public static final String XML_TAG_DHCP_HOSTNAME_SETTING = "DhcpHostnameSetting";
         public static final String XML_TAG_CARRIER_ID = "CarrierId";
         public static final String XML_TAG_SUBSCRIPTION_ID = "SubscriptionId";
         public static final String XML_TAG_IS_AUTO_JOIN = "AutoJoinEnabled";
@@ -602,6 +603,8 @@ public class XmlUtil {
             XmlUtil.writeNextValue(out, XML_TAG_IS_REPEATER_ENABLED,
                     configuration.isRepeaterEnabled());
             writeSecurityParamsListToXml(out, configuration);
+            XmlUtil.writeNextValue(out, XML_TAG_DHCP_HOSTNAME_SETTING,
+                    configuration.getDhcpHostnameSetting());
         }
 
         /**
@@ -993,6 +996,9 @@ public class XmlUtil {
                         case XML_TAG_MAC_RANDOMIZATION_SETTING:
                             configuration.macRandomizationSetting = (int) value;
                             macRandomizationSettingExists = true;
+                            break;
+                        case XML_TAG_DHCP_HOSTNAME_SETTING:
+                            configuration.setDhcpHostnameSetting((int) value);
                             break;
                         case XML_TAG_CARRIER_ID:
                             configuration.carrierId = (int) value;
