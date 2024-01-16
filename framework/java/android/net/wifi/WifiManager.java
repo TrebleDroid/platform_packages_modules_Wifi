@@ -12097,7 +12097,7 @@ public class WifiManager {
      * If MSCS has already been enabled/configured, this will override the
      * existing configuration.
      *
-     * Note that this API should be considered best-effort.
+     * Refer to Section 11.25.3 of the IEEE 802.11-2020 standard for more information.
      *
      * @param mscsParams {@link MscsParams} object containing the configuration parameters.
      * @hide
@@ -12119,7 +12119,8 @@ public class WifiManager {
      * Disable Mirrored Stream Classification Service (MSCS).
      *
      * If MSCS is enabled/configured, this will send a remove request to the AP.
-     * Note that this API should be considered best-effort.
+     *
+     * Refer to Section 11.25.3 of the IEEE 802.11-2020 standard for more information.
      * @hide
      */
     @SystemApi
