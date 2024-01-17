@@ -133,3 +133,10 @@ flag {
     description: "Control the API for parsing uri"
     bug: "279169417"
 }
+
+flag {
+    name: "qos_r3_support"
+    namespace: "wifi"
+    description: "Add additional QoS fields to support QoS R3"
+    bug: "319313500"
+}
