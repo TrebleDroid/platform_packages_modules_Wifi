@@ -77,6 +77,7 @@ import android.net.wifi.WifiContext;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.net.wifi.nl80211.NativeWifiClient;
 import android.os.BatteryManager;
 import android.os.Message;
@@ -216,6 +217,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Mock WifiInjector mWifiInjector;
     @Mock WifiCountryCode mWifiCountryCode;
     @Mock LocalLog mLocalLog;
+    @Mock DeviceWiphyCapabilities mDeviceWiphyCapabilities;
 
     final ArgumentCaptor<WifiNative.InterfaceCallback> mWifiNativeInterfaceCallbackCaptor =
             ArgumentCaptor.forClass(WifiNative.InterfaceCallback.class);
@@ -403,6 +405,10 @@ public class SoftApManagerTest extends WifiBaseTest {
         when(mWifiNative.forceClientDisconnect(any(), any(), anyInt())).thenReturn(true);
         when(mWifiInjector.getWifiHandlerLocalLog()).thenReturn(mLocalLog);
         when(mWifiInjector.getWifiCountryCode()).thenReturn(mWifiCountryCode);
+        when(mWifiNative.getDeviceWiphyCapabilities(any(), anyBoolean())).thenReturn(
+                mDeviceWiphyCapabilities);
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
+                .thenReturn(true);
 
         // Init Test SoftAp infos
         mTestSoftApInfo = new SoftApInfo();
@@ -2221,6 +2227,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 | SoftApCapability.SOFTAP_FEATURE_CLIENT_FORCE_DISCONNECT
                 | SoftApCapability.SOFTAP_FEATURE_ACS_OFFLOAD
                 | SoftApCapability.SOFTAP_FEATURE_WPA3_SAE;
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(
+                ScanResult.WIFI_STANDARD_11BE)).thenReturn(false);
         SoftApCapability testSoftApCapability = new SoftApCapability(testSoftApFeature);
         testSoftApCapability.setCountryCode(TEST_COUNTRY_CODE);
         Builder configBuilder = new SoftApConfiguration.Builder();
@@ -2643,6 +2651,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 | SoftApCapability.SOFTAP_FEATURE_WPA3_SAE
                 | SoftApCapability.SOFTAP_FEATURE_ACS_OFFLOAD
                 | SoftApCapability.SOFTAP_FEATURE_MAC_ADDRESS_CUSTOMIZATION;
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(
+                ScanResult.WIFI_STANDARD_11BE)).thenReturn(false);
         SoftApCapability noClientControlCapability = new SoftApCapability(testSoftApFeature);
         noClientControlCapability.setMaxSupportedClients(1);
         noClientControlCapability.setCountryCode(TEST_COUNTRY_CODE);
@@ -2740,6 +2750,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 | SoftApCapability.SOFTAP_FEATURE_CLIENT_FORCE_DISCONNECT
                 | SoftApCapability.SOFTAP_FEATURE_WPA3_SAE
                 | SoftApCapability.SOFTAP_FEATURE_MAC_ADDRESS_CUSTOMIZATION;
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(
+                ScanResult.WIFI_STANDARD_11BE)).thenReturn(false);
         SoftApCapability testCapability = new SoftApCapability(testSoftApFeature);
         testCapability.setSupportedChannelList(
                 SoftApConfiguration.BAND_2GHZ, TEST_SUPPORTED_24G_CHANNELS);
@@ -2776,6 +2788,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 | SoftApCapability.SOFTAP_FEATURE_CLIENT_FORCE_DISCONNECT
                 | SoftApCapability.SOFTAP_FEATURE_WPA3_SAE
                 | SoftApCapability.SOFTAP_FEATURE_MAC_ADDRESS_CUSTOMIZATION;
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(
+                ScanResult.WIFI_STANDARD_11BE)).thenReturn(false);
         SparseIntArray dual_channels = new SparseIntArray(2);
         dual_channels.put(SoftApConfiguration.BAND_5GHZ, 149);
         dual_channels.put(SoftApConfiguration.BAND_2GHZ, 2);
@@ -4018,8 +4032,8 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApRemoves11BEIfNotSupported() throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
-        mTestSoftApCapability.setSupportedFeatures(false,
-                SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE);
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
+                .thenReturn(false);
         Builder configBuilder = new SoftApConfiguration.Builder();
         configBuilder.setBand(SoftApConfiguration.BAND_2GHZ);
         configBuilder.setSsid(TEST_SSID);

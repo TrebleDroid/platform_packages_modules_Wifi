@@ -39,6 +39,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
+import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -1304,16 +1305,6 @@ public class SoftApManager implements ActiveModeManager {
                             break;
                         }
 
-                        if (SdkLevel.isAtLeastT()
-                                && mCurrentSoftApConfiguration.isIeee80211beEnabled()
-                                && !mCurrentSoftApCapability.areFeaturesSupported(
-                                SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE)) {
-                            Log.d(getTag(), "11BE is not supported, removing from configuration");
-                            mCurrentSoftApConfiguration = new SoftApConfiguration
-                                    .Builder(mCurrentSoftApConfiguration)
-                                    .setIeee80211beEnabled(false)
-                                    .build();
-                        }
                         mApInterfaceName = mWifiNative.setupInterfaceForSoftApMode(
                                 mWifiNativeInterfaceCallback, mRequestorWs,
                                 mCurrentSoftApConfiguration.getBand(), isBridgeRequired(),
@@ -1329,6 +1320,20 @@ public class SoftApManager implements ActiveModeManager {
                             }
                             break;
                         }
+
+                        DeviceWiphyCapabilities capa =
+                                mWifiNative.getDeviceWiphyCapabilities(
+                                        mApInterfaceName, isBridgeRequired());
+                        if (SdkLevel.isAtLeastT()
+                                && mCurrentSoftApConfiguration.isIeee80211beEnabled()
+                                && (capa == null || !capa.isWifiStandardSupported(
+                                ScanResult.WIFI_STANDARD_11BE))) {
+                            Log.d(getTag(), "11BE is not supported, removing from configuration");
+                            mCurrentSoftApConfiguration = new SoftApConfiguration.Builder(
+                                    mCurrentSoftApConfiguration).setIeee80211beEnabled(
+                                    false).build();
+                        }
+
                         mSoftApNotifier.dismissSoftApShutdownTimeoutExpiredNotification();
                         updateApState(WifiManager.WIFI_AP_STATE_ENABLING,
                                 WifiManager.WIFI_AP_STATE_DISABLED, 0);
