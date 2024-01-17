@@ -4869,9 +4869,6 @@ public class WifiMetrics {
                         + mContext.getResources().getBoolean(
                                 R.bool.config_wifi_connected_mac_randomization_supported));
                 pw.println("mWifiLogProto.scoreExperimentId=" + mWifiLogProto.scoreExperimentId);
-                pw.println("mExperimentValues.wifiIsUnusableLoggingEnabled="
-                        + mContext.getResources().getBoolean(
-                                R.bool.config_wifiIsUnusableEventMetricsEnabled));
                 pw.println("mExperimentValues.wifiDataStallMinTxBad="
                         + mContext.getResources().getInteger(
                                 R.integer.config_wifiDataStallMinTxBad));
@@ -5574,8 +5571,6 @@ public class WifiMetrics {
             mWifiLogProto.wifiWakeStats = mWifiWakeMetrics.buildProto();
             mWifiLogProto.isMacRandomizationOn = mContext.getResources().getBoolean(
                     R.bool.config_wifi_connected_mac_randomization_supported);
-            mExperimentValues.wifiIsUnusableLoggingEnabled = mContext.getResources().getBoolean(
-                    R.bool.config_wifiIsUnusableEventMetricsEnabled);
             mExperimentValues.linkSpeedCountsLoggingEnabled = mContext.getResources().getBoolean(
                     R.bool.config_wifiLinkSpeedMetricsEnabled);
             mExperimentValues.wifiDataStallMinTxBad = mContext.getResources().getInteger(
@@ -6885,9 +6880,6 @@ public class WifiMetrics {
             return;
         }
         mScoreBreachLowTimeMillis = -1;
-        if (!mContext.getResources().getBoolean(R.bool.config_wifiIsUnusableEventMetricsEnabled)) {
-            return;
-        }
 
         long currentBootTime = mClock.getElapsedSinceBootMillis();
         switch (triggerType) {
