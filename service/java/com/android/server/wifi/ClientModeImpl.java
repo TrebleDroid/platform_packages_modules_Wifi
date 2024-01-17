@@ -93,6 +93,7 @@ import android.net.wifi.WifiManager.DeviceMobilityState;
 import android.net.wifi.WifiNetworkAgentSpecifier;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.net.wifi.WifiSsid;
+import android.net.wifi.flags.Flags;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.nl80211.DeviceWiphyCapabilities;
@@ -1634,6 +1635,11 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             }
             if (mContext.getResources().getBoolean(R.bool.config_wifi11axSupportOverride)) {
                 cap.setWifiStandardSupport(ScanResult.WIFI_STANDARD_11AX, true);
+            }
+            // Enable WPA3 SAE auto-upgrade offload
+            if (Flags.getDeviceCrossAkmRoamingSupport() && SdkLevel.isAtLeastV()
+                    && cap.getMaxNumberAkms() >= 2) {
+                mWifiGlobals.setWpa3SaeUpgradeOffloadEnabled();
             }
 
             mWifiNative.setDeviceWiphyCapabilities(mInterfaceName, cap);
