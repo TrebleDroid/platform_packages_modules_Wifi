@@ -4038,15 +4038,12 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             // roaming. The linked network roaming reset the mLastNetworkId which results in
             // the connected configuration to be null.
             config = getConnectingWifiConfigurationInternal();
-        }
-        if (config == null || (config.getIpAssignment() == IpConfiguration.IpAssignment.STATIC)) {
-            // config could be null if it had been removed from WifiConfigManager. In this case
-            // we should simply disconnect. And if IP reachability failures come from static IP
-            // case(e.g. a misconfigured default gateway IP address), refreshing L3 provisioning
-            // doesn't help improve the situation and also introduces a loop, it's better to
-            // disconnect and disable the auto-rejoin on that network.
-            handleIpReachabilityLost(lossReason);
-            return;
+            if (config == null) {
+                // config could be null if it had been removed from WifiConfigManager. In this case
+                // we should simply disconnect.
+                handleIpReachabilityLost(lossReason);
+                return;
+            }
         }
         final long curTime = mClock.getElapsedSinceBootMillis();
         if (curTime - mNudFailureCounter.first <= mWifiGlobals.getRepeatedNudFailuresWindowMs()) {
@@ -8248,7 +8245,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                         .withNetwork(network)
                         .withDisplayName(config.SSID)
                         .withCreatorUid(config.creatorUid)
-                        .withLayer2Information(layer2Info);
+                        .withLayer2Information(layer2Info)
+                        .withoutIpReachabilityMonitor();
             }
             if (mContext.getResources().getBoolean(R.bool.config_wifiEnableApfOnNonPrimarySta)
                     || isPrimary()) {
