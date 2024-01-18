@@ -2510,8 +2510,7 @@ public class ActiveModeWarden {
 
                 // fallback decision
                 if (requestInfo.clientRole == ROLE_CLIENT_LOCAL_ONLY
-                        && mContext.getResources().getBoolean(
-                        R.bool.config_wifiMultiStaLocalOnlyConcurrencyEnabled)
+                        && isStaStaConcurrencySupportedForLocalOnlyConnections()
                         && !mWifiPermissionsUtil.isTargetSdkLessThan(
                         requestInfo.requestorWs.getPackageName(0), Build.VERSION_CODES.S,
                         requestInfo.requestorWs.getUid(0))) {
