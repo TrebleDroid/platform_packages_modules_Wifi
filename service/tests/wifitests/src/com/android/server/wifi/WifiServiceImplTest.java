@@ -9141,8 +9141,18 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     private List<ScanResult> createScanResultList() {
-        return Collections.singletonList(new ScanResult(WifiSsid.fromUtf8Text(TEST_SSID),
-                TEST_SSID, TEST_BSSID, 1245, 0, TEST_CAP, -78, 2450, 1025, 22, 33, 20, 0, 0, true));
+        return Collections.singletonList(new ScanResult.Builder(WifiSsid.fromUtf8Text(TEST_SSID),
+                TEST_BSSID)
+                .setHessid(1245)
+                .setCaps(TEST_CAP)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setChannelWidth(20)
+                .setIs80211McRTTResponder(true)
+                .build());
     }
 
     private void sendCountryCodeChangedBroadcast(String countryCode) {
@@ -11391,18 +11401,51 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
     private List<ScanResult> createChannelDataScanResults() {
         List<ScanResult> scanResults = new ArrayList<>();
-        scanResults.add(
-                new ScanResult(WifiSsid.fromUtf8Text(TEST_SSID), TEST_SSID, TEST_BSSID, 1234, 0,
-                        TEST_CAP, -78, 2412, 1024, 22, 33, 20, 0, 0, true));
-        scanResults.add(
-                new ScanResult(WifiSsid.fromUtf8Text(TEST_SSID), TEST_SSID, TEST_BSSID, 1234, 0,
-                        TEST_CAP, -85, 2417, 1024, 22, 33, 20, 0, 0, true));
-        scanResults.add(
-                new ScanResult(WifiSsid.fromUtf8Text(TEST_SSID), TEST_SSID, TEST_BSSID, 1234, 0,
-                        TEST_CAP, -60, 5805, 1024, 22, 33, 20, 0, 0, true));
-        scanResults.add(
-                new ScanResult(WifiSsid.fromUtf8Text(TEST_SSID), TEST_SSID, TEST_BSSID, 1234, 0,
-                        TEST_CAP, -70, 5805, 1024, 22, 33, 20, 0, 0, true));
+
+        scanResults.add(new ScanResult.Builder(WifiSsid.fromUtf8Text(TEST_SSID), TEST_BSSID)
+                        .setHessid(1245)
+                        .setCaps(TEST_CAP)
+                        .setRssi(-78)
+                        .setFrequency(2412)
+                        .setTsf(1025)
+                        .setDistanceCm(22)
+                        .setDistanceSdCm(33)
+                        .setChannelWidth(20)
+                        .setIs80211McRTTResponder(true)
+                        .build());
+        scanResults.add(new ScanResult.Builder(WifiSsid.fromUtf8Text(TEST_SSID), TEST_BSSID)
+                .setHessid(1245)
+                .setCaps(TEST_CAP)
+                .setRssi(-85)
+                .setFrequency(2417)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setChannelWidth(20)
+                .setIs80211McRTTResponder(true)
+                .build());
+        scanResults.add(new ScanResult.Builder(WifiSsid.fromUtf8Text(TEST_SSID), TEST_BSSID)
+                .setHessid(1245)
+                .setCaps(TEST_CAP)
+                .setRssi(-60)
+                .setFrequency(5805)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setChannelWidth(20)
+                .setIs80211McRTTResponder(true)
+                .build());
+        scanResults.add(new ScanResult.Builder(WifiSsid.fromUtf8Text(TEST_SSID), TEST_BSSID)
+                .setHessid(1245)
+                .setCaps(TEST_CAP)
+                .setRssi(-70)
+                .setFrequency(5805)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setChannelWidth(20)
+                .setIs80211McRTTResponder(true)
+                .build());
         return scanResults;
     }
 

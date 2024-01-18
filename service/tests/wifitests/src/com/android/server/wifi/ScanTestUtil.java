@@ -311,9 +311,11 @@ public class ScanTestUtil {
     }
 
     public static ScanResult createScanResult(int freq) {
-        return new ScanResult(WifiSsid.fromUtf8Text("AN SSID"),
-                MacAddressUtils.createRandomUnicastAddress().toString(), 0L,
-                -1, null, "", 0, freq, 0);
+        return new ScanResult.Builder(WifiSsid.fromUtf8Text("AN SSID"),
+                MacAddressUtils.createRandomUnicastAddress().toString())
+                .setCaps("")
+                .setFrequency(freq)
+                .build();
     }
 
     private static ScanData createScanData(int[] freqs, int bucketsScanned, int bandScanned) {

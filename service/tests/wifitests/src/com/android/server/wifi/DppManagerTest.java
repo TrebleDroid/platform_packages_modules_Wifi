@@ -855,9 +855,18 @@ public class DppManagerTest extends WifiBaseTest {
      */
     private void addTestNetworkInScanResult(int frequency) {
         String caps = "[WPA2-FT/SAE+SAE][ESS][WPS]";
-        ScanResult scanResult = new ScanResult(WifiSsid.fromUtf8Text(TEST_SSID_NO_QUOTE),
-                TEST_SSID_NO_QUOTE, TEST_BSSID, 1245, 0, caps, -78, frequency,
-                1025, 22, 33, 20, 0, 0, true);
+        ScanResult scanResult = new ScanResult.Builder(
+                WifiSsid.fromUtf8Text(TEST_SSID_NO_QUOTE),
+                TEST_BSSID)
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(frequency)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
         List<ScanResult> scanResults = new ArrayList<>();
         scanResults.add(scanResult);
         when(mScanRequestProxy.getScanResults()).thenReturn(scanResults);

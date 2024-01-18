@@ -47,6 +47,10 @@ DeprecationMismatch: android.net.wifi.WifiScanner.WifiChangeSettings:
     Class android.net.wifi.WifiScanner.WifiChangeSettings: @Deprecated annotation (present) and @deprecated doc tag (not present) do not match
 
 
+MissingGetterMatchingBuilder: android.net.wifi.QosCharacteristics.Builder#setMsduDeliveryInfo(int, int):
+    android.net.wifi.QosCharacteristics does not declare a `getMsduDeliveryInfo()` method matching method android.net.wifi.QosCharacteristics.Builder.setMsduDeliveryInfo(int,int)
+MissingGetterMatchingBuilder: android.net.wifi.QosCharacteristics.Builder#setServiceStartTimeInfo(int, int):
+    android.net.wifi.QosCharacteristics does not declare a `getServiceStartTimeInfo()` method matching method android.net.wifi.QosCharacteristics.Builder.setServiceStartTimeInfo(int,int)
 MissingGetterMatchingBuilder: android.net.wifi.rtt.RangingRequest.Builder#addResponder(android.net.wifi.rtt.ResponderConfig):
     
 
