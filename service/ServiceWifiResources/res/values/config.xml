@@ -1276,4 +1276,28 @@
            regulatory domain.
      false: disconnect on NUD failures (normal/default action). -->
     <bool translatable="false" name ="config_wifiDisableNudDisconnectsForWapiInSpecificCc">false</bool>
+    <!-- A list of AKM suite selector mapping to configure the unknown AKM suite specifier to
+         known AKM suite specifier (Refer IEEE-80211-2020 section 9.4.2.24.3 AKM suites).
+         An AKM suite selector is defined as a combination of OUI (Organizationally unique
+         identifier) and AKMP (Authentication and key management protocol) suite type in IEEE80211
+         spec. For example 00-0F-AC:1 represents Authentication negotiated over IEEE Std 802.1X,
+         where the OUI is 00-0F-AC and AKMP is 1.
+         The Values specified here is for OEMs to allow setting the security type for APs which
+         advertise the AKMs not defined in Wi-Fi framework(unknown to framework). If a mapping is
+         available, framework sets the AP's key management type to the mapped known AKM and the
+         security type will be derived based on the known AKM. Then it is up to the HAL
+         implementation to derive the actual AKM to use in connection.
+         The mapping specified here is in integer decimal format separated by a comma:
+         (Unknown AKM, Known AKM).
+         When defining the integer AKM value here, follow this rule, the most significant byte
+         should carry the AKMP suite type. Use the below method to compute the integer decimal
+         AKM suite selector value -  AKM_VALUE(0x00, 0x0f, 0xac, 0x1)
+         AKM_VALUE(a, b, c, d) -> ((((u32) (a)) << 24) | (((u32) (b)) << 16) | (((u32) (c)) << 8)
+         | (u32) (d)) = 28053248 (Hex value - 0x01ac0f00) -->
+    <string-array translatable="false" name="config_wifiUnknownAkmToKnownAkmMapping">
+        <!-- Below is a sample configuration for this list:
+             <item>unknownAkm1,knownAkm</item>
+             <item>unknownAkm2,knownAkm</item>
+        -->
+    </string-array>
 </resources>

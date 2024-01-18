@@ -337,6 +337,7 @@
           <item type="bool" name="config_wifiSofapHalMapWpa3TransitionModeToWpa3OnlyIn6GHzBand" />
           <item type="bool" name ="config_wifiRemainConnectedAfterIpProvisionTimeout" />
           <item type="bool" name ="config_wifiDisableNudDisconnectsForWapiInSpecificCc" />
+          <item type="array" name="config_wifiUnknownAkmToKnownAkmMapping" />
 
           <!-- Params from config.xml that can be overlayed -->
 
