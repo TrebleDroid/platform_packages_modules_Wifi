@@ -18,6 +18,7 @@ package com.android.server.wifi;
 
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
+
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_LOCAL_ONLY;
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_PRIMARY;
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SCAN_ONLY;
@@ -27,8 +28,10 @@ import static com.android.server.wifi.ActiveModeManager.ROLE_SOFTAP_LOCAL_ONLY;
 import static com.android.server.wifi.ActiveModeManager.ROLE_SOFTAP_TETHERED;
 import static com.android.server.wifi.ActiveModeWarden.INTERNAL_REQUESTOR_WS;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_NATIVE_SUPPORTED_STA_BANDS;
+
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -377,7 +380,11 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         }
         verify(mClientModeManager, atLeastOnce()).getInterfaceName();
         verify(mWifiNative, atLeastOnce()).getSupportedFeatureSet(WIFI_IFACE_NAME);
-        assertEquals(TEST_FEATURE_SET, mActiveModeWarden.getSupportedFeatureSet());
+
+        // getSupportedFeatureSet must at least contain TEST_FEATURE_SET. It may contain more
+        // feature depending on concurrency support which does not need to get tested here.
+        assertEquals(TEST_FEATURE_SET,
+                mActiveModeWarden.getSupportedFeatureSet() & TEST_FEATURE_SET);
         verify(mScanRequestProxy, times(4)).enableScanning(true, true);
         assertEquals(mClientModeManager, mActiveModeWarden.getPrimaryClientModeManager());
         verify(mModeChangeCallback).onActiveModeManagerRoleChanged(mClientModeManager);
@@ -3444,6 +3451,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
             throws Exception {
         // Ensure that we can't create more client ifaces - so will attempt to fallback (which we
         // should be able to do for <S apps)
+        when(mWifiNative.isStaStaConcurrencySupported()).thenReturn(true);
         when(mWifiNative.isItPossibleToCreateStaIface(any())).thenReturn(false);
         when(mResources.getBoolean(R.bool.config_wifiMultiStaLocalOnlyConcurrencyEnabled))
                 .thenReturn(true);
@@ -3456,11 +3464,8 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         requestRemoveAdditionalClientModeManagerWhenNotAllowed(ROLE_CLIENT_LOCAL_ONLY, true);
     }
 
-    @Test
-    public void requestRemoveLoClientModeManagerWhenNotSystemAppAndTargetSdkEqualToSAndCantCreate()
-            throws Exception {
-        // Ensure that we can't create more client ifaces - so will attempt to fallback (which we
-        // can't for >=S apps)
+    private void testLoFallbackAboveAndroidS(boolean isStaStaSupported) throws Exception {
+        when(mWifiNative.isStaStaConcurrencySupported()).thenReturn(isStaStaSupported);
         when(mWifiNative.isItPossibleToCreateStaIface(any())).thenReturn(false);
         when(mResources.getBoolean(R.bool.config_wifiMultiStaLocalOnlyConcurrencyEnabled))
                 .thenReturn(true);
@@ -3470,7 +3475,24 @@ public class ActiveModeWardenTest extends WifiBaseTest {
                 .thenReturn(false);
         assertFalse(mActiveModeWarden.canRequestMoreClientModeManagersInRole(
                 TEST_WORKSOURCE, ROLE_CLIENT_LOCAL_ONLY, false));
-        requestRemoveAdditionalClientModeManagerWhenNotAllowed(ROLE_CLIENT_LOCAL_ONLY, false);
+        requestRemoveAdditionalClientModeManagerWhenNotAllowed(ROLE_CLIENT_LOCAL_ONLY,
+                !isStaStaSupported);
+    }
+
+    @Test
+    public void requestRemoveLoClientModeManagerWhenNotSystemAppAndTargetSdkEqualToSAndCantCreate()
+            throws Exception {
+        // Ensure that we can't create more client ifaces - so will attempt to fallback (which we
+        // can't for >=S apps)
+        testLoFallbackAboveAndroidS(true);
+    }
+
+    @Test
+    public void requestRemoveLoClientModeManagerWhenNotSystemAppAndTargetSdkEqualToSAndCantCreate2()
+            throws Exception {
+        // Ensure that we can't create more client ifaces and STA+STA is not supported, we
+        // fallback even for >=S apps
+        testLoFallbackAboveAndroidS(false);
     }
 
     @Test
