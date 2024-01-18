@@ -652,8 +652,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
                     ? null : source.mNetworkKey;
             mApTidToLinkMappingNegotiationSupported =
                     source.mApTidToLinkMappingNegotiationSupported;
-            mVendorData = shouldRedactLocationSensitiveFields(redactions)
-                    ? Collections.emptyList() : new ArrayList<>(source.mVendorData);
+            mVendorData = new ArrayList<>(source.mVendorData);
         }
     }
 

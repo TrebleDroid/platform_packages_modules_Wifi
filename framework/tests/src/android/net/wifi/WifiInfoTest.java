@@ -282,9 +282,6 @@ public class WifiInfoTest {
         if (SdkLevel.isAtLeastT()) {
             assertMloSensitiveLocationRedaction(info);
         }
-        if (SdkLevel.isAtLeastV()) {
-            assertTrue(info.getVendorData().isEmpty());
-        }
     }
 
     /**
