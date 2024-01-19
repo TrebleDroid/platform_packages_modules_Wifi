@@ -23,6 +23,7 @@ import static android.Manifest.permission.LOCATION_HARDWARE;
 import static android.Manifest.permission.NEARBY_WIFI_DEVICES;
 
 import android.annotation.CallbackExecutor;
+import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
@@ -108,12 +109,19 @@ public class WifiRttManager {
      */
     public static final String CHARACTERISTICS_KEY_BOOLEAN_STA_RESPONDER = "key_sta_responder";
 
+    /**
+     * Bundle key to access if device supports to be a IEEE 802.11az non-trigger based initiator
+     */
+    @FlaggedApi("com.android.wifi.flags.rtt_11az_ntb_ranging_support")
+    public static final String CHARACTERISTICS_KEY_BOOLEAN_NTB_INITIATOR = "key_ntb_initiator";
+
     /** @hide */
     @StringDef(prefix = { "CHARACTERISTICS_KEY_"}, value = {
             CHARACTERISTICS_KEY_BOOLEAN_ONE_SIDED_RTT,
             CHARACTERISTICS_KEY_BOOLEAN_LCI,
             CHARACTERISTICS_KEY_BOOLEAN_LCR,
             CHARACTERISTICS_KEY_BOOLEAN_STA_RESPONDER,
+            CHARACTERISTICS_KEY_BOOLEAN_NTB_INITIATOR,
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface RttCharacteristicsKey {}

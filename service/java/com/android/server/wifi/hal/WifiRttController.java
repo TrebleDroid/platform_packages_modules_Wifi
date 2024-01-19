@@ -108,6 +108,14 @@ public class WifiRttController {
         public byte mcVersion;
         // Whether ftm rtt data collection is supported.
         public boolean rttFtmSupported;
+        // IEEE 802.11az preamble supported, see bit mask definition above.
+        public int azPreambleSupported;
+        // IEE 802.11az RTT bandwidth supported.
+        public int azBwSupported;
+        // Whether IEEE 802.11az Non-Trigger-based (non-TB) responder mode is supported.
+        public boolean ntbInitiatorSupported;
+        // Whether IEEE 802.11az Non-Trigger-based (non-TB) responder mode is supported.
+        public boolean ntbResponderSupported;
 
         public Capabilities() {
         }
@@ -154,6 +162,10 @@ public class WifiRttController {
             mcVersion = rttHalCapabilities.mcVersion;
             bwSupported = rttHalCapabilities.bwSupport;
             rttFtmSupported = rttHalCapabilities.rttFtmSupported;
+            azPreambleSupported = rttHalCapabilities.azPreambleSupport;
+            azBwSupported = rttHalCapabilities.azBwSupport;
+            ntbInitiatorSupported = rttHalCapabilities.ntbInitiatorSupported;
+            ntbResponderSupported = rttHalCapabilities.ntbResponderSupported;
         }
     }
 

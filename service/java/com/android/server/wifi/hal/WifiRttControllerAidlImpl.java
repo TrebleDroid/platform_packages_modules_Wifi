@@ -287,6 +287,13 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                     .set80211mcMeasurement(rttResult.type == RttType.TWO_SIDED_11MC)
                     .setMeasurementChannelFrequencyMHz(rttResult.channelFreqMHz)
                     .setMeasurementBandwidth(halToFrameworkChannelBandwidth(rttResult.packetBw))
+                    .set80211azNtbMeasurement(rttResult.type == RttType.TWO_SIDED_11AZ_NTB)
+                    .setMinTimeBetweenNtbMeasurementsMicros(rttResult.ntbMinMeasurementTime)
+                    .setMaxTimeBetweenNtbMeasurementsMicros(rttResult.ntbMaxMeasurementTime)
+                    .set80211azInitiatorTxLtfRepetitionsCount(rttResult.i2rTxLtfRepetitionCount)
+                    .set80211azResponderTxLtfRepetitionsCount(rttResult.r2iTxLtfRepetitionCount)
+                    .set80211azNumberOfTxSpatialStreams(rttResult.numTxSpatialStreams)
+                    .set80211azNumberOfRxSpatialStreams(rttResult.numRxSpatialStreams)
                     .build());
         }
         return rangingResults;
@@ -382,10 +389,25 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
             config.addr = responder.macAddress.toByteArray();
 
             try {
-                config.type = responder.supports80211mc ? RttType.TWO_SIDED : RttType.ONE_SIDED;
-                if (config.type == RttType.ONE_SIDED && cap != null && !cap.oneSidedRttSupported) {
-                    Log.w(TAG, "Device does not support one-sided RTT");
-                    continue;
+                if (cap != null) {
+                    if (responder.supports80211azNtb && cap.ntbInitiatorSupported) {
+                        config.type = RttType.TWO_SIDED_11AZ_NTB;
+                    } else if (responder.supports80211mc) {
+                        // IEEE 802.11mc is supported by the device
+                        config.type = RttType.TWO_SIDED_11MC;
+                    } else if (cap.oneSidedRttSupported) {
+                        config.type = RttType.ONE_SIDED;
+                    } else {
+                        Log.w(TAG, "Device does not support one-sided RTT");
+                        continue;
+                    }
+                } else {
+                    if (responder.supports80211mc) {
+                        // IEEE 802.11mc is supported by the device
+                        config.type = RttType.TWO_SIDED_11MC;
+                    } else {
+                        config.type = RttType.ONE_SIDED;
+                    }
                 }
 
                 config.peer = frameworkToHalRttPeerType(responder.responderType);
@@ -398,6 +420,12 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                 config.bw = frameworkToHalChannelBandwidth(responder.channelWidth);
                 config.preamble = frameworkToHalResponderPreamble(responder.preamble);
                 validateBwAndPreambleCombination(config.bw, config.preamble);
+                // ResponderConfig#ntbMaxMeasurementTime is in units of 10 milliseconds
+                config.ntbMaxMeasurementTime =
+                        responder.getNtbMaxTimeBetweenMeasurementsMicros() / 10000;
+                // ResponderConfig#ntbMinMeasurementTime is in units of 100 microseconds
+                config.ntbMinMeasurementTime =
+                        responder.getNtbMinTimeBetweenMeasurementsMicros() / 100;
 
                 if (config.peer == RttPeerType.NAN_TYPE) {
                     config.mustRequestLci = false;
@@ -421,8 +449,10 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                     if (cap != null) { // constrain parameters per device capabilities
                         config.mustRequestLci = config.mustRequestLci && cap.lciSupported;
                         config.mustRequestLcr = config.mustRequestLcr && cap.lcrSupported;
-                        config.bw = halRttChannelBandwidthCapabilityLimiter(config.bw, cap);
-                        config.preamble = halRttPreambleCapabilityLimiter(config.preamble, cap);
+                        config.bw = halRttChannelBandwidthCapabilityLimiter(config.bw, cap,
+                                config.type);
+                        config.preamble = halRttPreambleCapabilityLimiter(config.preamble, cap,
+                                config.type);
                     }
                 }
             } catch (IllegalArgumentException e) {
@@ -543,9 +573,12 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
      * Note: the halRttChannelBandwidth is a single bit flag from the HAL RttBw type.
      */
     private static int halRttChannelBandwidthCapabilityLimiter(int halRttChannelBandwidth,
-            WifiRttController.Capabilities cap) throws IllegalArgumentException {
+            WifiRttController.Capabilities cap, @RttType int rttType)
+            throws IllegalArgumentException {
         int requestedBandwidth = halRttChannelBandwidth;
-        while ((halRttChannelBandwidth != 0) && ((halRttChannelBandwidth & cap.bwSupported) == 0)) {
+        int bwSupported =
+                (rttType == RttType.TWO_SIDED_11AZ_NTB) ? cap.azBwSupported : cap.bwSupported;
+        while ((halRttChannelBandwidth != 0) && ((halRttChannelBandwidth & bwSupported) == 0)) {
             halRttChannelBandwidth >>= 1;
         }
 
@@ -567,9 +600,12 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
      * Note: the halRttPreamble is a single bit flag from the HAL RttPreamble type.
      */
     private static int halRttPreambleCapabilityLimiter(int halRttPreamble,
-            WifiRttController.Capabilities cap) throws IllegalArgumentException {
+            WifiRttController.Capabilities cap, @RttType int rttType)
+            throws IllegalArgumentException {
         int requestedPreamble = halRttPreamble;
-        while ((halRttPreamble != 0) && ((halRttPreamble & cap.preambleSupported) == 0)) {
+        int preambleSupported = (rttType == RttType.TWO_SIDED_11AZ_NTB) ? cap.azPreambleSupported
+                : cap.preambleSupported;
+        while ((halRttPreamble != 0) && ((halRttPreamble & preambleSupported) == 0)) {
             halRttPreamble >>= 1;
         }
 
