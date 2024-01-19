@@ -20,6 +20,7 @@ import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SuppressLint;
 import android.net.MacAddress;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiAnnotations.ChannelWidth;
@@ -656,7 +657,7 @@ public final class RangingResult implements Parcelable {
      * Note: the information is NOT validated - use with caution. Consider validating it with
      * other sources of information before using it.
      */
-    @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+    @SuppressLint("UnflaggedApi") // Flagging API promotion from @SystemApi to public not supported
     @NonNull
     public byte[] getLci() {
         if (mStatus != STATUS_SUCCESS) {
@@ -673,7 +674,7 @@ public final class RangingResult implements Parcelable {
      * Note: the information is NOT validated - use with caution. Consider validating it with
      * other sources of information before using it.
      */
-    @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
+    @SuppressLint("UnflaggedApi") // Flagging API promotion from @SystemApi to public not supported
     @NonNull
     public byte[] getLcr() {
         if (mStatus != STATUS_SUCCESS) {

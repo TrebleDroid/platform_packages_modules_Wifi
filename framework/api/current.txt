@@ -1652,8 +1652,8 @@ package android.net.wifi.rtt {
     method @FlaggedApi("com.android.wifi.flags.rtt_11az_ntb_ranging_support") public int get80211azResponderTxLtfRepetitionsCount();
     method public int getDistanceMm();
     method public int getDistanceStdDevMm();
-    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public byte[] getLci();
-    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public byte[] getLcr();
+    method @NonNull public byte[] getLci();
+    method @NonNull public byte[] getLcr();
     method @Nullable public android.net.MacAddress getMacAddress();
     method @FlaggedApi("com.android.wifi.flags.rtt_11az_ntb_ranging_support") public long getMaxTimeBetweenNtbMeasurementsMicros();
     method public int getMeasurementBandwidth();
