@@ -16,10 +16,21 @@
 
 package android.net.wifi.p2p;
 
+import android.annotation.FlaggedApi;
+import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
+import android.net.wifi.OuiKeyedData;
+import android.net.wifi.ParcelUtil;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+
+import androidx.annotation.RequiresApi;
+
+import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.net.Inet4Address;
 import java.util.ArrayList;
@@ -89,6 +100,9 @@ public class WifiP2pGroup implements Parcelable {
 
     /** The frequency (in MHz) used by this group */
     private int mFrequency;
+
+    /** List of {@link OuiKeyedData} providing vendor-specific configuration data. */
+    private @NonNull List<OuiKeyedData> mVendorData = Collections.emptyList();
 
     /**
      * P2P Client IPV4 address allocated via EAPOL-Key exchange.
@@ -340,6 +354,44 @@ public class WifiP2pGroup implements Parcelable {
         this.mFrequency = freq;
     }
 
+    /**
+     * Return the vendor-provided configuration data, if it exists. See also {@link
+     * #setVendorData(List)}
+     *
+     * @return Vendor configuration data, or empty list if it does not exist.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @NonNull
+    @SystemApi
+    public List<OuiKeyedData> getVendorData() {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        return mVendorData;
+    }
+
+    /**
+     * Set additional vendor-provided configuration data.
+     *
+     * @param vendorData List of {@link OuiKeyedData} containing the vendor-provided
+     *     configuration data. Note that multiple elements with the same OUI are allowed.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @SystemApi
+    public void setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        if (vendorData == null) {
+            throw new IllegalArgumentException("setVendorData received a null value");
+        }
+        mVendorData = vendorData;
+    }
+
     public String toString() {
         StringBuffer sbuf = new StringBuffer();
         sbuf.append("network: ").append(mNetworkName);
@@ -351,6 +403,7 @@ public class WifiP2pGroup implements Parcelable {
         sbuf.append("\n interface: ").append(mInterface);
         sbuf.append("\n networkId: ").append(mNetId);
         sbuf.append("\n frequency: ").append(mFrequency);
+        sbuf.append("\n vendorData: ").append(mVendorData);
         return sbuf.toString();
     }
 
@@ -370,6 +423,9 @@ public class WifiP2pGroup implements Parcelable {
             mInterface = source.getInterface();
             mNetId = source.getNetworkId();
             mFrequency = source.getFrequency();
+            if (SdkLevel.isAtLeastV()) {
+                mVendorData = new ArrayList<>(source.getVendorData());
+            }
         }
     }
 
@@ -386,6 +442,9 @@ public class WifiP2pGroup implements Parcelable {
         dest.writeString(mInterface);
         dest.writeInt(mNetId);
         dest.writeInt(mFrequency);
+        if (SdkLevel.isAtLeastV()) {
+            dest.writeList(mVendorData);
+        }
     }
 
     /** Implement the Parcelable interface */
@@ -404,6 +463,9 @@ public class WifiP2pGroup implements Parcelable {
                 group.setInterface(in.readString());
                 group.setNetworkId(in.readInt());
                 group.setFrequency(in.readInt());
+                if (SdkLevel.isAtLeastV()) {
+                    group.setVendorData(ParcelUtil.readOuiKeyedDataList(in));
+                }
                 return group;
             }
 
