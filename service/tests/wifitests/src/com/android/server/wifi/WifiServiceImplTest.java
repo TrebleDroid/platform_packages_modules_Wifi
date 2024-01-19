@@ -176,6 +176,7 @@ import android.net.wifi.IWifiNetworkSelectionConfigListener;
 import android.net.wifi.IWifiNetworkStateChangedListener;
 import android.net.wifi.IWifiVerboseLoggingStatusChangedListener;
 import android.net.wifi.MscsParams;
+import android.net.wifi.QosCharacteristics;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
@@ -11522,21 +11523,28 @@ public class WifiServiceImplTest extends WifiBaseTest {
         List<QosPolicyParams> largeList = createQosPolicyParamsList(
                 WifiManager.getMaxNumberOfPoliciesPerQosRequest() + 1, true);
         List<QosPolicyParams> duplicatePolicyList = createQosPolicyParamsList(5, false);
-        List<QosPolicyParams> mixedDirectionList = createQosPolicyParamsList(1, true);
-        mixedDirectionList.add(
-                new QosPolicyParams.Builder(101, QosPolicyParams.DIRECTION_UPLINK)
-                        .setDscp(15)
-                        .build());
         assertThrows(IllegalArgumentException.class, () ->
-                mWifiServiceImpl.addQosPolicies(emptyList, binder, TEST_PACKAGE_NAME, listener));
+                mWifiServiceImpl.addQosPolicies(emptyList, binder, TEST_PACKAGE_NAME,
+                        listener));
         assertThrows(IllegalArgumentException.class, () ->
-                mWifiServiceImpl.addQosPolicies(largeList, binder, TEST_PACKAGE_NAME, listener));
+                mWifiServiceImpl.addQosPolicies(largeList, binder, TEST_PACKAGE_NAME,
+                        listener));
         assertThrows(IllegalArgumentException.class, () ->
                 mWifiServiceImpl.addQosPolicies(
                         duplicatePolicyList, binder, TEST_PACKAGE_NAME, listener));
-        assertThrows(IllegalArgumentException.class, () ->
-                mWifiServiceImpl.addQosPolicies(
-                        mixedDirectionList, binder, TEST_PACKAGE_NAME, listener));
+
+        if (SdkLevel.isAtLeastV()) {
+            List<QosPolicyParams> mixedDirectionList = createQosPolicyParamsList(1, true);
+            QosCharacteristics mockQosCharacteristics = mock(QosCharacteristics.class);
+            when(mockQosCharacteristics.validate()).thenReturn(true);
+            mixedDirectionList.add(
+                    new QosPolicyParams.Builder(101, QosPolicyParams.DIRECTION_UPLINK)
+                            .setQosCharacteristics(mockQosCharacteristics)
+                            .build());
+            assertThrows(IllegalArgumentException.class, () ->
+                    mWifiServiceImpl.addQosPolicies(
+                            mixedDirectionList, binder, TEST_PACKAGE_NAME, listener));
+        }
     }
 
     /**
