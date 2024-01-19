@@ -102,6 +102,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
     private @Mock IBinder mServiceBinderMock;
     private @Mock WifiSettingsConfigStore mWifiSettingsConfigStore;
 
+    final int mServiceVersion = 2;
     final String mIfaceName = "virtual_interface_name";
     final String mSsid = "\"SSID\"";
     final byte[] mSsidBytes = {'S', 'S', 'I', 'D'};
@@ -165,6 +166,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         mDut = new SupplicantP2pIfaceHalSpy();
+        setCachedServiceVersion(mServiceVersion);
     }
 
     /**
