@@ -29,6 +29,8 @@ import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
+import android.net.wifi.OuiKeyedDataUtil;
 import android.net.wifi.ScanResult;
 import android.net.wifi.aware.PeerHandle;
 import android.os.Bundle;
@@ -37,6 +39,8 @@ import android.os.Parcel;
 import android.os.test.TestLooper;
 
 import androidx.test.filters.SmallTest;
+
+import com.android.modules.utils.build.SdkLevel;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -163,6 +167,9 @@ public class WifiRttManagerTest {
         builder.addWifiAwarePeer(mac1);
         builder.addWifiAwarePeer(peerHandle1);
         builder.setRttBurstSize(4);
+        if (SdkLevel.isAtLeastV()) {
+            builder.setVendorData(OuiKeyedDataUtil.createTestOuiKeyedDataList(5));
+        }
         RangingRequest request = builder.build();
 
         Parcel parcelW = Parcel.obtain();
@@ -452,9 +459,10 @@ public class WifiRttManagerTest {
         long timestamp = System.currentTimeMillis();
         byte[] lci = { 0x5, 0x6, 0x7 };
         byte[] lcr = { 0x1, 0x2, 0x3, 0xA, 0xB, 0xC };
+        List<OuiKeyedData> vendorData = OuiKeyedDataUtil.createTestOuiKeyedDataList(5);
 
         // RangingResults constructed with a MAC address
-        RangingResult result = new RangingResult.Builder()
+        RangingResult.Builder resultBuilder = new RangingResult.Builder()
                 .setStatus(status)
                 .setMacAddress(mac)
                 .setDistanceMm(distanceCm)
@@ -465,8 +473,11 @@ public class WifiRttManagerTest {
                 .setLci(lci)
                 .setLcr(lcr)
                 .setRangingTimestampMillis(timestamp)
-                .set80211mcMeasurement(true)
-                .build();
+                .set80211mcMeasurement(true);
+        if (SdkLevel.isAtLeastV()) {
+            resultBuilder.setVendorData(vendorData);
+        }
+        RangingResult result = resultBuilder.build();
 
         Parcel parcelW = Parcel.obtain();
         result.writeToParcel(parcelW, 0);
@@ -481,7 +492,7 @@ public class WifiRttManagerTest {
         assertEquals(result, rereadResult);
 
         // RangingResults constructed with a PeerHandle
-        result = new RangingResult.Builder()
+        resultBuilder = new RangingResult.Builder()
                 .setStatus(status)
                 .setPeerHandle(peerHandle)
                 .setDistanceMm(distanceCm)
@@ -489,8 +500,11 @@ public class WifiRttManagerTest {
                 .setRssi(rssi)
                 .setNumAttemptedMeasurements(numAttemptedMeasurements)
                 .setNumSuccessfulMeasurements(numSuccessfulMeasurements)
-                .setRangingTimestampMillis(timestamp)
-                .build();
+                .setRangingTimestampMillis(timestamp);
+        if (SdkLevel.isAtLeastV()) {
+            resultBuilder.setVendorData(vendorData);
+        }
+        result = resultBuilder.build();
 
         parcelW = Parcel.obtain();
         result.writeToParcel(parcelW, 0);
