@@ -351,6 +351,7 @@ public class WifiNativeTest extends WifiBaseTest {
                 mHandler, mRandom, mBuildProperties, mWifiInjector);
         mWifiNative.enableVerboseLogging(true, true);
         mWifiNative.initialize();
+        assertNull(mWifiNative.mUnknownAkmMap);
     }
 
     @After
@@ -1701,5 +1702,110 @@ public class WifiNativeTest extends WifiBaseTest {
     public void testSetAfcChannelAllowance() {
         mWifiNative.setAfcChannelAllowance(mAfcChannelAllowance);
         verify(mWifiVendorHal).setAfcChannelAllowance(mAfcChannelAllowance);
+    }
+
+    /**
+     * Verifies that overlay config item config_wifiUnknownAkmToKnownAkmMapping is parsed correctly
+     * and an expected value is set in unknown AKM map.
+     */
+    @Test
+    public void testConfigWifiUnknownAkmToKnownAkmMapping() throws Exception {
+        // Test that UnknownAkmMap is not set if two values are not added in the config.
+        mResources.setStringArray(
+                R.array.config_wifiUnknownAkmToKnownAkmMapping, new String[] {"1234"});
+        WifiNative wifiNativeInstance =
+                new WifiNative(
+                        mWifiVendorHal,
+                        mStaIfaceHal,
+                        mHostapdHal,
+                        mWificondControl,
+                        mWifiMonitor,
+                        mPropertyService,
+                        mWifiMetrics,
+                        mHandler,
+                        mRandom,
+                        mBuildProperties,
+                        mWifiInjector);
+        assertNull(wifiNativeInstance.mUnknownAkmMap);
+
+        // Test that UnknownAkmMap is not set if non-integer values are added in the config.
+        mResources.setStringArray(
+                R.array.config_wifiUnknownAkmToKnownAkmMapping, new String[] {"1234, bad"});
+        wifiNativeInstance =
+                new WifiNative(
+                        mWifiVendorHal,
+                        mStaIfaceHal,
+                        mHostapdHal,
+                        mWificondControl,
+                        mWifiMonitor,
+                        mPropertyService,
+                        mWifiMetrics,
+                        mHandler,
+                        mRandom,
+                        mBuildProperties,
+                        mWifiInjector);
+        assertNull(wifiNativeInstance.mUnknownAkmMap);
+
+        // Test that UnknownAkmMap is not set when an invalid AKM is set in the known AKM field
+        // known AKM - 555 (which is not a valid AKM suite specifier)
+        mResources.setStringArray(
+                R.array.config_wifiUnknownAkmToKnownAkmMapping, new String[] {"9846784, 555"});
+        wifiNativeInstance =
+                new WifiNative(
+                        mWifiVendorHal,
+                        mStaIfaceHal,
+                        mHostapdHal,
+                        mWificondControl,
+                        mWifiMonitor,
+                        mPropertyService,
+                        mWifiMetrics,
+                        mHandler,
+                        mRandom,
+                        mBuildProperties,
+                        mWifiInjector);
+        assertNull(wifiNativeInstance.mUnknownAkmMap);
+
+        // Test that UnknownAkmMap is set for a valid configuration
+        // known AKM - 28053248 (which corresponds to ScanResult.KEY_MGMT_EAP)
+        mResources.setStringArray(
+                R.array.config_wifiUnknownAkmToKnownAkmMapping, new String[] {"9846784, 28053248"});
+        wifiNativeInstance =
+                new WifiNative(
+                        mWifiVendorHal,
+                        mStaIfaceHal,
+                        mHostapdHal,
+                        mWificondControl,
+                        mWifiMonitor,
+                        mPropertyService,
+                        mWifiMetrics,
+                        mHandler,
+                        mRandom,
+                        mBuildProperties,
+                        mWifiInjector);
+        assertEquals(1, wifiNativeInstance.mUnknownAkmMap.size());
+        assertEquals(ScanResult.KEY_MGMT_EAP, wifiNativeInstance.mUnknownAkmMap.get(9846784));
+
+        // Test that UnknownAkmMap is set for multiple valid configuration entries
+        // known AKM - 28053248 (which corresponds to ScanResult.KEY_MGMT_EAP)
+        // known AKM - 413929216 (which corresponds to ScanResult.KEY_MGMT_SAE_EXT_KEY)
+        mResources.setStringArray(
+                R.array.config_wifiUnknownAkmToKnownAkmMapping,
+                new String[] {"9846784, 28053248", "1234, 413929216"});
+        wifiNativeInstance =
+                new WifiNative(
+                        mWifiVendorHal,
+                        mStaIfaceHal,
+                        mHostapdHal,
+                        mWificondControl,
+                        mWifiMonitor,
+                        mPropertyService,
+                        mWifiMetrics,
+                        mHandler,
+                        mRandom,
+                        mBuildProperties,
+                        mWifiInjector);
+        assertEquals(2, wifiNativeInstance.mUnknownAkmMap.size());
+        assertEquals(ScanResult.KEY_MGMT_EAP, wifiNativeInstance.mUnknownAkmMap.get(9846784));
+        assertEquals(ScanResult.KEY_MGMT_SAE_EXT_KEY, wifiNativeInstance.mUnknownAkmMap.get(1234));
     }
 }

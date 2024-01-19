@@ -599,13 +599,19 @@ public class RttMetricsTest extends WifiBaseTest {
 
         for (int i = 0; i < countAp; ++i) {
             placeholderMacBase[0]++;
-            builder.addResponder(new ResponderConfig(MacAddress.fromBytes(placeholderMacBase),
-                    ResponderConfig.RESPONDER_AP, true, 0, 0, 0, 0, 0));
+            builder.addResponder(new ResponderConfig.Builder()
+                    .setMacAddress(MacAddress.fromBytes(placeholderMacBase))
+                    .setResponderType(ResponderConfig.RESPONDER_AP)
+                    .set80211mcSupported(true)
+                    .build());
         }
         for (int i = 0; i < countAware; ++i) {
             placeholderMacBase[0]++;
-            builder.addResponder(new ResponderConfig(MacAddress.fromBytes(placeholderMacBase),
-                    ResponderConfig.RESPONDER_AWARE, true, 0, 0, 0, 0, 0));
+            builder.addResponder(new ResponderConfig.Builder()
+                    .setMacAddress(MacAddress.fromBytes(placeholderMacBase))
+                    .setResponderType(ResponderConfig.RESPONDER_AWARE)
+                    .set80211mcSupported(true)
+                    .build());
         }
 
         return builder.build();
@@ -618,8 +624,14 @@ public class RttMetricsTest extends WifiBaseTest {
 
         for (ResponderConfig peer : request.mRttPeers) {
 
-            RangingResult rttResult = new RangingResult(status, peer.macAddress,
-                    (int) (distance * 1000), 0, 0, 8, 8, null, null, null, 0, true);
+            RangingResult rttResult = new RangingResult.Builder()
+                    .setStatus(status)
+                    .setMacAddress(peer.getMacAddress())
+                    .setDistanceMm((int) (distance * 1000))
+                    .setNumAttemptedMeasurements(8)
+                    .setNumSuccessfulMeasurements(8)
+                    .set80211mcMeasurement(true)
+                    .build();
             distance += incrDistanceM;
             rangingResults.add(rttResult);
         }

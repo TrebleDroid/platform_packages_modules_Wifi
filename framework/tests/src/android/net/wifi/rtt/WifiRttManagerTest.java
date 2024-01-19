@@ -85,9 +85,17 @@ public class WifiRttManagerTest {
     public void testRangeSuccess() throws Exception {
         RangingRequest request = new RangingRequest.Builder().build();
         List<RangingResult> results = new ArrayList<>();
-        results.add(
-                new RangingResult(RangingResult.STATUS_SUCCESS, MacAddress.BROADCAST_ADDRESS, 15, 5,
-                        10, 8, 5, null, null, null, 666, true));
+        results.add(new RangingResult.Builder()
+                .setStatus(RangingResult.STATUS_SUCCESS)
+                .setMacAddress(MacAddress.BROADCAST_ADDRESS)
+                .setDistanceMm(15)
+                .setDistanceStdDevMm(5)
+                .setRssi(10)
+                .setNumAttemptedMeasurements(8)
+                .setNumSuccessfulMeasurements(5)
+                .setRangingTimestampMillis(666)
+                .set80211mcMeasurement(true)
+                .build());
         RangingResultCallback callbackMock = mock(RangingResultCallback.class);
         ArgumentCaptor<IRttCallback> callbackCaptor = ArgumentCaptor.forClass(IRttCallback.class);
 
@@ -446,9 +454,19 @@ public class WifiRttManagerTest {
         byte[] lcr = { 0x1, 0x2, 0x3, 0xA, 0xB, 0xC };
 
         // RangingResults constructed with a MAC address
-        RangingResult result = new RangingResult(status, mac, distanceCm, distanceStdDevCm, rssi,
-                numAttemptedMeasurements, numSuccessfulMeasurements, lci, lcr, null, timestamp,
-                true);
+        RangingResult result = new RangingResult.Builder()
+                .setStatus(status)
+                .setMacAddress(mac)
+                .setDistanceMm(distanceCm)
+                .setDistanceStdDevMm(distanceStdDevCm)
+                .setRssi(rssi)
+                .setNumAttemptedMeasurements(numAttemptedMeasurements)
+                .setNumSuccessfulMeasurements(numSuccessfulMeasurements)
+                .setLci(lci)
+                .setLcr(lcr)
+                .setRangingTimestampMillis(timestamp)
+                .set80211mcMeasurement(true)
+                .build();
 
         Parcel parcelW = Parcel.obtain();
         result.writeToParcel(parcelW, 0);
@@ -463,21 +481,16 @@ public class WifiRttManagerTest {
         assertEquals(result, rereadResult);
 
         // RangingResults constructed with a PeerHandle
-        result =
-                new RangingResult(
-                        status,
-                        peerHandle,
-                        distanceCm,
-                        distanceStdDevCm,
-                        rssi,
-                        numAttemptedMeasurements,
-                        numSuccessfulMeasurements,
-                        null,
-                        null,
-                        null,
-                        timestamp,
-                        RangingResult.UNSPECIFIED,
-                        RangingResult.UNSPECIFIED);
+        result = new RangingResult.Builder()
+                .setStatus(status)
+                .setPeerHandle(peerHandle)
+                .setDistanceMm(distanceCm)
+                .setDistanceStdDevMm(distanceStdDevCm)
+                .setRssi(rssi)
+                .setNumAttemptedMeasurements(numAttemptedMeasurements)
+                .setNumSuccessfulMeasurements(numSuccessfulMeasurements)
+                .setRangingTimestampMillis(timestamp)
+                .build();
 
         parcelW = Parcel.obtain();
         result.writeToParcel(parcelW, 0);
@@ -509,13 +522,30 @@ public class WifiRttManagerTest {
         byte[] lci = { };
         byte[] lcr = { };
 
-        RangingResult rr1 = new RangingResult(status, mac, distanceCm, distanceStdDevCm, rssi,
-                numAttemptedMeasurements, numSuccessfulMeasurements, lci, lcr, null, timestamp,
-                true);
-        RangingResult rr2 = new RangingResult(status, mac, distanceCm, distanceStdDevCm, rssi,
-                numAttemptedMeasurements, numSuccessfulMeasurements, null, null, null, timestamp,
-                true);
-
+        RangingResult rr1 = new RangingResult.Builder()
+                .setStatus(status)
+                .setMacAddress(mac)
+                .setDistanceMm(distanceCm)
+                .setDistanceStdDevMm(distanceStdDevCm)
+                .setRssi(rssi)
+                .setNumAttemptedMeasurements(numAttemptedMeasurements)
+                .setNumSuccessfulMeasurements(numSuccessfulMeasurements)
+                .setLci(lci)
+                .setLcr(lcr)
+                .setRangingTimestampMillis(timestamp)
+                .set80211mcMeasurement(true)
+                .build();
+        RangingResult rr2 = new RangingResult.Builder()
+                .setStatus(status)
+                .setMacAddress(mac)
+                .setDistanceMm(distanceCm)
+                .setDistanceStdDevMm(distanceStdDevCm)
+                .setRssi(rssi)
+                .setNumAttemptedMeasurements(numAttemptedMeasurements)
+                .setNumSuccessfulMeasurements(numSuccessfulMeasurements)
+                .setRangingTimestampMillis(timestamp)
+                .set80211mcMeasurement(true)
+                .build();
         assertEquals(rr1, rr2);
     }
 
@@ -525,9 +555,15 @@ public class WifiRttManagerTest {
     @Test
     public void testResponderConfigParcel() {
         // ResponderConfig constructed with a MAC address
-        ResponderConfig config = new ResponderConfig(MacAddress.fromString("00:01:02:03:04:05"),
-                ResponderConfig.RESPONDER_AP, true, ResponderConfig.CHANNEL_WIDTH_80MHZ, 2134, 2345,
-                2555, ResponderConfig.PREAMBLE_LEGACY);
+        ResponderConfig config = new ResponderConfig.Builder()
+                .setMacAddress(MacAddress.fromString("00:01:02:03:04:05"))
+                .set80211mcSupported(true)
+                .setChannelWidth(ScanResult.CHANNEL_WIDTH_80MHZ)
+                .setFrequencyMhz(2134)
+                .setCenterFreq0Mhz(2345)
+                .setCenterFreq1Mhz(2555)
+                .setPreamble(ScanResult.PREAMBLE_LEGACY)
+                .build();
 
         Parcel parcelW = Parcel.obtain();
         config.writeToParcel(parcelW, 0);
@@ -542,9 +578,16 @@ public class WifiRttManagerTest {
         assertEquals(config, rereadConfig);
 
         // ResponderConfig constructed with a PeerHandle
-        config = new ResponderConfig(new PeerHandle(10), ResponderConfig.RESPONDER_AWARE, false,
-                ResponderConfig.CHANNEL_WIDTH_80MHZ_PLUS_MHZ, 5555, 6666, 7777,
-                ResponderConfig.PREAMBLE_VHT);
+        config = new ResponderConfig.Builder()
+                .setPeerHandle(new PeerHandle(10))
+                .setResponderType(ResponderConfig.RESPONDER_AWARE)
+                .set80211mcSupported(false)
+                .setChannelWidth(ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ)
+                .setFrequencyMhz(5555)
+                .setCenterFreq0Mhz(6666)
+                .setCenterFreq1Mhz(7777)
+                .setPreamble(ScanResult.PREAMBLE_VHT)
+                .build();
 
         parcelW = Parcel.obtain();
         config.writeToParcel(parcelW, 0);

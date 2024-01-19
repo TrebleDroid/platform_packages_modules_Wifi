@@ -1647,6 +1647,8 @@ package android.net.wifi.rtt {
     method public int describeContents();
     method public int getDistanceMm();
     method public int getDistanceStdDevMm();
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public byte[] getLci();
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public byte[] getLcr();
     method @Nullable public android.net.MacAddress getMacAddress();
     method public int getMeasurementBandwidth();
     method public int getMeasurementChannelFrequencyMHz();
@@ -1664,6 +1666,26 @@ package android.net.wifi.rtt {
     field public static final int STATUS_RESPONDER_DOES_NOT_SUPPORT_IEEE80211MC = 2; // 0x2
     field public static final int STATUS_SUCCESS = 0; // 0x0
     field public static final int UNSPECIFIED = -1; // 0xffffffff
+  }
+
+  @FlaggedApi("com.android.wifi.flags.ranging_result_builder") public static final class RangingResult.Builder {
+    ctor public RangingResult.Builder();
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult build();
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder set80211mcMeasurement(boolean);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setDistanceMm(int);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setDistanceStdDevMm(int);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setLci(@Nullable byte[]);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setLcr(@Nullable byte[]);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setMacAddress(@Nullable android.net.MacAddress);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setMeasurementBandwidth(int);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setMeasurementChannelFrequencyMHz(int);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setNumAttemptedMeasurements(int);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setNumSuccessfulMeasurements(int);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setPeerHandle(@Nullable android.net.wifi.aware.PeerHandle);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setRangingTimestampMillis(long);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setRssi(int);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setStatus(int);
+    method @FlaggedApi("com.android.wifi.flags.ranging_result_builder") @NonNull public android.net.wifi.rtt.RangingResult.Builder setUnverifiedResponderLocation(@Nullable android.net.wifi.rtt.ResponderLocation);
   }
 
   public abstract class RangingResultCallback {

@@ -353,12 +353,20 @@ public class WifiRttControllerAidlImplTest extends WifiBaseTest {
     public void testRangingWithInvalidParameterCombination() throws Exception {
         int cmdId = 88;
         RangingRequest request = new RangingRequest.Builder().build();
-        ResponderConfig invalidConfig = new ResponderConfig(
-                MacAddress.fromString("08:09:08:07:06:88"), ResponderConfig.RESPONDER_AP, true,
-                ResponderConfig.CHANNEL_WIDTH_80MHZ, 0, 0, 0, ResponderConfig.PREAMBLE_HT);
-        ResponderConfig config = new ResponderConfig(
-                MacAddress.fromString("08:09:08:07:06:89"), ResponderConfig.RESPONDER_AP, true,
-                ResponderConfig.CHANNEL_WIDTH_80MHZ, 0, 0, 0, ResponderConfig.PREAMBLE_VHT);
+        ResponderConfig invalidConfig = new ResponderConfig.Builder()
+                .setMacAddress(MacAddress.fromString("08:09:08:07:06:88"))
+                .setResponderType(ResponderConfig.RESPONDER_AP)
+                .set80211mcSupported(true)
+                .setChannelWidth(ScanResult.CHANNEL_WIDTH_80MHZ)
+                .setPreamble(ScanResult.PREAMBLE_HT)
+                .build();
+        ResponderConfig config = new ResponderConfig.Builder()
+                .setMacAddress(MacAddress.fromString("08:09:08:07:06:89"))
+                .setResponderType(ResponderConfig.RESPONDER_AP)
+                .set80211mcSupported(true)
+                .setChannelWidth(ScanResult.CHANNEL_WIDTH_80MHZ)
+                .setPreamble(ScanResult.PREAMBLE_VHT)
+                .build();
 
         // Add a ResponderConfig with invalid parameter, should be ignored.
         request.mRttPeers.add(invalidConfig);

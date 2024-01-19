@@ -128,6 +128,13 @@ flag {
 }
 
 flag {
+    name: "ranging_result_builder"
+    namespace: "wifi"
+    description: "Add new Builder API for RangeResult"
+    bug: "318765791"
+}
+
+flag {
     name: "uri_parser"
     namespace: "wifi"
     description: "Control the API for parsing uri"
@@ -139,4 +146,12 @@ flag {
     namespace: "wifi"
     description: "Add additional QoS fields to support QoS R3"
     bug: "319313500"
+}
+
+flag {
+    name: "android_v_wifi_api"
+    namespace: "wifi"
+    description: "For new API added to Android V"
+    bug: "319927407"
+    is_fixed_read_only: true
 }

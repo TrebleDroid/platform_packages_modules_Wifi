@@ -423,21 +423,9 @@ public class RttServiceImplTest extends WifiBaseTest {
                 RttTestUtils.getDummyRangingResults(mRequestCaptor.getValue());
         results.first.remove(results.first.size() - 1);
         RangingResult removed = results.second.remove(results.second.size() - 1);
-        results.second.add(
-                new RangingResult(
-                        RangingResult.STATUS_FAIL,
-                        removed.getPeerHandle(),
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        null,
-                        null,
-                        null,
-                        0,
-                        RangingResult.UNSPECIFIED,
-                        RangingResult.UNSPECIFIED));
+        results.second.add(new RangingResult.Builder()
+                .setPeerHandle(removed.getPeerHandle())
+                .build());
         clock.time += MEASUREMENT_DURATION;
         mRangingResultsCbCaptor.getValue()
                 .onRangingResults(mIntCaptor.getValue(), results.first);
@@ -899,16 +887,14 @@ public class RttServiceImplTest extends WifiBaseTest {
                 RttTestUtils.getDummyRangingResults(request);
         results.first.remove(1); // remove a direct AWARE request
         RangingResult removed = results.second.remove(1);
-        results.second.add(
-                new RangingResult(RangingResult.STATUS_FAIL, removed.getMacAddress(), 0, 0, 0, 0, 0,
-                        null, null, null, 0, false, RangingResult.UNSPECIFIED,
-                        RangingResult.UNSPECIFIED));
+        results.second.add(new RangingResult.Builder()
+                .setMacAddress(removed.getMacAddress())
+                .build());
         results.first.remove(0); // remove an AP request
         removed = results.second.remove(0);
-        results.second.add(
-                new RangingResult(RangingResult.STATUS_FAIL, removed.getMacAddress(), 0, 0, 0, 0, 0,
-                        null, null, null, 0, false, RangingResult.UNSPECIFIED,
-                        RangingResult.UNSPECIFIED));
+        results.second.add(new RangingResult.Builder()
+                .setMacAddress(removed.getMacAddress())
+                .build());
 
         // (1) request ranging operation
         mDut.startRanging(mockIbinder, mPackageName, mFeatureId, null, request,
@@ -949,10 +935,9 @@ public class RttServiceImplTest extends WifiBaseTest {
                 RttTestUtils.getDummyRangingResults(request);
         List<RangingResult> allFailResults = new ArrayList<>();
         for (RangingResult result : results.second) {
-            allFailResults.add(
-                    new RangingResult(RangingResult.STATUS_FAIL, result.getMacAddress(), 0, 0, 0, 0,
-                            0, null, null, null, 0, false, RangingResult.UNSPECIFIED,
-                            RangingResult.UNSPECIFIED));
+            allFailResults.add(new RangingResult.Builder()
+                    .setMacAddress(result.getMacAddress())
+                    .build());
         }
 
         // (1) request ranging operation

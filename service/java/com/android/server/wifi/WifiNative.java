@@ -61,6 +61,7 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.Log;
 import android.util.SparseArray;
+import android.util.SparseIntArray;
 
 import com.android.internal.annotations.Immutable;
 import com.android.internal.annotations.VisibleForTesting;
@@ -138,6 +139,12 @@ public class WifiNative {
     private @WifiManager.MloMode int mCachedMloMode = WifiManager.MLO_MODE_DEFAULT;
     private boolean mIsLocationModeEnabled = false;
     private long mLastLocationModeEnabledTimeMs = 0;
+    /**
+     * Mapping of unknown AKMs configured in overlay config item
+     * config_wifiUnknownAkmToKnownAkmMapping to ScanResult security key management scheme
+     * (ScanResult.KEY_MGMT_XX)
+     */
+    @VisibleForTesting @Nullable SparseIntArray mUnknownAkmMap;
 
     public WifiNative(WifiVendorHal vendorHal,
                       SupplicantStaIfaceHal staIfaceHal, HostapdHal hostapdHal,
@@ -157,6 +164,70 @@ public class WifiNative {
         mBuildProperties = buildProperties;
         mWifiInjector = wifiInjector;
         mContext = wifiInjector.getContext();
+        initializeUnknownAkmMapping();
+    }
+
+    private void initializeUnknownAkmMapping() {
+        String[] unknownAkmMapping =
+                mContext.getResources()
+                        .getStringArray(R.array.config_wifiUnknownAkmToKnownAkmMapping);
+        if (unknownAkmMapping == null) {
+            return;
+        }
+        for (String line : unknownAkmMapping) {
+            if (line == null) {
+                continue;
+            }
+            String[] items = line.split(",");
+            if (items.length != 2) {
+                Log.e(
+                        TAG,
+                        "Failed to parse config_wifiUnknownAkmToKnownAkmMapping line="
+                                + line
+                                + ". Should contain only two values separated by comma");
+                continue;
+            }
+            try {
+                int unknownAkm = Integer.parseInt(items[0].trim());
+                int knownAkm = Integer.parseInt(items[1].trim());
+                // Convert the OEM configured known AKM suite selector to
+                // ScanResult security key management scheme(ScanResult.KEY_MGMT_XX)*/
+                int keyMgmtScheme =
+                        InformationElementUtil.Capabilities.akmToScanResultKeyManagementScheme(
+                                knownAkm);
+                if (keyMgmtScheme != ScanResult.KEY_MGMT_UNKNOWN) {
+                    if (mUnknownAkmMap == null) {
+                        mUnknownAkmMap = new SparseIntArray();
+                    }
+                    mUnknownAkmMap.put(unknownAkm, keyMgmtScheme);
+                    Log.d(
+                            TAG,
+                            "unknown AKM = "
+                                    + unknownAkm
+                                    + " - converted keyMgmtScheme: "
+                                    + keyMgmtScheme);
+                } else {
+                    Log.e(
+                            TAG,
+                            "Known AKM: "
+                                    + knownAkm
+                                    + " is not defined in the framework."
+                                    + " Hence Failed to add AKM: "
+                                    + unknownAkm
+                                    + " in UnknownAkmMap."
+                                    + " Parsed config from overlay: "
+                                    + line);
+                }
+            } catch (Exception e) {
+                // failure to parse. Something is wrong with the configuration.
+                Log.e(
+                        TAG,
+                        "Parsing config_wifiUnknownAkmToKnownAkmMapping line="
+                                + line
+                                + ". Exception occurred:"
+                                + e);
+            }
+        }
     }
 
     /**
@@ -1879,8 +1950,12 @@ public class WifiNative {
                     InformationElementUtil.parseInformationElements(result.getInformationElements());
             InformationElementUtil.Capabilities capabilities =
                     new InformationElementUtil.Capabilities();
-            capabilities.from(ies, result.getCapabilities(), mIsEnhancedOpenSupported,
-                              result.getFrequencyMhz());
+            capabilities.from(
+                    ies,
+                    result.getCapabilities(),
+                    mIsEnhancedOpenSupported,
+                    result.getFrequencyMhz(),
+                    mUnknownAkmMap);
             String flags = capabilities.generateCapabilitiesString();
             NetworkDetail networkDetail;
             try {
