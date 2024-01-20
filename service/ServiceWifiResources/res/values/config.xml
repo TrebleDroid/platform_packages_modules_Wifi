@@ -1300,4 +1300,16 @@
              <item>unknownAkm2,knownAkm</item>
         -->
     </string-array>
+    <!-- Integer for minimum time between IEEE 802.11az non-trigger based ranging measurements in
+         microseconds. Note that ranging request converts this to units of 100 microseconds. So the
+         value should be a multiple of 100 microseconds. Non-zero values in this setting take
+         precedence over individual responder settings, effectively enforcing a system-wide minimum
+         measurement interval for non-trigger based ranging operations.. -->
+    <integer translatable="false" name="config_wifi80211azMinTimeBetweenNtbMeasurementsMicros">250000</integer>
+    <!-- Integer for maximum time between IEEE 802.11az non-trigger based ranging measurements in
+         microseconds. Note that ranging request converts this to units of 10 milliseconds. So the
+         value should be a multiple of 10000 microseconds. Non-zero values in this setting take
+         precedence over individual responder settings, effectively enforcing a system-wide maximum
+         measurement interval for non-trigger based ranging operations. -->
+    <integer translatable="false" name="config_wifi80211azMaxTimeBetweenNtbMeasurementsMicros">15000000</integer>
 </resources>

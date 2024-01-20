@@ -7496,10 +7496,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     }
 
     @Test
-    public void testIpReachabilityFailureStaticIpOrganicTriggersDisconnection() throws Exception {
-        when(mDeviceConfigFacade.isHandleRssiOrganicKernelFailuresEnabled()).thenReturn(true);
-        assumeTrue(SdkLevel.isAtLeastT());
-
+    public void testIpReachabilityMonitorNotStartOnStaticIpConfiguration() throws Exception {
         final List<InetAddress> dnsServers = new ArrayList<>();
         dnsServers.add(InetAddresses.parseNumericAddress("8.8.8.8"));
         dnsServers.add(InetAddresses.parseNumericAddress("4.4.4.4"));
@@ -7533,19 +7530,9 @@ public class ClientModeImplTest extends WifiBaseTest {
         injectDhcpSuccess(dhcpResults);
         mLooper.dispatchAll();
         expectRegisterNetworkAgent((agentConfig) -> {}, (cap) -> {});
-        reset(mWifiNetworkAgent);
 
-        // normal behavior outside specific CC
-        when(mWifiGlobals.disableNudDisconnectsForWapiInSpecificCc()).thenReturn(true);
-        when(mWifiCountryCode.getCountryCode()).thenReturn("US");
-
-        // Trigger IP reachability failure and ensure we trigger a disconnection due to static IP.
-        ReachabilityLossInfoParcelable lossInfo =
-                new ReachabilityLossInfoParcelable("", ReachabilityLossReason.ORGANIC);
-        mIpClientCallback.onReachabilityFailure(lossInfo);
-        mLooper.dispatchAll();
-        verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
-        verify(mWifiNetworkAgent, never()).unregisterAfterReplacement(anyInt());
+        verify(mIpClient).startProvisioning(mProvisioningConfigurationCaptor.capture());
+        assertFalse(mProvisioningConfigurationCaptor.getValue().usingIpReachabilityMonitor);
     }
 
     private void doIpReachabilityFailureTest(int lossReason, boolean shouldWifiDisconnect)

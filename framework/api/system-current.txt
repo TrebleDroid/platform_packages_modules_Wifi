@@ -1615,6 +1615,7 @@ package android.net.wifi.rtt {
     field @Nullable public final android.net.wifi.aware.PeerHandle peerHandle;
     field public final int preamble;
     field public final int responderType;
+    field @FlaggedApi("com.android.wifi.flags.rtt_11az_ntb_ranging_support") public final boolean supports80211azNtb;
     field public final boolean supports80211mc;
   }
 
