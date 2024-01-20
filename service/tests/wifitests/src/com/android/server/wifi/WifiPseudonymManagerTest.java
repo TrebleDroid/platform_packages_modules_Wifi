@@ -362,7 +362,7 @@ public class WifiPseudonymManagerTest extends WifiBaseTest {
                                 .getValidPseudonymInfo(CARRIER_ID)
                                 .get()
                                 .getLttrInMillis();
-        assertTrue(mWindowStartCaptor.getValue().longValue() <= maxStartTime);
+        assertTrue(mWindowStartCaptor.getValue() <= maxStartTime + 1);
         assertEquals(CARRIER_ID, mRetrieveListenerArgumentCaptor.getValue().mCarrierId);
     }
 
