@@ -162,3 +162,10 @@ flag {
     bug: "319927407"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "d2d_usage_when_wifi_off"
+    namespace: "wifi"
+    description: "Add new API to configure d2d usage when wifi is off"
+    bug: "295792510"
+}
