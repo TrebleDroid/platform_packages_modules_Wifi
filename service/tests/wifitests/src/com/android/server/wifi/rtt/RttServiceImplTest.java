@@ -315,7 +315,8 @@ public class RttServiceImplTest extends WifiBaseTest {
 
         for (int i = 0; i < numIter; ++i) { // even: MC, non-MC, Aware, odd: MC only
             if (i % 2 == 0) {
-                requests[i] = RttTestUtils.getDummyRangingRequestMcOnly((byte) i);
+                requests[i] = RttTestUtils.getDummyRangingRequestMcOnly((byte) i,
+                        RangingRequest.getDefaultRttBurstSize());
             } else {
                 requests[i] = RttTestUtils.getDummyRangingRequest((byte) i);
             }
