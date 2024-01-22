@@ -663,9 +663,6 @@
     <!-- Indicates that hidden networks are to be scanned during scan only mode -->
     <bool translatable="false" name="config_wifiScanHiddenNetworksScanOnlyMode">false</bool>
 
-    <!-- Enable logging WifiIsUnusableEvent in metrics which gets triggered when wifi becomes unusable. -->
-    <bool translatable="false" name="config_wifiIsUnusableEventMetricsEnabled">true</bool>
-
     <!-- The minimum number of txBad the framework has to observe to trigger a wifi data stall. -->
     <integer translatable="false" name="config_wifiDataStallMinTxBad">1</integer>
 
