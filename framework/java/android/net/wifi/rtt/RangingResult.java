@@ -21,18 +21,26 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SuppressLint;
+import android.annotation.SystemApi;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
+import android.net.wifi.ParcelUtil;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiAnnotations.ChannelWidth;
 import android.net.wifi.aware.PeerHandle;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import androidx.annotation.RequiresApi;
+
+import com.android.modules.utils.build.SdkLevel;
 import com.android.wifi.flags.Flags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -104,6 +112,7 @@ public final class RangingResult implements Parcelable {
     private final int mR2iTxLtfRepetitions;
     private final int mNumTxSpatialStreams;
     private final int mNumRxSpatialStreams;
+    private List<OuiKeyedData> mVendorData;
 
     /**
      * Builder class used to construct {@link RangingResult} objects.
@@ -132,6 +141,7 @@ public final class RangingResult implements Parcelable {
         private int mR2iTxLtfRepetitions = UNSPECIFIED;
         private int mNumTxSpatialStreams = UNSPECIFIED;
         private int mNumRxSpatialStreams = UNSPECIFIED;
+        private List<OuiKeyedData> mVendorData = Collections.emptyList();
 
         /**
          * Sets the Range result status from {@link RangeResultStatus}.
@@ -462,6 +472,29 @@ public final class RangingResult implements Parcelable {
         }
 
         /**
+         * Set additional vendor-provided configuration data.
+         *
+         * @param vendorData List of {@link android.net.wifi.OuiKeyedData} containing the
+         *                   vendor-provided configuration data. Note that multiple elements with
+         *                   the same OUI are allowed.
+         * @hide
+         */
+        @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @SystemApi
+        @NonNull
+        public Builder setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+            if (!SdkLevel.isAtLeastV()) {
+                throw new UnsupportedOperationException();
+            }
+            if (vendorData == null) {
+                throw new IllegalArgumentException("setVendorData received a null value");
+            }
+            mVendorData = vendorData;
+            return this;
+        }
+
+        /**
          * Build {@link RangingResult}
          * @return an instance of {@link RangingResult}
          */
@@ -504,6 +537,7 @@ public final class RangingResult implements Parcelable {
         mR2iTxLtfRepetitions = builder.mR2iTxLtfRepetitions;
         mNumRxSpatialStreams = builder.mNumRxSpatialStreams;
         mNumTxSpatialStreams = builder.mNumTxSpatialStreams;
+        mVendorData = builder.mVendorData;
     }
 
     /**
@@ -852,6 +886,23 @@ public final class RangingResult implements Parcelable {
         return mPacketBw;
     }
 
+    /**
+     * Get the vendor-provided configuration data, if it exists.
+     *
+     * @return Vendor configuration data, or empty list if it does not exist.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @SystemApi
+    @NonNull
+    public List<OuiKeyedData> getVendorData() {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        return mVendorData;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -891,6 +942,9 @@ public final class RangingResult implements Parcelable {
         dest.writeInt(mR2iTxLtfRepetitions);
         dest.writeInt(mNumTxSpatialStreams);
         dest.writeInt(mNumRxSpatialStreams);
+        if (SdkLevel.isAtLeastV()) {
+            dest.writeList(mVendorData);
+        }
     }
 
     public static final @android.annotation.NonNull Creator<RangingResult> CREATOR =
@@ -902,7 +956,7 @@ public final class RangingResult implements Parcelable {
 
                 @Override
                 public RangingResult createFromParcel(Parcel in) {
-                    return new Builder()
+                    RangingResult.Builder builder = new Builder()
                             .setStatus(in.readInt())
                             .setMacAddress(
                                     in.readBoolean() ? MacAddress.CREATOR.createFromParcel(in)
@@ -927,8 +981,11 @@ public final class RangingResult implements Parcelable {
                             .set80211azInitiatorTxLtfRepetitionsCount(in.readInt())
                             .set80211azResponderTxLtfRepetitionsCount(in.readInt())
                             .set80211azNumberOfTxSpatialStreams(in.readInt())
-                            .set80211azNumberOfRxSpatialStreams(in.readInt())
-                            .build();
+                            .set80211azNumberOfRxSpatialStreams(in.readInt());
+                    if (SdkLevel.isAtLeastV()) {
+                        builder.setVendorData(ParcelUtil.readOuiKeyedDataList(in));
+                    }
+                    return builder.build();
                 }
             };
 
@@ -958,6 +1015,7 @@ public final class RangingResult implements Parcelable {
                 .append("r2iTxLtfRepetitions").append(mR2iTxLtfRepetitions)
                 .append("txSpatialStreams").append(mNumTxSpatialStreams)
                 .append("rxSpatialStreams").append(mNumRxSpatialStreams)
+                .append(", vendorData=").append(mVendorData)
                 .append("]").toString();
     }
 
@@ -990,7 +1048,8 @@ public final class RangingResult implements Parcelable {
                 && mI2rTxLtfRepetitions == lhs.mI2rTxLtfRepetitions
                 && mR2iTxLtfRepetitions == lhs.mR2iTxLtfRepetitions
                 && mNumTxSpatialStreams == lhs.mNumTxSpatialStreams
-                && mNumRxSpatialStreams == lhs.mNumRxSpatialStreams;
+                && mNumRxSpatialStreams == lhs.mNumRxSpatialStreams
+                && Objects.equals(mVendorData, lhs.mVendorData);
     }
 
     @Override
@@ -1000,6 +1059,6 @@ public final class RangingResult implements Parcelable {
                 Arrays.hashCode(mLcr), mResponderLocation, mTimestamp, mIs80211mcMeasurement,
                 mFrequencyMHz, mPacketBw, mIs80211azNtbMeasurement, mNtbMinMeasurementTime,
                 mNtbMaxMeasurementTime, mI2rTxLtfRepetitions, mR2iTxLtfRepetitions,
-                mNumTxSpatialStreams, mR2iTxLtfRepetitions);
+                mNumTxSpatialStreams, mR2iTxLtfRepetitions, mVendorData);
     }
 }

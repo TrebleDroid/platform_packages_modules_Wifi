@@ -1365,6 +1365,10 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                     } else {
                         builder.setPeerHandle(peer.peerHandle);
                     }
+                    if (SdkLevel.isAtLeastV() && resultForRequest.getVendorData() != null
+                            && !resultForRequest.getVendorData().isEmpty()) {
+                        builder.setVendorData(resultForRequest.getVendorData());
+                    }
                     finalResults.add(builder.build());
                 }
             }
