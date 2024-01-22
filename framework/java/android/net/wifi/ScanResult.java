@@ -1549,6 +1549,52 @@ public final class ScanResult implements Parcelable {
             mBssid = bssid;
         }
 
+        /**
+         * @hide
+         *
+         */
+        public Builder() {
+
+        }
+
+        /**
+         * @hide
+         */
+        public Builder setWifiSsid(WifiSsid wifiSsid) {
+            mWifiSsid = wifiSsid;
+            return this;
+        }
+
+        /**
+         * @hide
+         */
+        public Builder setBssid(String bssid) {
+            mBssid = bssid;
+            return this;
+        }
+
+        /**
+         * @hide
+         */
+        public void clear() {
+            mWifiSsid = null;
+            mBssid = null;
+            mHessid = 0;
+            mAnqpDomainId = 0;
+            mOsuProviders = null;
+            mCaps = null;
+            mRssi = UNSPECIFIED;
+            mFrequency = UNSPECIFIED;
+            mTsf = 0;
+            mDistanceCm = UNSPECIFIED;
+            mDistanceSdCm = UNSPECIFIED;
+            mChannelWidth = ScanResult.CHANNEL_WIDTH_20MHZ;
+            mCenterFreq0 = UNSPECIFIED;
+            mCenterFreq1 = UNSPECIFIED;
+            mIs80211McRTTResponder = false;
+            mIs80211azNtbRTTResponder = false;
+        }
+
         /** @hide */
         public ScanResult build() {
             return new ScanResult(this);
