@@ -758,6 +758,7 @@ package android.net.wifi {
     method public boolean isRestricted();
     method public boolean isUntrusted();
     method public boolean isUserInteractionRequired();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public boolean isWifi7Enabled();
     method public void writeToParcel(android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.WifiNetworkSuggestion> CREATOR;
     field public static final int RANDOMIZATION_NON_PERSISTENT = 1; // 0x1
@@ -788,6 +789,7 @@ package android.net.wifi {
     method @NonNull public android.net.wifi.WifiNetworkSuggestion.Builder setUntrusted(boolean);
     method @NonNull public android.net.wifi.WifiNetworkSuggestion.Builder setWapiEnterpriseConfig(@NonNull android.net.wifi.WifiEnterpriseConfig);
     method @NonNull public android.net.wifi.WifiNetworkSuggestion.Builder setWapiPassphrase(@NonNull String);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @NonNull public android.net.wifi.WifiNetworkSuggestion.Builder setWifi7Enabled(boolean);
     method @NonNull public android.net.wifi.WifiNetworkSuggestion.Builder setWifiSsid(@NonNull android.net.wifi.WifiSsid);
     method @NonNull public android.net.wifi.WifiNetworkSuggestion.Builder setWpa2EnterpriseConfig(@NonNull android.net.wifi.WifiEnterpriseConfig);
     method @NonNull public android.net.wifi.WifiNetworkSuggestion.Builder setWpa2Passphrase(@NonNull String);

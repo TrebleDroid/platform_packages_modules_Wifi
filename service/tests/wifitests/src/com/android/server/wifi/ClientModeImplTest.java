@@ -10956,4 +10956,25 @@ public class ClientModeImplTest extends WifiBaseTest {
         assertEquals(53, links.get(0).getChannel());
         assertEquals(WifiScanner.WIFI_BAND_6_GHZ, links.get(0).getBand());
     }
+
+    /**
+     * Verify that we disconnect Wi-Fi 7 is toggled.
+     */
+    @Test
+    public void verifyDisconnectOnTogglingWifi7() throws Exception {
+        connect();
+
+        WifiConfiguration oldConfig = new WifiConfiguration(mConnectedNetwork);
+        mConnectedNetwork.setWifi7Enabled(false);
+
+        for (WifiConfigManager.OnNetworkUpdateListener listener : mConfigUpdateListenerCaptor
+                .getAllValues()) {
+            listener.onNetworkUpdated(mConnectedNetwork, oldConfig, false);
+        }
+        mLooper.dispatchAll();
+        verify(mWifiNative).disconnect(WIFI_IFACE_NAME);
+        verify(mWifiMetrics).logStaEvent(anyString(), eq(StaEvent.TYPE_FRAMEWORK_DISCONNECT),
+                eq(StaEvent.DISCONNECT_NETWORK_WIFI7_TOGGLED));
+    }
+
 }

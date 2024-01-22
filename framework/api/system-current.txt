@@ -545,12 +545,14 @@ package android.net.wifi {
     method @Deprecated public boolean isNoInternetAccessExpected();
     method @Deprecated public boolean isRepeaterEnabled();
     method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public boolean isSendDhcpHostnameEnabled();
+    method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public boolean isWifi7Enabled();
     method @Deprecated public void setBssidAllowlist(@Nullable java.util.List<android.net.MacAddress>);
     method @Deprecated public void setDeletionPriority(int) throws java.lang.IllegalArgumentException;
     method @Deprecated public void setNetworkSelectionStatus(@NonNull android.net.wifi.WifiConfiguration.NetworkSelectionStatus);
     method @Deprecated @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void setRepeaterEnabled(boolean);
     method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void setSendDhcpHostnameEnabled(boolean);
     method @Deprecated @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
+    method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void setWifi7Enabled(boolean);
     field @Deprecated @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.WifiConfiguration> CREATOR;
     field @Deprecated public static final int INVALID_NETWORK_ID = -1; // 0xffffffff
     field @Deprecated public static final int METERED_OVERRIDE_METERED = 1; // 0x1

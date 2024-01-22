@@ -391,6 +391,7 @@ public class XmlUtil {
         public static final String XML_TAG_DPP_CONNECTOR = "DppConnector";
         public static final String XML_TAG_DPP_CSIGN_KEY = "DppCSignKey";
         public static final String XML_TAG_DPP_NET_ACCESS_KEY = "DppNetAccessKey";
+        public static final String XML_TAG_ENABLE_WIFI7 = "EnableWifi7";
 
         /**
          * Write Wep Keys to the XML stream.
@@ -602,6 +603,7 @@ public class XmlUtil {
                     configuration.numRebootsSinceLastUse);
             XmlUtil.writeNextValue(out, XML_TAG_IS_REPEATER_ENABLED,
                     configuration.isRepeaterEnabled());
+            XmlUtil.writeNextValue(out, XML_TAG_ENABLE_WIFI7, configuration.isWifi7Enabled());
             writeSecurityParamsListToXml(out, configuration);
             XmlUtil.writeNextValue(out, XML_TAG_SEND_DHCP_HOSTNAME,
                     configuration.isSendDhcpHostnameEnabled());
@@ -1060,6 +1062,9 @@ public class XmlUtil {
                             break;
                         case XML_TAG_DPP_NET_ACCESS_KEY:
                             dppNetAccessKey = (byte[]) value;
+                            break;
+                        case XML_TAG_ENABLE_WIFI7:
+                            configuration.setWifi7Enabled((boolean) value);
                             break;
                         default:
                             Log.w(TAG, "Ignoring unknown value name found: " + valueName[0]);

@@ -811,6 +811,20 @@ public class WifiConfigManager {
     }
 
     /**
+     * Check Wi-Fi 7 is enabled for this network.
+     *
+     * @param networkId networkId of the requested network.
+     * @return true if Wi-Fi 7 is enabled for this network, false otherwise.
+     */
+    public boolean isWifi7Enabled(int networkId) {
+        WifiConfiguration config = getInternalConfiguredNetwork(networkId);
+        if (config == null) {
+            return false;
+        }
+        return config.isWifi7Enabled();
+    }
+
+    /**
      * Retrieves the configured network corresponding to the provided networkId with password
      * masked.
      *
@@ -1274,6 +1288,7 @@ public class WifiConfigManager {
         internalConfig.setBssidAllowlist(externalConfig.getBssidAllowlistInternal());
         internalConfig.setRepeaterEnabled(externalConfig.isRepeaterEnabled());
         internalConfig.setSendDhcpHostnameEnabled(externalConfig.isSendDhcpHostnameEnabled());
+        internalConfig.setWifi7Enabled(externalConfig.isWifi7Enabled());
     }
 
     /**

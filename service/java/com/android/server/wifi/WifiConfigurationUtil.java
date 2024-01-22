@@ -973,6 +973,9 @@ public class WifiConfigurationUtil {
         if (WifiConfigurationUtil.hasCredentialChanged(config, config1)) {
             return false;
         }
+        if (config.isWifi7Enabled() != config1.isWifi7Enabled()) {
+            return false;
+        }
         return true;
     }
 

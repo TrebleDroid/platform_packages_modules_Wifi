@@ -313,6 +313,13 @@ public class SupplicantStaNetworkHalAidlImpl {
             if (config == null) {
                 return false;
             }
+            // ieee80211be
+            if (!config.isWifi7Enabled() && isServiceVersionIsAtLeast(3)) {
+                if (!disableEht()) {
+                    Log.e(TAG, "failed to disable EHT (Wi-Fi 7)");
+                    return false;
+                }
+            }
             // SSID
             if (config.SSID != null) {
                 WifiSsid wifiSsid = WifiSsid.fromString(config.SSID);
@@ -1305,6 +1312,33 @@ public class SupplicantStaNetworkHalAidlImpl {
             try {
                 mISupplicantStaNetwork.setSsid(ssid);
                 Log.i(TAG, "Successfully set SSID");
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Disable EHT for this network.
+     *
+     * @return true if successful, false otherwise
+     */
+    private boolean disableEht() {
+        synchronized (mLock) {
+            final String methodStr = "disableEht";
+            if (!checkStaNetworkAndLogFailure(methodStr)) {
+                return false;
+            }
+            try {
+                if (!isServiceVersionIsAtLeast(3)) {
+                    return false;
+                }
+                mISupplicantStaNetwork.disableEht();
+                Log.i(TAG, "Successfully disabled EHT");
                 return true;
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);
