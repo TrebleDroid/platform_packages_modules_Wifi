@@ -4161,6 +4161,62 @@ public class WifiManagerTest {
                 any(IBooleanListener.Stub.class));
     }
 
+    /**
+     * Verify {@link WifiManager#setPerSsidRoamingMode(WifiSsid, int)}.
+     */
+    @Test
+    public void testSetPerSsidRoamingMode() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        // Invalid input throws exception.
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiManager.setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID), -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiManager.setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID), 3));
+        assertThrows(NullPointerException.class,
+                () -> mWifiManager.setPerSsidRoamingMode(null, WifiManager.ROAMING_MODE_NORMAL));
+        // Set and verify.
+        mWifiManager.setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID),
+                WifiManager.ROAMING_MODE_NORMAL);
+        verify(mWifiService).setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID),
+                WifiManager.ROAMING_MODE_NORMAL, TEST_PACKAGE_NAME);
+    }
+
+    /**
+     * Verify {@link WifiManager#removePerSsidRoamingMode(WifiSsid)}.
+     */
+    @Test
+    public void testRemovePerSsidRoamingMode() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        // Invalid input throws exception.
+        assertThrows(NullPointerException.class,
+                () -> mWifiManager.removePerSsidRoamingMode(null));
+        // Remove and verify.
+        mWifiManager.removePerSsidRoamingMode(WifiSsid.fromString(TEST_SSID));
+        verify(mWifiService).removePerSsidRoamingMode(WifiSsid.fromString(TEST_SSID),
+                TEST_PACKAGE_NAME);
+    }
+
+    /**
+     * Verify {@link WifiManager#getPerSsidRoamingModes()}.
+     */
+    @Test
+    public void testGetPerSsidRoamingModes() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        Consumer<Map<String, Integer>> resultsSetCallback = mock(Consumer.class);
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        // Null executor/callback exception.
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.getPerSsidRoamingModes(null,
+                        resultsSetCallback));
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.getPerSsidRoamingModes(executor,
+                        null));
+        // Get and verify.
+        mWifiManager.getPerSsidRoamingModes(executor, resultsSetCallback);
+        verify(mWifiService).getPerSsidRoamingModes(eq(TEST_PACKAGE_NAME),
+                any(IMapListener.Stub.class));
+    }
+
     @Test
     public void testGetTwtCapabilities() throws Exception {
         assumeTrue(SdkLevel.isAtLeastV());
