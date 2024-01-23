@@ -20,6 +20,7 @@ import static com.android.server.wifi.WifiNetworkSelector.toNetworkString;
 
 import android.annotation.NonNull;
 import android.net.wifi.WifiConfiguration;
+import android.os.Process;
 import android.telephony.TelephonyManager;
 import android.util.LocalLog;
 import android.util.Log;
@@ -161,7 +162,8 @@ public class NetworkSuggestionNominator implements WifiNetworkSelector.NetworkNo
         if (!untrustedNetworkAllowed && !config.trusted) {
             return true;
         }
-        if (!restrictedNetworkAllowedUids.contains(config.creatorUid) && config.restricted) {
+        if (!(restrictedNetworkAllowedUids.contains(config.creatorUid)
+                || config.creatorUid == Process.SYSTEM_UID) && config.restricted) {
             return true;
         }
         // For suggestions with both oem paid & oem private set, ignore them If both oem paid
