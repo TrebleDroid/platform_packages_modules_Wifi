@@ -90,6 +90,42 @@ public class WifiRttControllerAidlImplTest extends WifiBaseTest {
     }
 
     /**
+     * Verify RTT burst duration with respect to different burst sizes.
+     */
+    @Test
+    public void testBurstDuration() throws Exception {
+        int cmdId = 55;
+        RangingRequest request = RttTestUtils.getDummyRangingRequestMcOnly((byte) 0, 8);
+        mDut.rangeRequest(cmdId, request);
+        verify(mIWifiRttControllerMock).rangeRequest(eq(cmdId), mRttConfigCaptor.capture());
+        RttConfig[] halRequest = mRttConfigCaptor.getValue();
+        RttConfig rttConfig = halRequest[0];
+        collector.checkThat("(1) Rtt burst size", rttConfig.numFramesPerBurst, equalTo(8));
+        collector.checkThat("(1) Rtt burst duration", rttConfig.burstDuration, equalTo(9));
+
+        cmdId = 56;
+        request = RttTestUtils.getDummyRangingRequestMcOnly((byte) 0, 20);
+        mDut.rangeRequest(cmdId, request);
+        verify(mIWifiRttControllerMock).rangeRequest(eq(cmdId), mRttConfigCaptor.capture());
+        halRequest = mRttConfigCaptor.getValue();
+        rttConfig = halRequest[0];
+        collector.checkThat("(2) Rtt burst size", rttConfig.numFramesPerBurst, equalTo(20));
+        collector.checkThat("(2) Rtt burst duration", rttConfig.burstDuration, equalTo(10));
+
+        cmdId = 57;
+        request = RttTestUtils.getDummyRangingRequestMcOnly((byte) 0, 30);
+        mDut.rangeRequest(cmdId, request);
+        verify(mIWifiRttControllerMock).rangeRequest(eq(cmdId), mRttConfigCaptor.capture());
+        halRequest = mRttConfigCaptor.getValue();
+        rttConfig = halRequest[0];
+        collector.checkThat("(3) Rtt burst size", rttConfig.numFramesPerBurst, equalTo(30));
+        collector.checkThat("(3) Rtt burst duration", rttConfig.burstDuration, equalTo(11));
+
+        verifyNoMoreInteractions(mIWifiRttControllerMock);
+
+    }
+
+    /**
      * Validate successful ranging flow.
      */
     @Test
