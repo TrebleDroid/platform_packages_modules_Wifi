@@ -1975,6 +1975,75 @@ public class WifiConfiguration implements Parcelable {
         mRandomizedMacAddress = mac;
     }
 
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = {"HOSTNAME_SETTING_"}, value = {
+            DHCP_HOSTNAME_SETTING_AUTO,
+            DHCP_HOSTNAME_SETTING_SEND,
+            DHCP_HOSTNAME_SETTING_DO_NOT_SEND
+    })
+    public @interface DhcpHostnameSetting {}
+
+    /**
+     * Let the WiFi framework decide whether to send the hostname to this network's DHCP server."
+     * For open/OWE networks, this will not send the hostname.
+     * For all other networks, this will always send the hostname.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public static final int DHCP_HOSTNAME_SETTING_AUTO = 0;
+
+    /**
+     * Always send the hostname of this device to this network's DHCP server.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public static final int DHCP_HOSTNAME_SETTING_SEND = 1;
+
+    /**
+     * Do not send the hostname of this device to this network's DHCP server.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public static final int DHCP_HOSTNAME_SETTING_DO_NOT_SEND = 2;
+
+    private int mDhcpHostnameSetting = DHCP_HOSTNAME_SETTING_AUTO;
+
+    /**
+     * Set whether to send the hostname of the device to this network's DHCP server.
+     *
+     * @param setting One of {@link #DHCP_HOSTNAME_SETTING_AUTO},
+     *                       {@link #DHCP_HOSTNAME_SETTING_SEND} or
+     *                       {@link #DHCP_HOSTNAME_SETTING_DO_NOT_SEND}.
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD})
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public void setDhcpHostnameSetting(@DhcpHostnameSetting int setting) {
+        mDhcpHostnameSetting = setting;
+    }
+
+    /**
+     * Whether to send the hostname of the device to this network's DHCP server.
+     * @return One of {@link #DHCP_HOSTNAME_SETTING_AUTO},
+     *                {@link #DHCP_HOSTNAME_SETTING_SEND},
+     *                {@link #DHCP_HOSTNAME_SETTING_DO_NOT_SEND}.
+     * By default, this field is set to {@link #DHCP_HOSTNAME_SETTING_AUTO}.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    @DhcpHostnameSetting
+    public int getDhcpHostnameSetting() {
+        return mDhcpHostnameSetting;
+    }
+
     /**
      * This network supports DPP AKM and the device is configured to
      * onboard peer enrollee devices with {@link #SECURITY_TYPE_DPP}
@@ -3507,6 +3576,7 @@ public class WifiConfiguration implements Parcelable {
         sbuf.append(" randomizedMacLastModifiedTimeMs: ")
                 .append(randomizedMacLastModifiedTimeMs == 0 ? "<none>"
                         : logTimeOfDay(randomizedMacLastModifiedTimeMs)).append("\n");
+        sbuf.append(" mDhcpHostnameSetting: ").append(mDhcpHostnameSetting).append("\n");
         sbuf.append(" deletionPriority: ").append(mDeletionPriority).append("\n");
         sbuf.append(" KeyMgmt:");
         for (int k = 0; k < this.allowedKeyManagement.size(); k++) {
@@ -4104,6 +4174,7 @@ public class WifiConfiguration implements Parcelable {
             macRandomizationSetting = source.macRandomizationSetting;
             randomizedMacExpirationTimeMs = source.randomizedMacExpirationTimeMs;
             randomizedMacLastModifiedTimeMs = source.randomizedMacLastModifiedTimeMs;
+            mDhcpHostnameSetting = source.mDhcpHostnameSetting;
             requirePmf = source.requirePmf;
             updateIdentifier = source.updateIdentifier;
             carrierId = source.carrierId;
@@ -4206,6 +4277,7 @@ public class WifiConfiguration implements Parcelable {
         dest.writeLong(recentFailure.getLastUpdateTimeSinceBootMillis());
         dest.writeParcelable(mRandomizedMacAddress, flags);
         dest.writeInt(macRandomizationSetting);
+        dest.writeInt(mDhcpHostnameSetting);
         dest.writeInt(osu ? 1 : 0);
         dest.writeLong(randomizedMacExpirationTimeMs);
         dest.writeLong(randomizedMacLastModifiedTimeMs);
@@ -4311,6 +4383,7 @@ public class WifiConfiguration implements Parcelable {
                     config.mRandomizedMacAddress = in.readParcelable(
                             MacAddress.class.getClassLoader());
                     config.macRandomizationSetting = in.readInt();
+                    config.mDhcpHostnameSetting = in.readInt();
                     config.osu = in.readInt() != 0;
                     config.randomizedMacExpirationTimeMs = in.readLong();
                     config.randomizedMacLastModifiedTimeMs = in.readLong();

@@ -124,6 +124,7 @@ public class WifiConfigStoreTest extends WifiBaseTest {
                     + "<byte-array name=\"AllowedSuiteBCiphers\" num=\"0\"></byte-array>\n"
                     + "</SecurityParams>\n"
                     + "</SecurityParamsList>\n"
+                    + "<int name=\"DhcpHostnameSetting\" value=\"0\" />\n"
                     + "<boolean name=\"Trusted\" value=\"true\" />\n"
                     + "<boolean name=\"IsRestricted\" value=\"false\" />\n"
                     + "<boolean name=\"OemPaid\" value=\"false\" />\n"
