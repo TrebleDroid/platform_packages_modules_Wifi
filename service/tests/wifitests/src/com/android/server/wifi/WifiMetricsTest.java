@@ -523,7 +523,6 @@ public class WifiMetricsTest extends WifiBaseTest {
     private static final long NUM_WATCHDOG_SUCCESS_DURATION_MS = 65;
     private static final long WIFI_POWER_METRICS_LOGGING_DURATION = 280;
     private static final long WIFI_POWER_METRICS_SCAN_TIME = 33;
-    private static final boolean WIFI_IS_UNUSABLE_EVENT_LOGGING_SETTING = true;
     private static final boolean LINK_SPEED_COUNTS_LOGGING_SETTING = true;
     private static final int DATA_STALL_MIN_TX_BAD_SETTING = 5;
     private static final int DATA_STALL_MIN_TX_SUCCESS_WITHOUT_RX_SETTING = 75;
@@ -1088,8 +1087,6 @@ public class WifiMetricsTest extends WifiBaseTest {
 
         addWifiHealthMetrics();
 
-        mResources.setBoolean(R.bool.config_wifiIsUnusableEventMetricsEnabled,
-                WIFI_IS_UNUSABLE_EVENT_LOGGING_SETTING);
         mResources.setBoolean(R.bool.config_wifiLinkSpeedMetricsEnabled,
                 LINK_SPEED_COUNTS_LOGGING_SETTING);
         mResources.setInteger(R.integer.config_wifiDataStallMinTxBad,
@@ -1596,8 +1593,6 @@ public class WifiMetricsTest extends WifiBaseTest {
                 mDecodedProto.wifiRadioUsage.loggingDurationMs);
         assertEquals(WIFI_POWER_METRICS_SCAN_TIME,
                 mDecodedProto.wifiRadioUsage.scanTimeMs);
-        assertEquals(WIFI_IS_UNUSABLE_EVENT_LOGGING_SETTING,
-                mDecodedProto.experimentValues.wifiIsUnusableLoggingEnabled);
         assertEquals(LINK_SPEED_COUNTS_LOGGING_SETTING,
                 mDecodedProto.experimentValues.linkSpeedCountsLoggingEnabled);
         assertEquals(DATA_STALL_MIN_TX_BAD_SETTING,
@@ -3716,22 +3711,10 @@ public class WifiMetricsTest extends WifiBaseTest {
     }
 
     /**
-     * Verify that no WifiIsUnusableEvent is generated when it is disabled in the settings
-     */
-    @Test
-    public void testNoUnusableEventLogWhenDisabled() throws Exception {
-        mResources.setBoolean(R.bool.config_wifiIsUnusableEventMetricsEnabled, false);
-        generateAllUnusableEvents(mWifiMetrics);
-        dumpProtoAndDeserialize();
-        assertEquals(0, mDecodedProto.wifiIsUnusableEventList.length);
-    }
-
-    /**
      * Generate WifiIsUnusableEvent and verify that they are logged correctly
      */
     @Test
     public void testUnusableEventLogSerializeDeserialize() throws Exception {
-        mResources.setBoolean(R.bool.config_wifiIsUnusableEventMetricsEnabled, true);
         generateAllUnusableEvents(mWifiMetrics);
         dumpProtoAndDeserialize();
         verifyDeserializedUnusableEvents(mDecodedProto);
@@ -3743,7 +3726,6 @@ public class WifiMetricsTest extends WifiBaseTest {
      */
     @Test
     public void testWifiIsUnUsableReportedWithNoExternalScorer() throws Exception {
-        mResources.setBoolean(R.bool.config_wifiIsUnusableEventMetricsEnabled, true);
         generateAllUnusableEvents(mWifiMetrics);
         for (int i = 0; i < mTestUnusableEvents.length; i++) {
             int index = i;
@@ -3759,7 +3741,6 @@ public class WifiMetricsTest extends WifiBaseTest {
      */
     @Test
     public void testWifiIsUnUsableReportedWithExternalScorer() throws Exception {
-        mResources.setBoolean(R.bool.config_wifiIsUnusableEventMetricsEnabled, true);
         mWifiMetrics.setIsExternalWifiScorerOn(true, TEST_UID);
         mWifiMetrics.setScorerPredictedWifiUsabilityState(TEST_IFACE_NAME,
                 WifiMetrics.WifiUsabilityState.USABLE);
@@ -3777,7 +3758,6 @@ public class WifiMetricsTest extends WifiBaseTest {
      */
     @Test
     public void testUnusableEventBounding() throws Exception {
-        mResources.setBoolean(R.bool.config_wifiIsUnusableEventMetricsEnabled, true);
         for (int i = 0; i < (WifiMetrics.MAX_UNUSABLE_EVENTS + 2); i++) {
             generateAllUnusableEvents(mWifiMetrics);
         }
@@ -3791,7 +3771,6 @@ public class WifiMetricsTest extends WifiBaseTest {
      */
     @Test
     public void testUnusableEventTimeThrottleForDataStall() throws Exception {
-        mResources.setBoolean(R.bool.config_wifiIsUnusableEventMetricsEnabled, true);
         generateUnusableEventAtGivenTime(0, 0);
         // should be time throttled
         generateUnusableEventAtGivenTime(1, 1);

@@ -200,7 +200,6 @@
           <item type="integer" name="config_wifiBssidBlocklistMonitorValidationFailureBaseBlockDurationMs" />
           <item type="bool" name="config_wifiScanHiddenNetworksScanOnlyMode" />
           <item type="integer" name="config_wifiHardwareSoftapMaxClientCount" />
-          <item type="bool" name="config_wifiIsUnusableEventMetricsEnabled" />
           <item type="integer" name="config_wifiDataStallMinTxBad" />
           <item type="integer" name="config_wifiDataStallMinTxSuccessWithoutRx" />
           <item type="bool" name="config_wifiLinkSpeedMetricsEnabled" />

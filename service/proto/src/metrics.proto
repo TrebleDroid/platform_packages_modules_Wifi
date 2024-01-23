@@ -2310,8 +2310,8 @@ message WifiRadioUsage {
 }
 
 message ExperimentValues {
-  // Indicates if we are logging WifiIsUnusableEvent in metrics
-  optional bool wifi_is_unusable_logging_enabled = 1;
+  reserved 1;
+  reserved "wifi_is_unusable_logging_enabled";
 
   // Minimum number of txBad to trigger a data stall
   optional int32 wifi_data_stall_min_tx_bad = 2;
