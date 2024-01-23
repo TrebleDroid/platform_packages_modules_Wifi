@@ -84,6 +84,7 @@ public class WifiGlobals {
     private final boolean mIsWepDeprecated;
     private final boolean mIsWpaPersonalDeprecated;
     private final Map<String, List<String>> mCountryCodeToAfcServers;
+    private final long mWifiConfigMaxDisableDurationMs;
     // This is set by WifiManager#setVerboseLoggingEnabled(int).
     private int mVerboseLoggingLevel = WifiManager.VERBOSE_LOGGING_LEVEL_DISABLED;
     private boolean mIsUsingExternalScorer = false;
@@ -162,6 +163,8 @@ public class WifiGlobals {
         mIsAfcSupportedOnDevice = mContext.getResources().getBoolean(R.bool.config_wifiAfcSupported)
                 && mContext.getResources().getBoolean(R.bool.config_wifiSoftap6ghzSupported)
                 && mContext.getResources().getBoolean(R.bool.config_wifi6ghzSupport);
+        mWifiConfigMaxDisableDurationMs = mContext.getResources()
+                .getInteger(R.integer.config_wifiDisableTemporaryMaximumDurationMs);
         Set<String> unsupportedSsidPrefixes = new ArraySet<>(mContext.getResources().getStringArray(
                 R.array.config_wifiForceDisableMacRandomizationSsidPrefixList));
         mCountryCodeToAfcServers = getCountryCodeToAfcServersMap();
@@ -605,6 +608,13 @@ public class WifiGlobals {
         return mIsWepAllowed.get();
     }
 
+    /**
+     * Get the maximum Wifi temporary disable duration.
+     */
+    public long getWifiConfigMaxDisableDurationMs() {
+        return mWifiConfigMaxDisableDurationMs;
+    }
+
     /** Dump method for debugging */
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("Dump of WifiGlobals");
@@ -641,6 +651,7 @@ public class WifiGlobals {
         pw.println("mRepeatedNudFailuresThreshold=" + mRepeatedNudFailuresThreshold);
         pw.println("mRepeatedNudFailuresWindowMs=" + mRepeatedNudFailuresWindowMs);
         pw.println("mCarrierSpecificEapFailureConfigMapPerCarrierId mapping below:");
+        pw.println("mWifiConfigMaxDisableDurationMs=" + mWifiConfigMaxDisableDurationMs);
         for (int i = 0; i < mCarrierSpecificEapFailureConfigMapPerCarrierId.size(); i++) {
             int carrierId = mCarrierSpecificEapFailureConfigMapPerCarrierId.keyAt(i);
             SparseArray<CarrierSpecificEapFailureConfig> perFailureMap =

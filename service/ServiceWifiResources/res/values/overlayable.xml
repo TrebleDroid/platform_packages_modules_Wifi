@@ -167,6 +167,7 @@
           <item type="integer" name="config_wifiDisableReasonByWrongPasswordThreshold" />
           <item type="integer" name="config_wifiDisableReasonAuthenticationNoSubscriptionThreshold" />
           <item type="integer" name="config_wifiDisableReasonConsecutiveFailuresThreshold" />
+          <item type="integer" name="config_wifiDisableTemporaryMaximumDurationMs" />
 
           <item type="integer" name="config_wifiDisableReasonAssociationRejectionDurationMs" />
           <item type="integer" name="config_wifiDisableReasonAuthenticationFailureDurationMs" />

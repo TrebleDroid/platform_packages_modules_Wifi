@@ -118,8 +118,6 @@ public class WifiBlocklistMonitor {
     private static final int MIN_RSSI_DIFF_TO_UNBLOCK_BSSID = 5;
     @VisibleForTesting
     public static final int NUM_CONSECUTIVE_FAILURES_PER_NETWORK_EXP_BACKOFF = 5;
-    @VisibleForTesting
-    public static final long WIFI_CONFIG_MAX_DISABLE_DURATION_MILLIS = TimeUnit.HOURS.toMillis(18);
     private static final String TAG = "WifiBlocklistMonitor";
 
     private final Context mContext;
@@ -135,6 +133,7 @@ public class WifiBlocklistMonitor {
     private final Map<Integer, BssidDisableReason> mBssidDisableReasons =
             buildBssidDisableReasons();
     private final SparseArray<DisableReasonInfo> mDisableReasonInfo;
+    private final WifiGlobals mWifiGlobals;
 
     // Map of bssid to BssidStatus
     private Map<String, BssidStatus> mBssidStatusMap = new ArrayMap<>();
@@ -251,7 +250,7 @@ public class WifiBlocklistMonitor {
     WifiBlocklistMonitor(Context context, WifiConnectivityHelper connectivityHelper,
             WifiLastResortWatchdog wifiLastResortWatchdog, Clock clock, LocalLog localLog,
             WifiScoreCard wifiScoreCard, ScoringParams scoringParams, WifiMetrics wifiMetrics,
-            WifiPermissionsUtil wifiPermissionsUtil) {
+            WifiPermissionsUtil wifiPermissionsUtil, WifiGlobals wifiGlobals) {
         mContext = context;
         mConnectivityHelper = connectivityHelper;
         mWifiLastResortWatchdog = wifiLastResortWatchdog;
@@ -262,6 +261,7 @@ public class WifiBlocklistMonitor {
         mDisableReasonInfo = DISABLE_REASON_INFOS.clone();
         mWifiMetrics = wifiMetrics;
         mWifiPermissionsUtil = wifiPermissionsUtil;
+        mWifiGlobals = wifiGlobals;
         loadCustomConfigsForDisableReasonInfos();
     }
 
@@ -1386,8 +1386,8 @@ public class WifiBlocklistMonitor {
                 - NUM_CONSECUTIVE_FAILURES_PER_NETWORK_EXP_BACKOFF;
         for (int i = 0; i < exponentialBackoffCount; i++) {
             disableDurationMs *= 2;
-            if (disableDurationMs > WIFI_CONFIG_MAX_DISABLE_DURATION_MILLIS) {
-                disableDurationMs = WIFI_CONFIG_MAX_DISABLE_DURATION_MILLIS;
+            if (disableDurationMs > mWifiGlobals.getWifiConfigMaxDisableDurationMs()) {
+                disableDurationMs = mWifiGlobals.getWifiConfigMaxDisableDurationMs();
                 break;
             }
         }
