@@ -11648,7 +11648,9 @@ public class WifiManager {
      *
      * Note: All policies in a single request must have the same {@link QosPolicyParams.Direction}.
      *
-     * Note: Currently, only the {@link QosPolicyParams#DIRECTION_DOWNLINK} direction is supported.
+     * Note: Support for the {@link QosPolicyParams#DIRECTION_UPLINK} direction is added in
+     *       {@link android.os.Build.VERSION_CODES#VANILLA_ICE_CREAM}. For earlier releases,
+     *       only the {@link QosPolicyParams#DIRECTION_DOWNLINK} direction is supported.
      *
      * @param policyParamsList List of {@link QosPolicyParams} objects describing the requested
      *                         policies. Must have a maximum length of
