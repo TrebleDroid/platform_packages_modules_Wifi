@@ -2238,7 +2238,8 @@ public class ActiveModeWarden {
         }
 
         private boolean shouldEnableSta() {
-            return mSettingsStore.isWifiToggleEnabled() || shouldEnableScanOnlyMode();
+            return (mSettingsStore.isWifiToggleEnabled() || shouldEnableScanOnlyMode())
+                    && !mSettingsStore.isSatelliteModeOn();
         }
 
         private void handleStaToggleChangeInDisabledState(WorkSource requestorWs) {

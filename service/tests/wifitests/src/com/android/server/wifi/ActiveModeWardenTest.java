@@ -5265,6 +5265,42 @@ public class ActiveModeWardenTest extends WifiBaseTest {
     }
 
     @Test
+    public void testSatelliteModemDisableWifiWhenLocationModeChanged() throws Exception {
+        when(mSettingsStore.isScanAlwaysAvailable()).thenReturn(true);
+        when(mWifiPermissionsUtil.isLocationModeEnabled()).thenReturn(false);
+
+        // Wifi is enabled
+        enterClientModeActiveState();
+        assertInEnabledState();
+
+        // Satellite mode is ON, disable Wifi
+        assertWifiShutDown(() -> {
+            when(mSettingsStore.isSatelliteModeOn()).thenReturn(true);
+            mActiveModeWarden.handleSatelliteModeChange();
+            mLooper.dispatchAll();
+        });
+        mClientListener.onStopped(mClientModeManager);
+        mLooper.dispatchAll();
+        assertInDisabledState();
+
+        // Location state changes
+        ArgumentCaptor<BroadcastReceiver> bcastRxCaptor =
+                ArgumentCaptor.forClass(BroadcastReceiver.class);
+        verify(mContext).registerReceiver(
+                bcastRxCaptor.capture(),
+                argThat(filter -> filter.hasAction(LocationManager.MODE_CHANGED_ACTION)));
+        BroadcastReceiver broadcastReceiver = bcastRxCaptor.getValue();
+
+        when(mWifiPermissionsUtil.isLocationModeEnabled()).thenReturn(true);
+        Intent intent = new Intent(LocationManager.MODE_CHANGED_ACTION);
+        broadcastReceiver.onReceive(mContext, intent);
+        mLooper.dispatchAll();
+
+        // Ensure Wi-Fi is still disabled
+        assertInDisabledState();
+    }
+
+    @Test
     public void testOnIdleModeChanged() throws Exception {
         enterClientModeActiveState();
         List<ClientModeManager> currentCMMs = mActiveModeWarden.getClientModeManagers();
