@@ -402,7 +402,8 @@ public class WifiConnectivityManager {
             // a different band with the primary.
             return false;
         }
-        if (WifiInjector.getInstance().getHalDeviceManager()
+        if (mActiveModeWarden.getClientModeManagerInRole(ROLE_CLIENT_SECONDARY_LONG_LIVED)
+                == null && WifiInjector.getInstance().getHalDeviceManager()
                 .creatingIfaceWillDeletePrivilegedIface(HalDeviceManager.HDM_CREATE_IFACE_STA,
                         mMultiInternetConnectionRequestorWs)) {
             localLog(listenerName + ": No secondary cmm candidate");
