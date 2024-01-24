@@ -167,6 +167,9 @@ public final class WifiAnnotations {
     })
     public @interface SecurityType {}
 
+    /**
+     * The type of wifi uri scheme.
+     */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(prefix = {"URI_SCHEME_"}, value = {
             UriParserResults.URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG,
