@@ -8110,6 +8110,54 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     /**
+     * See {@link android.net.wifi.WifiManager#setSendDhcpHostnameRestriction(int)}.
+     */
+    public void setSendDhcpHostnameRestriction(@NonNull String packageName,
+            @WifiManager.SendDhcpHostnameRestriction int restriction) {
+        int callingUid = Binder.getCallingUid();
+        int callingPid = Binder.getCallingPid();
+        if (mVerboseLoggingEnabled) {
+            mLog.info("setSendDhcpHostnameRestriction:% uid=% package=%").c(restriction)
+                    .c(callingUid).c(packageName).flush();
+        }
+        if (!isSettingsOrSuw(callingPid, callingUid)
+                && !mWifiPermissionsUtil.isDeviceOwner(callingUid, packageName)) {
+            throw new SecurityException("Uid " + callingUid
+                    + " is not allowed to query the global dhcp hostname restriction");
+        }
+        mWifiThreadRunner.post(() -> mWifiGlobals.setSendDhcpHostnameRestriction(restriction));
+    }
+
+    /**
+     * See {@link WifiManager#querySendDhcpHostnameRestriction(Executor, Consumer)}
+     */
+    @Override
+    public void querySendDhcpHostnameRestriction(@NonNull String packageName,
+            @NonNull IIntegerListener listener) {
+        if (listener == null) {
+            throw new IllegalArgumentException("listener should not be null");
+        }
+        int callingUid = Binder.getCallingUid();
+        int callingPid = Binder.getCallingPid();
+        if (mVerboseLoggingEnabled) {
+            mLog.info("querySendDhcpHostnameRestriction: uid=% package=%")
+                    .c(callingUid).c(packageName).flush();
+        }
+        if (!isSettingsOrSuw(callingPid, callingUid)
+                && !mWifiPermissionsUtil.isDeviceOwner(callingUid, packageName)) {
+            throw new SecurityException("Uid " + callingUid
+                    + " is not allowed to query the global dhcp hostname restriction");
+        }
+        mWifiThreadRunner.post(() -> {
+            try {
+                listener.onResult(mWifiGlobals.getSendDhcpHostnameRestriction());
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage(), e);
+            }
+        });
+    }
+
+    /**
      * Force Overlay Config for testing
      */
     public boolean forceOverlayConfigValue(String configString, String value, boolean isEnabled) {

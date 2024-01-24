@@ -12136,4 +12136,92 @@ public class WifiManager {
             throw e.rethrowFromSystemServer();
         }
     }
+
+    /**
+     * No restriction for sending the DHCP hostname.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_NONE = 0;
+
+    /**
+     * Do not send the DHCP hostname to open networks.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_OPEN = 1;
+
+    /**
+     * Do not send the DHCP hostname to any network.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_ALL = 2;
+
+    /** @hide */
+    @IntDef(prefix = { "SEND_DHCP_HOSTNAME_RESTRICTION_" }, value = {
+            SEND_DHCP_HOSTNAME_RESTRICTION_NONE,
+            SEND_DHCP_HOSTNAME_RESTRICTION_OPEN,
+            SEND_DHCP_HOSTNAME_RESTRICTION_ALL,
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface SendDhcpHostnameRestriction {}
+
+    /**
+     * Set a global restriction on which networks to send the device hostname to during DHCP.
+     *
+     * @param restriction One of {@link #SEND_DHCP_HOSTNAME_RESTRICTION_NONE},
+     *                    {@link #SEND_DHCP_HOSTNAME_RESTRICTION_OPEN} or
+     *                    {@link #SEND_DHCP_HOSTNAME_RESTRICTION_ALL}.
+     *
+     * @throws SecurityException if the calling app is not a Device Owner (DO), or a privileged app
+     *                           that has one of the permissions required by this API.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD
+    })
+    public void setSendDhcpHostnameRestriction(@SendDhcpHostnameRestriction int restriction) {
+        try {
+            mService.setSendDhcpHostnameRestriction(mContext.getOpPackageName(), restriction);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Query the global restriction on which networks to send the device hostname to during DHCP.
+     * @see #setDhcpHostnameRestriction(int)
+     *
+     * @param executor The executor on which callback will be invoked.
+     * @param resultsCallback An asynchronous callback that will return one of
+     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_NONE},
+     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_OPEN} or
+     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_ALL}.
+     *
+     * @throws SecurityException if the calling app is not a Device Owner (DO), or a privileged app
+     *                           that has one of the permissions required by this API.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD
+    })
+    public void querySendDhcpHostnameRestriction(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<Integer> resultsCallback) {
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
+        try {
+            mService.querySendDhcpHostnameRestriction(mContext.getOpPackageName(),
+                    new IIntegerListener.Stub() {
+                        @Override
+                        public void onResult(int value) {
+                            Binder.clearCallingIdentity();
+                            executor.execute(() -> {
+                                resultsCallback.accept(value);
+                            });
+                        }
+                    });
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
 }
