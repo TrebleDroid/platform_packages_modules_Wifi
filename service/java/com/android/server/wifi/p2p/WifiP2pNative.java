@@ -68,6 +68,20 @@ public class WifiP2pNative {
     private String mP2pIfaceName;
     private InterfaceDestroyedListenerInternal mInterfaceDestroyedListener;
 
+    /**
+     * Death handler for the supplicant daemon.
+     */
+    private class SupplicantDeathHandlerInternal implements WifiNative.SupplicantDeathEventHandler {
+        @Override
+        public void onDeath() {
+            if (mP2pIface != null) {
+                Log.i(TAG, "wpa_supplicant died. Cleaning up internal state.");
+                mInterfaceDestroyedListener.teardownAndInvalidate(mP2pIface.name);
+                mWifiMetrics.incrementNumSupplicantCrashes();
+            }
+        }
+    }
+
     // Internal callback registered to HalDeviceManager.
     private class InterfaceDestroyedListenerInternal implements
             HalDeviceManager.InterfaceDestroyedListener {
@@ -82,6 +96,10 @@ public class WifiP2pNative {
 
         public void teardownAndInvalidate(@Nullable String ifaceName) {
             synchronized (mLock) {
+                if (mFeatureFlags.d2dUsageWhenWifiOff()
+                        && !mSupplicantP2pIfaceHal.deregisterDeathHandler()) {
+                    Log.i(TAG, "Failed to deregister p2p supplicant death handler");
+                }
                 if (!TextUtils.isEmpty(ifaceName)) {
                     mSupplicantP2pIfaceHal.teardownIface(ifaceName);
                     if (mP2pIface != null) {
@@ -167,8 +185,11 @@ public class WifiP2pNative {
     /**
      * Close supplicant connection.
      */
-    public void closeSupplicantConnection() {
-        // Nothing to do for HAL.
+    public void stopP2pSupplicantIfNecessary() {
+        if (mFeatureFlags.d2dUsageWhenWifiOff()
+                && mSupplicantP2pIfaceHal.isInitializationStarted()) {
+            mSupplicantP2pIfaceHal.terminate();
+        }
     }
 
     /**
@@ -242,6 +263,15 @@ public class WifiP2pNative {
                 }
                 if (!mSupplicantP2pIfaceHal.setupIface(mP2pIfaceName)) {
                     Log.e(TAG, "Failed to setup P2p iface in supplicant");
+                    teardownInterface();
+                    mWifiMetrics.incrementNumSetupP2pInterfaceFailureDueToSupplicant();
+                    return null;
+                }
+                if (mFeatureFlags.d2dUsageWhenWifiOff()
+                        && !mSupplicantP2pIfaceHal.registerDeathHandler(
+                                new SupplicantDeathHandlerInternal())) {
+                    Log.e(TAG, "Failed to register supplicant death handler"
+                            + "(because hidl supplicant?)");
                     teardownInterface();
                     mWifiMetrics.incrementNumSetupP2pInterfaceFailureDueToSupplicant();
                     return null;

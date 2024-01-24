@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,6 +50,7 @@ import com.android.wifi.flags.FeatureFlags;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -100,6 +102,7 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
         when(mSupplicantP2pIfaceHal.initialize()).thenReturn(true);
         when(mSupplicantP2pIfaceHal.isInitializationComplete()).thenReturn(true);
         when(mSupplicantP2pIfaceHal.setupIface(TEST_P2P_IFACE_NAME)).thenReturn(true);
+        when(mSupplicantP2pIfaceHal.registerDeathHandler(any())).thenReturn(true);
         when(mPropertyService.getString(
                 WifiP2pNative.P2P_INTERFACE_PROPERTY, WifiP2pNative.P2P_IFACE_NAME))
                 .thenReturn(TEST_P2P_IFACE_NAME);
@@ -196,16 +199,34 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
      * Verifies the teardown of a p2p interface with no HAL (HIDL) support.
      */
     @Test
-    public void testTeardownInterfaceWithNoVendorHal() throws Exception {
+    public void testTeardownInterfaceWithNoVendorHalWhenD2dAloneFeatureEnabled() throws Exception {
+        testTeardownInterfaceWithNoVendorHal(true);
+    }
+    /**
+     * Verifies the teardown of a p2p interface with no HAL (HIDL) support.
+     */
+    @Test
+    public void testTeardownInterfaceWithNoVendorHalD2dAloneFeatureDisabled() throws Exception {
         when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
-        when(mHalDeviceManager.isSupported()).thenReturn(false);
+        testTeardownInterfaceWithNoVendorHal(false);
+    }
 
+    private void testTeardownInterfaceWithNoVendorHal(boolean isD2dAloneFeatureEnabled)
+            throws Exception {
+        when(mHalDeviceManager.isSupported()).thenReturn(false);
+        InOrder order = inOrder(mSupplicantP2pIfaceHal, mWifiNative);
         assertEquals(TEST_P2P_IFACE_NAME, mWifiP2pNative.setupInterface(
                 mHalDeviceInterfaceDestroyedListener, mHandler, TEST_WS));
 
         mWifiP2pNative.teardownInterface();
 
         verify(mHalDeviceManager, never()).removeIface(any(WifiHal.WifiInterface.class));
-        verify(mSupplicantP2pIfaceHal).teardownIface(eq(TEST_P2P_IFACE_NAME));
+        if (isD2dAloneFeatureEnabled) {
+            order.verify(mSupplicantP2pIfaceHal).deregisterDeathHandler();
+            order.verify(mSupplicantP2pIfaceHal).teardownIface(eq(TEST_P2P_IFACE_NAME));
+            order.verify(mWifiNative).teardownP2pIface(eq(mMockP2pIface.id));
+        } else {
+            order.verify(mSupplicantP2pIfaceHal).teardownIface(eq(TEST_P2P_IFACE_NAME));
+        }
     }
 }

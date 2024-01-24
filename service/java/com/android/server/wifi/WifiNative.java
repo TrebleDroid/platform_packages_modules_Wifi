@@ -482,6 +482,11 @@ public class WifiNative {
             return false;
         }
 
+        /** Checks if there are any P2P iface active. */
+        private boolean hasAnyP2pIface() {
+            return hasAnyIfaceOfType(Iface.IFACE_TYPE_P2P);
+        }
+
         /** Checks if there are any STA (for connectivity) iface active. */
         private boolean hasAnyStaIfaceForConnectivity() {
             return hasAnyIfaceOfType(Iface.IFACE_TYPE_STA_FOR_CONNECTIVITY);
@@ -705,10 +710,19 @@ public class WifiNative {
     private void stopSupplicantIfNecessary() {
         synchronized (mLock) {
             if (!mIfaceMgr.hasAnyStaIfaceForConnectivity()) {
-                if (!mSupplicantStaIfaceHal.deregisterDeathHandler()) {
-                    Log.e(TAG, "Failed to deregister supplicant death handler");
+                if (mSupplicantStaIfaceHal.isInitializationStarted()) {
+                    if (!mSupplicantStaIfaceHal.deregisterDeathHandler()) {
+                        Log.e(TAG, "Failed to deregister supplicant death handler");
+                    }
+
                 }
-                mSupplicantStaIfaceHal.terminate();
+                if (!mIfaceMgr.hasAnyP2pIface()) {
+                    if (mSupplicantStaIfaceHal.isInitializationStarted()) {
+                        mSupplicantStaIfaceHal.terminate();
+                    } else {
+                        mWifiInjector.getWifiP2pNative().stopP2pSupplicantIfNecessary();
+                    }
+                }
             }
         }
     }
@@ -1259,6 +1273,7 @@ public class WifiNative {
         synchronized (mLock) {
             mIfaceMgr.removeIface(interfaceId);
             stopHalAndWificondIfNecessary();
+            stopSupplicantIfNecessary();
         }
     }
 
@@ -5067,28 +5082,34 @@ public class WifiNative {
         return mHostapdHal.isSoftApInstanceDiedHandlerSupported();
     }
 
-    @VisibleForTesting
     /** Checks if there are any STA (for connectivity) iface active. */
+    @VisibleForTesting
     boolean hasAnyStaIfaceForConnectivity() {
         return mIfaceMgr.hasAnyStaIfaceForConnectivity();
     }
 
-    @VisibleForTesting
     /** Checks if there are any STA (for scan) iface active. */
+    @VisibleForTesting
     boolean hasAnyStaIfaceForScan() {
         return mIfaceMgr.hasAnyStaIfaceForScan();
     }
 
-    @VisibleForTesting
     /** Checks if there are any AP iface active. */
+    @VisibleForTesting
     boolean hasAnyApIface() {
         return mIfaceMgr.hasAnyApIface();
     }
 
-    @VisibleForTesting
     /** Checks if there are any iface active. */
+    @VisibleForTesting
     boolean hasAnyIface() {
         return mIfaceMgr.hasAnyIface();
+    }
+
+    /** Checks if there are any P2P iface active. */
+    @VisibleForTesting
+    boolean hasAnyP2pIface() {
+        return mIfaceMgr.hasAnyP2pIface();
     }
 
     /**
