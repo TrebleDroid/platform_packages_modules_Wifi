@@ -77,10 +77,9 @@ public class RttTestUtils {
     }
 
     /**
-     * Returns a placeholder ranging request with 2 requests:
-     * - First: 802.11mc capable
+     * Returns a placeholder ranging request with 11mc request with a specified burst size.
      */
-    public static RangingRequest getDummyRangingRequestMcOnly(byte lastMacByte) {
+    public static RangingRequest getDummyRangingRequestMcOnly(byte lastMacByte, int rttBurstSize) {
         RangingRequest.Builder builder = new RangingRequest.Builder();
 
         ScanResult scan1 = new ScanResult();
@@ -89,6 +88,7 @@ public class RttTestUtils {
         scan1.channelWidth = ScanResult.CHANNEL_WIDTH_40MHZ;
 
         builder.addAccessPoint(scan1);
+        builder.setRttBurstSize(rttBurstSize);
 
         return builder.build();
     }

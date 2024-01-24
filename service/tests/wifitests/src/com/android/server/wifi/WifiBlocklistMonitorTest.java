@@ -78,6 +78,8 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
             WifiBlocklistMonitor.REASON_FRAMEWORK_DISCONNECT_MBO_OCE;
     private static final int TEST_L2_FAILURE = WifiBlocklistMonitor.REASON_ASSOCIATION_REJECTION;
     private static final int TEST_DHCP_FAILURE = WifiBlocklistMonitor.REASON_DHCP_FAILURE;
+    private static final long TEST_MAX_DISABLE_DURATION_MILLIS =
+            TimeUnit.HOURS.toMillis(18); // 18 hours
     private static final long BASE_BLOCKLIST_DURATION = TimeUnit.MINUTES.toMillis(5); // 5 minutes
     private static final long BASE_CONNECTED_SCORE_BLOCKLIST_DURATION =
             TimeUnit.SECONDS.toMillis(30);
@@ -141,6 +143,7 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
     @Mock private ScanRequestProxy mScanRequestProxy;
     @Mock private WifiScoreCard.PerNetwork mPerNetwork;
     @Mock private WifiScoreCard.NetworkConnectionStats mRecentStats;
+    @Mock private WifiGlobals mWifiGlobals;
 
     private MockResources mResources;
     private WifiBlocklistMonitor mWifiBlocklistMonitor;
@@ -156,6 +159,8 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
                 .thenReturn(TEST_NUM_MAX_FIRMWARE_SUPPORT_SSIDS);
         when(mScoringParams.getSufficientRssi(anyInt())).thenReturn(TEST_SUFFICIENT_RSSI);
         when(mScoringParams.getGoodRssi(anyInt())).thenReturn(TEST_GOOD_RSSI);
+        when(mWifiGlobals.getWifiConfigMaxDisableDurationMs())
+                .thenReturn(TEST_MAX_DISABLE_DURATION_MILLIS);
         mResources = new MockResources();
         mResources.setInteger(R.integer.config_wifiBssidBlocklistMonitorBaseBlockDurationMs,
                 (int) BASE_BLOCKLIST_DURATION);
@@ -248,7 +253,7 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
 
         mWifiBlocklistMonitor = new WifiBlocklistMonitor(mContext, mWifiConnectivityHelper,
                 mWifiLastResortWatchdog, mClock, mLocalLog, mWifiScoreCard, mScoringParams,
-                mWifiMetrics, mWifiPermissionsUtil);
+                mWifiMetrics, mWifiPermissionsUtil, mWifiGlobals);
         mWifiBlocklistMonitor.setScanRequestProxy(mScanRequestProxy);
     }
 
@@ -1600,7 +1605,7 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
 
     /**
      * Verify the disable duration for a network is capped at
-     * WIFI_CONFIG_MAX_DISABLE_DURATION_MILLIS.
+     * WifiConfigMaxDisableDurationMs.
      */
     @Test
     public void testTryEnableNetworkExponentialBackoffCapped() {
@@ -1610,10 +1615,10 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
                 Integer.MAX_VALUE);
         verifyDisableNetwork(openNetwork, disableReason);
 
-        // verify the exponential backoff is capped at WIFI_CONFIG_MAX_DISABLE_DURATION_MILLIS
+        // verify the exponential backoff is capped at WifiConfigMaxDisableDurationMs
         verifyNetworkIsEnabledAfter(openNetwork,
                 TEST_ELAPSED_UPDATE_NETWORK_SELECTION_TIME_MILLIS
-                        + WifiBlocklistMonitor.WIFI_CONFIG_MAX_DISABLE_DURATION_MILLIS);
+                        + TEST_MAX_DISABLE_DURATION_MILLIS);
     }
 
     /**
@@ -1677,7 +1682,7 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
             mResources.setInteger(entry.getValue(), newThreshold);
             mWifiBlocklistMonitor = new WifiBlocklistMonitor(mContext, mWifiConnectivityHelper,
                     mWifiLastResortWatchdog, mClock, mLocalLog, mWifiScoreCard, mScoringParams,
-                    mWifiMetrics, mWifiPermissionsUtil);
+                    mWifiMetrics, mWifiPermissionsUtil, mWifiGlobals);
             mWifiBlocklistMonitor.setScanRequestProxy(mScanRequestProxy);
 
             // Verify that the threshold is updated in the copied version

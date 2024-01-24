@@ -634,6 +634,17 @@ public class XmlUtilTest extends WifiBaseTest {
                 retrieved.second.macRandomizationSetting);
     }
 
+    /**
+     * Verify serializing/deserializing DHCP hostname setting.
+     * @throws Exception
+     */
+    @Test
+    public void testDhcpHostnameSettingSerializeDeserialize() throws Exception {
+        WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
+        config.setDhcpHostnameSetting(WifiConfiguration.DHCP_HOSTNAME_SETTING_SEND);
+        serializeDeserializeWifiConfiguration(config);
+    }
+
     private WifiEnterpriseConfig makeTestWifiEnterpriseConfig() {
         final WifiEnterpriseConfig config = new WifiEnterpriseConfig();
         config.setFieldValue(WifiEnterpriseConfig.IDENTITY_KEY, TEST_IDENTITY);

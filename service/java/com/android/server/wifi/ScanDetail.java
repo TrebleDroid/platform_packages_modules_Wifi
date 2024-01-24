@@ -42,6 +42,7 @@ public class ScanDetail {
     private volatile NetworkDetail mNetworkDetail;
     private long mSeen = 0;
     private byte[] mInformationElementRawData;
+    private static final ScanResult.Builder sBuilder = new ScanResult.Builder();
 
     /**
      * Main constructor used when converting from NativeScanResult
@@ -73,7 +74,10 @@ public class ScanDetail {
                             && networkDetail.getHSRelease() != null;
             is80211McResponder = networkDetail.is80211McResponderSupport();
         }
-        mScanResult = new ScanResult.Builder(wifiSsid, bssid)
+        sBuilder.clear();
+        mScanResult = sBuilder
+                .setWifiSsid(wifiSsid)
+                .setBssid(bssid)
                 .setHessid(hessid)
                 .setAnqpDomainId(anqpDomainId)
                 .setOsuProviders(osuProviders)

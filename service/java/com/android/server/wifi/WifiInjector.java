@@ -423,7 +423,8 @@ public class WifiInjector {
                         mWifiScoreCard,
                         mScoringParams,
                         mWifiMetrics,
-                        mWifiPermissionsUtil);
+                        mWifiPermissionsUtil,
+                        mWifiGlobals);
         mWifiMetrics.setWifiBlocklistMonitor(mWifiBlocklistMonitor);
         // Config Manager
         mWifiConfigManager =

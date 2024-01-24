@@ -31,6 +31,7 @@ import static java.lang.Math.toIntExact;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.TargetApi;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.AppOpsManager;
@@ -147,6 +148,7 @@ public class WifiNetworkFactory extends NetworkFactory {
     private final ClientModeImplMonitor mClientModeImplMonitor;
     private final FrameworkFacade mFacade;
     private final MultiInternetManager mMultiInternetManager;
+    private final NetworkCapabilities mCapabilitiesFilter;
     private RemoteCallbackList<INetworkRequestMatchCallback> mRegisteredCallbacks;
     // Store all user approved access points for apps.
     @VisibleForTesting
@@ -592,6 +594,7 @@ public class WifiNetworkFactory extends NetworkFactory {
         mUserApprovedAccessPointMap = new HashMap<>();
         mFacade = facade;
         mMultiInternetManager = multiInternetManager;
+        mCapabilitiesFilter = nc;
 
         // register the data store for serializing/deserializing data.
         configStore.registerStoreData(
@@ -609,6 +612,18 @@ public class WifiNetworkFactory extends NetworkFactory {
                                 handleScreenStateChanged(screenOn);
                             }
                         });
+    }
+
+    // package-private
+    @TargetApi(Build.VERSION_CODES.S)
+    void updateSubIdsInCapabilitiesFilter(Set<Integer> subIds) {
+        // setSubscriptionIds is only available on Android S+ devices.
+        if (SdkLevel.isAtLeastS()) {
+            NetworkCapabilities newFilter =
+                    new NetworkCapabilities.Builder(mCapabilitiesFilter)
+                            .setSubscriptionIds(subIds).build();
+            setCapabilityFilter(newFilter);
+        }
     }
 
     private void saveToStore() {

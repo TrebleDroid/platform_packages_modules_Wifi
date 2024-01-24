@@ -1975,6 +1975,75 @@ public class WifiConfiguration implements Parcelable {
         mRandomizedMacAddress = mac;
     }
 
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = {"HOSTNAME_SETTING_"}, value = {
+            DHCP_HOSTNAME_SETTING_AUTO,
+            DHCP_HOSTNAME_SETTING_SEND,
+            DHCP_HOSTNAME_SETTING_DO_NOT_SEND
+    })
+    public @interface DhcpHostnameSetting {}
+
+    /**
+     * Let the WiFi framework decide whether to send the hostname to this network's DHCP server."
+     * For open/OWE networks, this will not send the hostname.
+     * For all other networks, this will always send the hostname.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public static final int DHCP_HOSTNAME_SETTING_AUTO = 0;
+
+    /**
+     * Always send the hostname of this device to this network's DHCP server.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public static final int DHCP_HOSTNAME_SETTING_SEND = 1;
+
+    /**
+     * Do not send the hostname of this device to this network's DHCP server.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public static final int DHCP_HOSTNAME_SETTING_DO_NOT_SEND = 2;
+
+    private int mDhcpHostnameSetting = DHCP_HOSTNAME_SETTING_AUTO;
+
+    /**
+     * Set whether to send the hostname of the device to this network's DHCP server.
+     *
+     * @param setting One of {@link #DHCP_HOSTNAME_SETTING_AUTO},
+     *                       {@link #DHCP_HOSTNAME_SETTING_SEND} or
+     *                       {@link #DHCP_HOSTNAME_SETTING_DO_NOT_SEND}.
+     * @hide
+     */
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD})
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public void setDhcpHostnameSetting(@DhcpHostnameSetting int setting) {
+        mDhcpHostnameSetting = setting;
+    }
+
+    /**
+     * Whether to send the hostname of the device to this network's DHCP server.
+     * @return One of {@link #DHCP_HOSTNAME_SETTING_AUTO},
+     *                {@link #DHCP_HOSTNAME_SETTING_SEND},
+     *                {@link #DHCP_HOSTNAME_SETTING_DO_NOT_SEND}.
+     * By default, this field is set to {@link #DHCP_HOSTNAME_SETTING_AUTO}.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    @DhcpHostnameSetting
+    public int getDhcpHostnameSetting() {
+        return mDhcpHostnameSetting;
+    }
+
     /**
      * This network supports DPP AKM and the device is configured to
      * onboard peer enrollee devices with {@link #SECURITY_TYPE_DPP}
@@ -3507,6 +3576,7 @@ public class WifiConfiguration implements Parcelable {
         sbuf.append(" randomizedMacLastModifiedTimeMs: ")
                 .append(randomizedMacLastModifiedTimeMs == 0 ? "<none>"
                         : logTimeOfDay(randomizedMacLastModifiedTimeMs)).append("\n");
+        sbuf.append(" mDhcpHostnameSetting: ").append(mDhcpHostnameSetting).append("\n");
         sbuf.append(" deletionPriority: ").append(mDeletionPriority).append("\n");
         sbuf.append(" KeyMgmt:");
         for (int k = 0; k < this.allowedKeyManagement.size(); k++) {
@@ -4104,6 +4174,7 @@ public class WifiConfiguration implements Parcelable {
             macRandomizationSetting = source.macRandomizationSetting;
             randomizedMacExpirationTimeMs = source.randomizedMacExpirationTimeMs;
             randomizedMacLastModifiedTimeMs = source.randomizedMacLastModifiedTimeMs;
+            mDhcpHostnameSetting = source.mDhcpHostnameSetting;
             requirePmf = source.requirePmf;
             updateIdentifier = source.updateIdentifier;
             carrierId = source.carrierId;
@@ -4206,6 +4277,7 @@ public class WifiConfiguration implements Parcelable {
         dest.writeLong(recentFailure.getLastUpdateTimeSinceBootMillis());
         dest.writeParcelable(mRandomizedMacAddress, flags);
         dest.writeInt(macRandomizationSetting);
+        dest.writeInt(mDhcpHostnameSetting);
         dest.writeInt(osu ? 1 : 0);
         dest.writeLong(randomizedMacExpirationTimeMs);
         dest.writeLong(randomizedMacLastModifiedTimeMs);
@@ -4232,127 +4304,133 @@ public class WifiConfiguration implements Parcelable {
     /** Implement the Parcelable interface {@hide} */
     @SystemApi
     public static final @android.annotation.NonNull Creator<WifiConfiguration> CREATOR =
-        new Creator<WifiConfiguration>() {
-            public WifiConfiguration createFromParcel(Parcel in) {
-                WifiConfiguration config = new WifiConfiguration();
-                config.networkId = in.readInt();
-                config.status = in.readInt();
-                config.mNetworkSelectionStatus.readFromParcel(in);
-                config.SSID = in.readString();
-                config.BSSID = in.readString();
-                config.apBand = in.readInt();
-                config.apChannel = in.readInt();
-                config.FQDN = in.readString();
-                config.providerFriendlyName = in.readString();
-                config.isHomeProviderNetwork = in.readInt() != 0;
-                int numRoamingConsortiumIds = in.readInt();
-                config.roamingConsortiumIds = new long[numRoamingConsortiumIds];
-                for (int i = 0; i < numRoamingConsortiumIds; i++) {
-                    config.roamingConsortiumIds[i] = in.readLong();
-                }
-                config.preSharedKey = in.readString();
-                for (int i = 0; i < config.wepKeys.length; i++) {
-                    config.wepKeys[i] = in.readString();
-                }
-                config.wepTxKeyIndex = in.readInt();
-                config.priority = in.readInt();
-                config.mDeletionPriority = in.readInt();
-                config.hiddenSSID = in.readInt() != 0;
-                config.requirePmf = in.readInt() != 0;
-                config.updateIdentifier = in.readString();
+            new Creator<WifiConfiguration>() {
+                public WifiConfiguration createFromParcel(Parcel in) {
+                    WifiConfiguration config = new WifiConfiguration();
+                    config.networkId = in.readInt();
+                    config.status = in.readInt();
+                    config.mNetworkSelectionStatus.readFromParcel(in);
+                    config.SSID = in.readString();
+                    config.BSSID = in.readString();
+                    config.apBand = in.readInt();
+                    config.apChannel = in.readInt();
+                    config.FQDN = in.readString();
+                    config.providerFriendlyName = in.readString();
+                    config.isHomeProviderNetwork = in.readInt() != 0;
+                    int numRoamingConsortiumIds = in.readInt();
+                    config.roamingConsortiumIds = new long[numRoamingConsortiumIds];
+                    for (int i = 0; i < numRoamingConsortiumIds; i++) {
+                        config.roamingConsortiumIds[i] = in.readLong();
+                    }
+                    config.preSharedKey = in.readString();
+                    for (int i = 0; i < config.wepKeys.length; i++) {
+                        config.wepKeys[i] = in.readString();
+                    }
+                    config.wepTxKeyIndex = in.readInt();
+                    config.priority = in.readInt();
+                    config.mDeletionPriority = in.readInt();
+                    config.hiddenSSID = in.readInt() != 0;
+                    config.requirePmf = in.readInt() != 0;
+                    config.updateIdentifier = in.readString();
 
-                config.allowedKeyManagement   = readBitSet(in);
-                config.allowedProtocols       = readBitSet(in);
-                config.allowedAuthAlgorithms  = readBitSet(in);
-                config.allowedPairwiseCiphers = readBitSet(in);
-                config.allowedGroupCiphers    = readBitSet(in);
-                config.allowedGroupManagementCiphers = readBitSet(in);
-                config.allowedSuiteBCiphers   = readBitSet(in);
+                    config.allowedKeyManagement = readBitSet(in);
+                    config.allowedProtocols = readBitSet(in);
+                    config.allowedAuthAlgorithms = readBitSet(in);
+                    config.allowedPairwiseCiphers = readBitSet(in);
+                    config.allowedGroupCiphers = readBitSet(in);
+                    config.allowedGroupManagementCiphers = readBitSet(in);
+                    config.allowedSuiteBCiphers = readBitSet(in);
 
-                int numSecurityParams = in.readInt();
-                for (int i = 0; i < numSecurityParams; i++) {
-                    config.mSecurityParamsList.add(in.readParcelable(null));
+                    int numSecurityParams = in.readInt();
+                    for (int i = 0; i < numSecurityParams; i++) {
+                        config.mSecurityParamsList.add(
+                                in.readParcelable(SecurityParams.class.getClassLoader()));
+                    }
+
+                    config.enterpriseConfig = in.readParcelable(
+                            WifiEnterpriseConfig.class.getClassLoader());
+                    config.setIpConfiguration(
+                            in.readParcelable(IpConfiguration.class.getClassLoader()));
+                    config.dhcpServer = in.readString();
+                    config.defaultGwMacAddress = in.readString();
+                    config.validatedInternetAccess = in.readInt() != 0;
+                    config.isLegacyPasspointConfig = in.readInt() != 0;
+                    config.ephemeral = in.readInt() != 0;
+                    config.trusted = in.readInt() != 0;
+                    config.oemPaid = in.readInt() != 0;
+                    config.oemPrivate = in.readInt() != 0;
+                    config.carrierMerged = in.readInt() != 0;
+                    config.fromWifiNetworkSuggestion = in.readInt() != 0;
+                    config.fromWifiNetworkSpecifier = in.readInt() != 0;
+                    config.meteredHint = in.readInt() != 0;
+                    config.mIsRepeaterEnabled = in.readBoolean();
+                    config.meteredOverride = in.readInt();
+                    config.useExternalScores = in.readInt() != 0;
+                    config.creatorUid = in.readInt();
+                    config.lastConnectUid = in.readInt();
+                    config.lastUpdateUid = in.readInt();
+                    config.creatorName = in.readString();
+                    config.lastUpdateName = in.readString();
+                    config.numScorerOverride = in.readInt();
+                    config.numScorerOverrideAndSwitchedNetwork = in.readInt();
+                    config.numAssociation = in.readInt();
+                    config.allowAutojoin = in.readBoolean();
+                    config.numNoInternetAccessReports = in.readInt();
+                    config.noInternetAccessExpected = in.readInt() != 0;
+                    config.shared = in.readInt() != 0;
+                    config.mPasspointManagementObjectTree = in.readString();
+                    config.recentFailure.setAssociationStatus(in.readInt(), in.readLong());
+                    config.mRandomizedMacAddress = in.readParcelable(
+                            MacAddress.class.getClassLoader());
+                    config.macRandomizationSetting = in.readInt();
+                    config.mDhcpHostnameSetting = in.readInt();
+                    config.osu = in.readInt() != 0;
+                    config.randomizedMacExpirationTimeMs = in.readLong();
+                    config.randomizedMacLastModifiedTimeMs = in.readLong();
+                    config.carrierId = in.readInt();
+                    config.mPasspointUniqueId = in.readString();
+                    config.subscriptionId = in.readInt();
+                    config.restricted = in.readBoolean();
+                    config.mSubscriptionGroup = in.readParcelable(
+                            ParcelUuid.class.getClassLoader());
+                    config.mBssidAllowlist = in.readArrayList(MacAddress.class.getClassLoader());
+                    config.mIsDppConfigurator = in.readBoolean();
+                    config.mDppPrivateEcKey = in.createByteArray();
+                    if (config.mDppPrivateEcKey == null) {
+                        config.mDppPrivateEcKey = new byte[0];
+                    }
+                    config.mDppConnector = in.createByteArray();
+                    if (config.mDppConnector == null) {
+                        config.mDppConnector = new byte[0];
+                    }
+                    config.mDppCSignKey = in.createByteArray();
+                    if (config.mDppCSignKey == null) {
+                        config.mDppCSignKey = new byte[0];
+                    }
+                    config.mDppNetAccessKey = in.createByteArray();
+                    if (config.mDppNetAccessKey == null) {
+                        config.mDppNetAccessKey = new byte[0];
+                    }
+                    config.isCurrentlyConnected = in.readBoolean();
+                    config.mIsUserSelected = in.readBoolean();
+                    config.mHasPreSharedKeyChanged = in.readBoolean();
+                    config.mEncryptedPreSharedKey = in.createByteArray();
+                    if (config.mEncryptedPreSharedKey == null) {
+                        config.mEncryptedPreSharedKey = new byte[0];
+                    }
+                    config.mEncryptedPreSharedKeyIv = in.createByteArray();
+                    if (config.mEncryptedPreSharedKeyIv == null) {
+                        config.mEncryptedPreSharedKeyIv = new byte[0];
+                    }
+                    config.mIpProvisioningTimedOut = in.readBoolean();
+                    config.mVendorData = ParcelUtil.readOuiKeyedDataList(in);
+                    return config;
                 }
 
-                config.enterpriseConfig = in.readParcelable(null);
-                config.setIpConfiguration(in.readParcelable(null));
-                config.dhcpServer = in.readString();
-                config.defaultGwMacAddress = in.readString();
-                config.validatedInternetAccess = in.readInt() != 0;
-                config.isLegacyPasspointConfig = in.readInt() != 0;
-                config.ephemeral = in.readInt() != 0;
-                config.trusted = in.readInt() != 0;
-                config.oemPaid = in.readInt() != 0;
-                config.oemPrivate = in.readInt() != 0;
-                config.carrierMerged = in.readInt() != 0;
-                config.fromWifiNetworkSuggestion = in.readInt() != 0;
-                config.fromWifiNetworkSpecifier = in.readInt() != 0;
-                config.meteredHint = in.readInt() != 0;
-                config.mIsRepeaterEnabled = in.readBoolean();
-                config.meteredOverride = in.readInt();
-                config.useExternalScores = in.readInt() != 0;
-                config.creatorUid = in.readInt();
-                config.lastConnectUid = in.readInt();
-                config.lastUpdateUid = in.readInt();
-                config.creatorName = in.readString();
-                config.lastUpdateName = in.readString();
-                config.numScorerOverride = in.readInt();
-                config.numScorerOverrideAndSwitchedNetwork = in.readInt();
-                config.numAssociation = in.readInt();
-                config.allowAutojoin = in.readBoolean();
-                config.numNoInternetAccessReports = in.readInt();
-                config.noInternetAccessExpected = in.readInt() != 0;
-                config.shared = in.readInt() != 0;
-                config.mPasspointManagementObjectTree = in.readString();
-                config.recentFailure.setAssociationStatus(in.readInt(), in.readLong());
-                config.mRandomizedMacAddress = in.readParcelable(null);
-                config.macRandomizationSetting = in.readInt();
-                config.osu = in.readInt() != 0;
-                config.randomizedMacExpirationTimeMs = in.readLong();
-                config.randomizedMacLastModifiedTimeMs = in.readLong();
-                config.carrierId = in.readInt();
-                config.mPasspointUniqueId = in.readString();
-                config.subscriptionId = in.readInt();
-                config.restricted = in.readBoolean();
-                config.mSubscriptionGroup = in.readParcelable(null);
-                config.mBssidAllowlist = in.readArrayList(MacAddress.class.getClassLoader());
-                config.mIsDppConfigurator = in.readBoolean();
-                config.mDppPrivateEcKey = in.createByteArray();
-                if (config.mDppPrivateEcKey == null) {
-                    config.mDppPrivateEcKey = new byte[0];
+                public WifiConfiguration[] newArray(int size) {
+                    return new WifiConfiguration[size];
                 }
-                config.mDppConnector = in.createByteArray();
-                if (config.mDppConnector == null) {
-                    config.mDppConnector = new byte[0];
-                }
-                config.mDppCSignKey = in.createByteArray();
-                if (config.mDppCSignKey == null) {
-                    config.mDppCSignKey = new byte[0];
-                }
-                config.mDppNetAccessKey = in.createByteArray();
-                if (config.mDppNetAccessKey == null) {
-                    config.mDppNetAccessKey = new byte[0];
-                }
-                config.isCurrentlyConnected = in.readBoolean();
-                config.mIsUserSelected = in.readBoolean();
-                config.mHasPreSharedKeyChanged = in.readBoolean();
-                config.mEncryptedPreSharedKey = in.createByteArray();
-                if (config.mEncryptedPreSharedKey == null) {
-                    config.mEncryptedPreSharedKey = new byte[0];
-                }
-                config.mEncryptedPreSharedKeyIv = in.createByteArray();
-                if (config.mEncryptedPreSharedKeyIv == null) {
-                    config.mEncryptedPreSharedKeyIv = new byte[0];
-                }
-                config.mIpProvisioningTimedOut = in.readBoolean();
-                config.mVendorData = ParcelUtil.readOuiKeyedDataList(in);
-                return config;
-            }
-
-            public WifiConfiguration[] newArray(int size) {
-                return new WifiConfiguration[size];
-            }
-        };
+            };
 
     /**
      * Passpoint Unique identifier

@@ -29,6 +29,7 @@ import android.hardware.wifi.RttStatus;
 import android.hardware.wifi.RttType;
 import android.hardware.wifi.WifiChannelInfo;
 import android.hardware.wifi.WifiChannelWidthInMhz;
+import android.hardware.wifi.common.OuiKeyedData;
 import android.net.MacAddress;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiAnnotations;
@@ -39,6 +40,9 @@ import android.net.wifi.rtt.ResponderLocation;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
 import android.util.Log;
+
+import com.android.modules.utils.build.SdkLevel;
+import com.android.server.wifi.util.HalAidlUtil;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -271,7 +275,7 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                 }
                 rttResult.distanceSdInMm = 0;
             }
-            rangingResults.add(new RangingResult.Builder()
+            RangingResult.Builder resultBuilder = new RangingResult.Builder()
                     .setStatus(halToFrameworkRttStatus(rttResult.status))
                     .setMacAddress(MacAddress.fromBytes(rttResult.addr))
                     .setDistanceMm(rttResult.distanceInMm)
@@ -293,8 +297,13 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                     .set80211azInitiatorTxLtfRepetitionsCount(rttResult.i2rTxLtfRepetitionCount)
                     .set80211azResponderTxLtfRepetitionsCount(rttResult.r2iTxLtfRepetitionCount)
                     .set80211azNumberOfTxSpatialStreams(rttResult.numTxSpatialStreams)
-                    .set80211azNumberOfRxSpatialStreams(rttResult.numRxSpatialStreams)
-                    .build());
+                    .set80211azNumberOfRxSpatialStreams(rttResult.numRxSpatialStreams);
+            if (SdkLevel.isAtLeastV() && WifiHalAidlImpl.isServiceVersionAtLeast(2)
+                    && rttResult.vendorData != null) {
+                resultBuilder.setVendorData(
+                        HalAidlUtil.halToFrameworkOuiKeyedDataList(rttResult.vendorData));
+            }
+            rangingResults.add(resultBuilder.build());
         }
         return rangingResults;
     }
@@ -378,6 +387,53 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
         }
     }
 
+    /**
+     * Get optimum burst duration corresponding to a burst size.
+     *
+     * IEEE 802.11 spec, Section 11.21.6.3 Fine timing measurement procedure negotiation, burst
+     * duration is defined as
+     *
+     * Burst duration = (N_FTMPB  * (K + 1)) – 1) * T_MDFTM + T_FTM + aSIFSTime + T_Ack, where
+     *  - N_FTMPB is the value of the FTMs Per Burst subfield
+     *  - K is the maximum number of Fine Timing Measurement frame retransmissions the
+     *    responding STA might attempt
+     *  - T_MDFTM is the duration indicated by the Min Delta FTM subfield of the Fine Timing
+     *    Measurement Parameters field of the initial Fine Timing Measurement frame (FTM_1)
+     *  - T_FTM is the duration of the initial Fine Timing Measurement frame if the FTMs Per Burst
+     *    subfield of the Fine Timing Measurement Parameters field of FTM_1 is set to 1,
+     *    and the duration of the non-initial Fine Timing Measurement frame otherwise
+     *    T_Ack is the duration of the Ack frame expected as a response
+     *
+     * Since many of the parameters are dependent on the chip and the vendor software, framework is
+     * doing a simple conversion with experimented values. Vendor Software may override the burst
+     * duration with more optimal values.
+     *
+     * Section '9.4.2.167 Fine Timing Measurement Parameters element' defines Burst Duration
+     * subfield encoding as,
+     * +--------------------+
+     * |Value|   Represents |
+     * +--------------------+
+     * | 0-1 |  Reserved    |
+     * |  2  |    250 us    |
+     * |  3  |    500 us    |
+     * |  4  |      1 ms    |
+     * |  5  |      2 ms    |
+     * |  6  |      4 ms    |
+     * |  7  |      8 ms    |
+     * |  8  |     16 ms    |
+     * |  9  |     32 ms    |
+     * | 10  |     64 ms    |
+     * | 11  |    128 ms    |
+     * |12-14|  Reserved    |
+     * | 15  | No Preference|
+     * +-----+--------------+
+     */
+    private static int getOptimumBurstDuration(int burstSize) {
+        if (burstSize <= 8) return 9; // 32 ms
+        if (burstSize <= 24) return 10; // 64 ms
+        return 11; // 128 ms
+    }
+
     private static RttConfig[] convertRangingRequestToRttConfigs(RangingRequest request,
             WifiRttController.Capabilities cap) {
         ArrayList<RttConfig> rttConfigs = new ArrayList<>();
@@ -387,6 +443,12 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
         for (ResponderConfig responder: request.mRttPeers) {
             RttConfig config = new RttConfig();
             config.addr = responder.macAddress.toByteArray();
+
+            OuiKeyedData[] vendorData = null;
+            if (SdkLevel.isAtLeastV() && request.getVendorData() != null
+                    && !request.getVendorData().isEmpty()) {
+                vendorData = HalAidlUtil.frameworkToHalOuiKeyedDataList(request.getVendorData());
+            }
 
             try {
                 if (cap != null) {
@@ -419,6 +481,9 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                 config.channel.centerFreq1 = responder.centerFreq1;
                 config.bw = frameworkToHalChannelBandwidth(responder.channelWidth);
                 config.preamble = frameworkToHalResponderPreamble(responder.preamble);
+                if (WifiHalAidlImpl.isServiceVersionAtLeast(2) && vendorData != null) {
+                    config.vendorData = vendorData;
+                }
                 validateBwAndPreambleCombination(config.bw, config.preamble);
                 // ResponderConfig#ntbMaxMeasurementTime is in units of 10 milliseconds
                 config.ntbMaxMeasurementTime =
@@ -435,7 +500,7 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                     config.numFramesPerBurst = request.mRttBurstSize;
                     config.numRetriesPerRttFrame = 0; // irrelevant for 2-sided RTT
                     config.numRetriesPerFtmr = 3;
-                    config.burstDuration = 9;
+                    config.burstDuration = getOptimumBurstDuration(request.mRttBurstSize);
                 } else { // AP + all non-NAN requests
                     config.mustRequestLci = true;
                     config.mustRequestLcr = true;
@@ -444,7 +509,7 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                     config.numFramesPerBurst = request.mRttBurstSize;
                     config.numRetriesPerRttFrame = (config.type == RttType.TWO_SIDED ? 0 : 3);
                     config.numRetriesPerFtmr = 3;
-                    config.burstDuration = 9;
+                    config.burstDuration = getOptimumBurstDuration(request.mRttBurstSize);
 
                     if (cap != null) { // constrain parameters per device capabilities
                         config.mustRequestLci = config.mustRequestLci && cap.lciSupported;
