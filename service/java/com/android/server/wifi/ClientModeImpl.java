@@ -7886,6 +7886,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     .withPreDhcpAction()
                     .withPreconnection()
                     .withDisplayName(config.SSID)
+                    .withCreatorUid(config.creatorUid)
                     .withLayer2Information(layer2Info);
             if (mContext.getResources().getBoolean(R.bool.config_wifiEnableApfOnNonPrimarySta)
                     || isPrimary()) {
@@ -7938,6 +7939,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     .withNetwork(network)
                     .withDisplayName(config.SSID)
                     .withScanResultInfo(scanResultInfo)
+                    .withCreatorUid(config.creatorUid)
                     .withLayer2Information(layer2Info);
             } else {
                 StaticIpConfiguration staticIpConfig = config.getStaticIpConfiguration();
@@ -7945,6 +7947,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                         .withStaticConfiguration(staticIpConfig)
                         .withNetwork(network)
                         .withDisplayName(config.SSID)
+                        .withCreatorUid(config.creatorUid)
                         .withLayer2Information(layer2Info);
             }
             if (mContext.getResources().getBoolean(R.bool.config_wifiEnableApfOnNonPrimarySta)
