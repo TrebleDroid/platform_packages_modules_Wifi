@@ -211,7 +211,8 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
 
             if (mMonitor != null) {
                 ISupplicantP2pIfaceCallback callback =
-                        new SupplicantP2pIfaceCallbackAidlImpl(ifaceName, mMonitor);
+                        new SupplicantP2pIfaceCallbackAidlImpl(ifaceName, mMonitor,
+                                getCachedServiceVersion());
                 if (!registerCallback(callback)) {
                     Log.e(TAG, "Unable to register callback for iface " + ifaceName);
                     return false;

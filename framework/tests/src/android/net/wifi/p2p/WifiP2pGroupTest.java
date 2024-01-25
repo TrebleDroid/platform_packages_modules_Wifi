@@ -20,11 +20,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import android.net.wifi.OuiKeyedData;
+import android.net.wifi.OuiKeyedDataUtil;
 import android.os.Parcel;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.modules.utils.build.SdkLevel;
+
 import org.junit.Test;
+
+import java.util.List;
 
 /**
  * Unit test harness for {@link android.net.wifi.p2p.WifiP2pGroup}
@@ -40,6 +46,8 @@ public class WifiP2pGroupTest {
     private static final int FREQUENCY = 5300;
     private static final WifiP2pDevice CLIENT_1 = new WifiP2pDevice("aa:bb:cc:dd:ee:01");
     private static final WifiP2pDevice CLIENT_2 = new WifiP2pDevice("aa:bb:cc:dd:ee:02");
+    private static final List<OuiKeyedData> VENDOR_DATA =
+            OuiKeyedDataUtil.createTestOuiKeyedDataList(5);
 
     /**
      * Verify setter/getter functions.
@@ -57,6 +65,9 @@ public class WifiP2pGroupTest {
         group.setFrequency(FREQUENCY);
         group.addClient(CLIENT_1.deviceAddress);
         group.addClient(CLIENT_2);
+        if (SdkLevel.isAtLeastV()) {
+            group.setVendorData(VENDOR_DATA);
+        }
 
         assertEquals(INTERFACE, group.getInterface());
         assertEquals(NETWORK_ID, group.getNetworkId());
@@ -65,6 +76,9 @@ public class WifiP2pGroupTest {
         assertFalse(group.isGroupOwner());
         assertEquals(GROUP_OWNER, group.getOwner());
         assertEquals(FREQUENCY, group.getFrequency());
+        if (SdkLevel.isAtLeastV()) {
+            assertTrue(VENDOR_DATA.equals(group.getVendorData()));
+        }
 
         assertFalse(group.isClientListEmpty());
         assertTrue(group.contains(CLIENT_1));
@@ -86,6 +100,9 @@ public class WifiP2pGroupTest {
         parcelR.setDataPosition(0);
         WifiP2pGroup fromParcel = WifiP2pGroup.CREATOR.createFromParcel(parcelR);
 
+        if (SdkLevel.isAtLeastV()) {
+            assertTrue(VENDOR_DATA.equals(fromParcel.getVendorData()));
+        }
         assertEquals(group.toString(), fromParcel.toString());
 
     }

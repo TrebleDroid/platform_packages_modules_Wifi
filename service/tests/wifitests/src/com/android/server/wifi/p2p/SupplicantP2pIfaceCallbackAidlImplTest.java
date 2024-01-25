@@ -20,6 +20,7 @@ import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTL
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -30,9 +31,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import android.app.test.MockAnswerUtil.AnswerWithArguments;
+import android.hardware.wifi.common.OuiKeyedData;
 import android.hardware.wifi.supplicant.P2pClientEapolIpAddressInfo;
 import android.hardware.wifi.supplicant.P2pDeviceFoundEventParams;
+import android.hardware.wifi.supplicant.P2pGoNegotiationReqEventParams;
 import android.hardware.wifi.supplicant.P2pGroupStartedEventParams;
+import android.hardware.wifi.supplicant.P2pInvitationEventParams;
 import android.hardware.wifi.supplicant.P2pProvDiscStatusCode;
 import android.hardware.wifi.supplicant.P2pProvisionDiscoveryCompletedEventParams;
 import android.hardware.wifi.supplicant.P2pStatusCode;
@@ -45,9 +49,11 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pProvDiscEvent;
 import android.net.wifi.p2p.nsd.WifiP2pServiceResponse;
+import android.os.PersistableBundle;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.WifiBaseTest;
 import com.android.server.wifi.p2p.WifiP2pServiceImpl.P2pStatus;
 import com.android.server.wifi.util.NativeUtil;
@@ -83,6 +89,7 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
     private static final String DEVICE_ADDRESS_STR = "00:01:02:03:04:05";
     private static final int TEST_NETWORK_ID = 9;
     private static final int TEST_GROUP_FREQUENCY = 5400;
+    private static final int DEFAULT_SERVICE_VERSION = 2;
     private byte[] mTestPrimaryDeviceTypeBytes = { 0x00, 0x01, 0x02, -1, 0x04, 0x05, 0x06, 0x07 };
     private String mTestPrimaryDeviceTypeString = "1-02FF0405-1543";
     private String mTestDeviceName = "test device name";
@@ -91,8 +98,9 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
     private int mTestGroupCapabilities = 456;
 
     private class SupplicantP2pIfaceCallbackImplSpy extends SupplicantP2pIfaceCallbackAidlImpl {
-        SupplicantP2pIfaceCallbackImplSpy(String iface, WifiP2pMonitor monitor) {
-            super(iface, monitor);
+        SupplicantP2pIfaceCallbackImplSpy(String iface, WifiP2pMonitor monitor,
+                int serviceVersion) {
+            super(iface, monitor, serviceVersion);
         }
     }
 
@@ -100,7 +108,11 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         mMonitor = mock(WifiP2pMonitor.class);
-        mDut = new SupplicantP2pIfaceCallbackImplSpy(mIface, mMonitor);
+        initializeDut(DEFAULT_SERVICE_VERSION);
+    }
+
+    private void initializeDut(int serviceVersion) {
+        mDut = new SupplicantP2pIfaceCallbackImplSpy(mIface, mMonitor, serviceVersion);
     }
 
     /**
@@ -338,6 +350,60 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
         mDut.onGoNegotiationRequest(mDeviceAddressInvalid2, 0);
         verify(mMonitor, never()).broadcastP2pDeviceLost(
                 anyString(), any(WifiP2pDevice.class));
+    }
+
+    private static OuiKeyedData[] createTestVendorData() {
+        int oui = 0x0033aabb;
+        OuiKeyedData vendorDataElement = new OuiKeyedData();
+        vendorDataElement.oui = oui;
+        vendorDataElement.vendorData = new PersistableBundle();
+        return new OuiKeyedData[]{vendorDataElement};
+    }
+
+    /**
+     * Sunny day scenario for onGoNegotiationRequestWithParams call.
+     */
+    @Test
+    public void testOnGoNegotiationRequestWithParams_success() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        initializeDut(3 /* serviceVersion */);
+        HashSet<Integer> setups = new HashSet<Integer>();
+
+        P2pGoNegotiationReqEventParams params = new P2pGoNegotiationReqEventParams();
+        params.srcAddress = mDeviceAddress1Bytes;
+        params.passwordId = WpsDevPasswordId.USER_SPECIFIED;
+        params.vendorData = createTestVendorData();
+
+        doAnswer(new AnswerWithArguments() {
+            public void answer(String iface, WifiP2pConfig config) {
+                assertEquals(iface, mIface);
+                assertNotNull(config.wps);
+                setups.add(config.wps.setup);
+                assertEquals(config.deviceAddress, mDeviceAddress1String);
+                assertEquals(params.vendorData[0].oui, config.getVendorData().get(0).getOui());
+            }
+        }).when(mMonitor).broadcastP2pGoNegotiationRequest(
+                anyString(), any(WifiP2pConfig.class));
+
+        mDut.onGoNegotiationRequestWithParams(params);
+        assertTrue(setups.contains(WpsInfo.DISPLAY));
+
+        params.passwordId = WpsDevPasswordId.PUSHBUTTON;
+
+        mDut.onGoNegotiationRequestWithParams(params);
+        assertTrue(setups.contains(WpsInfo.PBC));
+
+        params.passwordId = WpsDevPasswordId.REGISTRAR_SPECIFIED;
+
+        mDut.onGoNegotiationRequestWithParams(params);
+        assertTrue(setups.contains(WpsInfo.KEYPAD));
+
+        params.passwordId = 0xffff;
+
+        // Invalid should default to PBC
+        setups.clear();
+        mDut.onGoNegotiationRequestWithParams(params);
+        assertTrue(setups.contains(WpsInfo.PBC));
     }
 
     /**
@@ -852,6 +918,33 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
         WifiP2pGroup group = groupCaptor.getValue();
         assertEquals(TEST_NETWORK_ID, group.getNetworkId());
         assertEquals(mDeviceAddress2String, group.getOwner().deviceAddress);
+    }
+
+    /**
+     * Test testOnInvitationReceivedWithParams should trigger P2pInvitationReceived broadcast.
+     */
+    @Test
+    public void testOnInvitationReceivedWithParams() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        initializeDut(3 /* serviceVersion */);
+
+        P2pInvitationEventParams params = new P2pInvitationEventParams();
+        params.srcAddress = mDeviceAddress1Bytes;
+        params.goDeviceAddress = mDeviceAddress2Bytes;
+        params.bssid = DEVICE_ADDRESS;
+        params.persistentNetworkId = TEST_NETWORK_ID;
+        params.operatingFrequencyMHz = TEST_GROUP_FREQUENCY;
+        params.vendorData = createTestVendorData();
+
+        mDut.onInvitationReceivedWithParams(params);
+
+        ArgumentCaptor<WifiP2pGroup> groupCaptor = ArgumentCaptor.forClass(WifiP2pGroup.class);
+        verify(mMonitor).broadcastP2pInvitationReceived(eq(mIface), groupCaptor.capture());
+
+        WifiP2pGroup group = groupCaptor.getValue();
+        assertEquals(TEST_NETWORK_ID, group.getNetworkId());
+        assertEquals(mDeviceAddress2String, group.getOwner().deviceAddress);
+        assertEquals(params.vendorData[0].oui, group.getVendorData().get(0).getOui());
     }
 
     /**
