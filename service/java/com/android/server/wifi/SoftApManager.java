@@ -705,7 +705,7 @@ public class SoftApManager implements ActiveModeManager {
     private void onL2Connected(@NonNull ConcreteClientModeManager clientModeManager) {
         Log.d(getTag(), "onL2Connected called");
         mStateMachine.sendMessage(SoftApStateMachine.CMD_HANDLE_WIFI_CONNECTED,
-                clientModeManager.getConnectionInfo());
+                clientModeManager);
     }
 
 
@@ -2161,30 +2161,44 @@ public class SoftApManager implements ActiveModeManager {
                             Log.d(getTag(), "Ignore wifi connected in single AP state");
                             break;
                         }
-                        WifiInfo wifiInfo = (WifiInfo) message.obj;
+                        ConcreteClientModeManager cmm = (ConcreteClientModeManager) message.obj;
+                        String wifiInterface = cmm.getInterfaceName();
+                        WifiInfo wifiInfo = cmm.getConnectionInfo();
                         int wifiFreq = wifiInfo.getFrequency();
+                        int wifiBand = ApConfigUtil.convertFrequencyToBand(wifiFreq);
+                        List<Integer> bands = new ArrayList<Integer>();
+                        bands.add(wifiBand);
                         String targetShutDownInstance = "";
                         if (wifiFreq > 0 && !mSafeChannelFrequencyList.contains(wifiFreq)) {
                             Log.i(getTag(), "Wifi connected to freq:" + wifiFreq
                                     + " which is unavailable for SAP");
                             for (SoftApInfo sapInfo : mCurrentSoftApInfoMap.values()) {
-                                if (ApConfigUtil.convertFrequencyToBand(sapInfo.getFrequency())
-                                          == ApConfigUtil.convertFrequencyToBand(wifiFreq)) {
+                                int sapBand =
+                                        ApConfigUtil.convertFrequencyToBand(sapInfo.getFrequency());
+                                if (sapBand == wifiBand) {
                                     targetShutDownInstance = sapInfo.getApInstanceIdentifier();
                                     Log.d(getTag(), "Remove the " + targetShutDownInstance
                                             + " instance which is running on the same band as "
                                             + "the wifi connection on an unsafe channel");
-                                    break;
+                                } else {
+                                    bands.add(sapBand);
                                 }
                             }
                             // Wifi may connect to different band as the SAP. For instances:
                             // Wifi connect to 6Ghz but bridged AP is running on 2.4Ghz + 5Ghz.
-                            // In this case, targetShutDownInstance will be empty, shutdown the
-                            // highest frequency instance.
-                            removeIfaceInstanceFromBridgedApIface(
-                                    TextUtils.isEmpty(targetShutDownInstance)
-                                    ? getHighestFrequencyInstance(mCurrentSoftApInfoMap.keySet())
-                                    : targetShutDownInstance);
+                            // In this case, targetShutDownInstance will be empty, check whether
+                            // the chip supports this combination. If not, shutdown the highest
+                            // frequency instance.
+                            if (TextUtils.isEmpty(targetShutDownInstance)) {
+                                // We have to use STA ifacename to query band combinations.
+                                if (!mWifiNative.isBandCombinationSupported(wifiInterface, bands)) {
+                                    removeIfaceInstanceFromBridgedApIface(
+                                            getHighestFrequencyInstance(
+                                                    mCurrentSoftApInfoMap.keySet()));
+                                }
+                            } else {
+                                removeIfaceInstanceFromBridgedApIface(targetShutDownInstance);
+                            }
                         }
                         break;
                     case CMD_PLUGGED_STATE_CHANGED:

@@ -127,6 +127,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     private static final String TEST_FIRST_INSTANCE_NAME = "testif1";
     private static final String TEST_SECOND_INSTANCE_NAME = "testif2";
     private static final String OTHER_INTERFACE_NAME = "otherif";
+    private static final String TEST_STA_INTERFACE_NAME = "testif0sta";
     private static final long TEST_DEFAULT_SHUTDOWN_TIMEOUT_MILLIS = 600_000;
     private static final long TEST_DEFAULT_SHUTDOWN_IDLE_INSTANCE_IN_BRIDGED_MODE_TIMEOUT_MILLIS =
             300_000;
@@ -391,6 +392,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 .thenReturn(mPrimaryWifiInfo);
         when(mConcreteClientModeManager.getConnectionInfo())
                 .thenReturn(mPrimaryWifiInfo);
+        when(mConcreteClientModeManager.getInterfaceName())
+                .thenReturn(TEST_STA_INTERFACE_NAME);
         when(mWifiNative.forceClientDisconnect(any(), any(), anyInt())).thenReturn(true);
         when(mWifiInjector.getWifiHandlerLocalLog()).thenReturn(mLocalLog);
         when(mWifiInjector.getWifiCountryCode()).thenReturn(mWifiCountryCode);
@@ -3619,6 +3622,9 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         // TEST_SUPPORTED_5G_CHANNELS = 36, 149, mark to unsafe. Let Wifi connect to 5945 (6G)
         when(mPrimaryWifiInfo.getFrequency()).thenReturn(5945);
+        // Device doesn't support three band combination.
+        when(mWifiNative.isBandCombinationSupported(eq(TEST_STA_INTERFACE_NAME), any()))
+                .thenReturn(false);
 
         reset(mCallback);
         // Trigger wifi connected
@@ -3638,6 +3644,35 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         verify(mCallback).onConnectedClientsOrInfoChanged(
                 mTestSoftApInfoMap, mTestWifiClientsMap, true);
+    }
+
+    @Test
+    public void testBridgedModeNotShutDownForWifiUnavailableChannelWhenBandCombinationSupported()
+            throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        SoftApConfiguration bridgedConfig = generateBridgedModeSoftApConfig(null);
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, bridgedConfig, mTestSoftApCapability,
+                TEST_COUNTRY_CODE);
+        startSoftApAndVerifyEnabled(apConfig, bridgedConfig, false);
+
+        reset(mCallback);
+        // SoftApInfo updated
+        mockSoftApInfoUpdateAndVerifyAfterSapStarted(true /* bridged mode*/, true);
+
+        // TEST_SUPPORTED_5G_CHANNELS = 36, 149, mark to unsafe. Let Wifi connect to 5945 (6G)
+        when(mPrimaryWifiInfo.getFrequency()).thenReturn(5945);
+        // Device supports three band combination
+        when(mWifiNative.isBandCombinationSupported(eq(TEST_STA_INTERFACE_NAME), any()))
+                .thenReturn(true);
+
+        reset(mCallback);
+        // Trigger wifi connected
+        mCmiListenerCaptor.getValue().onL2Connected(mConcreteClientModeManager);
+        mLooper.dispatchAll();
+        // Verify instance not removed
+        verify(mWifiNative, never()).removeIfaceInstanceFromBridgedApIface(eq(TEST_INTERFACE_NAME),
+                eq(TEST_SECOND_INSTANCE_NAME));
     }
 
     @Test
