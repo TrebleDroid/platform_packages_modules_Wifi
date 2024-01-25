@@ -1932,23 +1932,24 @@ public final class ScanResult implements Parcelable {
                     if (in.readInt() == 1) {
                         wifiSsid = WifiSsid.CREATOR.createFromParcel(in);
                     }
-                    String ssid = in.readString();
-                    if (wifiSsid == null) {
-                        wifiSsid = WifiSsid.fromUtf8Text(ssid);
-                    }
-                    ScanResult sr = new ScanResult.Builder(wifiSsid, in.readString())
-                            .setHessid(in.readLong())
-                            .setAnqpDomainId(in.readInt())
-                            .setCaps(in.readString())
-                            .setRssi(in.readInt())
-                            .setFrequency(in.readInt())
-                            .setTsf(in.readLong())
-                            .setDistanceCm(in.readInt())
-                            .setDistanceSdCm(in.readInt())
-                            .setChannelWidth(in.readInt())
-                            .setCenterFreq0(in.readInt())
-                            .setCenterFreq1(in.readInt())
-                            .build();
+                    ScanResult sr = new ScanResult(
+                            wifiSsid,
+                            in.readString(),                    /* SSID  */
+                            in.readString(),                    /* BSSID */
+                            in.readLong(),                      /* HESSID */
+                            in.readInt(),                       /* ANQP Domain ID */
+                            in.readString(),                    /* capabilities */
+                            in.readInt(),                       /* level */
+                            in.readInt(),                       /* frequency */
+                            in.readLong(),                      /* timestamp */
+                            in.readInt(),                       /* distanceCm */
+                            in.readInt(),                       /* distanceSdCm */
+                            in.readInt(),                       /* channelWidth */
+                            in.readInt(),                       /* centerFreq0 */
+                            in.readInt(),                       /* centerFreq1 */
+                            false                               /* rtt responder,
+                                                               fixed with flags below */
+                    );
 
                     sr.mWifiStandard = in.readInt();
                     sr.seen = in.readLong();
