@@ -428,7 +428,7 @@ public final class WifiPseudonymManager {
         if (!mVerboseLogEnabled) {
             return;
         }
-        Log.d(TAG, msg);
+        Log.d(TAG, msg, null);
     }
 
     @VisibleForTesting

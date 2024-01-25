@@ -41,6 +41,7 @@ import static android.net.wifi.WifiManager.WIFI_INTERFACE_TYPE_DIRECT;
 import static android.net.wifi.WifiManager.WIFI_INTERFACE_TYPE_STA;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
 import static android.os.Process.WIFI_UID;
+
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_LOCAL_ONLY;
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_LONG_LIVED;
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_TRANSIENT;
@@ -2871,7 +2872,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 listener.onResult(mWifiApConfigStore
                         .getLastConfiguredTetheredApPassphraseSinceBoot());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -3388,7 +3389,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 mNetworkSelectionConfig = builder.build();
                 listener.onResult(mNetworkSelectionConfig);
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -4146,7 +4147,7 @@ public class WifiServiceImpl extends BaseWifiService {
             try {
                 listener.onResult(mWifiConnectivityManager.getAutoJoinEnabledExternal());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -4437,7 +4438,7 @@ public class WifiServiceImpl extends BaseWifiService {
             try {
                 listener.onResult(getChannelDataInternal());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -5045,7 +5046,7 @@ public class WifiServiceImpl extends BaseWifiService {
                         mActiveModeWarden.getPrimaryClientModeManager()
                                 .enableTdlsWithRemoteIpAddress(remoteAddress, enable));
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -5093,7 +5094,7 @@ public class WifiServiceImpl extends BaseWifiService {
                         mActiveModeWarden.getPrimaryClientModeManager()
                                 .enableTdls(remoteMacAddress, enable));
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -5112,7 +5113,7 @@ public class WifiServiceImpl extends BaseWifiService {
                         mActiveModeWarden.getPrimaryClientModeManager()
                                 .isTdlsOperationCurrentlyAvailable());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -5135,7 +5136,7 @@ public class WifiServiceImpl extends BaseWifiService {
                         mActiveModeWarden.getPrimaryClientModeManager()
                                 .getMaxSupportedConcurrentTdlsSessions());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -5154,7 +5155,7 @@ public class WifiServiceImpl extends BaseWifiService {
                         mActiveModeWarden.getPrimaryClientModeManager()
                                 .getNumberOfEnabledTdlsSessions());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -6858,7 +6859,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 mWifiConnectivityManager.setExternalPnoScanRequest(
                         uid, packageName, binder, callback, ssids, frequencies);
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -6911,7 +6912,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 }
                 listener.onResult(lastCallerInfo.getPackageName(), lastCallerInfo.getToggleState());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -7639,7 +7640,7 @@ public class WifiServiceImpl extends BaseWifiService {
             }
             listener.onResult(statusList);
         } catch (RemoteException e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, e.getMessage(), e);
         }
     }
 
@@ -7773,7 +7774,7 @@ public class WifiServiceImpl extends BaseWifiService {
             try {
                 listener.onResult(mWifiGlobals.getPollRssiIntervalMillis());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -7803,7 +7804,7 @@ public class WifiServiceImpl extends BaseWifiService {
             try {
                 listener.onResult(mWifiNative.setMloMode(mode) == WifiStatusCode.SUCCESS);
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -7830,7 +7831,7 @@ public class WifiServiceImpl extends BaseWifiService {
             try {
                 listener.onResult(mWifiNative.getMloMode());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -7913,7 +7914,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 listener.onResult(mWifiNative.getMaxMloAssociationLinkCount(
                         mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName()));
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -7945,7 +7946,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 listener.onResult(mWifiNative.getMaxMloStrLinkCount(
                         mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName()));
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -7990,7 +7991,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 }
                 listener.onResult(supportedBands);
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }

@@ -106,17 +106,17 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
     private void localLog(String message) {
         mLocalLog.log(message);
         if (isVerboseLoggingEnabled()) {
-            Log.i(TAG, message);
+            Log.i(TAG, message, null);
         }
     }
 
     private void logw(String message) {
-        Log.w(TAG, message);
+        Log.w(TAG, message, null);
         mLocalLog.log(message);
     }
 
     private void loge(String message) {
-        Log.e(TAG, message);
+        Log.e(TAG, message, null);
         mLocalLog.log(message);
     }
 

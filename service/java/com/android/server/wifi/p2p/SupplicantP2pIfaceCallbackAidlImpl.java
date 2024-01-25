@@ -70,7 +70,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
 
     protected static void logd(String msg) {
         if (sVerboseLoggingEnabled) {
-            Log.d(TAG, msg);
+            Log.d(TAG, msg, null);
         }
     }
 
