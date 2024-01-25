@@ -475,7 +475,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             try {
                 listener.onResult(mWifiNative.getCachedScanResultsFromAllClientIfaces());
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }

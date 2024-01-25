@@ -8065,7 +8065,7 @@ public class WifiServiceImpl extends BaseWifiService {
             try {
                 listener.onResult(mSettingsConfigStore.get(WIFI_WEP_ALLOWED));
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
