@@ -6337,12 +6337,12 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
 
         @Override
         protected void logd(String s) {
-            Log.d(TAG, s);
+            Log.d(TAG, s, null);
         }
 
         @Override
         protected void loge(String s) {
-            Log.e(TAG, s);
+            Log.e(TAG, s, null);
         }
 
         /**

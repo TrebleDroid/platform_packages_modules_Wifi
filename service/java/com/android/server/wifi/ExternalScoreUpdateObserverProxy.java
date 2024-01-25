@@ -74,7 +74,7 @@ public class ExternalScoreUpdateObserverProxy extends IScoreUpdateObserver.Stub 
     private void incrementAndMaybeLogWtf(String message) {
         mCountNullCallback++;
         if (mCountNullCallback >= MAX_NULL_CALLBACK_TRIGGER_WTF) {
-            Log.wtf(TAG, message);
+            Log.wtf(TAG, message, null);
         }
     }
 

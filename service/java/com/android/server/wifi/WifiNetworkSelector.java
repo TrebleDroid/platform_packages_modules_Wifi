@@ -218,7 +218,7 @@ public class WifiNetworkSelector {
     // be retrieved in bugreport. It is also used to print the log in the console.
     private void localLog(String log) {
         mLocalLog.log(log);
-        if (mVerboseLoggingEnabled) Log.d(TAG, log);
+        if (mVerboseLoggingEnabled) Log.d(TAG, log, null);
     }
 
     /**

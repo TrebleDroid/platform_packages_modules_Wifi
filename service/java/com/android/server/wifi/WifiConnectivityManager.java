@@ -268,7 +268,7 @@ public class WifiConnectivityManager {
     // be retrieved in bugreport.
     private void localLog(String log) {
         mLocalLog.log(log);
-        if (mVerboseLoggingEnabled) Log.v(TAG, log);
+        if (mVerboseLoggingEnabled) Log.v(TAG, log, null);
     }
 
     /**

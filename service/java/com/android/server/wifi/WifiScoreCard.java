@@ -2097,13 +2097,13 @@ public class WifiScoreCard {
 
     private void logd(String string) {
         if (mVerboseLoggingEnabled) {
-            Log.d(TAG, string);
+            Log.d(TAG, string, null);
         }
     }
 
     private void logv(String string) {
         if (mVerboseLoggingEnabled) {
-            Log.v(TAG, string);
+            Log.v(TAG, string, null);
         }
         mLocalLog.log(string);
     }

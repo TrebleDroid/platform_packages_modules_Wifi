@@ -1026,7 +1026,7 @@ public class WifiHealthMonitor {
 
     private void logd(String string) {
         if (mVerboseLoggingEnabled) {
-            Log.d(TAG, string);
+            Log.d(TAG, string, null);
         }
     }
 

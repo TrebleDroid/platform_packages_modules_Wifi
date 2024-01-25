@@ -214,15 +214,15 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      */
     @Override
     protected void loge(String s) {
-        Log.e(getTag(), s);
+        Log.e(getTag(), s, null);
     }
     @Override
     protected void logd(String s) {
-        Log.d(getTag(), s);
+        Log.d(getTag(), s, null);
     }
     @Override
     protected void log(String s) {
-        Log.d(getTag(), s);
+        Log.d(getTag(), s, null);
     }
     private final WifiContext mContext;
     private final WifiMetrics mWifiMetrics;
