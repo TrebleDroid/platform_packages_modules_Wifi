@@ -118,6 +118,7 @@ package android.net.wifi {
     method public int getIpVersion();
     method @IntRange(from=1, to=255) public int getPolicyId();
     method public int getProtocol();
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @Nullable public android.net.wifi.QosCharacteristics getQosCharacteristics();
     method @Nullable public java.net.InetAddress getSourceAddress();
     method @IntRange(from=android.net.DscpPolicy.SOURCE_PORT_ANY, to=65535) public int getSourcePort();
     method public int getUserPriority();
@@ -155,6 +156,7 @@ package android.net.wifi {
     method @NonNull public android.net.wifi.QosPolicyParams.Builder setFlowLabel(@Nullable byte[]);
     method @NonNull public android.net.wifi.QosPolicyParams.Builder setIpVersion(int);
     method @NonNull public android.net.wifi.QosPolicyParams.Builder setProtocol(int);
+    method @FlaggedApi("com.android.wifi.flags.qos_r3_support") @NonNull public android.net.wifi.QosPolicyParams.Builder setQosCharacteristics(@Nullable android.net.wifi.QosCharacteristics);
     method @NonNull public android.net.wifi.QosPolicyParams.Builder setSourceAddress(@Nullable java.net.InetAddress);
     method @NonNull public android.net.wifi.QosPolicyParams.Builder setSourcePort(@IntRange(from=android.net.DscpPolicy.SOURCE_PORT_ANY, to=65535) int);
     method @NonNull public android.net.wifi.QosPolicyParams.Builder setUserPriority(int);

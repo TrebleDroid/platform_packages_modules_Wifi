@@ -62,19 +62,36 @@ public class QosPolicyParamsTest {
     }
 
     /**
-     * Creates a QosPolicyParams object will all fields assigned to a default test value.
+     * Creates a QosCharacteristics object with all fields assigned to a default value.
+     */
+    private static QosCharacteristics createTestQosCharacteristics() {
+        int minServiceIntervalMicros = 2000;
+        int maxServiceIntervalMicros = 5000;
+        int minDataRateKbps = 500;
+        int delayBoundMicros = 200;
+        return new QosCharacteristics.Builder(
+                minServiceIntervalMicros, maxServiceIntervalMicros,
+                minDataRateKbps, delayBoundMicros).build();
+    }
+
+    /**
+     * Creates a QosPolicyParams object with all fields assigned to a default test value.
      */
     private QosPolicyParams createTestQosPolicyParams() {
-        return new QosPolicyParams.Builder(TEST_POLICY_ID, TEST_DIRECTION)
-                .setUserPriority(TEST_USER_PRIORITY)
-                .setIpVersion(TEST_IP_VERSION)
-                .setDscp(TEST_DSCP)
-                .setSourcePort(TEST_SOURCE_PORT)
-                .setProtocol(TEST_PROTOCOL)
-                .setDestinationPort(TEST_DESTINATION_PORT)
-                .setSourceAddress(getInetAddress(TEST_SOURCE_ADDRESS))
-                .setDestinationAddress(getInetAddress(TEST_DESTINATION_ADDRESS))
-                .build();
+        QosPolicyParams.Builder builder =
+                new QosPolicyParams.Builder(TEST_POLICY_ID, TEST_DIRECTION)
+                        .setUserPriority(TEST_USER_PRIORITY)
+                        .setIpVersion(TEST_IP_VERSION)
+                        .setDscp(TEST_DSCP)
+                        .setSourcePort(TEST_SOURCE_PORT)
+                        .setProtocol(TEST_PROTOCOL)
+                        .setDestinationPort(TEST_DESTINATION_PORT)
+                        .setSourceAddress(getInetAddress(TEST_SOURCE_ADDRESS))
+                        .setDestinationAddress(getInetAddress(TEST_DESTINATION_ADDRESS));
+        if (SdkLevel.isAtLeastV()) {
+            builder.setQosCharacteristics(createTestQosCharacteristics());
+        }
+        return builder.build();
     }
 
     /**
@@ -91,6 +108,10 @@ public class QosPolicyParamsTest {
         assertEquals(TEST_DESTINATION_PORT, params.getDestinationPort());
         assertTrue(getInetAddress(TEST_SOURCE_ADDRESS).equals(params.getSourceAddress()));
         assertTrue(getInetAddress(TEST_DESTINATION_ADDRESS).equals(params.getDestinationAddress()));
+        if (SdkLevel.isAtLeastV()) {
+            QosCharacteristics testQosCharacteristics = createTestQosCharacteristics();
+            assertEquals(testQosCharacteristics, params.getQosCharacteristics());
+        }
     }
 
     /**
@@ -138,6 +159,10 @@ public class QosPolicyParamsTest {
         assertThrows(IllegalArgumentException.class, () ->
                 // Policies for downlink are required to have a User Priority and IP Version.
                 new QosPolicyParams.Builder(TEST_POLICY_ID, QosPolicyParams.DIRECTION_DOWNLINK)
+                        .build());
+        assertThrows(IllegalArgumentException.class, () ->
+                // Policies for uplink are required to have QoS characteristics.
+                new QosPolicyParams.Builder(TEST_POLICY_ID, QosPolicyParams.DIRECTION_UPLINK)
                         .build());
     }
 
