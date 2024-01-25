@@ -8472,27 +8472,25 @@ public class WifiConfigManagerTest extends WifiBaseTest {
     }
 
     /**
-     * Verify that the DHCP hostname setting is correctly updated
+     * Verify that the send DHCP hostname setting is correctly updated
      */
     @Test
-    public void testAddNetworkUpdatesDhcpHostnameSetting() {
+    public void testAddNetworkUpdatesSendDhcpHostname() {
         WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
-        config.setDhcpHostnameSetting(WifiConfiguration.DHCP_HOSTNAME_SETTING_SEND);
+        config.setSendDhcpHostnameEnabled(false);
 
         NetworkUpdateResult result = addNetworkToWifiConfigManager(config);
 
         assertTrue(result.isSuccess());
         config = mWifiConfigManager.getConfiguredNetwork(result.getNetworkId());
-        assertEquals(WifiConfiguration.DHCP_HOSTNAME_SETTING_SEND,
-                config.getDhcpHostnameSetting());
+        assertFalse(config.isSendDhcpHostnameEnabled());
 
-        config.setDhcpHostnameSetting(WifiConfiguration.DHCP_HOSTNAME_SETTING_AUTO);
+        config.setSendDhcpHostnameEnabled(true);
         result = updateNetworkToWifiConfigManager(config);
 
         assertTrue(result.isSuccess());
         config = mWifiConfigManager.getConfiguredNetwork(result.getNetworkId());
-        assertEquals(WifiConfiguration.DHCP_HOSTNAME_SETTING_AUTO,
-                config.getDhcpHostnameSetting());
+        assertTrue(config.isSendDhcpHostnameEnabled());
     }
 
     /**
@@ -8500,7 +8498,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
      * NETWORK_SETUP_WIZARD permissions.
      */
     @Test
-    public void testUpdateDhcpHostnameSettingFailsWithoutSettingsOrSuwPermission() {
+    public void testUpdateSendDhcpHostnameFailsWithoutSettingsOrSuwPermission() {
         when(mWifiPermissionsUtil.checkNetworkSettingsPermission(TEST_CREATOR_UID))
                 .thenReturn(false);
         when(mWifiPermissionsUtil.checkNetworkSetupWizardPermission(TEST_CREATOR_UID))
@@ -8511,21 +8509,20 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 .thenReturn(false);
         WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
 
-        // Fail to add if dhcp hostname setting is set to SEND
-        config.setDhcpHostnameSetting(WifiConfiguration.DHCP_HOSTNAME_SETTING_SEND);
+        // Fail to add if dhcp hostname setting is set to DO_NOT_SEND
+        config.setSendDhcpHostnameEnabled(false);
         NetworkUpdateResult result = addNetworkToWifiConfigManager(config);
         assertFalse(result.isSuccess());
 
-        // Can add if dhcp hostname setting is reset to default
-        config.setDhcpHostnameSetting(WifiConfiguration.DHCP_HOSTNAME_SETTING_AUTO);
+        // Can add if dhcp hostname setting is reset to default SEND
+        config.setSendDhcpHostnameEnabled(true);
         result = addNetworkToWifiConfigManager(config);
         assertTrue(result.isSuccess());
         config = mWifiConfigManager.getConfiguredNetwork(result.getNetworkId());
-        assertEquals(WifiConfiguration.DHCP_HOSTNAME_SETTING_AUTO,
-                config.getDhcpHostnameSetting());
+        assertTrue(config.isSendDhcpHostnameEnabled());
 
-        // Fail to update if dchp hostname setting is set to SEND
-        config.setDhcpHostnameSetting(WifiConfiguration.DHCP_HOSTNAME_SETTING_SEND);
+        // Fail to update if dchp hostname setting is set to DO_NOT_SEND
+        config.setSendDhcpHostnameEnabled(false);
         result = updateNetworkToWifiConfigManager(config);
         assertFalse(result.isSuccess());
     }

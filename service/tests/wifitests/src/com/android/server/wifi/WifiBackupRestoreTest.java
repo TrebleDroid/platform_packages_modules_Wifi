@@ -267,7 +267,7 @@ public class WifiBackupRestoreTest extends WifiBaseTest {
                     + "<byte-array name=\"AllowedSuiteBCiphers\" num=\"0\"></byte-array>\n"
                     + "</SecurityParams>\n"
                     + "</SecurityParamsList>\n"
-                    + "<int name=\"DhcpHostnameSetting\" value=\"0\" />\n"
+                    + "<boolean name=\"SendDhcpHostname\" value=\"true\" />\n"
                     + "<int name=\"MeteredOverride\" value=\"1\" />\n"
                     + "</WifiConfiguration>\n"
                     + "<IpConfiguration>\n"

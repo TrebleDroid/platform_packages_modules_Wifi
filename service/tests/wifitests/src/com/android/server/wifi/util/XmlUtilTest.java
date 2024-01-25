@@ -16,8 +16,14 @@
 
 package com.android.server.wifi.util;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import android.net.IpConfiguration;
 import android.net.MacAddress;
@@ -639,10 +645,66 @@ public class XmlUtilTest extends WifiBaseTest {
      * @throws Exception
      */
     @Test
-    public void testDhcpHostnameSettingSerializeDeserialize() throws Exception {
+    public void testSendDhcpHostnameEnabledSerializeDeserialize() throws Exception {
         WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
-        config.setDhcpHostnameSetting(WifiConfiguration.DHCP_HOSTNAME_SETTING_SEND);
+        config.setSendDhcpHostnameEnabled(true);
         serializeDeserializeWifiConfiguration(config);
+    }
+
+    /**
+     * Verify that deserializing an XML without SEND_DHCP_HOSTNAME will automatically set the value
+     * to true for secure networks.
+     * @throws IOException
+     * @throws XmlPullParserException
+     */
+    @Test
+    public void testSendDhcpHostnameEnabledUpgradeToTrueForSecure()
+            throws IOException, XmlPullParserException {
+        final XmlSerializer out = new FastXmlSerializer();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        out.setOutput(outputStream, StandardCharsets.UTF_8.name());
+        XmlUtil.writeDocumentStart(out, mXmlDocHeader);
+        XmlUtil.writeNextSectionStart(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS_LIST);
+        XmlUtil.writeNextSectionStart(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS);
+        XmlUtil.writeNextValue(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_TYPE,
+                WifiConfiguration.SECURITY_TYPE_PSK);
+        XmlUtil.writeNextValue(out, WifiConfigurationXmlUtil.XML_TAG_IS_ENABLED, true);
+        XmlUtil.writeNextSectionEnd(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS);
+        XmlUtil.writeNextSectionEnd(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS_LIST);
+        XmlUtil.writeDocumentEnd(out, mXmlDocHeader);
+
+        Pair<String, WifiConfiguration> retrieved =
+                deserializeWifiConfiguration(outputStream.toByteArray(), false);
+
+        assertTrue(retrieved.second.isSendDhcpHostnameEnabled());
+    }
+
+    /**
+     * Verify that deserializing an XML without SEND_DHCP_HOSTNAME will automatically set the value
+     * to true for secure networks.
+     * @throws IOException
+     * @throws XmlPullParserException
+     */
+    @Test
+    public void testSendDhcpHostnameEnabledUpgradeToFalseForOpen()
+            throws IOException, XmlPullParserException {
+        final XmlSerializer out = new FastXmlSerializer();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        out.setOutput(outputStream, StandardCharsets.UTF_8.name());
+        XmlUtil.writeDocumentStart(out, mXmlDocHeader);
+        XmlUtil.writeNextSectionStart(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS_LIST);
+        XmlUtil.writeNextSectionStart(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS);
+        XmlUtil.writeNextValue(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_TYPE,
+                WifiConfiguration.SECURITY_TYPE_OPEN);
+        XmlUtil.writeNextValue(out, WifiConfigurationXmlUtil.XML_TAG_IS_ENABLED, true);
+        XmlUtil.writeNextSectionEnd(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS);
+        XmlUtil.writeNextSectionEnd(out, WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS_LIST);
+        XmlUtil.writeDocumentEnd(out, mXmlDocHeader);
+
+        Pair<String, WifiConfiguration> retrieved =
+                deserializeWifiConfiguration(outputStream.toByteArray(), false);
+
+        assertFalse(retrieved.second.isSendDhcpHostnameEnabled());
     }
 
     private WifiEnterpriseConfig makeTestWifiEnterpriseConfig() {

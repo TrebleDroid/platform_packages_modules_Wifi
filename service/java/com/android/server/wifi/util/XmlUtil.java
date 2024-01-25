@@ -363,7 +363,7 @@ public class XmlUtil {
         public static final String XML_TAG_ROAMING_CONSORTIUM_OIS = "RoamingConsortiumOIs";
         public static final String XML_TAG_RANDOMIZED_MAC_ADDRESS = "RandomizedMacAddress";
         public static final String XML_TAG_MAC_RANDOMIZATION_SETTING = "MacRandomizationSetting";
-        public static final String XML_TAG_DHCP_HOSTNAME_SETTING = "DhcpHostnameSetting";
+        public static final String XML_TAG_SEND_DHCP_HOSTNAME = "SendDhcpHostname";
         public static final String XML_TAG_CARRIER_ID = "CarrierId";
         public static final String XML_TAG_SUBSCRIPTION_ID = "SubscriptionId";
         public static final String XML_TAG_IS_AUTO_JOIN = "AutoJoinEnabled";
@@ -603,8 +603,8 @@ public class XmlUtil {
             XmlUtil.writeNextValue(out, XML_TAG_IS_REPEATER_ENABLED,
                     configuration.isRepeaterEnabled());
             writeSecurityParamsListToXml(out, configuration);
-            XmlUtil.writeNextValue(out, XML_TAG_DHCP_HOSTNAME_SETTING,
-                    configuration.getDhcpHostnameSetting());
+            XmlUtil.writeNextValue(out, XML_TAG_SEND_DHCP_HOSTNAME,
+                    configuration.isSendDhcpHostnameEnabled());
         }
 
         /**
@@ -859,6 +859,7 @@ public class XmlUtil {
             WifiConfiguration configuration = new WifiConfiguration();
             String configKeyInData = null;
             boolean macRandomizationSettingExists = false;
+            boolean sendDhcpHostnameExists = false;
             byte[] dppConnector = null;
             byte[] dppCSign = null;
             byte[] dppNetAccessKey = null;
@@ -997,8 +998,9 @@ public class XmlUtil {
                             configuration.macRandomizationSetting = (int) value;
                             macRandomizationSettingExists = true;
                             break;
-                        case XML_TAG_DHCP_HOSTNAME_SETTING:
-                            configuration.setDhcpHostnameSetting((int) value);
+                        case XML_TAG_SEND_DHCP_HOSTNAME:
+                            configuration.setSendDhcpHostnameEnabled((boolean) value);
+                            sendDhcpHostnameExists = true;
                             break;
                         case XML_TAG_CARRIER_ID:
                             configuration.carrierId = (int) value;
@@ -1125,6 +1127,12 @@ public class XmlUtil {
             if (configuration.macRandomizationSetting
                     == WifiConfiguration.RANDOMIZATION_PERSISTENT && !fromSuggestion) {
                 configuration.macRandomizationSetting = WifiConfiguration.RANDOMIZATION_AUTO;
+            }
+            if (!sendDhcpHostnameExists) {
+                // Update legacy configs to send the DHCP hostname for secure networks only.
+                configuration.setSendDhcpHostnameEnabled(
+                        !configuration.isSecurityType(WifiConfiguration.SECURITY_TYPE_OPEN)
+                        && !configuration.isSecurityType(WifiConfiguration.SECURITY_TYPE_OWE));
             }
             configuration.convertLegacyFieldsToSecurityParamsIfNeeded();
             configuration.setDppConnectionKeys(dppConnector, dppCSign, dppNetAccessKey);
