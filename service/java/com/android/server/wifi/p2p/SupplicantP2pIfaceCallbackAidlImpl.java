@@ -33,6 +33,8 @@ import android.hardware.wifi.supplicant.P2pProvisionDiscoveryCompletedEventParam
 import android.hardware.wifi.supplicant.P2pStatusCode;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.hardware.wifi.supplicant.WpsDevPasswordId;
+import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -45,6 +47,8 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.util.HexDump;
+import com.android.modules.utils.build.SdkLevel;
+import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.io.ByteArrayInputStream;
@@ -62,11 +66,13 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
 
     private final String mInterface;
     private final WifiP2pMonitor mMonitor;
+    private final int mServiceVersion;
 
     public SupplicantP2pIfaceCallbackAidlImpl(
-            @NonNull String iface, @NonNull WifiP2pMonitor monitor) {
+            @NonNull String iface, @NonNull WifiP2pMonitor monitor, int serviceVersion) {
         mInterface = iface;
         mMonitor = monitor;
+        mServiceVersion = serviceVersion;
     }
 
     /**
@@ -78,7 +84,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
 
     protected static void logd(String msg) {
         if (sVerboseLoggingEnabled) {
-            Log.d(TAG, msg);
+            Log.d(TAG, msg, null);
         }
     }
 
@@ -149,7 +155,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onGoNegotiationRequest(byte[] srcAddress, int passwordId) {
-        handleGoNegotiationRequestEvent(srcAddress, passwordId);
+        handleGoNegotiationRequestEvent(srcAddress, passwordId, null);
     }
 
     /**
@@ -160,24 +166,36 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onGoNegotiationRequestWithParams(
-                P2pGoNegotiationReqEventParams goNegotiationReqEventParams) {
+            P2pGoNegotiationReqEventParams goNegotiationReqEventParams) {
+        List<OuiKeyedData> vendorData = null;
+        if (mServiceVersion >= 3 && goNegotiationReqEventParams.vendorData != null) {
+            vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(
+                    goNegotiationReqEventParams.vendorData);
+        }
         handleGoNegotiationRequestEvent(
                 goNegotiationReqEventParams.srcAddress,
-                goNegotiationReqEventParams.passwordId);
+                goNegotiationReqEventParams.passwordId,
+                vendorData);
     }
 
     private void handleGoNegotiationRequestEvent(
             byte[] srcAddress,
-            int passwordId) {
-        WifiP2pConfig config = new WifiP2pConfig();
+            int passwordId,
+            @Nullable List<OuiKeyedData> vendorData) {
+        WifiP2pConfig.Builder builder = new WifiP2pConfig.Builder();
 
         try {
-            config.deviceAddress = NativeUtil.macAddressFromByteArray(srcAddress);
+            builder.setDeviceAddress(MacAddress.fromBytes(srcAddress));
         } catch (Exception e) {
             Log.e(TAG, "Could not decode device address.", e);
             return;
         }
 
+        if (SdkLevel.isAtLeastV() && vendorData != null) {
+            builder.setVendorData(vendorData);
+        }
+
+        WifiP2pConfig config = builder.build();
         config.wps = new WpsInfo();
 
         switch (passwordId) {
@@ -367,8 +385,9 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
     public void onInvitationReceived(byte[] srcAddress, byte[] goDeviceAddress,
             byte[] bssid, int persistentNetworkId, int operatingFrequency) {
         handleInvitationReceivedEvent(srcAddress, goDeviceAddress, bssid,
-                           persistentNetworkId, operatingFrequency);
+                           persistentNetworkId, operatingFrequency, null);
     }
+
     /**
      * Used to indicate the reception of a P2P invitation.
      *
@@ -376,13 +395,19 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onInvitationReceivedWithParams(
-                 P2pInvitationEventParams invitationEventParams) {
+            P2pInvitationEventParams invitationEventParams) {
+        List<OuiKeyedData> vendorData = null;
+        if (mServiceVersion >= 3 && invitationEventParams.vendorData != null) {
+            vendorData =
+                    HalAidlUtil.halToFrameworkOuiKeyedDataList(invitationEventParams.vendorData);
+        }
         handleInvitationReceivedEvent(
-                 invitationEventParams.srcAddress,
-                 invitationEventParams.goDeviceAddress,
-                 invitationEventParams.bssid,
-                 invitationEventParams.persistentNetworkId,
-                 invitationEventParams.operatingFrequencyMHz);
+                invitationEventParams.srcAddress,
+                invitationEventParams.goDeviceAddress,
+                invitationEventParams.bssid,
+                invitationEventParams.persistentNetworkId,
+                invitationEventParams.operatingFrequencyMHz,
+                vendorData);
     }
 
     private void handleInvitationReceivedEvent(
@@ -390,7 +415,8 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             byte[] goDeviceAddress,
             byte[] bssid,
             int persistentNetworkId,
-            int operatingFrequency) {
+            int operatingFrequency,
+            List<OuiKeyedData> vendorData) {
         WifiP2pGroup group = new WifiP2pGroup();
         group.setNetworkId(persistentNetworkId);
 
@@ -415,6 +441,10 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
         }
 
         group.setOwner(owner);
+
+        if (SdkLevel.isAtLeastV() && vendorData != null) {
+            group.setVendorData(vendorData);
+        }
 
         logd("Invitation received on " + mInterface + ": " + group);
         mMonitor.broadcastP2pInvitationReceived(mInterface, group);

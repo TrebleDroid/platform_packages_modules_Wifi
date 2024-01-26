@@ -586,11 +586,11 @@ public class SupplicantP2pIfaceHalHidlImpl implements ISupplicantP2pIfaceHal {
     }
 
     protected static void logd(String s) {
-        if (sVerboseLoggingEnabled) Log.d(TAG, s);
+        if (sVerboseLoggingEnabled) Log.d(TAG, s, null);
     }
 
     protected static void logw(String s) {
-        Log.w(TAG, s);
+        Log.w(TAG, s, null);
     }
 
     protected static <S> void logCompletion(String operation, int code, String debugMessage) {

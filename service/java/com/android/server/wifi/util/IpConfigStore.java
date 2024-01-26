@@ -255,10 +255,10 @@ public class IpConfigStore {
     }
 
     protected static void loge(String s) {
-        Log.e(TAG, s);
+        Log.e(TAG, s, null);
     }
 
     protected static void log(String s) {
-        Log.d(TAG, s);
+        Log.d(TAG, s, null);
     }
 }

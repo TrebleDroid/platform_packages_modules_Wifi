@@ -61,6 +61,9 @@ public class WifiCountryCode {
     private static final String BOOT_DEFAULT_WIFI_COUNTRY_CODE = "ro.boot.wificountrycode";
     private static final int PKT_COUNT_HIGH_PKT_PER_SEC = 16;
     private static final int DISCONNECT_WIFI_COUNT_MAX = 1;
+    /* TODO: replace with PackageManager.FEATURE_TELEPHONY_CALLING once
+     * wifi-module-sdk-version-defaults min_sdk_version bumps to API 33. */
+    private static final String FEATURE_TELEPHONY_CALLING = "android.hardware.telephony.calling";
     static final int MIN_COUNTRY_CODE_COUNT_US = 3;
     static final int MIN_COUNTRY_CODE_COUNT_OTHER = 2;
     static final String COUNTRY_CODE_US = "US";
@@ -302,6 +305,15 @@ public class WifiCountryCode {
         mVerboseLoggingEnabled = verbose;
     }
 
+    private boolean hasCalling() {
+        return mContext.getPackageManager().hasSystemFeature(FEATURE_TELEPHONY_CALLING);
+    }
+
+    /**
+     * Check if Wi-Fi calling is available.
+     *
+     * This method can only be called if device has calling feature (see hasCalling()).
+     */
     private boolean isWifiCallingAvailable() {
         SubscriptionManager subscriptionManager =
                 mContext.getSystemService(SubscriptionManager.class);
@@ -535,7 +547,7 @@ public class WifiCountryCode {
     }
 
     private boolean shouldDisconnectWifiToForceUpdate() {
-        if (isWifiCallingAvailable()) {
+        if (!hasCalling() || isWifiCallingAvailable()) {
             return false;
         }
 

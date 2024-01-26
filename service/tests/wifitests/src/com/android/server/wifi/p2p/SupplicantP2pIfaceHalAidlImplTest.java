@@ -49,6 +49,7 @@ import android.hardware.wifi.supplicant.ISupplicantP2pNetwork;
 import android.hardware.wifi.supplicant.IfaceInfo;
 import android.hardware.wifi.supplicant.MacAddress;
 import android.hardware.wifi.supplicant.MiracastMode;
+import android.hardware.wifi.supplicant.P2pConnectInfo;
 import android.hardware.wifi.supplicant.P2pFrameTypeMask;
 import android.hardware.wifi.supplicant.SupplicantStatusCode;
 import android.hardware.wifi.supplicant.WpsProvisionMethod;
@@ -102,6 +103,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
     private @Mock IBinder mServiceBinderMock;
     private @Mock WifiSettingsConfigStore mWifiSettingsConfigStore;
 
+    final int mServiceVersion = 2;
     final String mIfaceName = "virtual_interface_name";
     final String mSsid = "\"SSID\"";
     final byte[] mSsidBytes = {'S', 'S', 'I', 'D'};
@@ -165,6 +167,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         mDut = new SupplicantP2pIfaceHalSpy();
+        setCachedServiceVersion(mServiceVersion);
     }
 
     /**
@@ -647,12 +650,13 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
     }
 
     /**
-     * Sunny day scenario for connect()
+     * Sunny day scenario for connect() using the HAL method for AIDL <= 2.
      */
     @Test
-    public void testConnect_success() throws Exception {
+    public void testConnect_V2_success() throws Exception {
         final String configPin = "12345";
         final HashSet<Integer> methods = new HashSet<>();
+        setCachedServiceVersion(2);
 
         doAnswer(new AnswerWithArguments() {
             public String answer(byte[] peer, int method, String pin, boolean joinExisting,
@@ -673,6 +677,61 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
             }
         }).when(mISupplicantP2pIfaceMock).connect(eq(mPeerMacAddressBytes), anyInt(),
                 anyString(), anyBoolean(), anyBoolean(), anyInt());
+
+        WifiP2pConfig config = createPlaceholderP2pConfig(mPeerMacAddress, WpsInfo.DISPLAY, "");
+
+        // Default value when service is not initialized.
+        assertNull(mDut.connect(config, false));
+
+        executeAndValidateInitializationSequence(false, false);
+
+        assertEquals(configPin, mDut.connect(config, false));
+        assertTrue(methods.contains(WpsProvisionMethod.DISPLAY));
+        methods.clear();
+
+        config = createPlaceholderP2pConfig(mPeerMacAddress, WpsInfo.DISPLAY, configPin);
+        assertTrue(mDut.connect(config, false).isEmpty());
+        assertTrue(methods.contains(WpsProvisionMethod.DISPLAY));
+        methods.clear();
+
+        config = createPlaceholderP2pConfig(mPeerMacAddress, WpsInfo.PBC, "");
+        assertTrue(mDut.connect(config, false).isEmpty());
+        assertTrue(methods.contains(WpsProvisionMethod.PBC));
+        methods.clear();
+
+        config = createPlaceholderP2pConfig(mPeerMacAddress, WpsInfo.KEYPAD, configPin);
+        assertTrue(mDut.connect(config, false).isEmpty());
+        assertTrue(methods.contains(WpsProvisionMethod.KEYPAD));
+    }
+
+    /**
+     * Sunny day scenario for connect() using the HAL method for AIDL >= 3.
+     */
+    @Test
+    public void testConnect_V3_success() throws Exception {
+        final String configPin = "12345";
+        final HashSet<Integer> methods = new HashSet<>();
+        setCachedServiceVersion(3);
+
+        doAnswer(new AnswerWithArguments() {
+            public String answer(P2pConnectInfo info) throws RemoteException {
+                String pin = info.preSelectedPin;
+                int method = info.provisionMethod;
+                methods.add(method);
+
+                if (method == WpsProvisionMethod.DISPLAY && TextUtils.isEmpty(pin)) {
+                    // Return the configPin for DISPLAY method if the pin was not provided.
+                    return configPin;
+                } else {
+                    if (method != WpsProvisionMethod.PBC) {
+                        // PIN is only required for PIN methods.
+                        assertEquals(pin, configPin);
+                    }
+                    // For all the other cases, there is no generated pin.
+                    return "";
+                }
+            }
+        }).when(mISupplicantP2pIfaceMock).connectWithParams(any(P2pConnectInfo.class));
 
         WifiP2pConfig config = createPlaceholderP2pConfig(mPeerMacAddress, WpsInfo.DISPLAY, "");
 
@@ -747,6 +806,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
         WifiP2pConfig config = createPlaceholderP2pConfig(mPeerMacAddress,
                 WpsInfo.DISPLAY, configPin);
 
+        setCachedServiceVersion(2);
         executeAndValidateInitializationSequence(false, false);
         doThrow(new ServiceSpecificException(SupplicantStatusCode.FAILURE_UNKNOWN))
                 .when(mISupplicantP2pIfaceMock).connect(eq(mPeerMacAddressBytes), anyInt(),

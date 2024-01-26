@@ -1078,7 +1078,7 @@ public class DppManager {
 
     private void logd(String message) {
         if (mVerboseLoggingEnabled) {
-            Log.d(TAG, message);
+            Log.d(TAG, message, null);
         }
     }
 

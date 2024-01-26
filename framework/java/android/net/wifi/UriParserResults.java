@@ -34,9 +34,17 @@ import java.util.Objects;
 @SystemApi
 public final class UriParserResults implements Parcelable {
 
+    /**
+     * Return value for {@link #getUriScheme()} indicating that the URI contains
+     * a ZXing WiFi configuration.
+     */
     @FlaggedApi("com.android.wifi.flags.uri_parser")
     public static final int URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG = 1;
 
+    /**
+     * Return value for {@link #getUriScheme()} indicating that the URI contains
+     * a DPP (Easy Connect) configuration.
+     */
     @FlaggedApi("com.android.wifi.flags.uri_parser")
     public static final int URI_SCHEME_DPP = 2;
 

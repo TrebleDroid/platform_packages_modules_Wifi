@@ -92,48 +92,48 @@ class LogcatLog implements WifiLog {
 
     @Override
     public void eC(String msg) {
-        Log.e(mTag, msg);
+        Log.e(mTag, msg, null);
     }
 
     @Override
     public void wC(String msg) {
-        Log.w(mTag, msg);
+        Log.w(mTag, msg, null);
     }
 
     @Override
     public void iC(String msg) {
-        Log.i(mTag, msg);
+        Log.i(mTag, msg, null);
     }
 
     @Override
     public void tC(String msg) {
-        Log.d(mTag, msg);
+        Log.d(mTag, msg, null);
     }
 
     /* Legacy methods */
     @Override
     public void e(String msg) {
-        Log.e(mTag, msg);
+        Log.e(mTag, msg, null);
     }
 
     @Override
     public void w(String msg) {
-        Log.w(mTag, msg);
+        Log.w(mTag, msg, null);
     }
 
     @Override
     public void i(String msg) {
-        Log.i(mTag, msg);
+        Log.i(mTag, msg, null);
     }
 
     @Override
     public void d(String msg) {
-        Log.d(mTag, msg);
+        Log.d(mTag, msg, null);
     }
 
     @Override
     public void v(String msg) {
-        Log.v(mTag, msg);
+        Log.v(mTag, msg, null);
     }
 
     /* Internal details */

@@ -1065,7 +1065,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                         listener.onResult(mPairingConfigManager
                                 .getAllPairedDevices(callingPackage));
                     } catch (RemoteException e) {
-                        Log.e(TAG, e.getMessage());
+                        Log.e(TAG, e.getMessage(), e);
                     }
                 }
         );
@@ -1099,7 +1099,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             try {
                 listener.onResult(state.getConfigRequest().mMasterPreference);
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -1131,7 +1131,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             try {
                 listener.onResult(mOpportunisticSet.contains(ctxPkg));
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }

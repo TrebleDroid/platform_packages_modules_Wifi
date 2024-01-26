@@ -26,6 +26,7 @@ import android.hardware.wifi.supplicant.ISupplicantP2pNetwork;
 import android.hardware.wifi.supplicant.IfaceInfo;
 import android.hardware.wifi.supplicant.IfaceType;
 import android.hardware.wifi.supplicant.MiracastMode;
+import android.hardware.wifi.supplicant.P2pConnectInfo;
 import android.hardware.wifi.supplicant.P2pDiscoveryInfo;
 import android.hardware.wifi.supplicant.P2pExtListenInfo;
 import android.hardware.wifi.supplicant.P2pFrameTypeMask;
@@ -210,7 +211,8 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
 
             if (mMonitor != null) {
                 ISupplicantP2pIfaceCallback callback =
-                        new SupplicantP2pIfaceCallbackAidlImpl(ifaceName, mMonitor);
+                        new SupplicantP2pIfaceCallbackAidlImpl(ifaceName, mMonitor,
+                                getCachedServiceVersion());
                 if (!registerCallback(callback)) {
                     Log.e(TAG, "Unable to register callback for iface " + ifaceName);
                     return false;
@@ -758,6 +760,38 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
         }
     }
 
+    private String connectWithParams(boolean joinExistingGroup, byte[] peerAddress,
+            int provisionMethod, String preSelectedPin, boolean persistent, int groupOwnerIntent,
+            WifiP2pConfig config) {
+        synchronized (mLock) {
+            String methodStr = "connectWithParams";
+
+            // Parameters should be pre-validated.
+            P2pConnectInfo info = new P2pConnectInfo();
+            info.joinExistingGroup = joinExistingGroup;
+            info.peerAddress = peerAddress;
+            info.provisionMethod = provisionMethod;
+            info.preSelectedPin = preSelectedPin;
+            info.persistent = persistent;
+            info.goIntent = groupOwnerIntent;
+
+            if (SdkLevel.isAtLeastV() && config.getVendorData() != null
+                    && !config.getVendorData().isEmpty()) {
+                info.vendorData =
+                        HalAidlUtil.frameworkToHalOuiKeyedDataList(config.getVendorData());
+            }
+
+            try {
+                return mISupplicantP2pIface.connectWithParams(info);
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return null;
+        }
+    }
+
     /**
      * Start P2P group formation with a discovered P2P peer. This includes
      * optional group owner negotiation, group interface setup, provisioning,
@@ -812,6 +846,11 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
             if (config.groupOwnerIntent < 0 || config.groupOwnerIntent > 15) {
                 Log.e(TAG, "Invalid group owner intent: " + config.groupOwnerIntent);
                 return null;
+            }
+
+            if (getCachedServiceVersion() >= 3) {
+                return connectWithParams(joinExistingGroup, peerAddress, provisionMethod,
+                        preSelectedPin, persistent, config.groupOwnerIntent, config);
             }
 
             try {
