@@ -671,6 +671,19 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
 
     private final Clock mClock;
 
+    private class D2DAllowWhenInfraStaDisabledValueListener
+            implements WifiSettingsConfigStore.OnSettingsChangedListener<Boolean> {
+        @Override
+        public void onSettingsChanged(@NonNull WifiSettingsConfigStore.Key<Boolean> key,
+                @Nullable Boolean newValue) {
+            if (!mP2pStateMachine.isWifiP2pAvailable()) {
+                Log.i(TAG, "D2d isn't allowed anymore when infra sta is disabled");
+                mP2pStateMachine.sendMessage(DISABLE_P2P);
+                mP2pStateMachine.checkAndSendP2pStateChangedBroadcast();
+            }
+        }
+    }
+
     public WifiP2pServiceImpl(Context context, WifiInjector wifiInjector) {
         mContext = context;
         mWifiInjector = wifiInjector;
@@ -1300,8 +1313,8 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         }
                     }
                 }, new IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION));
-
-                // TODO: b/295792510 - Monitor D2D_ALLOWED_WHEN_INFRA_STA_DISABLED value.
+                mSettingsConfigStore.registerChangeListener(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED,
+                        new D2DAllowWhenInfraStaDisabledValueListener(), this.getHandler());
                 // Register for location mode on/off broadcasts
                 mContext.registerReceiver(new BroadcastReceiver() {
                     @Override
@@ -5393,7 +5406,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
             pw.println();
         }
 
-        private boolean isWifiP2pAvailable() {
+        public boolean isWifiP2pAvailable() {
             if (mIsP2pDisallowedByAdmin) return false;
             if (mFeatureFlags.d2dUsageWhenWifiOff()) {
                 return mIsWifiEnabled
@@ -5403,9 +5416,10 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
             return mIsWifiEnabled;
         }
 
-        private void checkAndSendP2pStateChangedBroadcast() {
+        public void checkAndSendP2pStateChangedBroadcast() {
             Log.d(TAG, "Wifi enabled=" + mIsWifiEnabled + ", P2P disallowed by admin="
-                    + mIsP2pDisallowedByAdmin);
+                    + mIsP2pDisallowedByAdmin + ", D2D allowed when infra sta is disabled="
+                    + mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED));
             boolean wifiP2pAvailable = isWifiP2pAvailable();
             if (mLastP2pState != wifiP2pAvailable) {
                 mLastP2pState = wifiP2pAvailable;

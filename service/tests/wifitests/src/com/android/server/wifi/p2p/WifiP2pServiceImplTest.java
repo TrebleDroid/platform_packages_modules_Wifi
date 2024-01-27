@@ -246,6 +246,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     private ArgumentCaptor<TetheringManager.TetheringEventCallback> mTetheringEventCallbackCaptor =
             ArgumentCaptor.forClass(TetheringManager.TetheringEventCallback.class);
     private TetheringManager.TetheringEventCallback mTetheringEventCallback;
+    private ArgumentCaptor<WifiSettingsConfigStore.OnSettingsChangedListener>
+            mD2DAllowedSettingsCallbackCaptor =
+            ArgumentCaptor.forClass(WifiSettingsConfigStore.OnSettingsChangedListener.class);
 
     @Mock Bundle mBundle;
     @Mock Context mContext;
@@ -1526,6 +1529,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
             }
             mWifiStateChangedReceiver = mBcastRxCaptor.getAllValues().get(0);
             mLocationModeReceiver = mBcastRxCaptor.getAllValues().get(1);
+            verify(mWifiSettingsConfigStore).registerChangeListener(
+                    eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED),
+                    mD2DAllowedSettingsCallbackCaptor.capture(), any());
         }
 
         verify(mWifiPermissionsUtil, never()).isLocationModeEnabled();
@@ -8029,5 +8035,28 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         simulateWifiStateChange(false);
         checkIsP2pInitWhenClientConnected(true, mClient1,
                 new WorkSource(mClient1.getCallingUid(), TEST_PACKAGE_NAME));
+    }
+
+    /**
+     * Verify that p2p disable when the D2d allowed value changes to false
+     */
+    @Test
+    public void testP2pChangeToDisableWhenD2DAllowedToFalse()
+            throws Exception {
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(true);
+        when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
+        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(true);
+        simulateWifiStateChange(false);
+        checkIsP2pInitWhenClientConnected(true, mClient1,
+                new WorkSource(mClient1.getCallingUid(), TEST_PACKAGE_NAME));
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(false);
+        mD2DAllowedSettingsCallbackCaptor.getValue().onSettingsChanged(
+                D2D_ALLOWED_WHEN_INFRA_STA_DISABLED, false);
+        mLooper.dispatchAll();
+        // P2P is really disabled when wifi is off.
+        verify(mWifiNative).teardownInterface();
+        verify(mWifiMonitor).stopMonitoring(anyString());
     }
 }
