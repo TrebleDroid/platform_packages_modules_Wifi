@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -80,7 +81,7 @@ public class WifiGlobals {
     private final boolean mAdjustPollRssiIntervalEnabled;
     private final boolean mWifiInterfaceAddedSelfRecoveryEnabled;
     private final int mNetworkNotFoundEventThreshold;
-    private final boolean mIsBackgroundScanSupported;
+    private boolean mIsBackgroundScanSupported;
     private final boolean mIsWepDeprecated;
     private final boolean mIsWpaPersonalDeprecated;
     private final Map<String, List<String>> mCountryCodeToAfcServers;
@@ -92,6 +93,7 @@ public class WifiGlobals {
     private final boolean mIsAfcSupportedOnDevice;
     private boolean mDisableNudDisconnectsForWapiInSpecificCc = false;
     private Set<String> mMacRandomizationUnsupportedSsidPrefixes = new ArraySet<>();
+    private Map<String, BiFunction<String, Boolean, Boolean>> mOverrideMethods = new HashMap<>();
 
     private SparseArray<SparseArray<CarrierSpecificEapFailureConfig>>
             mCarrierSpecificEapFailureConfigMapPerCarrierId = new SparseArray<>();
@@ -177,6 +179,23 @@ public class WifiGlobals {
             }
         }
         loadCarrierSpecificEapFailureConfigMap();
+        mOverrideMethods.put("config_wifi_background_scan_support",
+                new BiFunction<String, Boolean, Boolean>() {
+                @Override
+                public Boolean apply(String value , Boolean isEnabled) {
+                    // reset to default
+                    if (!isEnabled) {
+                        mIsBackgroundScanSupported = mContext.getResources()
+                        .getBoolean(R.bool.config_wifi_background_scan_support);
+                        return true;
+                    }
+                    if ("true".equals(value) || "false".equals(value)) {
+                        mIsBackgroundScanSupported = Boolean.parseBoolean(value);
+                        return true;
+                    }
+                    return false;
+                }
+            });
     }
 
     /**
@@ -613,6 +632,17 @@ public class WifiGlobals {
      */
     public long getWifiConfigMaxDisableDurationMs() {
         return mWifiConfigMaxDisableDurationMs;
+    }
+
+    /**
+     * Force Overlay Config Value for background scan.
+     */
+    public boolean forceOverlayConfigValue(String configString, String value,
+            boolean isEnabled) {
+        if (!mOverrideMethods.containsKey(configString)) {
+            return false;
+        }
+        return mOverrideMethods.get(configString).apply(value, isEnabled);
     }
 
     /** Dump method for debugging */
