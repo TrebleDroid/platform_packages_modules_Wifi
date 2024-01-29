@@ -7861,4 +7861,16 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         return mWifiNative.setMockWifiMethods(methods);
     }
+
+    /**
+     * Force Overlay Config for testing
+     */
+    public boolean forceOverlayConfigValue(String configString, String value, boolean isEnabled) {
+        int uid = Binder.getCallingUid();
+        if (!mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)) {
+            throw new SecurityException(TAG + " Uid " + uid
+                    + " Missing NETWORK_SETTINGS permission");
+        }
+        return mWifiGlobals.forceOverlayConfigValue(configString, value, isEnabled);
+    }
 }
