@@ -1113,4 +1113,16 @@ public class BaseWifiService extends IWifiManager.Stub {
     public void disableMscs() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void setSendDhcpHostnameRestriction(@NonNull String packageName,
+            @WifiManager.SendDhcpHostnameRestriction int restriction) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void querySendDhcpHostnameRestriction(@NonNull String packageName,
+            @NonNull IIntegerListener listener) {
+        throw new UnsupportedOperationException();
+    }
 }

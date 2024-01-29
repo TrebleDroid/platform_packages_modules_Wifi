@@ -1273,8 +1273,7 @@ public class WifiConfigManager {
                 externalConfig.getNetworkSelectionStatus().getConnectChoiceRssi());
         internalConfig.setBssidAllowlist(externalConfig.getBssidAllowlistInternal());
         internalConfig.setRepeaterEnabled(externalConfig.isRepeaterEnabled());
-        internalConfig.setDhcpHostnameSetting(
-                externalConfig.getDhcpHostnameSetting());
+        internalConfig.setSendDhcpHostnameEnabled(externalConfig.isSendDhcpHostnameEnabled());
     }
 
     /**
@@ -1517,10 +1516,10 @@ public class WifiConfigManager {
                     existingInternalConfig);
         }
 
-        if (WifiConfigurationUtil.hasDhcpHostnameSettingChanged(existingInternalConfig,
+        if (WifiConfigurationUtil.hasSendDhcpHostnameEnabledChanged(existingInternalConfig,
                 newInternalConfig) && !mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)
                 && !mWifiPermissionsUtil.checkNetworkSetupWizardPermission(uid)) {
-            Log.e(TAG, "UID " + uid + " does not have permission to modify DHCP hostname "
+            Log.e(TAG, "UID " + uid + " does not have permission to modify send DHCP hostname "
                     + "setting " + config.getProfileKey() + ". Must have "
                     + "NETWORK_SETTINGS or NETWORK_SETUP_WIZARD.");
             return new Pair<>(
