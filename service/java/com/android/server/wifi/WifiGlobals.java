@@ -19,14 +19,21 @@ package com.android.server.wifi;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
 import android.util.ArraySet;
+import android.util.Log;
+import android.util.SparseArray;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.server.wifi.WifiBlocklistMonitor.CarrierSpecificEapFailureConfig;
 import com.android.wifi.resources.R;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,11 +46,15 @@ import javax.annotation.concurrent.ThreadSafe;
 /** Global wifi service in-memory state that is not persisted. */
 @ThreadSafe
 public class WifiGlobals {
+
+    private static final String TAG = "WifiGlobals";
     private final Context mContext;
 
     private final AtomicInteger mPollRssiIntervalMillis = new AtomicInteger(-1);
     private final AtomicBoolean mIpReachabilityDisconnectEnabled = new AtomicBoolean(true);
     private final AtomicBoolean mIsBluetoothConnected = new AtomicBoolean(false);
+    // Set default to false to check if the value will be overridden by WifiSettingConfigStore.
+    private final AtomicBoolean mIsWepAllowed = new AtomicBoolean(false);
 
     // These are read from the overlay, cache them after boot up.
     private final boolean mIsWpa3SaeUpgradeEnabled;
@@ -63,19 +74,28 @@ public class WifiGlobals {
     private final int mPollRssiLongIntervalMillis;
     private final int mClientRssiMonitorThresholdDbm;
     private final int mClientRssiMonitorHysteresisDb;
+    private boolean mDisableFirmwareRoamingInIdleMode = false;
+    private final boolean mIsSupportMultiInternetDual5G;
     private final boolean mAdjustPollRssiIntervalEnabled;
     private final boolean mWifiInterfaceAddedSelfRecoveryEnabled;
     private final int mNetworkNotFoundEventThreshold;
     private boolean mIsBackgroundScanSupported;
     private final boolean mIsWepDeprecated;
     private final boolean mIsWpaPersonalDeprecated;
-
+    private final Map<String, List<String>> mCountryCodeToAfcServers;
+    private final long mWifiConfigMaxDisableDurationMs;
     // This is set by WifiManager#setVerboseLoggingEnabled(int).
-    private boolean mIsShowKeyVerboseLoggingModeEnabled = false;
+    private int mVerboseLoggingLevel = WifiManager.VERBOSE_LOGGING_LEVEL_DISABLED;
     private boolean mIsUsingExternalScorer = false;
     private boolean mDisableUnwantedNetworkOnLowRssi = false;
+    private final boolean mIsAfcSupportedOnDevice;
+    private boolean mDisableNudDisconnectsForWapiInSpecificCc = false;
     private Set<String> mMacRandomizationUnsupportedSsidPrefixes = new ArraySet<>();
     private Map<String, BiFunction<String, Boolean, Boolean>> mOverrideMethods = new HashMap<>();
+
+    private SparseArray<SparseArray<CarrierSpecificEapFailureConfig>>
+            mCarrierSpecificEapFailureConfigMapPerCarrierId = new SparseArray<>();
+
 
     public WifiGlobals(Context context) {
         mContext = context;
@@ -118,10 +138,16 @@ public class WifiGlobals {
                 R.integer.config_wifiClientRssiMonitorHysteresisDb);
         mAdjustPollRssiIntervalEnabled = mContext.getResources().getBoolean(
                 R.bool.config_wifiAdjustPollRssiIntervalEnabled);
+        mDisableFirmwareRoamingInIdleMode = mContext.getResources()
+                .getBoolean(R.bool.config_wifiDisableFirmwareRoamingInIdleMode);
+        mIsSupportMultiInternetDual5G = mContext.getResources().getBoolean(
+                R.bool.config_wifiAllowMultiInternetConnectDual5GFrequency);
         mWifiInterfaceAddedSelfRecoveryEnabled = mContext.getResources().getBoolean(
                 R.bool.config_wifiInterfaceAddedSelfRecoveryEnabled);
         mDisableUnwantedNetworkOnLowRssi = mContext.getResources().getBoolean(
                 R.bool.config_wifiDisableUnwantedNetworkOnLowRssi);
+        mDisableNudDisconnectsForWapiInSpecificCc = mContext.getResources().getBoolean(
+                R.bool.config_wifiDisableNudDisconnectsForWapiInSpecificCc);
         mNetworkNotFoundEventThreshold = mContext.getResources().getInteger(
                 R.integer.config_wifiNetworkNotFoundEventThreshold);
         mIsBackgroundScanSupported = mContext.getResources()
@@ -130,8 +156,14 @@ public class WifiGlobals {
                 .getBoolean(R.bool.config_wifiWepDeprecated);
         mIsWpaPersonalDeprecated = mContext.getResources()
                 .getBoolean(R.bool.config_wifiWpaPersonalDeprecated);
+        mIsAfcSupportedOnDevice = mContext.getResources().getBoolean(R.bool.config_wifiAfcSupported)
+                && mContext.getResources().getBoolean(R.bool.config_wifiSoftap6ghzSupported)
+                && mContext.getResources().getBoolean(R.bool.config_wifi6ghzSupport);
+        mWifiConfigMaxDisableDurationMs = mContext.getResources()
+                .getInteger(R.integer.config_wifiDisableTemporaryMaximumDurationMs);
         Set<String> unsupportedSsidPrefixes = new ArraySet<>(mContext.getResources().getStringArray(
                 R.array.config_wifiForceDisableMacRandomizationSsidPrefixList));
+        mCountryCodeToAfcServers = getCountryCodeToAfcServersMap();
         if (!unsupportedSsidPrefixes.isEmpty()) {
             for (String ssid : unsupportedSsidPrefixes) {
                 String cleanedSsid = ssid.length() > 1 && (ssid.charAt(0) == '"')
@@ -140,6 +172,7 @@ public class WifiGlobals {
                 mMacRandomizationUnsupportedSsidPrefixes.add(cleanedSsid);
             }
         }
+        loadCarrierSpecificEapFailureConfigMap();
         mOverrideMethods.put("config_wifi_background_scan_support",
                 new BiFunction<String, Boolean, Boolean>() {
                 @Override
@@ -159,6 +192,89 @@ public class WifiGlobals {
             });
     }
 
+    /**
+     * Gets the CarrierSpecificEapFailureConfig applicable for the carrierId and eapFailureReason.
+     * @param carrierId the carrier ID
+     * @param eapFailureReason EAP failure reason
+     * @return The applicable CarrierSpecificEapFailureConfig, or null if there's no data for this
+     * particular combination of carrierId and eapFailureReason.
+     */
+    public @Nullable CarrierSpecificEapFailureConfig getCarrierSpecificEapFailureConfig(
+            int carrierId, int eapFailureReason) {
+        if (!mCarrierSpecificEapFailureConfigMapPerCarrierId.contains(carrierId)) {
+            return null;
+        }
+        return mCarrierSpecificEapFailureConfigMapPerCarrierId.get(carrierId).get(eapFailureReason);
+    }
+
+    /**
+     * Utility method for unit testing.
+     */
+    public @VisibleForTesting int getCarrierSpecificEapFailureConfigMapSize() {
+        return mCarrierSpecificEapFailureConfigMapPerCarrierId.size();
+    }
+
+    private void loadCarrierSpecificEapFailureConfigMap() {
+        String[] eapFailureOverrides = mContext.getResources().getStringArray(
+                R.array.config_wifiEapFailureConfig);
+        if (eapFailureOverrides == null) {
+            return;
+        }
+        for (String line : eapFailureOverrides) {
+            if (line == null) {
+                continue;
+            }
+            String[] items = line.split(",");
+            if (items.length != 5) {
+                // error case. Should have exactly 5 items.
+                Log.e(TAG, "Failed to parse eapFailureOverrides line=" + line);
+                continue;
+            }
+            try {
+                int carrierId = Integer.parseInt(items[0].trim());
+                int eapFailureCode = Integer.parseInt(items[1].trim());
+                int displayDialogue = Integer.parseInt(items[2].trim());
+                int disableThreshold = Integer.parseInt(items[3].trim());
+                int disableDurationMinutes = Integer.parseInt(items[4].trim());
+                if (!mCarrierSpecificEapFailureConfigMapPerCarrierId.contains(carrierId)) {
+                    mCarrierSpecificEapFailureConfigMapPerCarrierId.put(carrierId,
+                            new SparseArray<>());
+                }
+                SparseArray<CarrierSpecificEapFailureConfig> perEapFailureMap =
+                        mCarrierSpecificEapFailureConfigMapPerCarrierId.get(carrierId);
+                perEapFailureMap.put(eapFailureCode, new CarrierSpecificEapFailureConfig(
+                        disableThreshold, disableDurationMinutes * 60 * 1000, displayDialogue > 0));
+            } catch (Exception e) {
+                // failure to parse. Something is wrong with the config.
+                Log.e(TAG, "Parsing eapFailureOverrides line=" + line
+                        + ". Exception occurred:" + e);
+            }
+        }
+    }
+
+    private Map<String, List<String>> getCountryCodeToAfcServersMap() {
+        Map<String, List<String>> countryCodeToAfcServers = new HashMap<>();
+        String[] countryCodeToAfcServersFromConfig = mContext.getResources().getStringArray(
+                R.array.config_wifiAfcServerUrlsForCountry);
+
+        if (countryCodeToAfcServersFromConfig == null) {
+            return countryCodeToAfcServers;
+        }
+
+        // each entry should be of the form: countryCode,url1,url2...
+        for (String entry : countryCodeToAfcServersFromConfig) {
+            String[] countryAndUrls = entry.split(",");
+
+            // if no servers are specified for a country, then continue to the next entry
+            if (countryAndUrls.length < 2) {
+                continue;
+            }
+            countryCodeToAfcServers.put(countryAndUrls[0], Arrays.asList(Arrays.copyOfRange(
+                    countryAndUrls, 1, countryAndUrls.length)));
+        }
+        return countryCodeToAfcServers;
+    }
+
     public Set<String> getMacRandomizationUnsupportedSsidPrefixes() {
         return mMacRandomizationUnsupportedSsidPrefixes;
     }
@@ -176,6 +292,21 @@ public class WifiGlobals {
     /** Returns whether CMD_IP_REACHABILITY_LOST events should trigger disconnects. */
     public boolean getIpReachabilityDisconnectEnabled() {
         return mIpReachabilityDisconnectEnabled.get();
+    }
+
+    /**
+     * Returns a list of AFC server URLs for a country, or null if AFC is not available in that
+     * country.
+     */
+    public @Nullable List<String> getAfcServerUrlsForCountry(String countryCode) {
+        return mCountryCodeToAfcServers.get(countryCode);
+    }
+
+    /**
+     * Returns whether this device supports AFC.
+     */
+    public boolean isAfcSupportedOnDevice() {
+        return mIsAfcSupportedOnDevice;
     }
 
     /** Sets whether CMD_IP_REACHABILITY_LOST events should trigger disconnects. */
@@ -220,7 +351,16 @@ public class WifiGlobals {
      * @return boolean true if WEP networks are deprecated, false otherwise.
      */
     public boolean isWepDeprecated() {
-        return mIsWepDeprecated;
+        return mIsWepDeprecated || !mIsWepAllowed.get();
+    }
+
+    /**
+     * Helper method to check if WEP networks are supported.
+     *
+     * @return boolean true if WEP networks are supported, false otherwise.
+     */
+    public boolean isWepSupported() {
+        return !mIsWepDeprecated;
     }
 
     /**
@@ -230,6 +370,22 @@ public class WifiGlobals {
      */
     public boolean isWpaPersonalDeprecated() {
         return mIsWpaPersonalDeprecated;
+    }
+
+    /**
+     * Helper method to check whether this device should disable firmware roaming in idle mode.
+     * @return if the device should disable firmware roaming in idle mode.
+     */
+    public boolean isDisableFirmwareRoamingInIdleMode() {
+        return mDisableFirmwareRoamingInIdleMode;
+    }
+
+    /**
+     * Get the configuration for whether Multi-internet are allowed to
+     * connect simultaneously to both 5GHz high and 5GHz low.
+     */
+    public boolean isSupportMultiInternetDual5G() {
+        return mIsSupportMultiInternetDual5G;
     }
 
     /**
@@ -295,14 +451,21 @@ public class WifiGlobals {
         return mIsWpa3SaeH2eSupported;
     }
 
-    /** Set if show key verbose logging mode is enabled. */
-    public void setShowKeyVerboseLoggingModeEnabled(boolean enable) {
-        mIsShowKeyVerboseLoggingModeEnabled = enable;
+    /**
+     * Record the verbose logging level
+     */
+    public void setVerboseLoggingLevel(int level) {
+        mVerboseLoggingLevel = level;
+    }
+
+    /** Return the currently set verbose logging level. */
+    public int getVerboseLoggingLevel() {
+        return mVerboseLoggingLevel;
     }
 
     /** Check if show key verbose logging mode is enabled. */
     public boolean getShowKeyVerboseLoggingModeEnabled() {
-        return mIsShowKeyVerboseLoggingModeEnabled;
+        return mVerboseLoggingLevel == WifiManager.VERBOSE_LOGGING_LEVEL_ENABLED_SHOW_KEY;
     }
 
     /** Set whether the external scorer is being used **/
@@ -417,10 +580,38 @@ public class WifiGlobals {
     }
 
     /**
+     * Get whether to disable NUD disconnects for WAPI configurations in a specific CC.
+     */
+    public boolean disableNudDisconnectsForWapiInSpecificCc() {
+        return mDisableNudDisconnectsForWapiInSpecificCc;
+    }
+
+    /**
      * Get the threshold to use for blocking a network due to NETWORK_NOT_FOUND_EVENT failure.
      */
     public int getNetworkNotFoundEventThreshold() {
         return mNetworkNotFoundEventThreshold;
+    }
+
+    /**
+     * Set whether wep network is allowed by user.
+     */
+    public void setWepAllowed(boolean isAllowed) {
+        mIsWepAllowed.set(isAllowed);
+    }
+
+    /**
+     * Get whether or not wep network is allowed by user.
+     */
+    public boolean isWepAllowed() {
+        return mIsWepAllowed.get();
+    }
+
+    /**
+     * Get the maximum Wifi temporary disable duration.
+     */
+    public long getWifiConfigMaxDisableDurationMs() {
+        return mWifiConfigMaxDisableDurationMs;
     }
 
     /**
@@ -465,5 +656,23 @@ public class WifiGlobals {
         pw.println("mIsBackgroundScanSupported=" + mIsBackgroundScanSupported);
         pw.println("mIsWepDeprecated=" + mIsWepDeprecated);
         pw.println("mIsWpaPersonalDeprecated=" + mIsWpaPersonalDeprecated);
+        pw.println("mIsWepAllowed=" + mIsWepAllowed.get());
+        pw.println("mDisableFirmwareRoamingInIdleMode=" + mDisableFirmwareRoamingInIdleMode);
+        pw.println("mCarrierSpecificEapFailureConfigMapPerCarrierId mapping below:");
+        pw.println("mWifiConfigMaxDisableDurationMs=" + mWifiConfigMaxDisableDurationMs);
+        for (int i = 0; i < mCarrierSpecificEapFailureConfigMapPerCarrierId.size(); i++) {
+            int carrierId = mCarrierSpecificEapFailureConfigMapPerCarrierId.keyAt(i);
+            SparseArray<CarrierSpecificEapFailureConfig> perFailureMap =
+                    mCarrierSpecificEapFailureConfigMapPerCarrierId.valueAt(i);
+            for (int j = 0; j < perFailureMap.size(); j++) {
+                int eapFailureCode = perFailureMap.keyAt(j);
+                pw.println("carrierId=" + carrierId
+                        + ", eapFailureCode=" + eapFailureCode
+                        + ", displayNotification=" + perFailureMap.valueAt(j).displayNotification
+                        + ", threshold=" + perFailureMap.valueAt(j).threshold
+                        + ", durationMs=" + perFailureMap.valueAt(j).durationMs);
+            }
+        }
+        pw.println("mIsSupportMultiInternetDual5G=" + mIsSupportMultiInternetDual5G);
     }
 }

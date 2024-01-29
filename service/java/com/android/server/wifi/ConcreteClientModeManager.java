@@ -407,6 +407,13 @@ public class ConcreteClientModeManager implements ClientModeManager {
                 if (!mWifiNative.switchClientInterfaceToScanMode(
                         mClientInterfaceName, mTargetRoleChangeInfo.requestorWs)) {
                     mModeListener.onStartFailure(ConcreteClientModeManager.this);
+                    updateConnectModeState(mRole, WifiManager.WIFI_STATE_UNKNOWN,
+                            WifiManager.WIFI_STATE_DISABLING);
+                    updateConnectModeState(mRole, WifiManager.WIFI_STATE_DISABLED,
+                            WifiManager.WIFI_STATE_UNKNOWN);
+                    takeBugReportInterfaceFailureIfNeeded(
+                            "Wi-Fi BugReport (STA interface failure):",
+                            "Fail to switch to scan-only mode in started state");
                 } else {
                     mStateMachine.sendMessage(
                             ClientModeStateMachine.CMD_SWITCH_TO_SCAN_ONLY_MODE_CONTINUE,
@@ -1416,8 +1423,8 @@ public class ConcreteClientModeManager implements ClientModeManager {
 
     @Override
     public boolean setWifiConnectedNetworkScorer(
-            IBinder binder, IWifiConnectedNetworkScorer scorer) {
-        return getClientMode().setWifiConnectedNetworkScorer(binder, scorer);
+            IBinder binder, IWifiConnectedNetworkScorer scorer, int callerUid) {
+        return getClientMode().setWifiConnectedNetworkScorer(binder, scorer, callerUid);
     }
 
     @Override
@@ -1594,6 +1601,11 @@ public class ConcreteClientModeManager implements ClientModeManager {
     }
 
     @Override
+    public boolean isIpProvisioningTimedOut() {
+        return getClientMode().isIpProvisioningTimedOut();
+    }
+
+    @Override
     public boolean isSupplicantTransientState() {
         return getClientMode().isSupplicantTransientState();
     }
@@ -1700,5 +1712,10 @@ public class ConcreteClientModeManager implements ClientModeManager {
     @Override
     public boolean isMlo() {
         return getClientMode().isMlo();
+    }
+
+    @Override
+    public void onIdleModeChanged(boolean isIdle) {
+        getClientMode().onIdleModeChanged(isIdle);
     }
 }

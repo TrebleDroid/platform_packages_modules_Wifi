@@ -1,0 +1,114 @@
+package: "com.android.wifi.flags"
+
+flag {
+    name: "test_flag_function"
+    namespace: "wifi"
+    description: "This flag aim to test the flag release for wifi stack"
+    bug: "301145404"
+}
+
+flag {
+    name: "runtime_disable_pno_scan"
+    namespace: "wifi"
+    description: "Control the API to disable the PNO runtime"
+    bug: "282821585"
+}
+
+
+flag {
+    name: "delay_save_to_store"
+    namespace: "wifi"
+    description: "Control the feature delay the save to store in batch to reduce the blocking time"
+    bug: "302172794"
+}
+
+flag {
+    name: "single_wifi_thread"
+    namespace: "wifi"
+    description: "Control the feature that move all Wifi service to a single thread"
+    bug: "302593617"
+}
+
+flag {
+    name: "vendor_parcelable_parameters"
+    namespace: "wifi"
+    description: "Control the APIs that allow additional vendor-specific parcelables"
+    bug: "296069900"
+}
+
+flag {
+    name: "verbose_logging_for_aware_only"
+    namespace: "wifi"
+    description: "Control the API that allow only enable verbose logging for Wifi Aware"
+    bug: "289273616"
+}
+
+flag {
+    name: "add_channel_stats_per_link"
+    namespace: "wifi"
+    description: "Control the API that get the channel stats per link from WifiUsabilityStatsEntry"
+    bug: "276385220"
+}
+
+flag {
+    name: "mlo_link_capabilities_info"
+    namespace: "wifi"
+    description: "Control the API that get the MLO link capabilities"
+    bug: "262643386"
+}
+
+flag {
+    name: "disable_reason_unwanted_low_rssi"
+    namespace: "wifi"
+    description: "Control the API that as disable because of unwanted network under sufficient rssi"
+    bug: "262643386"
+}
+
+flag {
+    name: "low_latency_lock_listener"
+    namespace: "wifi"
+    description: "Control the API that add/remove the low latency lock listener"
+    bug: "277556184"
+}
+
+flag {
+    name: "network_provider_battery_charging_status"
+    namespace: "wifi"
+    description: "Control the API that allows setting / reading the NetworkProviderInfo's battery charging status"
+    bug: "305067231"
+}
+
+flag {
+    name: "shared_connectivity_broadcast_receiver_test_api"
+    namespace: "wifi"
+    description: "Control the test API for SharedConnectivityManager's getBroadcastReceiver() method"
+    bug: "305067231"
+}
+
+flag {
+    name: "anqp_request_wait_for_response"
+    namespace: "wifi"
+    description: "Make the ANQP request in a queue and wait for the previous response before trigger the next request"
+    bug: "310037751"
+}
+
+flag {
+    name: "wep_usage"
+    namespace: "wifi"
+    description: "Control the API for wep usage"
+    bug: "275367422"
+}
+
+flag {
+    name: "wpa_personal_usage"
+    namespace: "wifi"
+    description: "Control the API for wpa personal usage"
+    bug: "275367422"
+}
+
+flag {
+    name: "add_subscription_id"
+    namespace: "wifi"
+    description: "Add new API to set the subscription id in the Wifi Info"
+    bug: "236669534"
+}

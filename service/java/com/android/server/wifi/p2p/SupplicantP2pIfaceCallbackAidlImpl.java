@@ -19,10 +19,15 @@ package com.android.server.wifi.p2p;
 import static com.android.net.module.util.Inet4AddressUtils.intToInet4AddressHTL;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.hardware.wifi.supplicant.ISupplicantP2pIfaceCallback;
 import android.hardware.wifi.supplicant.P2pClientEapolIpAddressInfo;
+import android.hardware.wifi.supplicant.P2pDeviceFoundEventParams;
 import android.hardware.wifi.supplicant.P2pGroupStartedEventParams;
+import android.hardware.wifi.supplicant.P2pPeerClientDisconnectedEventParams;
+import android.hardware.wifi.supplicant.P2pPeerClientJoinedEventParams;
 import android.hardware.wifi.supplicant.P2pProvDiscStatusCode;
+import android.hardware.wifi.supplicant.P2pProvisionDiscoveryCompletedEventParams;
 import android.hardware.wifi.supplicant.P2pStatusCode;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.hardware.wifi.supplicant.WpsDevPasswordId;
@@ -41,6 +46,7 @@ import com.android.internal.util.HexDump;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.io.ByteArrayInputStream;
+import java.net.Inet4Address;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -96,42 +102,9 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
     public void onDeviceFound(byte[] srcAddress, byte[] p2pDeviceAddress, byte[] primaryDeviceType,
             String deviceName, int configMethods, byte deviceCapabilities, int groupCapabilities,
             byte[] wfdDeviceInfo) {
-        if (deviceName == null) {
-            Log.e(TAG, "Missing device name.");
-            return;
-        }
-        WifiP2pDevice device = new WifiP2pDevice();
-        device.deviceName = deviceName;
-        try {
-            device.deviceAddress = NativeUtil.macAddressFromByteArray(p2pDeviceAddress);
-        } catch (Exception e) {
-            Log.e(TAG, "Could not decode device address.", e);
-            return;
-        }
-
-        try {
-            device.primaryDeviceType = NativeUtil.wpsDevTypeStringFromByteArray(primaryDeviceType);
-        } catch (Exception e) {
-            Log.e(TAG, "Could not encode device primary type.", e);
-            return;
-        }
-
-        device.deviceCapability = deviceCapabilities;
-        device.groupCapability = groupCapabilities;
-        device.wpsConfigMethodsSupported = configMethods;
-        device.status = WifiP2pDevice.AVAILABLE;
-
-        if (wfdDeviceInfo != null && wfdDeviceInfo.length >= 6) {
-            device.wfdInfo = new WifiP2pWfdInfo(
-                    // Use & 0xFF to cast signed byte to unsigned int, otherwise
-                    // sign extension will affect the bitwise operations
-                    ((wfdDeviceInfo[0] & 0xFF) << 8) + (wfdDeviceInfo[1] & 0xFF),
-                    ((wfdDeviceInfo[2] & 0xFF) << 8) + (wfdDeviceInfo[3] & 0xFF),
-                    ((wfdDeviceInfo[4] & 0xFF) << 8) + (wfdDeviceInfo[5] & 0xFF));
-        }
-
-        logd("Device discovered on " + mInterface + ": " + device);
-        mMonitor.broadcastP2pDeviceFound(mInterface, device);
+        handleDeviceFound(srcAddress, p2pDeviceAddress, primaryDeviceType, deviceName,
+                configMethods, deviceCapabilities, groupCapabilities, wfdDeviceInfo,
+                null, null);
     }
 
     /**
@@ -443,9 +416,44 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
     @Override
     public void onProvisionDiscoveryCompleted(byte[] p2pDeviceAddress, boolean isRequest,
             byte status, int configMethods, String generatedPin) {
-        logd("Provision discovery " + (isRequest ? "request" : "response")
-                + " for WPS Config method: " + configMethods
-                + " status: " + status);
+        handleProvisionDiscoveryCompletedEvent(
+                p2pDeviceAddress, isRequest, status, configMethods, generatedPin, null);
+    }
+
+    /**
+     * Used to indicate the completion of a P2P provision discovery request.
+     *
+     * @param provisionDiscoveryCompletedEventParams Parameters associated with P2P provision
+     *     discovery frame notification.
+     */
+    @Override
+    public void onProvisionDiscoveryCompletedEvent(
+            P2pProvisionDiscoveryCompletedEventParams provisionDiscoveryCompletedEventParams) {
+        handleProvisionDiscoveryCompletedEvent(
+                provisionDiscoveryCompletedEventParams.p2pDeviceAddress,
+                provisionDiscoveryCompletedEventParams.isRequest,
+                provisionDiscoveryCompletedEventParams.status,
+                provisionDiscoveryCompletedEventParams.configMethods,
+                provisionDiscoveryCompletedEventParams.generatedPin,
+                provisionDiscoveryCompletedEventParams.groupInterfaceName);
+    }
+
+    private void handleProvisionDiscoveryCompletedEvent(
+            byte[] p2pDeviceAddress,
+            boolean isRequest,
+            byte status,
+            int configMethods,
+            String generatedPin,
+            String groupIfName) {
+        logd(
+                "Provision discovery "
+                        + (isRequest ? "request" : "response")
+                        + " for WPS Config method: "
+                        + configMethods
+                        + " status: "
+                        + status
+                        + " groupIfName: "
+                        + (TextUtils.isEmpty(groupIfName) ? "null" : groupIfName));
 
         WifiP2pProvDiscEvent event = new WifiP2pProvDiscEvent();
         event.device = new WifiP2pDevice();
@@ -480,6 +488,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             mMonitor.broadcastP2pProvisionDiscoveryShowPin(mInterface, event);
         } else if (!isRequest && (configMethods & WpsConfigMethods.DISPLAY) != 0) {
             event.event = WifiP2pProvDiscEvent.ENTER_PIN;
+            event.pin = generatedPin;
             mMonitor.broadcastP2pProvisionDiscoveryEnterPin(mInterface, event);
         } else if (isRequest && (configMethods & WpsConfigMethods.DISPLAY) != 0) {
             event.event = WifiP2pProvDiscEvent.SHOW_PIN;
@@ -545,7 +554,30 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onStaAuthorized(byte[] srcAddress, byte[] p2pDeviceAddress) {
-        logd("STA authorized on " + mInterface);
+        onP2pApStaConnected(null, srcAddress, p2pDeviceAddress, 0);
+    }
+
+    /**
+     * Used to indicate that a P2P client has joined this device group owner.
+     *
+     * @param clientJoinedEventParams Parameters associated with peer client joined event.
+     */
+    @Override
+    public void onPeerClientJoined(P2pPeerClientJoinedEventParams clientJoinedEventParams) {
+        onP2pApStaConnected(
+                clientJoinedEventParams.groupInterfaceName,
+                clientJoinedEventParams.clientInterfaceAddress,
+                clientJoinedEventParams.clientDeviceAddress,
+                clientJoinedEventParams.clientIpAddress);
+    }
+
+    private void onP2pApStaConnected(
+            String groupIfName, byte[] srcAddress, byte[] p2pDeviceAddress, int ipAddress) {
+        logd("STA authorized on " + (TextUtils.isEmpty(groupIfName) ? mInterface : groupIfName));
+        if (ipAddress != 0) {
+            Inet4Address ipAddressClient = intToInet4AddressHTL(ipAddress);
+            logd("IP Address of Client: " + ipAddressClient.getHostAddress());
+        }
         WifiP2pDevice device = createStaEventDevice(srcAddress, p2pDeviceAddress);
         if (device == null) {
             return;
@@ -561,7 +593,27 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
      */
     @Override
     public void onStaDeauthorized(byte[] srcAddress, byte[] p2pDeviceAddress) {
-        logd("STA deauthorized on " + mInterface);
+        onP2pApStaDisconnected(null, srcAddress, p2pDeviceAddress);
+    }
+
+    /**
+     * Used to indicate that a P2P client has disconnected from this device group owner.
+     *
+     * @param clientDisconnectedEventParams Parameters associated with peer client disconnected
+     *     event.
+     */
+    @Override
+    public void onPeerClientDisconnected(
+            P2pPeerClientDisconnectedEventParams clientDisconnectedEventParams) {
+        onP2pApStaDisconnected(
+                clientDisconnectedEventParams.groupInterfaceName,
+                clientDisconnectedEventParams.clientInterfaceAddress,
+                clientDisconnectedEventParams.clientDeviceAddress);
+    }
+
+    private void onP2pApStaDisconnected(
+            String groupIfName, byte[] srcAddress, byte[] p2pDeviceAddress) {
+        logd("STA deauthorized on " + (TextUtils.isEmpty(groupIfName) ? mInterface : groupIfName));
         WifiP2pDevice device = createStaEventDevice(srcAddress, p2pDeviceAddress);
         if (device == null) {
             return;
@@ -679,6 +731,35 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             byte[] primaryDeviceType, String deviceName, int configMethods,
             byte deviceCapabilities, int groupCapabilities, byte[] wfdDeviceInfo,
             byte[] wfdR2DeviceInfo, byte[] vendorElemBytes) {
+        handleDeviceFound(srcAddress, p2pDeviceAddress, primaryDeviceType, deviceName,
+                configMethods, deviceCapabilities, groupCapabilities, wfdDeviceInfo,
+                wfdR2DeviceInfo, vendorElemBytes);
+    }
+
+    /**
+     * Used to indicate that a P2P device has been found.
+     *
+     * @param deviceFoundEventParams Parameters associated with the device found event.
+     */
+    @Override
+    public void onDeviceFoundWithParams(P2pDeviceFoundEventParams deviceFoundEventParams) {
+        handleDeviceFound(
+                deviceFoundEventParams.srcAddress,
+                deviceFoundEventParams.p2pDeviceAddress,
+                deviceFoundEventParams.primaryDeviceType,
+                deviceFoundEventParams.deviceName,
+                deviceFoundEventParams.configMethods,
+                deviceFoundEventParams.deviceCapabilities,
+                deviceFoundEventParams.groupCapabilities,
+                deviceFoundEventParams.wfdDeviceInfo,
+                deviceFoundEventParams.wfdR2DeviceInfo,
+                deviceFoundEventParams.vendorElemBytes);
+    }
+
+    private void handleDeviceFound(byte[] srcAddress, byte[] p2pDeviceAddress,
+            byte[] primaryDeviceType, String deviceName, int configMethods,
+            byte deviceCapabilities, int groupCapabilities, byte[] wfdDeviceInfo,
+            @Nullable byte[] wfdR2DeviceInfo, @Nullable byte[] vendorElemBytes) {
         WifiP2pDevice device = new WifiP2pDevice();
         device.deviceName = deviceName;
         if (deviceName == null) {

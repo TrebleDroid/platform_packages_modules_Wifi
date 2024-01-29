@@ -29,6 +29,7 @@ import android.net.wifi.util.ScanResultUtil;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
 
@@ -48,6 +49,8 @@ import java.util.Objects;
  * but does not currently report them to external clients.
  */
 public final class ScanResult implements Parcelable {
+
+    private static final String TAG = "ScanResult";
     /**
      * The network name.
      *
@@ -536,6 +539,20 @@ public final class ScanResult implements Parcelable {
     public static final int WIFI_BAND_60_GHZ = WifiScanner.WIFI_BAND_60_GHZ;
 
     /**
+     * Constant used for dual 5GHz multi-internet use-case only. Not to be used for regular scan
+     * result reporting.
+     * @hide
+     */
+    public static final int WIFI_BAND_5_GHZ_LOW = WifiScanner.WIFI_BAND_5_GHZ_LOW;
+
+    /**
+     * Constant used for dual 5GHz multi-internet use-case only. Not to be used for regular scan
+     * result reporting.
+     * @hide
+     */
+    public static final int WIFI_BAND_5_GHZ_HIGH = WifiScanner.WIFI_BAND_5_GHZ_HIGH;
+
+    /**
      * @hide
      */
     @Retention(RetentionPolicy.SOURCE)
@@ -870,6 +887,16 @@ public final class ScanResult implements Parcelable {
      * @hide
      */
     public static final int BAND_60_GHZ_END_FREQ_MHZ = 70200;
+    /**
+     * The highest frequency in 5GHz low
+     * @hide
+     */
+    public static final int BAND_5_GHZ_LOW_HIGHEST_FREQ_MHZ = 5320;
+    /**
+     * The lowest frequency in 5GHz high
+     * @hide
+     */
+    public static final int BAND_5_GHZ_HIGH_LOWEST_FREQ_MHZ = 5500;
 
     /**
      * Utility function to check if a frequency within 2.4 GHz band
@@ -930,6 +957,35 @@ public final class ScanResult implements Parcelable {
      */
     public static boolean is60GHz(int freqMhz) {
         return freqMhz >= BAND_60_GHZ_START_FREQ_MHZ && freqMhz <= BAND_60_GHZ_END_FREQ_MHZ;
+    }
+
+    /**
+     * Utility function to check whether 2 frequencies are valid for multi-internet connection
+     * when dual-5GHz is supported.
+     *
+     * The allowed combinations are:
+     * - 2.4GHz + Any 5GHz
+     * - 2.4GHz + 6Ghz
+     * - 5GHz low + 5GHz high
+     * - 5GHz low + 6GHz
+     * @hide
+     */
+    public static boolean isValidCombinedBandForDual5GHz(int freqMhz1, int freqMhz2) {
+        int band1 = toBand(freqMhz1);
+        int band2 = toBand(freqMhz2);
+        if (band1 == WIFI_BAND_24_GHZ || band2 == WIFI_BAND_24_GHZ) {
+            return band1 != band2;
+        }
+
+        // 5GHz Low : b1 36-48 b2 52-64(5320)
+        // 5GHz High : b3 100(5500)-144 b4 149-165
+        if ((freqMhz1 <= BAND_5_GHZ_LOW_HIGHEST_FREQ_MHZ
+                && freqMhz2 >= BAND_5_GHZ_HIGH_LOWEST_FREQ_MHZ)
+                    || (freqMhz2 <= BAND_5_GHZ_LOW_HIGHEST_FREQ_MHZ
+                        && freqMhz1 >= BAND_5_GHZ_HIGH_LOWEST_FREQ_MHZ)) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1184,6 +1240,14 @@ public final class ScanResult implements Parcelable {
          * @hide
          */
         public static final int EID_EXT_MULTI_LINK = 107;
+        /**
+         * Multi-Link IE Fragment sub element ID: see IEEE 802.11be Specification section 9.4.2.312
+         * Multi-Link element.
+         *
+         * @hide
+         */
+        public static final int EID_FRAGMENT_SUB_ELEMENT_MULTI_LINK = 254;
+
         /**
          * EHT Capabilities IE extension id: see IEEE 802.11be Specification section 9.4.2.1
          *
@@ -1535,6 +1599,7 @@ public final class ScanResult implements Parcelable {
 
     /** Implement the Parcelable interface {@hide} */
     public void writeToParcel(Parcel dest, int flags) {
+        long start = dest.dataSize();
         if (wifiSsid != null) {
             dest.writeInt(1);
             wifiSsid.writeToParcel(dest, flags);
@@ -1572,6 +1637,7 @@ public final class ScanResult implements Parcelable {
         else {
             dest.writeInt(0);
         }
+        int anqpElementsPayloadSize = 0;
         if (anqpElements != null) {
             dest.writeInt(anqpElements.length);
             for (AnqpInformationElement element : anqpElements) {
@@ -1579,6 +1645,7 @@ public final class ScanResult implements Parcelable {
                 dest.writeInt(element.getElementId());
                 dest.writeInt(element.getPayload().length);
                 dest.writeByteArray(element.getPayload());
+                anqpElementsPayloadSize += element.getPayload().length;
             }
         } else {
             dest.writeInt(0);
@@ -1600,6 +1667,18 @@ public final class ScanResult implements Parcelable {
         dest.writeParcelable(mApMldMacAddress, flags);
         dest.writeInt(mApMloLinkId);
         dest.writeTypedList(mAffiliatedMloLinks);
+        if (dest.dataSize() - start > 10000) {
+            Log.e(
+                    TAG,
+                    " Abnormal ScanResult: "
+                            + this
+                            + ". The size is "
+                            + (dest.dataSize() - start)
+                            + ". The informationElements size is "
+                            + informationElements.length
+                            + ". The anqpPayload size is "
+                            + anqpElementsPayloadSize);
+        }
     }
 
     /** Implement the Parcelable interface */

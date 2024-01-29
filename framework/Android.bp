@@ -136,6 +136,7 @@ java_library {
     libs: [
         "framework-annotations-lib",
         "framework-connectivity.stubs.module_lib",
+        "framework-location.stubs.module_lib",
     ],
     installable: false,
     visibility: [
@@ -158,17 +159,27 @@ java_sdk_library {
     ],
 
     impl_only_libs: [
+        "framework-location.stubs.module_lib",
         "framework-connectivity.stubs.module_lib",
     ],
 
     public: {
-        libs: ["framework-connectivity.stubs"],
+        libs: [
+            "framework-location.stubs",
+            "framework-connectivity.stubs",
+        ],
     },
     system: {
-        libs: ["framework-connectivity.stubs.system"],
+        libs: [
+            "framework-location.stubs.system",
+            "framework-connectivity.stubs.system",
+        ],
     },
     module_lib: {
-        libs: ["framework-connectivity.stubs.module_lib"],
+        libs: [
+            "framework-location.stubs.module_lib",
+            "framework-connectivity.stubs.module_lib",
+        ],
     },
     api_srcs: [
         ":wifi_javadoc_only_files",

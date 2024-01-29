@@ -163,6 +163,13 @@ public class WifiConfigurationUtil {
     }
 
     /**
+     * Helper method to check if the provided |config| corresponds to a DPP network or not.
+     */
+    public static boolean isConfigForDppNetwork(WifiConfiguration config) {
+        return config.isSecurityType(WifiConfiguration.SECURITY_TYPE_DPP);
+    }
+
+    /**
      * Helper method to check if the provided |config| corresponds to a WEP network or not.
      */
     public static boolean isConfigForWepNetwork(WifiConfiguration config) {
@@ -334,6 +341,10 @@ public class WifiConfigurationUtil {
             }
             if (!TextUtils.equals(newEnterpriseConfig.getDomainSuffixMatch(),
                     existingEnterpriseConfig.getDomainSuffixMatch())) {
+                return true;
+            }
+            if (newEnterpriseConfig.getMinimumTlsVersion()
+                    != existingEnterpriseConfig.getMinimumTlsVersion()) {
                 return true;
             }
         } else {

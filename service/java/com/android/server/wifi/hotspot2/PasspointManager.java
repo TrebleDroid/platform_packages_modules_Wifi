@@ -87,7 +87,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class provides the APIs to manage Passpoint provider configurations.
@@ -296,13 +296,18 @@ public class PasspointManager {
     }
 
     private void onUserConnectChoiceRemove(String choiceKey) {
-        if (mProviders.values().stream()
-                .filter(provider -> TextUtils.equals(provider.getConnectChoice(), choiceKey))
-                .peek(provider -> provider.setUserConnectChoice(null, 0))
-                .count() == 0) {
-            return;
+        AtomicBoolean modified = new AtomicBoolean(false);
+        mProviders.values().forEach(provider -> {
+            if (TextUtils.equals(provider.getConnectChoice(), choiceKey)) {
+                provider.setUserConnectChoice(null, 0);
+                if (!modified.get())  {
+                    modified.set(true);
+                }
+            }
+        });
+        if (modified.get()) {
+            mWifiConfigManager.saveToStore(true);
         }
-        mWifiConfigManager.saveToStore(true);
     }
 
     private void onUserConnectChoiceSet(List<WifiConfiguration> networks, String choiceKey,
@@ -327,19 +332,17 @@ public class PasspointManager {
      */
     public void removePasspointProviderWithPackage(@NonNull String packageName) {
         stopTrackingAppOpsChange(packageName);
-        for (Map.Entry<String, PasspointProvider> entry : getPasspointProviderWithPackage(
-                packageName).entrySet()) {
-            String uniqueId = entry.getValue().getConfig().getUniqueId();
-            removeProvider(Process.WIFI_UID /* ignored */, true, uniqueId, null);
+        for (PasspointProvider provider : getPasspointProviderWithPackage(packageName)) {
+            removeProvider(Process.WIFI_UID /* ignored */, true,
+                    provider.getConfig().getUniqueId(), null);
         }
     }
 
-    private Map<String, PasspointProvider> getPasspointProviderWithPackage(
+    private List<PasspointProvider> getPasspointProviderWithPackage(
             @NonNull String packageName) {
-        return mProviders.entrySet().stream().filter(
-                entry -> TextUtils.equals(packageName,
-                        entry.getValue().getPackageName())).collect(
-                Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+        List<PasspointProvider> providers = new ArrayList<>(mProviders.values());
+        providers.removeIf(provider -> !TextUtils.equals(packageName, provider.getPackageName()));
+        return providers;
     }
 
     private void startTrackingAppOpsChange(@NonNull String packageName, int uid) {
@@ -377,7 +380,8 @@ public class PasspointManager {
         mObjectFactory = objectFactory;
         mProviders = new HashMap<>();
         mAnqpCache = objectFactory.makeAnqpCache(clock);
-        mAnqpRequestManager = objectFactory.makeANQPRequestManager(mPasspointEventHandler, clock);
+        mAnqpRequestManager = objectFactory.makeANQPRequestManager(mPasspointEventHandler, clock,
+                wifiInjector, mHandler);
         mWifiConfigManager = wifiConfigManager;
         mWifiMetrics = wifiMetrics;
         mProviderIndex = 0;
@@ -868,9 +872,8 @@ public class PasspointManager {
             return Collections.emptyList();
         }
         List<Pair<PasspointProvider, PasspointMatch>> allMatches = getAllMatchedProviders(
-                scanResult, anqpRequestAllowed).stream()
-                .filter(a -> !isExpired(a.first.getConfig()))
-                .collect(Collectors.toList());
+                scanResult, anqpRequestAllowed);
+        allMatches.removeIf(a -> isExpired(a.first.getConfig()));
         if (allMatches.isEmpty()) {
             if (mVerboseLoggingEnabled) {
                 Log.d(TAG, "No service provider found for " + scanResult.SSID);
@@ -1197,16 +1200,24 @@ public class PasspointManager {
             return Collections.emptyList();
         }
         List<WifiConfiguration> configs = new ArrayList<>();
-        Set<String> uniqueIdSet = new HashSet<>();
-        uniqueIdSet.addAll(idList);
+        Set<String> uniqueIdSet = new HashSet<>(idList);
+        boolean refreshed = false;
         for (String uniqueId : uniqueIdSet) {
             PasspointProvider provider = mProviders.get(uniqueId);
             if (provider == null) {
                 continue;
             }
-            WifiConfiguration config = provider.getWifiConfig();
-            config = mWifiConfigManager.getConfiguredNetwork(config.getProfileKey());
+            String profileKey = provider.getWifiConfig().getProfileKey();
+            WifiConfiguration config = mWifiConfigManager
+                    .getConfiguredNetwork(profileKey);
+            if (config == null && !refreshed) {
+                // Refresh the WifiConfigManager, this may caused by new ANQP response
+                mPasspointNetworkNominateHelper.refreshWifiConfigsForProviders();
+                refreshed = true;
+                config = mWifiConfigManager.getConfiguredNetwork(profileKey);
+            }
             if (config == null) {
+                Log.e(TAG, "After refresh, still not in the WifiConfig, ignore");
                 continue;
             }
             // If the Passpoint configuration is from a suggestion, check if the app shares this
@@ -1232,21 +1243,32 @@ public class PasspointManager {
     }
 
     /**
-     * Returns the corresponding wifi configurations for all non-suggestion Passpoint profiles
-     * that include a recent SSID.
+     * Returns the corresponding Wifi configurations for all non-suggestion Passpoint profiles.
      *
+     * @param requireSsid If true, this method will only return Passpoint configs that include an
+     *     SSID. If false, this method will return all Passpoint configs, including those which do
+     *     not include an SSID.
+     *     <p>Note: Passpoint SSIDs are recorded upon successful connection to a network. Having an
+     *     SSID indicates that a Passpoint network has connected since the last reboot.
      * @return List of {@link WifiConfiguration} converted from {@link PasspointProvider}.
      */
-    public List<WifiConfiguration> getWifiConfigsForPasspointProfilesWithSsids() {
+    public List<WifiConfiguration> getWifiConfigsForPasspointProfiles(boolean requireSsid) {
+        if (mProviders.isEmpty()) return Collections.emptyList();
+        List<PasspointProvider> sortedProviders = new ArrayList<>(mProviders.values());
+        Collections.sort(sortedProviders, new PasspointProvider.ConnectionTimeComparator());
+
         List<WifiConfiguration> configs = new ArrayList<>();
-        for (PasspointProvider provider : mProviders.values()) {
-            if (provider == null || provider.getMostRecentSsid() == null
-                    || provider.isFromSuggestion()) {
+        for (PasspointProvider provider : sortedProviders) {
+            if (provider == null
+                    || provider.isFromSuggestion()
+                    || (requireSsid && provider.getMostRecentSsid() == null)) {
                 continue;
             }
             WifiConfiguration config = provider.getWifiConfig();
             config.SSID = provider.getMostRecentSsid();
-            config.getNetworkSelectionStatus().setHasEverConnected(true);
+            if (config.SSID != null) {
+                config.getNetworkSelectionStatus().setHasEverConnected(true);
+            }
             configs.add(config);
         }
         return configs;
@@ -1282,6 +1304,7 @@ public class PasspointManager {
             provider.setHasEverConnected(true);
         }
         provider.setMostRecentSsid(ssid);
+        provider.updateMostRecentConnectionTime();
     }
 
     /**
@@ -1445,7 +1468,7 @@ public class PasspointManager {
     public void clearAnqpRequestsAndFlushCache() {
         mAnqpRequestManager.clear();
         mAnqpCache.flush();
-        mProviders.values().stream().forEach(p -> p.clearProviderBlock());
+        mProviders.values().forEach(PasspointProvider::clearProviderBlock);
     }
 
     private PKIXParameters mInjectedPKIXParameters;
@@ -1629,7 +1652,7 @@ public class PasspointManager {
      * Resets all sim networks state.
      */
     public void resetSimPasspointNetwork() {
-        mProviders.values().stream().forEach(p -> p.setAnonymousIdentity(null));
+        mProviders.values().forEach(p -> p.setAnonymousIdentity(null));
         mWifiConfigManager.saveToStore(true);
     }
 

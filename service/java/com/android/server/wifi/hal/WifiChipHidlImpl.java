@@ -36,6 +36,7 @@ import android.hardware.wifi.V1_6.WifiAntennaMode;
 import android.hardware.wifi.V1_6.WifiRadioCombination;
 import android.hardware.wifi.V1_6.WifiRadioConfiguration;
 import android.net.wifi.CoexUnsafeChannel;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
@@ -96,22 +97,22 @@ public class WifiChipHidlImpl implements IWifiChip {
     }
 
     /**
-     * See comments for {@link IWifiChip#createApIface()}
+     * See comments for {@link IWifiChip#createApIface(List)}
      */
     @Override
     @Nullable
-    public WifiApIface createApIface() {
+    public WifiApIface createApIface(@NonNull List<OuiKeyedData> vendorData) {
         String methodStr = "createApIface";
         return validateAndCall(methodStr, null,
                 () -> createApIfaceInternal(methodStr));
     }
 
     /**
-     * See comments for {@link IWifiChip#createBridgedApIface()}
+     * See comments for {@link IWifiChip#createBridgedApIface(List)}
      */
     @Override
     @Nullable
-    public WifiApIface createBridgedApIface() {
+    public WifiApIface createBridgedApIface(@NonNull List<OuiKeyedData> vendorData) {
         String methodStr = "createBridgedApIface";
         return validateAndCall(methodStr, null,
                 () -> createBridgedApIfaceInternal(methodStr));
@@ -583,6 +584,15 @@ public class WifiChipHidlImpl implements IWifiChip {
     public boolean enableStaChannelForPeerNetwork(boolean enableIndoorChannel,
             boolean enableDfsChannel) {
         Log.d(TAG, "enableStaChannelForPeerNetwork() is not implemented in hidl.");
+        return false;
+    }
+
+    /**
+     * See comments for {@link IWifiChip#setAfcChannelAllowance(WifiChip.AfcChannelAllowance)}
+     */
+    @Override
+    public boolean setAfcChannelAllowance(WifiChip.AfcChannelAllowance afcChannelAllowance) {
+        Log.d(TAG, "setAfcChannelAllowance() is not implemented in hidl.");
         return false;
     }
 

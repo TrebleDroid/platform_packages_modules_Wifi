@@ -18,22 +18,17 @@ package com.android.server.wifi;
 
 import android.annotation.NonNull;
 import android.app.ActivityManager;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.wifi.IWifiLowLatencyLockListener;
 import android.net.wifi.WifiManager;
 import android.os.BatteryStatsManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.WorkSource;
 import android.os.WorkSource.WorkChain;
-import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
@@ -102,11 +97,24 @@ public class WifiLockManager {
     private final RemoteCallbackList<IWifiLowLatencyLockListener>
             mWifiLowLatencyLockListeners = new RemoteCallbackList<>();
     private boolean mIsLowLatencyActivated = false;
+    private WorkSource mLowLatencyBlamedWorkSource = new WorkSource();
+    private WorkSource mHighPerfBlamedWorkSource = new WorkSource();
+    private enum BlameReason {
+        WIFI_CONNECTION_STATE_CHANGED,
+        SCREEN_STATE_CHANGED,
+    };
 
-    WifiLockManager(Context context, BatteryStatsManager batteryStats,
-            ActiveModeWarden activeModeWarden, FrameworkFacade frameworkFacade,
-            Handler handler, Clock clock, WifiMetrics wifiMetrics,
-            DeviceConfigFacade deviceConfigFacade, WifiPermissionsUtil wifiPermissionsUtil) {
+    WifiLockManager(
+            Context context,
+            BatteryStatsManager batteryStats,
+            ActiveModeWarden activeModeWarden,
+            FrameworkFacade frameworkFacade,
+            Handler handler,
+            Clock clock,
+            WifiMetrics wifiMetrics,
+            DeviceConfigFacade deviceConfigFacade,
+            WifiPermissionsUtil wifiPermissionsUtil,
+            WifiDeviceStateChangeManager wifiDeviceStateChangeManager) {
         mContext = context;
         mBatteryStats = batteryStats;
         mActiveModeWarden = activeModeWarden;
@@ -118,25 +126,21 @@ public class WifiLockManager {
         mDeviceConfigFacade = deviceConfigFacade;
         mWifiPermissionsUtil = wifiPermissionsUtil;
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_SCREEN_ON);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-        context.registerReceiver(
-                new BroadcastReceiver() {
+        wifiDeviceStateChangeManager.registerStateChangeCallback(
+                new WifiDeviceStateChangeManager.StateChangeCallback() {
                     @Override
-                    public void onReceive(Context context, Intent intent) {
-                        String action = intent.getAction();
-                        if (TextUtils.equals(action, Intent.ACTION_SCREEN_ON)) {
-                            handleScreenStateChanged(true);
-                        } else if (TextUtils.equals(action, Intent.ACTION_SCREEN_OFF)) {
-                            handleScreenStateChanged(false);
-                        }
+                    public void onScreenStateChanged(boolean screenOn) {
+                        handleScreenStateChanged(screenOn);
                     }
-                }, filter, null, mHandler);
-        handleScreenStateChanged(context.getSystemService(PowerManager.class).isInteractive());
+                });
 
         // Register for UID fg/bg transitions
         registerUidImportanceTransitions();
+    }
+
+    private boolean canDisableChipPowerSave() {
+        return mContext.getResources().getBoolean(
+                R.bool.config_wifiLowLatencyLockDisableChipPowerSave);
     }
 
     // Check for conditions to activate high-perf lock
@@ -200,7 +204,7 @@ public class WifiLockManager {
             // then UID either share the blame, or removed from sharing
             // whether to start or stop the blame based on UID fg/bg state
             if (canActivateLowLatencyLock(
-                    isAppScreenOnExempted(uid) ? IGNORE_SCREEN_STATE_MASK : 0)) {
+                    uidRec.mIsScreenOnExempted ? IGNORE_SCREEN_STATE_MASK : 0)) {
                 setBlameLowLatencyUid(uid, uidRec.mIsFg);
                 notifyLowLatencyActiveUsersChanged();
             }
@@ -407,7 +411,7 @@ public class WifiLockManager {
             // Update the running mode
             updateOpMode();
             // Adjust blaming for UIDs in foreground
-            setBlameLowLatencyWatchList(screenOn);
+            setBlameLowLatencyWatchList(BlameReason.SCREEN_STATE_CHANGED, screenOn);
         }
     }
 
@@ -430,8 +434,10 @@ public class WifiLockManager {
         mWifiConnected = hasAtLeastOneConnection;
 
         // Adjust blaming for UIDs in foreground carrying low latency locks
-        if (canActivateLowLatencyLock(IGNORE_WIFI_STATE_MASK)) {
-            setBlameLowLatencyWatchList(mWifiConnected);
+        if (canActivateLowLatencyLock(countFgLowLatencyUids(/*isScreenOnExempted*/ true) > 0
+                ? IGNORE_SCREEN_STATE_MASK | IGNORE_WIFI_STATE_MASK
+                : IGNORE_WIFI_STATE_MASK)) {
+            setBlameLowLatencyWatchList(BlameReason.WIFI_CONNECTION_STATE_CHANGED, mWifiConnected);
         }
 
         // Adjust blaming for UIDs carrying high perf locks
@@ -468,10 +474,18 @@ public class WifiLockManager {
         return true;
     }
 
-    private boolean isAppForeground(final int uid, final int importance) {
-        if ((importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)) {
-            return true;
+    private boolean isAnyLowLatencyAppExemptedFromForeground(int[] uids) {
+        if (uids == null) return false;
+        for (int uid : uids) {
+            UidRec uidRec = mLowLatencyUidWatchList.get(uid);
+            if (uidRec != null && uidRec.mIsFgExempted) {
+                return true;
+            }
         }
+        return false;
+    }
+
+    private boolean isAppExemptedFromImportance(int uid, int importance) {
         // Exemption for applications running with CAR Mode permissions.
         if (mWifiPermissionsUtil.checkRequestCompanionProfileAutomotiveProjectionPermission(uid)
                 && (importance
@@ -483,7 +497,25 @@ public class WifiLockManager {
         return false;
     }
 
-    private boolean isAppScreenOnExempted(int uid) {
+    private boolean isAppForeground(final int uid, final int importance) {
+        if ((importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)) {
+            return true;
+        }
+        return isAppExemptedFromImportance(uid, importance);
+    }
+
+    private boolean isAnyLowLatencyAppExemptedFromScreenOn(int[] uids) {
+        if (uids == null) return false;
+        for (int uid : uids) {
+            UidRec uidRec = mLowLatencyUidWatchList.get(uid);
+            if (uidRec != null && uidRec.mIsScreenOnExempted) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAppExemptedFromScreenOn(int uid) {
         // Exemption for applications running with CAR Mode permissions.
         if (mWifiPermissionsUtil.checkRequestCompanionProfileAutomotiveProjectionPermission(uid)) {
             return true;
@@ -502,13 +534,15 @@ public class WifiLockManager {
             mLowLatencyUidWatchList.put(uid, uidRec);
             notifyLowLatencyOwnershipChanged();
 
-            // Now check if the uid is running in foreground
-            if (isAppForeground(uid,
-                    mContext.getSystemService(ActivityManager.class).getUidImportance(uid))) {
-                uidRec.mIsFg = true;
-            }
+            uidRec.mIsFg = isAppForeground(uid,
+                    mContext.getSystemService(ActivityManager.class).getUidImportance(uid));
+            // Save the current permission of foreground & 'screen on' exemption.
+            uidRec.mIsFgExempted = isAppExemptedFromImportance(uid,
+                    ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND);
+            uidRec.mIsScreenOnExempted = isAppExemptedFromScreenOn(uid);
 
-            if (canActivateLowLatencyLock(isAppScreenOnExempted(uid) ? IGNORE_SCREEN_STATE_MASK : 0,
+            if (canActivateLowLatencyLock(
+                    uidRec.mIsScreenOnExempted ? IGNORE_SCREEN_STATE_MASK : 0,
                     uidRec)) {
                 // Share the blame for this uid
                 setBlameLowLatencyUid(uid, true);
@@ -527,16 +561,17 @@ public class WifiLockManager {
         if (uidRec.mLockCount > 0) {
             uidRec.mLockCount--;
         } else {
-            Log.e(TAG, "Error, uid record conatains no locks");
+            Log.e(TAG, "Error, uid record contains no locks");
         }
         if (uidRec.mLockCount == 0) {
             mLowLatencyUidWatchList.remove(uid);
             notifyLowLatencyOwnershipChanged();
 
-            // Remove blame for this UID if it was alerady set
+            // Remove blame for this UID if it was already set
             // Note that blame needs to be stopped only if it was started before
             // to avoid calling the API unnecessarily, since it is reference counted
-            if (canActivateLowLatencyLock(0, uidRec)) {
+            if (canActivateLowLatencyLock(uidRec.mIsScreenOnExempted ? IGNORE_SCREEN_STATE_MASK : 0,
+                    uidRec)) {
                 setBlameLowLatencyUid(uid, false);
                 notifyLowLatencyActiveUsersChanged();
             }
@@ -634,11 +669,21 @@ public class WifiLockManager {
             Log.d(TAG, "releaseLock: " + wifiLock);
         }
 
+        WorkSource ws = wifiLock.getWorkSource();
+        Pair<int[], String[]> uidsAndTags = WorkSourceUtil.getUidsAndTagsForWs(ws);
+
         switch(wifiLock.mMode) {
             case WifiManager.WIFI_MODE_FULL_HIGH_PERF:
-                ++mFullHighPerfLocksReleased;
                 mWifiMetrics.addWifiLockAcqSession(WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                        mClock.getElapsedSinceBootMillis() - wifiLock.getAcqTimestamp());
+                        uidsAndTags.first,
+                        uidsAndTags.second,
+                        mWifiPermissionsUtil.getWifiCallerType(wifiLock.getUid(),
+                                ws.getPackageName(0)),
+                        mClock.getElapsedSinceBootMillis() - wifiLock.getAcqTimestamp(),
+                        canDisableChipPowerSave(),
+                        false,
+                        false);
+                ++mFullHighPerfLocksReleased;
                 // Stop blaming only if blaming was set before (conditions are met).
                 // This is to avoid calling the api unncessarily, since this API is
                 // reference counted in batteryStats and statsd
@@ -647,10 +692,17 @@ public class WifiLockManager {
                 }
                 break;
             case WifiManager.WIFI_MODE_FULL_LOW_LATENCY:
+                mWifiMetrics.addWifiLockAcqSession(WifiManager.WIFI_MODE_FULL_LOW_LATENCY,
+                        uidsAndTags.first,
+                        uidsAndTags.second,
+                        mWifiPermissionsUtil.getWifiCallerType(wifiLock.getUid(),
+                                ws.getPackageName(0)),
+                        mClock.getElapsedSinceBootMillis() - wifiLock.getAcqTimestamp(),
+                        canDisableChipPowerSave(),
+                        isAnyLowLatencyAppExemptedFromScreenOn(uidsAndTags.first),
+                        isAnyLowLatencyAppExemptedFromForeground(uidsAndTags.first));
                 removeWsFromLlWatchList(wifiLock.getWorkSource());
                 ++mFullLowLatencyLocksReleased;
-                mWifiMetrics.addWifiLockAcqSession(WifiManager.WIFI_MODE_FULL_LOW_LATENCY,
-                        mClock.getElapsedSinceBootMillis() - wifiLock.getAcqTimestamp());
                 break;
             default:
                 // Do nothing
@@ -669,6 +721,7 @@ public class WifiLockManager {
      * @return true if the operation succeeded, false otherwise
      */
     private boolean resetCurrentMode(@NonNull ClientModeManager clientModeManager) {
+        Pair<int[], String[]> uidsAndTags = null;
         switch (mCurrentOpMode) {
             case WifiManager.WIFI_MODE_FULL_HIGH_PERF:
                 if (!setPowerSave(clientModeManager, ClientMode.POWER_SAVE_CLIENT_WIFI_LOCK,
@@ -676,8 +729,15 @@ public class WifiLockManager {
                     Log.e(TAG, "Failed to reset the OpMode from hi-perf to Normal");
                     return false;
                 }
+                uidsAndTags = WorkSourceUtil.getUidsAndTagsForWs(mHighPerfBlamedWorkSource);
                 mWifiMetrics.addWifiLockActiveSession(WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                        mClock.getElapsedSinceBootMillis() - mCurrentSessionStartTimeMs);
+                        uidsAndTags.first,
+                        uidsAndTags.second,
+                        mClock.getElapsedSinceBootMillis() - mCurrentSessionStartTimeMs,
+                        canDisableChipPowerSave(),
+                        false,
+                        false);
+                mHighPerfBlamedWorkSource.clear();
                 break;
 
             case WifiManager.WIFI_MODE_FULL_LOW_LATENCY:
@@ -685,8 +745,15 @@ public class WifiLockManager {
                     Log.e(TAG, "Failed to reset the OpMode from low-latency to Normal");
                     return false;
                 }
+                uidsAndTags = WorkSourceUtil.getUidsAndTagsForWs(mLowLatencyBlamedWorkSource);
                 mWifiMetrics.addWifiLockActiveSession(WifiManager.WIFI_MODE_FULL_LOW_LATENCY,
-                        mClock.getElapsedSinceBootMillis() - mCurrentSessionStartTimeMs);
+                        uidsAndTags.first,
+                        uidsAndTags.second,
+                        mClock.getElapsedSinceBootMillis() - mCurrentSessionStartTimeMs,
+                        canDisableChipPowerSave(),
+                        isAnyLowLatencyAppExemptedFromScreenOn(uidsAndTags.first),
+                        isAnyLowLatencyAppExemptedFromForeground(uidsAndTags.first));
+                mLowLatencyBlamedWorkSource.clear();
                 break;
 
             case WifiManager.WIFI_MODE_NO_LOCKS_HELD:
@@ -707,8 +774,7 @@ public class WifiLockManager {
     private boolean setPowerSave(@NonNull ClientModeManager clientModeManager,
             @ClientMode.PowerSaveClientType int client, boolean ps) {
         // Check the overlay allows lock to control chip power save.
-        if (mContext.getResources().getBoolean(
-                R.bool.config_wifiLowLatencyLockDisableChipPowerSave)) {
+        if (canDisableChipPowerSave()) {
             return clientModeManager.setPowerSave(client, ps);
         }
         // Otherwise, pretend the call is a success.
@@ -818,9 +884,6 @@ public class WifiLockManager {
                 clientModeManager.setLowLatencyMode(!enabled);
                 return false;
             }
-            mIsLowLatencyActivated = enabled;
-            notifyLowLatencyActivated();
-            notifyLowLatencyActiveUsersChanged();
         } else if (lowLatencySupport == LOW_LATENCY_NOT_SUPPORTED) {
             // Only set power save mode
             if (!setPowerSave(clientModeManager, ClientMode.POWER_SAVE_CLIENT_WIFI_LOCK,
@@ -830,6 +893,9 @@ public class WifiLockManager {
             }
         }
 
+        mIsLowLatencyActivated = enabled;
+        notifyLowLatencyActivated();
+        notifyLowLatencyActiveUsersChanged();
         return true;
     }
 
@@ -955,7 +1021,7 @@ public class WifiLockManager {
             UidRec uidRec = mLowLatencyUidWatchList.valueAt(idx);
             if (uidRec.mIsFg) {
                 if (isScreenOnExempted) {
-                    if (isAppScreenOnExempted(uidRec.mUid)) uidCount++;
+                    if (uidRec.mIsScreenOnExempted) uidCount++;
                 } else {
                     uidCount++;
                 }
@@ -969,6 +1035,7 @@ public class WifiLockManager {
         Pair<int[], String[]> uidsAndTags = WorkSourceUtil.getUidsAndTagsForWs(ws);
         try {
             if (shouldBlame) {
+                mHighPerfBlamedWorkSource.add(ws);
                 mBatteryStats.reportFullWifiLockAcquiredFromSource(ws);
                 WifiStatsLog.write(WifiStatsLog.WIFI_LOCK_STATE_CHANGED,
                         uidsAndTags.first, uidsAndTags.second,
@@ -990,6 +1057,7 @@ public class WifiLockManager {
         long ident = Binder.clearCallingIdentity();
         try {
             if (shouldBlame) {
+                mLowLatencyBlamedWorkSource.add(new WorkSource(uid));
                 mBatteryStats.reportFullWifiLockAcquiredFromSource(new WorkSource(uid));
                 WifiStatsLog.write_non_chained(WifiStatsLog.WIFI_LOCK_STATE_CHANGED, uid, null,
                         WifiStatsLog.WIFI_LOCK_STATE_CHANGED__STATE__ON,
@@ -1005,10 +1073,15 @@ public class WifiLockManager {
         }
     }
 
-    private void setBlameLowLatencyWatchList(boolean shouldBlame) {
+    private void setBlameLowLatencyWatchList(BlameReason reason, boolean shouldBlame) {
         boolean notify = false;
         for (int idx = 0; idx < mLowLatencyUidWatchList.size(); idx++) {
             UidRec uidRec = mLowLatencyUidWatchList.valueAt(idx);
+            // The blame state of the UIDs should not be changed if the app is exempted from
+            // screen-on and the reason for blaming is screen state change.
+            if (uidRec.mIsScreenOnExempted && reason == BlameReason.SCREEN_STATE_CHANGED) {
+                continue;
+            }
             // Affect the blame for only UIDs running in foreground
             // UIDs running in the background are already not blamed,
             // and they should remain in that state.
@@ -1101,8 +1174,10 @@ public class WifiLockManager {
         final int mUid;
         // Count of locks owned or co-owned by this UID
         int mLockCount;
-        // Is this UID running in foreground
+        // Is this UID running in foreground or in exempted state (e.g. foreground-service)
         boolean mIsFg;
+        boolean mIsFgExempted = false;
+        boolean mIsScreenOnExempted = false;
 
         UidRec(int uid) {
             mUid = uid;

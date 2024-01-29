@@ -45,6 +45,7 @@ import android.net.MacAddress;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
+import android.net.wifi.SoftApInfo;
 import android.net.wifi.WifiInfo;
 import android.os.Build;
 import android.os.Handler;
@@ -297,6 +298,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
     public void initWithDefaultConfiguration() throws Exception {
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
+        mLooper.dispatchAll();
         verify(mWifiConfigManager).saveToStore(true);
     }
 
@@ -325,6 +327,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         store.setApConfiguration(null);
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         verifyDefaultApConfig(mDataStoreSource.toSerialize(), TEST_DEFAULT_AP_SSID);
+        mLooper.dispatchAll();
         verify(mWifiConfigManager).saveToStore(true);
         verify(mBackupManagerProxy).notifyDataChanged();
         assertFalse(store.getApConfiguration().isUserConfigurationInternal());
@@ -343,6 +346,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
 
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         assertFalse(store.getApConfiguration().isUserConfigurationInternal());
+        mLooper.dispatchAll();
         verify(mWifiConfigManager).saveToStore(true);
 
         /* Update with a valid configuration. */
@@ -359,6 +363,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         assertEquals(TEST_RANDOMIZED_MAC, store.getApConfiguration()
                 .getPersistentRandomizedMacAddress());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
+        mLooper.dispatchAll();
         verify(mWifiConfigManager, times(2)).saveToStore(true);
         verify(mBackupManagerProxy, times(2)).notifyDataChanged();
         assertTrue(store.getApConfiguration().isUserConfigurationInternal());
@@ -374,6 +379,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         /* Initialize WifiApConfigStore with default configuration. */
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
+        mLooper.dispatchAll();
         verify(mWifiConfigManager).saveToStore(true);
 
         /* Update with a valid configuration. */
@@ -396,6 +402,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         store.setApConfiguration(providedConfig);
         verifyApConfig(expectedConfig, store.getApConfiguration());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
+        mLooper.dispatchAll();
         verify(mWifiConfigManager, times(2)).saveToStore(true);
         verify(mBackupManagerProxy, times(2)).notifyDataChanged();
     }
@@ -410,6 +417,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         /* Initialize WifiApConfigStore with default configuration. */
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
+        mLooper.dispatchAll();
         verify(mWifiConfigManager).saveToStore(true);
 
         /* Update with a valid configuration. */
@@ -423,6 +431,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         store.setApConfiguration(expectedConfig);
         verifyApConfig(expectedConfig, store.getApConfiguration());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
+        mLooper.dispatchAll();
         verify(mWifiConfigManager, times(2)).saveToStore(true);
         verify(mBackupManagerProxy, times(2)).notifyDataChanged();
     }
@@ -436,6 +445,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         /* Initialize WifiApConfigStore with default configuration. */
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
+        mLooper.dispatchAll();
         verify(mWifiConfigManager).saveToStore(true);
 
         /* Update with a valid configuration. */
@@ -449,6 +459,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         store.setApConfiguration(expectedConfig);
         verifyApConfig(expectedConfig, store.getApConfiguration());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
+        mLooper.dispatchAll();
         verify(mWifiConfigManager, times(2)).saveToStore(true);
         verify(mBackupManagerProxy, times(2)).notifyDataChanged();
     }
@@ -479,6 +490,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         mDataStoreSource.fromDeserialized(persistedConfig);
         verifyApConfig(expectedConfig, store.getApConfiguration());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
+        mLooper.dispatchAll();
         verify(mWifiConfigManager).saveToStore(true);
         verify(mBackupManagerProxy).notifyDataChanged();
     }
@@ -502,6 +514,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         WifiApConfigStore store = createWifiApConfigStore();
         mDataStoreSource.fromDeserialized(persistedConfig);
         verifyApConfig(persistedConfig, store.getApConfiguration());
+        mLooper.dispatchAll();
         verify(mWifiConfigManager, never()).saveToStore(true);
         verify(mBackupManagerProxy, never()).notifyDataChanged();
     }
@@ -535,39 +548,16 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
 
     /**
      * Verify a proper local only hotspot config is generated for 5Ghz band when overlay configured
-     * and there are available 5g channels.
      */
     @Test
     public void generateLocalOnlyHotspotConfigWhenOverlayConfigureTo5G() throws Exception {
-        //leslea
-        when(mPackageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)).thenReturn(true);
-        when(mSoftApCapability.getSupportedChannelList(SoftApConfiguration.BAND_5GHZ))
-                .thenReturn(new int[] {36});
-        mResources.setBoolean(R.bool.config_wifi_local_only_hotspot_5ghz, true);
-        WifiApConfigStore store = createWifiApConfigStore();
-        SoftApConfiguration config = store
-                .generateLocalOnlyHotspotConfig(mContext, null, mSoftApCapability);
-        verifyDefaultLocalOnlyApConfig(config, TEST_DEFAULT_HOTSPOT_SSID,
-                SoftApConfiguration.BAND_5GHZ);
-
-        // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
-    }
-
-    /**
-     * Verify a proper local only hotspot config is generated for 2Ghz band when overlay configured
-     * but there is no available 5g channel.
-     */
-    @Test
-    public void generateLocalOnlyHotspotConfigWhenOverlayConfigureTo5GButNoAvailable5GChannel()
-            throws Exception {
         when(mPackageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)).thenReturn(true);
         mResources.setBoolean(R.bool.config_wifi_local_only_hotspot_5ghz, true);
         WifiApConfigStore store = createWifiApConfigStore();
         SoftApConfiguration config = store
                 .generateLocalOnlyHotspotConfig(mContext, null, mSoftApCapability);
         verifyDefaultLocalOnlyApConfig(config, TEST_DEFAULT_HOTSPOT_SSID,
-                SoftApConfiguration.BAND_2GHZ);
+                SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ);
 
         // verify that the config passes the validateApWifiConfiguration check
         assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
@@ -575,19 +565,16 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
 
     /**
      * Verify a proper local only hotspot config is generated for 6Ghz band when overlay configured
-     * and there are available 6g channels.
      */
     @Test
     public void generateLocalOnlyHotspotConfigWhenOverlayConfigureTo6G() throws Exception {
         when(mPackageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)).thenReturn(true);
-        when(mSoftApCapability.getSupportedChannelList(SoftApConfiguration.BAND_6GHZ))
-                .thenReturn(new int[] {1});
         mResources.setBoolean(R.bool.config_wifiLocalOnlyHotspot6ghz, true);
         WifiApConfigStore store = createWifiApConfigStore();
         SoftApConfiguration config = store
                 .generateLocalOnlyHotspotConfig(mContext, null, mSoftApCapability);
         verifyDefaultLocalOnlyApConfig(config, TEST_DEFAULT_HOTSPOT_SSID,
-                SoftApConfiguration.BAND_6GHZ);
+                SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_6GHZ);
 
         SoftApConfiguration updatedConfig = new SoftApConfiguration.Builder(config)
                 .setPassphrase("somepassword", SECURITY_TYPE_WPA3_SAE)
@@ -598,22 +585,27 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
     }
 
     /**
-     * Verify a proper local only hotspot config is generated for 2Ghz band when overlay configured
-     * but there is no available 6g channel.
+     * Verify a proper local only hotspot config is generated for 5Ghz and 6Ghz band when overlay
+     * configured
      */
     @Test
-    public void generateLocalOnlyHotspotConfigWhenOverlayConfigureTo6GButNoAvailable6GChannel()
-            throws Exception {
+    public void generateLocalOnlyHotspotConfigWhenOverlayConfigureTo5GAnd6G() throws Exception {
         when(mPackageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)).thenReturn(true);
         mResources.setBoolean(R.bool.config_wifiLocalOnlyHotspot6ghz, true);
+        mResources.setBoolean(R.bool.config_wifi_local_only_hotspot_5ghz, true);
         WifiApConfigStore store = createWifiApConfigStore();
         SoftApConfiguration config = store
                 .generateLocalOnlyHotspotConfig(mContext, null, mSoftApCapability);
         verifyDefaultLocalOnlyApConfig(config, TEST_DEFAULT_HOTSPOT_SSID,
-                SoftApConfiguration.BAND_2GHZ);
+                SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
+                        | SoftApConfiguration.BAND_6GHZ);
+
+        SoftApConfiguration updatedConfig = new SoftApConfiguration.Builder(config)
+                .setPassphrase("somepassword", SECURITY_TYPE_WPA3_SAE)
+                .build();
 
         // verify that the config passes the validateApWifiConfiguration check
-        assertTrue(WifiApConfigStore.validateApWifiConfiguration(config, true, mContext));
+        assertTrue(WifiApConfigStore.validateApWifiConfiguration(updatedConfig, true, mContext));
     }
 
     @Test
@@ -1306,34 +1298,47 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
     }
 
     @Test
-    public void testForceApBaneChannel() throws Exception {
+    public void testForceApBandChannel() throws Exception {
         int testBand = SoftApConfiguration.BAND_5GHZ; // Not default
         int testChannal = 149;
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
+        mLooper.dispatchAll();
         verify(mWifiConfigManager).saveToStore(true);
 
         // Test to enable forced AP band
-        store.enableForceSoftApBandOrChannel(testBand, 0);
+        store.enableForceSoftApBandOrChannel(testBand, 0, SoftApInfo.CHANNEL_WIDTH_AUTO);
         SoftApConfiguration expectedConfig = store.getApConfiguration();
-        assertEquals(expectedConfig.getBand(), testBand);
-        assertEquals(expectedConfig.getChannel(), 0);
+        assertEquals(testBand, expectedConfig.getBand());
+        assertEquals(0, expectedConfig.getChannel());
+        if (SdkLevel.isAtLeastT()) {
+            assertEquals(expectedConfig.getMaxChannelBandwidth(), SoftApInfo.CHANNEL_WIDTH_AUTO);
+        }
         // Disable forced AP band
         store.disableForceSoftApBandOrChannel();
         expectedConfig = store.getApConfiguration();
-        assertEquals(expectedConfig.getBand(), SoftApConfiguration.BAND_2GHZ);
-        assertEquals(expectedConfig.getChannel(), 0);
+        assertEquals(SoftApConfiguration.BAND_2GHZ, expectedConfig.getBand());
+        assertEquals(0, expectedConfig.getChannel());
+        if (SdkLevel.isAtLeastT()) {
+            assertEquals(SoftApInfo.CHANNEL_WIDTH_AUTO, expectedConfig.getMaxChannelBandwidth());
+        }
 
         // Test to enable forced AP band
-        store.enableForceSoftApBandOrChannel(testBand, testChannal);
+        store.enableForceSoftApBandOrChannel(testBand, testChannal, SoftApInfo.CHANNEL_WIDTH_40MHZ);
         expectedConfig = store.getApConfiguration();
-        assertEquals(expectedConfig.getBand(), testBand);
-        assertEquals(expectedConfig.getChannel(), testChannal);
+        assertEquals(testBand, expectedConfig.getBand());
+        assertEquals(testChannal, expectedConfig.getChannel());
+        if (SdkLevel.isAtLeastT()) {
+            assertEquals(SoftApInfo.CHANNEL_WIDTH_40MHZ, expectedConfig.getMaxChannelBandwidth());
+        }
         // Disable forced AP band
         store.disableForceSoftApBandOrChannel();
         expectedConfig = store.getApConfiguration();
-        assertEquals(expectedConfig.getBand(), SoftApConfiguration.BAND_2GHZ);
-        assertEquals(expectedConfig.getChannel(), 0);
+        assertEquals(SoftApConfiguration.BAND_2GHZ, expectedConfig.getBand());
+        assertEquals(0, expectedConfig.getChannel());
+        if (SdkLevel.isAtLeastT()) {
+            assertEquals(SoftApInfo.CHANNEL_WIDTH_AUTO, expectedConfig.getMaxChannelBandwidth());
+        }
     }
 
     private void verifyUpgradeConfiguration(WifiApConfigStore store, boolean isBridgedSupported,

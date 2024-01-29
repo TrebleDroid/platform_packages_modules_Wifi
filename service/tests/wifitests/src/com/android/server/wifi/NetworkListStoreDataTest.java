@@ -99,6 +99,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<byte-array name=\"AllowedSuiteBCiphers\" num=\"0\"></byte-array>\n"
                     + "<boolean name=\"Shared\" value=\"%s\" />\n"
                     + "<boolean name=\"AutoJoinEnabled\" value=\"true\" />\n"
+                    + "<int name=\"Priority\" value=\"0\" />\n"
                     + "<int name=\"DeletionPriority\" value=\"0\" />\n"
                     + "<int name=\"NumRebootsSinceLastUse\" value=\"0\" />\n"
                     + "<boolean name=\"RepeaterEnabled\" value=\"false\" />\n"
@@ -160,6 +161,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<int name=\"ConnectChoiceRssi\" value=\"0\" />\n"
                     + "<boolean name=\"HasEverConnected\" value=\"false\" />\n"
                     + "<boolean name=\"CaptivePortalNeverDetected\" value=\"true\" />\n"
+                    + "<boolean name=\"HasEverValidatedInternetAccess\" value=\"false\" />\n"
                     + "</NetworkStatus>\n"
                     + "<IpConfiguration>\n"
                     + "<string name=\"IpAssignment\">DHCP</string>\n"
@@ -186,6 +188,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<byte-array name=\"AllowedSuiteBCiphers\" num=\"0\"></byte-array>\n"
                     + "<boolean name=\"Shared\" value=\"%s\" />\n"
                     + "<boolean name=\"AutoJoinEnabled\" value=\"true\" />\n"
+                    + "<int name=\"Priority\" value=\"0\" />\n"
                     + "<int name=\"DeletionPriority\" value=\"0\" />\n"
                     + "<int name=\"NumRebootsSinceLastUse\" value=\"0\" />\n"
                     + "<boolean name=\"RepeaterEnabled\" value=\"false\" />\n"
@@ -247,15 +250,20 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<int name=\"ConnectChoiceRssi\" value=\"0\" />\n"
                     + "<boolean name=\"HasEverConnected\" value=\"false\" />\n"
                     + "<boolean name=\"CaptivePortalNeverDetected\" value=\"true\" />\n"
+                    + "<boolean name=\"HasEverValidatedInternetAccess\" value=\"false\" />\n"
                     + "</NetworkStatus>\n"
                     + "<IpConfiguration>\n"
                     + "<string name=\"IpAssignment\">DHCP</string>\n"
                     + "<string name=\"ProxySettings\">NONE</string>\n"
                     + "</IpConfiguration>\n"
                     + "<WifiEnterpriseConfiguration>\n"
-                    + "<string name=\"Identity\">" + TEST_IDENTITY + "</string>\n"
+                    + "<string name=\"Identity\">"
+                    + TEST_IDENTITY
+                    + "</string>\n"
                     + "<string name=\"AnonIdentity\"></string>\n"
-                    + "<string name=\"Password\">" + TEST_EAP_PASSWORD + "</string>\n"
+                    + "<string name=\"Password\">"
+                    + TEST_EAP_PASSWORD
+                    + "</string>\n"
                     + "<string name=\"ClientCert\"></string>\n"
                     + "<string name=\"CaCert\"></string>\n"
                     + "<string name=\"SubjectMatch\"></string>\n"
@@ -274,13 +282,14 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<boolean name=\"AppInstalledRootCaCert\" value=\"false\" />\n"
                     + "<boolean name=\"AppInstalledPrivateKey\" value=\"false\" />\n"
                     + "<null name=\"KeyChainAlias\" />\n"
-                    + (SdkLevel.isAtLeastS()
-                    ? "<null name=\"DecoratedIdentityPrefix\" />\n" : "")
+                    + (SdkLevel.isAtLeastS() ? "<null name=\"DecoratedIdentityPrefix\" />\n" : "")
                     + "<boolean name=\"TrustOnFirstUse\" value=\"false\" />\n"
                     + "<boolean name=\"UserApproveNoCaCert\" value=\"false\" />\n"
                     + "<int name=\"MinimumTlsVersion\" value=\"3\" />\n"
+                    + "<int name=\"TofuDialogState\" value=\"0\" />\n"
+                    + "<int name=\"TofuConnectionState\" value=\"0\" />\n"
                     + "</WifiEnterpriseConfiguration>\n"
-                    + "</Network>\n";;
+                    + "</Network>\n";
 
     private static final String SINGLE_SAE_NETWORK_DATA_XML_STRING_FORMAT =
             "<Network>\n"
@@ -302,6 +311,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<byte-array name=\"AllowedSuiteBCiphers\" num=\"0\"></byte-array>\n"
                     + "<boolean name=\"Shared\" value=\"%s\" />\n"
                     + "<boolean name=\"AutoJoinEnabled\" value=\"true\" />\n"
+                    + "<int name=\"Priority\" value=\"0\" />\n"
                     + "<int name=\"DeletionPriority\" value=\"0\" />\n"
                     + "<int name=\"NumRebootsSinceLastUse\" value=\"0\" />\n"
                     + "<boolean name=\"RepeaterEnabled\" value=\"false\" />\n"
@@ -355,6 +365,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<int name=\"ConnectChoiceRssi\" value=\"0\" />\n"
                     + "<boolean name=\"HasEverConnected\" value=\"false\" />\n"
                     + "<boolean name=\"CaptivePortalNeverDetected\" value=\"true\" />\n"
+                    + "<boolean name=\"HasEverValidatedInternetAccess\" value=\"false\" />\n"
                     + "</NetworkStatus>\n"
                     + "<IpConfiguration>\n"
                     + "<string name=\"IpAssignment\">DHCP</string>\n"
@@ -381,6 +392,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<byte-array name=\"AllowedSuiteBCiphers\" num=\"0\"></byte-array>\n"
                     + "<boolean name=\"Shared\" value=\"%s\" />\n"
                     + "<boolean name=\"AutoJoinEnabled\" value=\"true\" />\n"
+                    + "<int name=\"Priority\" value=\"0\" />\n"
                     + "<int name=\"DeletionPriority\" value=\"0\" />\n"
                     + "<int name=\"NumRebootsSinceLastUse\" value=\"0\" />\n"
                     + "<boolean name=\"RepeaterEnabled\" value=\"false\" />\n"
@@ -441,15 +453,20 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<int name=\"ConnectChoiceRssi\" value=\"0\" />\n"
                     + "<boolean name=\"HasEverConnected\" value=\"false\" />\n"
                     + "<boolean name=\"CaptivePortalNeverDetected\" value=\"true\" />\n"
+                    + "<boolean name=\"HasEverValidatedInternetAccess\" value=\"false\" />\n"
                     + "</NetworkStatus>\n"
                     + "<IpConfiguration>\n"
                     + "<string name=\"IpAssignment\">DHCP</string>\n"
                     + "<string name=\"ProxySettings\">NONE</string>\n"
                     + "</IpConfiguration>\n"
                     + "<WifiEnterpriseConfiguration>\n"
-                    + "<string name=\"Identity\">" + TEST_IDENTITY + "</string>\n"
+                    + "<string name=\"Identity\">"
+                    + TEST_IDENTITY
+                    + "</string>\n"
                     + "<string name=\"AnonIdentity\"></string>\n"
-                    + "<string name=\"Password\">" + TEST_EAP_PASSWORD + "</string>\n"
+                    + "<string name=\"Password\">"
+                    + TEST_EAP_PASSWORD
+                    + "</string>\n"
                     + "<string name=\"ClientCert\"></string>\n"
                     + "<string name=\"CaCert\"></string>\n"
                     + "<string name=\"SubjectMatch\"></string>\n"
@@ -468,20 +485,18 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<boolean name=\"AppInstalledRootCaCert\" value=\"false\" />\n"
                     + "<boolean name=\"AppInstalledPrivateKey\" value=\"false\" />\n"
                     + "<null name=\"KeyChainAlias\" />\n"
-                    + (SdkLevel.isAtLeastS()
-                    ? "<null name=\"DecoratedIdentityPrefix\" />\n" : "")
+                    + (SdkLevel.isAtLeastS() ? "<null name=\"DecoratedIdentityPrefix\" />\n" : "")
                     + "<boolean name=\"TrustOnFirstUse\" value=\"false\" />\n"
                     + "<boolean name=\"UserApproveNoCaCert\" value=\"false\" />\n"
                     + "<int name=\"MinimumTlsVersion\" value=\"0\" />\n"
+                    + "<int name=\"TofuDialogState\" value=\"0\" />\n"
+                    + "<int name=\"TofuConnectionState\" value=\"0\" />\n"
                     + "</WifiEnterpriseConfiguration>\n"
-                    + "</Network>\n";;
+                    + "</Network>\n";
 
     /**
-     * Repro'es the scenario in b/153435438.
-     * Network has
-     *  - Valid preSharedKey
-     *  - KeyMgmt set to KeyMgmt.OSEN
-     *  - ConfigKey set to "SSID"NONE
+     * Repro'es the scenario in b/153435438. Network has - Valid preSharedKey - KeyMgmt set to
+     * KeyMgmt.OSEN - ConfigKey set to "SSID"NONE
      */
     private static final String SINGLE_INVALID_NETWORK_DATA_XML_STRING_FORMAT =
             "<Network>\n"
@@ -502,6 +517,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<byte-array name=\"AllowedSuiteBCiphers\" num=\"0\"></byte-array>\n"
                     + "<boolean name=\"Shared\" value=\"%s\" />\n"
                     + "<boolean name=\"AutoJoinEnabled\" value=\"true\" />\n"
+                    + "<int name=\"Priority\" value=\"0\" />\n"
                     + "<int name=\"DeletionPriority\" value=\"0\" />\n"
                     + "<int name=\"NumRebootsSinceLastUse\" value=\"0\" />\n"
                     + "<boolean name=\"RepeaterEnabled\" value=\"false\" />\n"
@@ -536,6 +552,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                     + "<int name=\"ConnectChoiceRssi\" value=\"0\" />\n"
                     + "<boolean name=\"HasEverConnected\" value=\"false\" />\n"
                     + "<boolean name=\"CaptivePortalNeverDetected\" value=\"true\" />\n"
+                    + "<boolean name=\"HasEverValidatedInternetAccess\" value=\"false\" />\n"
                     + "</NetworkStatus>\n"
                     + "<IpConfiguration>\n"
                     + "<string name=\"IpAssignment\">UNASSIGNED</string>\n"
@@ -790,6 +807,7 @@ public class NetworkListStoreDataTest extends WifiBaseTest {
                         + "<int name=\"ConnectChoiceRssi\" value=\"0\" />\n"
                         + "<boolean name=\"HasEverConnected\" value=\"false\" />\n"
                         + "<boolean name=\"CaptivePortalNeverDetected\" value=\"true\" />\n"
+                        + "<boolean name=\"HasEverValidatedInternetAccess\" value=\"false\" />\n"
                         + "</NetworkStatus>\n"
                         + "<IpConfiguration>\n"
                         + "<string name=\"IpAssignment\">DHCP</string>\n"

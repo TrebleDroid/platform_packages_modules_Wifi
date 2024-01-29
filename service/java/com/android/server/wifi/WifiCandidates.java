@@ -25,6 +25,7 @@ import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiAnnotations;
 import android.net.wifi.WifiConfiguration;
 import android.util.ArrayMap;
+import android.util.Log;
 
 import com.android.internal.util.Preconditions;
 import com.android.server.wifi.proto.WifiScoreCardProto;
@@ -187,6 +188,11 @@ public class WifiCandidates {
         MacAddress getApMldMacAddress();
 
         /**
+         * Gets the number of reboots since the WifiConfiguration is last connected or updated.
+         */
+        int getNumRebootsSinceLastUse();
+
+        /**
          * Gets statistics from the scorecard.
          */
         @Nullable WifiScoreCardProto.Signal getEventStatistics(WifiScoreCardProto.Event event);
@@ -202,6 +208,13 @@ public class WifiCandidates {
          * @return true or false.
          */
         boolean isMultiLinkCapable();
+
+        /**
+         * Returns true if the candidate is Local-Only due to Ip Provisioning Timeout.
+         *
+         * @return true or false.
+         */
+        boolean isIpProvisioningTimedOut();
     }
 
     /**
@@ -231,8 +244,10 @@ public class WifiCandidates {
         private final boolean mCarrierOrPrivileged;
         private final int mPredictedThroughputMbps;
         private int mPredictedMultiLinkThroughputMbps;
+        private final int mNumRebootsSinceLastUse;
         private final int mEstimatedPercentInternetAvailability;
         private final MacAddress mApMldMacAddress;
+        private final boolean mIpProvisioningTimedOut;
 
         CandidateImpl(Key key, WifiConfiguration config,
                 WifiScoreCard.PerBssid perBssid,
@@ -269,11 +284,13 @@ public class WifiCandidates {
             this.mOemPrivate = config.oemPrivate;
             this.mCarrierOrPrivileged = isCarrierOrPrivileged;
             this.mPredictedThroughputMbps = predictedThroughputMbps;
+            this.mNumRebootsSinceLastUse = config.numRebootsSinceLastUse;
             this.mEstimatedPercentInternetAvailability = perBssid == null ? 50 :
                     perBssid.estimatePercentInternetAvailability();
             this.mRestricted = config.restricted;
             this.mPredictedMultiLinkThroughputMbps = 0;
             this.mApMldMacAddress = apMldMacAddress;
+            this.mIpProvisioningTimedOut = config.isIpProvisioningTimedOut();
         }
 
         @Override
@@ -402,6 +419,11 @@ public class WifiCandidates {
         }
 
         @Override
+        public int getNumRebootsSinceLastUse() {
+            return mNumRebootsSinceLastUse;
+        }
+
+        @Override
         public int getEstimatedPercentInternetAvailability() {
             return mEstimatedPercentInternetAvailability;
         }
@@ -409,6 +431,11 @@ public class WifiCandidates {
         @Override
         public MacAddress getApMldMacAddress() {
             return  mApMldMacAddress;
+        }
+
+        @Override
+        public boolean isIpProvisioningTimedOut() {
+            return mIpProvisioningTimedOut;
         }
 
         /**
@@ -441,6 +468,7 @@ public class WifiCandidates {
                     + "Mbps = " + getPredictedThroughputMbps() + ", "
                     + "nominator = " + getNominatorId() + ", "
                     + "pInternet = " + getEstimatedPercentInternetAvailability() + ", "
+                    + "numRebootsSinceLastUse = " + getNumRebootsSinceLastUse()  + ", "
                     + lastSelectionWeightString
                     + (isCurrentBssid() ? "connected, " : "")
                     + (isCurrentNetwork() ? "current, " : "")
@@ -454,7 +482,8 @@ public class WifiCandidates {
                     + (hasNoInternetAccess() ? "noInternet, " : "")
                     + (isNoInternetAccessExpected() ? "noInternetExpected, " : "")
                     + (isPasspoint() ? "passpoint, " : "")
-                    + (isOpenNetwork() ? "open" : "secure") + " }";
+                    + (isOpenNetwork() ? "open" : "secure")
+                    + " }";
         }
     }
 
@@ -632,12 +661,28 @@ public class WifiCandidates {
      */
     public @Nullable Key keyFromScanDetailAndConfig(ScanDetail scanDetail,
             WifiConfiguration config) {
-        if (!validConfigAndScanDetail(config, scanDetail)) return null;
+        if (!validConfigAndScanDetail(config, scanDetail)) {
+            Log.e(
+                    TAG,
+                    "validConfigAndScanDetail failed! ScanDetail: "
+                            + scanDetail
+                            + " WifiConfig: "
+                            + config);
+            return null;
+        }
 
         ScanResult scanResult = scanDetail.getScanResult();
         SecurityParams params = ScanResultMatchInfo.fromScanResult(scanResult)
                 .matchForNetworkSelection(ScanResultMatchInfo.fromWifiConfiguration(config));
-        if (null == params) return null;
+        if (null == params) {
+            Log.e(
+                    TAG,
+                    "matchForNetworkSelection failed! ScanResult: "
+                            + ScanResultMatchInfo.fromScanResult(scanResult)
+                            + " WifiConfig: "
+                            + ScanResultMatchInfo.fromWifiConfiguration(config));
+            return null;
+        }
         MacAddress bssid = MacAddress.fromString(scanResult.BSSID);
         return new Key(ScanResultMatchInfo.fromScanResult(scanResult), bssid, config.networkId,
                 params.getSecurityType());

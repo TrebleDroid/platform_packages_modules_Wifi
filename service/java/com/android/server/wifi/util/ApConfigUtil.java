@@ -50,7 +50,9 @@ import android.util.SparseArray;
 import android.util.SparseIntArray;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.server.wifi.SoftApManager;
 import com.android.server.wifi.WifiNative;
+import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.coex.CoexManager;
 import com.android.wifi.resources.R;
 
@@ -78,12 +80,6 @@ public class ApConfigUtil {
     public static final int DEFAULT_AP_BAND = SoftApConfiguration.BAND_2GHZ;
     public static final int DEFAULT_AP_CHANNEL = 6;
     public static final int HIGHEST_2G_AP_CHANNEL = 14;
-
-    /* Return code for updateConfiguration. */
-    public static final int SUCCESS = 0;
-    public static final int ERROR_NO_CHANNEL = 1;
-    public static final int ERROR_GENERIC = 2;
-    public static final int ERROR_UNSUPPORTED_CONFIGURATION = 3;
 
     /* Random number generator used for AP channel selection. */
     private static final Random sRandom = new Random();
@@ -737,33 +733,58 @@ public class ApConfigUtil {
     }
 
     /**
+     * Checks whether HAL support converting the restricted security type to an allowed one in 6GHz
+     * band configuration.
+     * @param resources the resources to get the OEM configuration for HAL support.
+     * @param type security type.
+     * @return true if HAL support to map WPA3 transition mode to WPA3 in 6GHz band,
+     * false otherwise.
+     */
+    public static boolean canHALConvertRestrictedSecurityTypeFor6GHz(@NonNull Resources resources,
+            @SoftApConfiguration.SecurityType int type) {
+        return type == SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION
+                && resources.getBoolean(R.bool
+                        .config_wifiSofapHalMapWpa3TransitionModeToWpa3OnlyIn6GHzBand);
+    }
+
+    /**
      * Remove {@link SoftApConfiguration#BAND_6GHZ} if multiple bands are configured
      * as a mask when security type is restricted to operate in this band.
      *
+     * @param resources the resources to get the OEM configuration for HAL support.
      * @param config The current {@link SoftApConfiguration}.
+     * @param isBridgedMode true if bridged mode is enabled, false otherwise.
      *
      * @return the updated SoftApConfiguration.
      */
     public static SoftApConfiguration remove6gBandForUnsupportedSecurity(
-            SoftApConfiguration config) {
+            @NonNull Resources resources,
+            SoftApConfiguration config, boolean isBridgedMode) {
         SoftApConfiguration.Builder builder = new SoftApConfiguration.Builder(config);
 
         try {
+            int securityType = config.getSecurityType();
             if (config.getBands().length == 1) {
                 int configuredBand = config.getBand();
                 if ((configuredBand & SoftApConfiguration.BAND_6GHZ) != 0
                         && isSecurityTypeRestrictedFor6gBand(config.getSecurityType())) {
                     Log.i(TAG, "remove BAND_6G if multiple bands are configured "
-                            + "as a mask since security type is restricted");
+                            + "as a mask when security type is restricted");
                     builder.setBand(configuredBand & ~SoftApConfiguration.BAND_6GHZ);
                 }
             } else if (SdkLevel.isAtLeastS()) {
                 SparseIntArray channels = config.getChannels();
                 SparseIntArray newChannels = new SparseIntArray(channels.size());
-                if (isSecurityTypeRestrictedFor6gBand(config.getSecurityType())) {
+                if (isSecurityTypeRestrictedFor6gBand(securityType)) {
                     for (int i = 0; i < channels.size(); i++) {
                         int band = channels.keyAt(i);
-                        if ((band & SoftApConfiguration.BAND_6GHZ) != 0) {
+                        if ((band & SoftApConfiguration.BAND_6GHZ) != 0
+                                && canHALConvertRestrictedSecurityTypeFor6GHz(resources,
+                                securityType) && isBridgedMode) {
+                            Log.i(TAG, "Do not remove BAND_6G in bridged mode for"
+                                    + " security type: " + securityType
+                                    + " as HAL can convert the security type");
+                        } else {
                             Log.i(TAG, "remove BAND_6G if multiple bands are configured "
                                     + "as a mask when security type is restricted");
                             band &= ~SoftApConfiguration.BAND_6GHZ;
@@ -791,9 +812,9 @@ public class ApConfigUtil {
      * @param countryCode country code
      * @param config configuration to update
      * @param capability soft ap capability
-     * @return an integer result code
+     * @return the corresponding {@link SoftApManager.StartResult} result code.
      */
-    public static int updateApChannelConfig(WifiNative wifiNative,
+    public static @SoftApManager.StartResult int updateApChannelConfig(WifiNative wifiNative,
             @NonNull CoexManager coexManager,
             Resources resources,
             String countryCode,
@@ -803,14 +824,14 @@ public class ApConfigUtil {
         /* Use default band and channel for device without HAL. */
         if (!wifiNative.isHalStarted()) {
             configBuilder.setChannel(DEFAULT_AP_CHANNEL, DEFAULT_AP_BAND);
-            return SUCCESS;
+            return SoftApManager.START_RESULT_SUCCESS;
         }
 
         /* Country code is mandatory for 5GHz band. */
         if (config.getBand() == SoftApConfiguration.BAND_5GHZ
                 && countryCode == null) {
             Log.e(TAG, "5GHz band is not allowed without country code");
-            return ERROR_GENERIC;
+            return SoftApManager.START_RESULT_FAILURE_GENERAL;
         }
         if (!capability.areFeaturesSupported(SOFTAP_FEATURE_ACS_OFFLOAD)) {
             /* Select a channel if it is not specified and ACS is not enabled */
@@ -820,7 +841,7 @@ public class ApConfigUtil {
                 if (freq == -1) {
                     /* We're not able to get channel from wificond. */
                     Log.e(TAG, "Failed to get available channel.");
-                    return ERROR_NO_CHANNEL;
+                    return SoftApManager.START_RESULT_FAILURE_NO_CHANNEL;
                 }
                 configBuilder.setChannel(
                         ScanResult.convertFrequencyMhzToChannelIfSupported(freq),
@@ -841,7 +862,7 @@ public class ApConfigUtil {
             }
         }
 
-        return SUCCESS;
+        return SoftApManager.START_RESULT_SUCCESS;
     }
 
     /**
@@ -981,6 +1002,27 @@ public class ApConfigUtil {
     }
 
     /**
+     * Helper function to update SoftApCapability instance based on config store.
+     *
+     * @param capability the original softApCapability
+     * @param configStore where we stored the Capability after first time fetch from driver.
+     * @return SoftApCapability which updated from the config store.
+     */
+    @NonNull
+    public static SoftApCapability updateCapabilityFromConfigStore(
+            SoftApCapability capability,
+            WifiSettingsConfigStore configStore) {
+        if (capability == null) {
+            return null;
+        }
+        if (capability.areFeaturesSupported(SOFTAP_FEATURE_IEEE80211_BE)) {
+            capability.setSupportedFeatures(isIeee80211beEnabledInConfig(configStore),
+                    SOFTAP_FEATURE_IEEE80211_BE);
+        }
+        return capability;
+    }
+
+    /**
      * Helper function to get device support 802.11 AX on Soft AP or not
      *
      * @param context the caller context used to get value from resource file.
@@ -1000,6 +1042,18 @@ public class ApConfigUtil {
     public static boolean isIeee80211beSupported(@NonNull Context context) {
         return context.getResources().getBoolean(
                     R.bool.config_wifiSoftapIeee80211beSupported);
+    }
+
+    /**
+     * Helper function to check Config supports 802.11 BE on Soft AP or not
+     *
+     * @param configStore to check the support from WifiSettingsConfigStore
+     * @return true if supported, false otherwise.
+     */
+    public static boolean isIeee80211beEnabledInConfig(
+            WifiSettingsConfigStore configStore) {
+        return configStore.get(
+                    WifiSettingsConfigStore.WIFI_WIPHY_11BE_SUPPORTED);
     }
 
     /**

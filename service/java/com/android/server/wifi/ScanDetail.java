@@ -25,7 +25,6 @@ import androidx.annotation.Nullable;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.wifi.hotspot2.NetworkDetail;
-import com.android.server.wifi.hotspot2.Utils;
 import com.android.server.wifi.hotspot2.anqp.ANQPElement;
 import com.android.server.wifi.hotspot2.anqp.Constants;
 import com.android.server.wifi.hotspot2.anqp.HSFriendlyNameElement;
@@ -67,8 +66,11 @@ public class ScanDetail {
             channelWidth = networkDetail.getChannelWidth();
             centerFreq0 = networkDetail.getCenterfreq0();
             centerFreq1 = networkDetail.getCenterfreq1();
-            isPasspoint = caps.contains("EAP")
-                    && networkDetail.isInterworking() && networkDetail.getHSRelease() != null;
+            isPasspoint =
+                    caps.contains("EAP")
+                            && !caps.contains("SUITE_B_192")
+                            && networkDetail.isInterworking()
+                            && networkDetail.getHSRelease() != null;
             is80211McResponder = networkDetail.is80211McResponderSupport();
         }
         mScanResult = new ScanResult(wifiSsid, bssid, hessid, anqpDomainId, osuProviders, caps,
@@ -182,8 +184,7 @@ public class ScanDetail {
         if (networkDetail != null) {
             return networkDetail.toKeyString();
         } else {
-            return "'" + mScanResult.BSSID + "':" + Utils.macToSimpleString(
-                    Utils.parseMac(mScanResult.BSSID));
+            return "'" + mScanResult.SSID + "':" + mScanResult.BSSID;
         }
     }
 
@@ -212,11 +213,6 @@ public class ScanDetail {
 
     @Override
     public String toString() {
-        try {
-            return "'" + mScanResult.BSSID + "'/" + Utils.macToSimpleString(
-                    Utils.parseMac(mScanResult.BSSID));
-        } catch (IllegalArgumentException iae) {
-            return "'" + mScanResult.BSSID + "'/----";
-        }
+        return "'" + mScanResult.SSID + "'/" + mScanResult.BSSID;
     }
 }

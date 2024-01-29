@@ -36,6 +36,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -52,12 +53,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import android.annotation.NonNull;
 import android.app.test.MockAnswerUtil;
 import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
@@ -83,6 +86,7 @@ import com.android.server.wifi.hal.WifiP2pIface;
 import com.android.server.wifi.hal.WifiRttController;
 import com.android.server.wifi.hal.WifiStaIface;
 import com.android.server.wifi.util.WorkSourceHelper;
+import com.android.wifi.flags.FeatureFlags;
 import com.android.wifi.resources.R;
 
 import com.google.common.collect.ImmutableList;
@@ -135,6 +139,8 @@ public class HalDeviceManagerTest extends WifiBaseTest {
     @Mock private WorkSourceHelper mWorkSourceHelper0;
     @Mock private WorkSourceHelper mWorkSourceHelper1;
     @Mock private WorkSourceHelper mWorkSourceHelper2;
+    @Mock private DeviceConfigFacade mDeviceConfigFacade;
+    @Mock private FeatureFlags mFeatureFlags;
     private TestLooper mTestLooper;
     private Handler mHandler;
     private ArgumentCaptor<WifiHal.Callback> mWifiEventCallbackCaptor = ArgumentCaptor.forClass(
@@ -186,6 +192,11 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         when(mWorkSourceHelper1.getWorkSource()).thenReturn(TEST_WORKSOURCE_1);
         when(mWorkSourceHelper2.getWorkSource()).thenReturn(TEST_WORKSOURCE_2);
         when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
+        when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
+        when(mDeviceConfigFacade.getFeatureFlags()).thenReturn(mFeatureFlags);
+        when(mFeatureFlags.singleWifiThread()).thenReturn(true);
+        when(mConcreteClientModeManager.getRole()).thenReturn(
+                ClientModeManager.ROLE_CLIENT_PRIMARY);
 
         when(mWifiMock.registerEventCallback(any(WifiHal.Callback.class))).thenReturn(true);
         when(mWifiMock.start()).thenReturn(WifiHal.WIFI_STATUS_SUCCESS);
@@ -843,10 +854,13 @@ public class HalDeviceManagerTest extends WifiBaseTest {
                 HDM_CREATE_IFACE_AP, true, TEST_WORKSOURCE_2);
         assertNull("Should not create this AP", apDetails);
         WifiInterface apIface = mDut.createApIface(
-                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_2, false, mSoftApManager);
+                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_2, false, mSoftApManager,
+                new ArrayList<>());
         collector.checkThat("AP was created", apIface, IsNull.nullValue());
 
         // Switch STA to secondary internet. Foreground AP can be created now.
+        when(mConcreteClientModeManager.getRole()).thenReturn(
+                ClientModeManager.ROLE_CLIENT_SECONDARY_LONG_LIVED);
         when(mConcreteClientModeManager.isSecondaryInternet()).thenReturn(true);
         apDetails = mDut.reportImpactToCreateIface(
                 HDM_CREATE_IFACE_AP, true, TEST_WORKSOURCE_2);
@@ -944,6 +958,9 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         networkInfo.setDetailedState(NetworkInfo.DetailedState.DISCONNECTED, null, null);
         connectionIntent.putExtra(WifiP2pManager.EXTRA_NETWORK_INFO, networkInfo);
         brCaptor.getValue().onReceive(mContext, connectionIntent);
+        assertFalse("Should not treat disconnected P2P as privileged iface",
+                mDut.creatingIfaceWillDeletePrivilegedIface(
+                        HDM_CREATE_IFACE_NAN, TEST_WORKSOURCE_2));
         nanDetails = mDut.reportImpactToCreateIface(
                 HDM_CREATE_IFACE_NAN, true, TEST_WORKSOURCE_2);
         assertNotNull("Should create this NAN", nanDetails);
@@ -1195,6 +1212,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
      */
     @Test
     public void testOnDestroyedWithHandlerTriggeredOnDifferentThread() throws Exception {
+        when(mFeatureFlags.singleWifiThread()).thenReturn(false);
         long currentThreadId = 983757; // arbitrary current thread ID
         when(mWifiInjector.getCurrentThreadId()).thenReturn(currentThreadId);
         // RETURNS_DEEP_STUBS allows mocking nested method calls
@@ -1226,6 +1244,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
      */
     @Test
     public void testOnDestroyedWaitingWithHandlerTriggeredOnDifferentThread() throws Exception {
+        when(mFeatureFlags.singleWifiThread()).thenReturn(false);
         // Enable waiting for destroy listeners
         mWaitForDestroyedListeners = true;
         // Setup a separate thread for destroy
@@ -1350,7 +1369,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         WifiApIface apIface = mock(WifiApIface.class);
         doAnswer(new GetNameAnswer("wlan0")).when(apIface).getName();
         doAnswer(new CreateApIfaceAnswer(chipMock, true, apIface))
-                .when(chipMock.chip).createApIface();
+                .when(chipMock.chip).createApIface(anyList());
         List<Pair<Integer, WorkSource>> apDetails = mDut.reportImpactToCreateIface(
                 HDM_CREATE_IFACE_AP, false, TEST_WORKSOURCE_0);
         assertEquals("Should get STA destroy details", 1, apDetails.size());
@@ -1361,7 +1380,8 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         assertEquals("Need to destroy the STA",
                 Pair.create(WifiChip.IFACE_TYPE_STA, TEST_WORKSOURCE_0), apDetails.get(0));
         assertEquals(apIface, mDut.createApIface(
-                CHIP_CAPABILITY_ANY, apIdl, mHandler, TEST_WORKSOURCE_0, false, mSoftApManager));
+                CHIP_CAPABILITY_ANY, apIdl, mHandler, TEST_WORKSOURCE_0, false, mSoftApManager,
+                new ArrayList<>()));
         mInOrder.verify(chipMock.chip).removeStaIface(getName(staIface));
         mInOrder.verify(staIdl).onDestroyed(getName(staIface));
         mInOrder.verify(chipMock.chip).configureChip(TestChipV1.AP_CHIP_MODE_ID);
@@ -1424,7 +1444,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         WifiApIface apIface = mock(WifiApIface.class);
         doAnswer(new GetNameAnswer("wlan0")).when(apIface).getName();
         doAnswer(new CreateApIfaceAnswer(chipMock, true, apIface))
-                .when(chipMock.chip).createApIface();
+                .when(chipMock.chip).createApIface(anyList());
         List<Pair<Integer, WorkSource>> apDetails = mDut.reportImpactToCreateIface(
                 HDM_CREATE_IFACE_AP, false, TEST_WORKSOURCE_0);
         assertEquals("Should get STA destroy details", 1, apDetails.size());
@@ -1435,7 +1455,8 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         assertEquals("Need to destroy the STA",
                 Pair.create(WifiChip.IFACE_TYPE_STA, TEST_WORKSOURCE_0), apDetails.get(0));
         assertEquals(apIface, mDut.createApIface(
-                CHIP_CAPABILITY_ANY, apIdl, mHandler, TEST_WORKSOURCE_0, false, mSoftApManager));
+                CHIP_CAPABILITY_ANY, apIdl, mHandler, TEST_WORKSOURCE_0, false, mSoftApManager,
+                new ArrayList<>()));
         mInOrder.verify(chipMock.chip).removeStaIface(getName(staIface));
         mInOrder.verify(staIdl).onDestroyed(getName(staIface));
         mInOrder.verify(chipMock.chip).configureChip(TestChipV1.AP_CHIP_MODE_ID);
@@ -1479,9 +1500,10 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         WifiApIface apIface = mock(WifiApIface.class);
         doAnswer(new GetNameAnswer("wlan0")).when(apIface).getName();
         doAnswer(new CreateApIfaceAnswer(chipMock, true, apIface))
-                .when(chipMock.chip).createApIface();
+                .when(chipMock.chip).createApIface(anyList());
         assertNull(mDut.createApIface(
-                CHIP_CAPABILITY_ANY, idl, null, TEST_WORKSOURCE_0, false, mSoftApManager));
+                CHIP_CAPABILITY_ANY, idl, null, TEST_WORKSOURCE_0, false, mSoftApManager,
+                new ArrayList<>()));
 
         // Create NAN Iface will be failure because null handler.
         WifiNanIface nanIface = mock(WifiNanIface.class);
@@ -1663,7 +1685,6 @@ public class HalDeviceManagerTest extends WifiBaseTest {
     public void testCanDeviceSupportCreateTypeComboChipV1() throws Exception {
         TestChipV1 chipMock = new TestChipV1();
         chipMock.initialize();
-        chipMock.allowGetCapsBeforeIfaceCreated = false;
         mInOrder = inOrder(mWifiMock, chipMock.chip, mManagerStatusListenerMock);
 
         // Try to query iface support before starting the HAL. Should return false without any
@@ -1798,6 +1819,100 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         ));
 
         verifyNoMoreInteractions(mManagerStatusListenerMock);
+    }
+
+    /**
+     * Validates that {@link HalDeviceManager#canDeviceSupportCreateTypeCombo(SparseArray)} with
+     * outdated stored static chip info will be updated once we load the chip info when the driver
+     * is up.
+     */
+    @Test
+    public void testCanDeviceSupportCreateTypeComboChipV1WithOutdatedStoredStaticChipInfo()
+            throws Exception {
+        TestChipV1 chipMock = new TestChipV1();
+        chipMock.initialize();
+        mInOrder = inOrder(mWifiMock, chipMock.chip, mManagerStatusListenerMock);
+
+        // Try to query iface support before starting the HAL. Should return false with the outdated
+        // stored static chip info that's missing AP capabilities.
+        String outdatedStaticChipInfo =
+                        "["
+                        + "    {"
+                        + "        \"chipId\": 10,"
+                        + "        \"chipCapabilities\": -1,"
+                        + "        \"availableModes\": ["
+                        + "            {"
+                        + "                \"id\": 0,"
+                        + "                \"availableCombinations\": ["
+                        + "                    {"
+                        + "                        \"limits\": ["
+                        + "                            {"
+                        + "                                \"maxIfaces\": 1,"
+                        + "                                \"types\": [0]"
+                        + "                            },"
+                        + "                            {"
+                        + "                                \"maxIfaces\": 1,"
+                        + "                                \"types\": [3, 4]"
+                        + "                            }"
+                        + "                        ]"
+                        + "                    }"
+                        + "                ]"
+                        + "            }"
+                        + "        ]"
+                        + "    }"
+                        + "]";
+        when(mWifiMock.isStarted()).thenReturn(false);
+        when(mWifiSettingsConfigStore.get(WifiSettingsConfigStore.WIFI_STATIC_CHIP_INFO))
+                .thenReturn(outdatedStaticChipInfo);
+
+        // Can create a NAN but not an AP from the stored static chip info
+        assertTrue(
+                mDut.canDeviceSupportCreateTypeCombo(
+                        new SparseArray<Integer>() {
+                            {
+                                put(WifiChip.IFACE_CONCURRENCY_TYPE_NAN, 1);
+                            }
+                        }));
+        assertFalse(
+                mDut.canDeviceSupportCreateTypeCombo(
+                        new SparseArray<Integer>() {
+                            {
+                                put(WifiChip.IFACE_CONCURRENCY_TYPE_AP, 1);
+                            }
+                        }));
+
+        verify(mWifiMock, never()).getChipIds();
+        when(mWifiMock.isStarted()).thenReturn(true);
+        executeAndValidateStartupSequence();
+        clearInvocations(mWifiMock);
+
+        // Create a STA to get the static chip info from driver and save it to store.
+        validateInterfaceSequence(
+                chipMock,
+                false, // chipModeValid
+                -1000, // chipModeId (only used if chipModeValid is true)
+                HDM_CREATE_IFACE_STA, // ifaceTypeToCreate
+                "wlan0", // ifaceName
+                TestChipV1.STA_CHIP_MODE_ID, // finalChipMode
+                null, // tearDownList
+                mock(InterfaceDestroyedListener.class), // destroyedListener
+                TEST_WORKSOURCE_0 // requestorWs
+        );
+
+        // Verify that the latest static chip info is saved to store.
+        verify(mWifiSettingsConfigStore)
+                .put(
+                        eq(WifiSettingsConfigStore.WIFI_STATIC_CHIP_INFO),
+                        eq(new JSONArray(TestChipV1.STATIC_CHIP_INFO_JSON_STRING).toString()));
+
+        // Now we can create an AP.
+        assertTrue(
+                mDut.canDeviceSupportCreateTypeCombo(
+                        new SparseArray<Integer>() {
+                            {
+                                put(WifiChip.IFACE_CONCURRENCY_TYPE_AP, 1);
+                            }
+                        }));
     }
 
     @Test
@@ -2006,7 +2121,8 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         apDetails = mDut.reportImpactToCreateIface(HDM_CREATE_IFACE_AP, true, TEST_WORKSOURCE_0);
         assertNull("Should not be able to create a new AP", apDetails);
         WifiInterface apIface2 = mDut.createApIface(
-                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_0, false, mSoftApManager);
+                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_0, false, mSoftApManager,
+                new ArrayList<>());
         collector.checkThat("AP2 should not be created", apIface2, IsNull.nullValue());
 
         // tear down AP
@@ -2319,8 +2435,9 @@ public class HalDeviceManagerTest extends WifiBaseTest {
      * - request P2P (privileged app): failure
      * - tear down AP
      * - create STA (system app)
+     * - create P2P (system app): will get refused
      * - create STA (system app): will get refused
-     * - create NAN (privileged app): should tear down last created STA
+     * - make STA secondary, create P2P (privileged app): should tear down STA
      * - create STA (foreground app): will get refused
      */
     @Test
@@ -2424,7 +2541,8 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         apDetails = mDut.reportImpactToCreateIface(HDM_CREATE_IFACE_AP, true, TEST_WORKSOURCE_0);
         assertNull("Should not create this AP", apDetails);
         WifiInterface apIface2 = mDut.createApIface(
-                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_0, false, mSoftApManager);
+                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_0, false, mSoftApManager,
+                new ArrayList<>());
         collector.checkThat("AP2 should not be created", apIface2, IsNull.nullValue());
 
         // request P2P (system app): should fail
@@ -2462,6 +2580,12 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         );
         collector.checkThat("STA 2 interface wasn't created", staIface2, IsNull.notNullValue());
 
+        // request P2P (system app): should fail even though both are privileged
+        p2pDetails = mDut.reportImpactToCreateIface(HDM_CREATE_IFACE_P2P, true, TEST_WORKSOURCE_0);
+        assertNull("should not create this p2p", p2pDetails);
+        p2pIfaceName = mDut.createP2pIface(null, null, TEST_WORKSOURCE_0);
+        collector.checkThat("P2P should not be created", p2pIfaceName, IsNull.nullValue());
+
         // request STA3 (system app): should fail
         staDetails = mDut.reportImpactToCreateIface(HDM_CREATE_IFACE_STA, false, TEST_WORKSOURCE_0);
         assertNotNull("should not fail when asking for same STA", staDetails);
@@ -2472,20 +2596,22 @@ public class HalDeviceManagerTest extends WifiBaseTest {
                 mConcreteClientModeManager);
         collector.checkThat("STA3 should not be created", staIface3, IsNull.nullValue());
 
-        // create NAN (privileged app): should destroy the last created STA (STA2)
-        nanIface = validateInterfaceSequence(chipMock,
+        // Make STA2 secondary and create P2P (privileged app): should destroy the STA
+        when(mConcreteClientModeManager.getRole())
+                .thenReturn(ClientModeManager.ROLE_CLIENT_SECONDARY_LONG_LIVED);
+        p2pIface = validateInterfaceSequence(chipMock,
                 true, // chipModeValid
                 TestChipV3.CHIP_MODE_ID, // chipModeId
-                HDM_CREATE_IFACE_NAN, // ifaceTypeToCreate
+                HDM_CREATE_IFACE_P2P, // ifaceTypeToCreate
                 "wlan0", // ifaceName
                 TestChipV3.CHIP_MODE_ID, // finalChipMode
                 new WifiInterface[]{staIface2}, // tearDownList
-                nanDestroyedListener, // destroyedListener
+                p2pDestroyedListener, // destroyedListener
                 TEST_WORKSOURCE_2, // requestorWs
                 new InterfaceDestroyedListenerWithIfaceName(
                         getName(staIface2), staDestroyedListener2)
         );
-        collector.checkThat("NAN interface wasn't created", nanIface, IsNull.notNullValue());
+        collector.checkThat("P2P interface wasn't created", p2pIface, IsNull.notNullValue());
 
         verify(chipMock.chip).removeStaIface("wlan1");
         verify(staDestroyedListener2).onDestroyed(getName(staIface2));
@@ -2755,7 +2881,8 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         apDetails = mDut.reportImpactToCreateIface(HDM_CREATE_IFACE_AP, true, TEST_WORKSOURCE_0);
         assertNull("Should not create this AP", apDetails);
         WifiInterface apIface2 = mDut.createApIface(
-                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_0, false, mSoftApManager);
+                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_0, false, mSoftApManager,
+                new ArrayList<>());
         collector.checkThat("AP2 should not be created", apIface2, IsNull.nullValue());
 
         // request P2P (system app): should fail
@@ -2920,7 +3047,8 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         apDetails = mDut.reportImpactToCreateIface(HDM_CREATE_IFACE_AP, true, TEST_WORKSOURCE_0);
         assertNull("Should not create this AP", apDetails);
         WifiInterface apIface2 = mDut.createApIface(
-                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_0, false, mSoftApManager);
+                CHIP_CAPABILITY_ANY, null, null, TEST_WORKSOURCE_0, false, mSoftApManager,
+                new ArrayList<>());
         collector.checkThat("AP2 should not be created", apIface2, IsNull.nullValue());
 
         // request P2P: should fail
@@ -3235,9 +3363,8 @@ public class HalDeviceManagerTest extends WifiBaseTest {
             );
             collector.checkThat("STA created", staIface, IsNull.notNullValue());
         } else {
-            List<Pair<Integer, WorkSource>> staDetails = mDut.reportImpactToCreateIface(
-                    HDM_CREATE_IFACE_STA, true, requiredChipCapabilities, TEST_WORKSOURCE_1);
-            assertNull("Should not create this STA", staDetails);
+            assertFalse("Should not be able to create this STA", mDut.isItPossibleToCreateIface(
+                    HDM_CREATE_IFACE_STA, requiredChipCapabilities, TEST_WORKSOURCE_1));
             staIface = mDut.createStaIface(
                     requiredChipCapabilities, null, null, TEST_WORKSOURCE_1,
                     mConcreteClientModeManager);
@@ -3263,11 +3390,11 @@ public class HalDeviceManagerTest extends WifiBaseTest {
             );
             collector.checkThat("AP created", apIface, IsNull.notNullValue());
         } else {
-            List<Pair<Integer, WorkSource>> apDetails = mDut.reportImpactToCreateIface(
-                    HDM_CREATE_IFACE_AP, true, requiredChipCapabilities, TEST_WORKSOURCE_0);
-            assertNull("Should not create this AP", apDetails);
+            assertFalse("Should not be able to create this AP", mDut.isItPossibleToCreateIface(
+                    HDM_CREATE_IFACE_AP, requiredChipCapabilities, TEST_WORKSOURCE_0));
             apIface = mDut.createApIface(
-                    requiredChipCapabilities, null, null, TEST_WORKSOURCE_0, false, mSoftApManager);
+                    requiredChipCapabilities, null, null, TEST_WORKSOURCE_0, false, mSoftApManager,
+                    new ArrayList<>());
             collector.checkThat("AP should not be created", apIface, IsNull.nullValue());
         }
         if (SdkLevel.isAtLeastS()) {
@@ -4133,7 +4260,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
 
         // check if can create interface
         List<Pair<Integer, WorkSource>> details = mDut.reportImpactToCreateIface(
-                createIfaceType, true, requiredChipCapabilities, requestorWs);
+                createIfaceType, true, requestorWs);
         if (tearDownList == null || tearDownList.length == 0) {
             assertTrue("Details list must be empty - can create" + details, details.isEmpty());
         } else { // TODO: assumes that at most a single entry - which is the current usage
@@ -4164,12 +4291,13 @@ public class HalDeviceManagerTest extends WifiBaseTest {
                             .when((WifiApIface) iface).getBridgedInstances();
                 }
                 doAnswer(new CreateApIfaceAnswer(chipMock, true, iface))
-                        .when(chipMock.chip).createApIface();
+                        .when(chipMock.chip).createApIface(anyList());
                 doAnswer(new CreateApIfaceAnswer(chipMock, true, iface))
-                        .when(chipMock.chip).createBridgedApIface();
+                        .when(chipMock.chip).createBridgedApIface(anyList());
                 mDut.createApIface(requiredChipCapabilities,
                         destroyedListener, mHandler, requestorWs,
-                        createIfaceType == HDM_CREATE_IFACE_AP_BRIDGE, mSoftApManager);
+                        createIfaceType == HDM_CREATE_IFACE_AP_BRIDGE, mSoftApManager,
+                        new ArrayList<>());
                 break;
             case HDM_CREATE_IFACE_P2P:
                 iface = mock(WifiP2pIface.class);
@@ -4221,10 +4349,10 @@ public class HalDeviceManagerTest extends WifiBaseTest {
                 mInOrder.verify(chipMock.chip).createStaIface();
                 break;
             case HDM_CREATE_IFACE_AP_BRIDGE:
-                mInOrder.verify(chipMock.chip).createBridgedApIface();
+                mInOrder.verify(chipMock.chip).createBridgedApIface(anyList());
                 break;
             case HDM_CREATE_IFACE_AP:
-                mInOrder.verify(chipMock.chip).createApIface();
+                mInOrder.verify(chipMock.chip).createApIface(anyList());
                 break;
             case HDM_CREATE_IFACE_P2P:
                 mInOrder.verify(chipMock.chip).createP2pIface();
@@ -4489,7 +4617,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
             super(chipMockBase, success, wifiIface, WifiChip.IFACE_TYPE_AP);
         }
 
-        public WifiApIface answer() {
+        public WifiApIface answer(@NonNull List<OuiKeyedData> vendorData) {
             addInterfaceInfo();
             return mSuccess ? (WifiApIface) mWifiIface : null;
         }
@@ -4712,7 +4840,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         static final String STATIC_CHIP_INFO_JSON_STRING = "["
                 + "    {"
                 + "        \"chipId\": 10,"
-                + "        \"chipCapabilities\": -1,"
+                + "        \"chipCapabilities\": 0,"
                 + "        \"availableModes\": ["
                 + "            {"
                 + "                \"id\": 0,"

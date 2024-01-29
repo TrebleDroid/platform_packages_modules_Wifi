@@ -28,7 +28,6 @@ import android.net.wifi.aware.IWifiAwareEventCallback;
 import android.net.wifi.aware.IdentityChangedListener;
 import android.net.wifi.util.HexEncoding;
 import android.os.RemoteException;
-import android.util.LocalLog;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -49,13 +48,12 @@ import java.util.Arrays;
  */
 public class WifiAwareClientState {
     private static final String TAG = "WifiAwareClientState";
-    private static final boolean VDBG = false; // STOPSHIP if true
+    private boolean mVdbg = false; // STOPSHIP if true
     private boolean mDbg = false;
 
     private final Context mContext;
     private final IWifiAwareEventCallback mCallback;
     private final SparseArray<WifiAwareDiscoverySessionState> mSessions = new SparseArray<>();
-    private final LocalLog mLocalLog;
 
     private final int mClientId;
     private ConfigRequest mConfigRequest;
@@ -80,7 +78,7 @@ public class WifiAwareClientState {
             String callingPackage, @Nullable String callingFeatureId,
             IWifiAwareEventCallback callback, ConfigRequest configRequest,
             boolean notifyIdentityChange, long creationTime,
-            WifiPermissionsUtil wifiPermissionsUtil, Object attributionSource, LocalLog localLog,
+            WifiPermissionsUtil wifiPermissionsUtil, Object attributionSource,
             boolean awareOffload, int callerType) {
         mContext = context;
         mClientId = clientId;
@@ -97,15 +95,15 @@ public class WifiAwareClientState {
         mCreationTime = creationTime;
         mWifiPermissionsUtil = wifiPermissionsUtil;
         mAttributionSource = attributionSource;
-        mLocalLog = localLog;
         mCallerType = callerType;
     }
 
     /**
      * Enable verbose logging.
      */
-    public void enableVerboseLogging(boolean verbose) {
-        mDbg = verbose | VDBG;
+    public void enableVerboseLogging(boolean verbose, boolean vDbg) {
+        mDbg = verbose;
+        mVdbg = vDbg;
     }
 
     /**
@@ -113,7 +111,9 @@ public class WifiAwareClientState {
      * the client. Destroys all discovery sessions belonging to this client.
      */
     public void destroy() {
-        mLocalLog.log("onAwareSessionTerminated, ClientId:" + mClientId);
+        if (mDbg) {
+            Log.v(TAG, "onAwareSessionTerminated, ClientId:" + mClientId);
+        }
         for (int i = 0; i < mSessions.size(); ++i) {
             mSessions.valueAt(i).terminate();
         }
@@ -250,17 +250,19 @@ public class WifiAwareClientState {
      *            client.
      */
     public void onInterfaceAddressChange(byte[] mac) {
-        mLocalLog.log("onInterfaceAddressChange: mClientId=" + mClientId
-                + ", mNotifyIdentityChange=" + mNotifyIdentityChange
-                + ", mac=" + String.valueOf(HexEncoding.encode(mac))
-                + ", mLastDiscoveryInterfaceMac="
-                + String.valueOf(HexEncoding.encode(mLastDiscoveryInterfaceMac)));
+        if (mDbg) {
+            Log.v(TAG, "onInterfaceAddressChange: mClientId=" + mClientId
+                    + ", mNotifyIdentityChange=" + mNotifyIdentityChange
+                    + ", mac=" + String.valueOf(HexEncoding.encode(mac))
+                    + ", mLastDiscoveryInterfaceMac="
+                    + String.valueOf(HexEncoding.encode(mLastDiscoveryInterfaceMac)));
+        }
         if (mNotifyIdentityChange && !Arrays.equals(mac, mLastDiscoveryInterfaceMac)) {
             boolean hasPermission = mWifiPermissionsUtil.checkCallersLocationPermission(
                     mCallingPackage, mCallingFeatureId, mUid,
                     /* coarseForTargetSdkLessThanQ */ true, null);
             try {
-                if (VDBG) Log.v(TAG, "hasPermission=" + hasPermission);
+                if (mVdbg) Log.v(TAG, "hasPermission=" + hasPermission);
                 mCallback.onIdentityChanged(hasPermission ? mac : ALL_ZERO_MAC);
             } catch (RemoteException e) {
                 Log.w(TAG, "onIdentityChanged: RemoteException - ignored: " + e);
@@ -302,7 +304,7 @@ public class WifiAwareClientState {
         boolean hasPermission = mWifiPermissionsUtil.checkCallersLocationPermission(
                 mCallingPackage, mCallingFeatureId, mUid,
                 /* coarseForTargetSdkLessThanQ */ true, null);
-        if (VDBG) Log.v(TAG, "hasPermission=" + hasPermission);
+        if (mVdbg) Log.v(TAG, "hasPermission=" + hasPermission);
         if (!Arrays.equals(currentDiscoveryInterfaceMac, mLastDiscoveryInterfaceMac)) {
             try {
                 mCallback.onIdentityChanged(

@@ -16,6 +16,7 @@
 
 package android.net.wifi;
 
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
@@ -52,6 +53,18 @@ public final class WifiUsabilityStatsEntry implements Parcelable {
             LINK_STATE_NOT_IN_USE,
             LINK_STATE_IN_USE})
     public @interface LinkState {}
+
+    /** @hide */
+    public static String getLinkStateString(@LinkState int state) {
+        switch (state) {
+            case LINK_STATE_NOT_IN_USE:
+                return "LINK_STATE_NOT_IN_USE";
+            case LINK_STATE_IN_USE:
+                return "LINK_STATE_IN_USE";
+            default:
+                return "LINK_STATE_UNKNOWN";
+        }
+    }
 
     /** Chip does not support reporting the state of the link. */
     public static final int LINK_STATE_UNKNOWN = 0;
@@ -1160,14 +1173,14 @@ public final class WifiUsabilityStatsEntry implements Parcelable {
     }
 
     /**
-     * The total time CCA is on busy status on the link frequency in ms counted from the last
-     * radio chip reset.
+     * The total time CCA is on busy status on the link frequency in ms counted from the last radio
+     * chip reset.
      *
      * @param linkId Identifier of the link.
      * @return total time CCA is on busy status for the link in ms.
      * @throws NoSuchElementException if linkId is invalid.
-     * @hide
      */
+    @FlaggedApi("com.android.wifi.flags.add_channel_stats_per_link")
     public long getTotalCcaBusyFreqTimeMillis(int linkId) {
         if (mLinkStats.contains(linkId)) return mLinkStats.get(linkId).mTotalCcaBusyFreqTimeMillis;
         throw new NoSuchElementException("linkId is invalid - " + linkId);
@@ -1188,8 +1201,8 @@ public final class WifiUsabilityStatsEntry implements Parcelable {
      * @param linkId Identifier of the link.
      * @return The total radio on time for the link in ms.
      * @throws NoSuchElementException if linkId is invalid.
-     * @hide
      */
+    @FlaggedApi("com.android.wifi.flags.add_channel_stats_per_link")
     public long getTotalRadioOnFreqTimeMillis(int linkId) {
         if (mLinkStats.contains(linkId)) return mLinkStats.get(linkId).mTotalRadioOnFreqTimeMillis;
         throw new NoSuchElementException("linkId is invalid - " + linkId);

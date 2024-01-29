@@ -94,6 +94,7 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
     private static final int TEST_ACTIVE_SUBSCRIPTION_ID = 1;
     private static final WorkSource TEST_WORKSOURCE = new WorkSource();
     private static final WorkSource TEST_WORKSOURCE2 = new WorkSource();
+    private static final int TEST_UID = 435546654;
 
     TestLooper mLooper;
 
@@ -485,6 +486,37 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
                 WIFI_STATE_DISABLED);
         checkWifiConnectModeStateChangedBroadcast(intents.get(1), WIFI_STATE_ENABLED,
                 WIFI_STATE_ENABLING);
+    }
+
+    @Test
+    public void testSwitchFromConnectModeToScanOnlyModeFail() throws Exception {
+        startClientInConnectModeAndVerifyEnabled();
+
+        // mock wifi native role switch failure
+        when(mWifiNative.switchClientInterfaceToScanMode(any(), any()))
+                .thenReturn(false);
+        InOrder inOrder = inOrder(mContext);
+        mClientModeManager.setRole(ROLE_CLIENT_SCAN_ONLY, TEST_WORKSOURCE);
+        mLooper.dispatchAll();
+
+        // Verify callback received for failed transition
+        verify(mListener).onStartFailure(mClientModeManager);
+
+        // First check WIFI_STATE_DISABLING is broadcast as the CMM tries to switch to scan only
+        // mode
+        inOrder.verify(mContext, atLeastOnce()).sendStickyBroadcastAsUser(
+                argThat(intent ->
+                        intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1)
+                                == WifiManager.WIFI_STATE_DISABLING),
+                any());
+
+        // Then verify WIFI_STATE_DISABLED is broadcast due to WifiNative failing
+        // to switch CMM role.
+        inOrder.verify(mContext).sendStickyBroadcastAsUser(
+                argThat(intent ->
+                        intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1)
+                                == WIFI_STATE_DISABLED),
+                any());
     }
 
     /**
@@ -1534,6 +1566,12 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
 
         mClientModeManager.setShouldReduceNetworkScore(false);
         verify(mClientModeImpl, times(2)).setShouldReduceNetworkScore(false);
+
+        mClientModeManager.onIdleModeChanged(true);
+        verify(mClientModeImpl).onIdleModeChanged(true);
+
+        mClientModeManager.onIdleModeChanged(false);
+        verify(mClientModeImpl).onIdleModeChanged(false);
     }
 
     @Test
@@ -1542,14 +1580,14 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
 
         IBinder iBinder = mock(IBinder.class);
         IWifiConnectedNetworkScorer iScorer = mock(IWifiConnectedNetworkScorer.class);
-        mClientModeManager.setWifiConnectedNetworkScorer(iBinder, iScorer);
-        verify(mClientModeImpl).setWifiConnectedNetworkScorer(iBinder, iScorer);
+        mClientModeManager.setWifiConnectedNetworkScorer(iBinder, iScorer, TEST_UID);
+        verify(mClientModeImpl).setWifiConnectedNetworkScorer(iBinder, iScorer, TEST_UID);
 
         mClientModeManager.clearWifiConnectedNetworkScorer();
         verify(mClientModeImpl).clearWifiConnectedNetworkScorer();
 
-        mClientModeManager.setWifiConnectedNetworkScorer(iBinder, iScorer);
-        verify(mClientModeImpl, times(2)).setWifiConnectedNetworkScorer(iBinder, iScorer);
+        mClientModeManager.setWifiConnectedNetworkScorer(iBinder, iScorer, TEST_UID);
+        verify(mClientModeImpl, times(2)).setWifiConnectedNetworkScorer(iBinder, iScorer, TEST_UID);
 
         mClientModeManager.onNetworkSwitchAccepted(1, "macAddress");
         verify(mClientModeImpl).onNetworkSwitchAccepted(1, "macAddress");
