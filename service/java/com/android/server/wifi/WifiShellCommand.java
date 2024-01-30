@@ -596,16 +596,17 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 }
                 case "imsi-protection-exemption-clear-user-approved-for-carrier": {
                     String arg1 = getNextArgRequired();
-                    int carrierId = -1;
                     try {
-                        carrierId = Integer.parseInt(arg1);
+                        final int carrierId = Integer.parseInt(arg1);
+                        mWifiThreadRunner.post(() ->
+                                mWifiCarrierInfoManager.clearImsiPrivacyExemptionForCarrier(
+                                        carrierId));
                     } catch (NumberFormatException e) {
                         pw.println("Invalid argument to "
                                 + "'imsi-protection-exemption-clear-user-approved-for-carrier' "
                                 + "- 'carrierId' must be an Integer");
                         return -1;
                     }
-                    mWifiCarrierInfoManager.clearImsiPrivacyExemptionForCarrier(carrierId);
                     return 0;
                 }
                 case "network-requests-remove-user-approved-access-points": {
