@@ -68,6 +68,7 @@ import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
+import android.net.wifi.p2p.WifiP2pExtListenParams;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pGroupList.GroupDeleteListener;
@@ -3004,8 +3005,20 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                             break;
                         }
                         int uid = message.sendingUid;
+                        int listenType = message.arg1;
+                        if (listenType == WifiP2pManager.WIFI_P2P_EXT_LISTEN_WITH_PARAMS
+                                && !SdkLevel.isAtLeastV()) {
+                            replyToMessage(message, WifiP2pManager.START_LISTEN_FAILED);
+                            break;
+                        }
                         Bundle extras = message.getData()
                                 .getBundle(WifiP2pManager.EXTRA_PARAM_KEY_BUNDLE);
+                        WifiP2pExtListenParams extListenParams = SdkLevel.isAtLeastV()
+                                && (listenType == WifiP2pManager.WIFI_P2P_EXT_LISTEN_WITH_PARAMS)
+                                        ? extras.getParcelable(
+                                                WifiP2pManager.EXTRA_PARAM_KEY_EXT_LISTEN_PARAMS,
+                                                WifiP2pExtListenParams.class)
+                                        : null;
                         boolean hasPermission;
                         if (isPlatformOrTargetSdkLessThanT(packageName, uid)) {
                             hasPermission = mWifiPermissionsUtil.checkCanAccessWifiDirect(
@@ -3028,7 +3041,8 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                                 mContext.getResources().getInteger(
                                         R.integer.config_wifiP2pExtListenPeriodMs),
                                 mContext.getResources().getInteger(
-                                        R.integer.config_wifiP2pExtListenIntervalMs))) {
+                                        R.integer.config_wifiP2pExtListenIntervalMs),
+                                extListenParams)) {
                             replyToMessage(message, WifiP2pManager.START_LISTEN_SUCCEEDED);
                             sendP2pListenChangedBroadcast(true);
                         } else {
@@ -3040,7 +3054,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                                 Process.myTid(), message.sendingUid, 0,
                                 getCallingPkgName(message.sendingUid, message.replyTo), true);
                         if (mVerboseLoggingEnabled) logd(getName() + " stop listen mode");
-                        if (mWifiNative.p2pExtListen(false, 0, 0)) {
+                        if (mWifiNative.p2pExtListen(false, 0, 0, null)) {
                             replyToMessage(message, WifiP2pManager.STOP_LISTEN_SUCCEEDED);
                             sendP2pListenChangedBroadcast(false);
                         } else {
@@ -3444,8 +3458,20 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                             break;
                         }
                         int uid = message.sendingUid;
+                        int listenType = message.arg1;
+                        if (listenType == WifiP2pManager.WIFI_P2P_EXT_LISTEN_WITH_PARAMS
+                                && !SdkLevel.isAtLeastV()) {
+                            replyToMessage(message, WifiP2pManager.START_LISTEN_FAILED);
+                            break;
+                        }
                         Bundle extras = message.getData()
                                 .getBundle(WifiP2pManager.EXTRA_PARAM_KEY_BUNDLE);
+                        WifiP2pExtListenParams extListenParams = SdkLevel.isAtLeastV()
+                                && (listenType == WifiP2pManager.WIFI_P2P_EXT_LISTEN_WITH_PARAMS)
+                                        ? extras.getParcelable(
+                                            WifiP2pManager.EXTRA_PARAM_KEY_EXT_LISTEN_PARAMS,
+                                            WifiP2pExtListenParams.class)
+                                        : null;
                         boolean hasPermission;
                         if (isPlatformOrTargetSdkLessThanT(packageName, uid)) {
                             hasPermission = mWifiPermissionsUtil.checkCanAccessWifiDirect(
@@ -3468,7 +3494,8 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                                 mContext.getResources().getInteger(
                                         R.integer.config_wifiP2pExtListenPeriodMs),
                                 mContext.getResources().getInteger(
-                                        R.integer.config_wifiP2pExtListenIntervalMs))) {
+                                        R.integer.config_wifiP2pExtListenIntervalMs),
+                                extListenParams)) {
                             replyToMessage(message, WifiP2pManager.START_LISTEN_SUCCEEDED);
                             sendP2pListenChangedBroadcast(true);
                         } else {
@@ -3480,7 +3507,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                                 Process.myTid(), message.sendingUid, 0,
                                 getCallingPkgName(message.sendingUid, message.replyTo), true);
                         if (mVerboseLoggingEnabled) logd(getName() + " stop listen mode");
-                        if (mWifiNative.p2pExtListen(false, 0, 0)) {
+                        if (mWifiNative.p2pExtListen(false, 0, 0, null)) {
                             replyToMessage(message, WifiP2pManager.STOP_LISTEN_SUCCEEDED);
                             sendP2pListenChangedBroadcast(false);
                         } else {
@@ -3662,7 +3689,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         if (mVerboseLoggingEnabled) {
                             logd(getName() + " stop listen mode");
                         }
-                        if (mWifiNative.p2pExtListen(false, 0, 0)) {
+                        if (mWifiNative.p2pExtListen(false, 0, 0, null)) {
                             replyToMessage(message, WifiP2pManager.STOP_LISTEN_SUCCEEDED);
                         } else {
                             replyToMessage(message, WifiP2pManager.STOP_LISTEN_FAILED);
@@ -4011,7 +4038,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         }
                         mGroup = (WifiP2pGroup) message.obj;
                         if (mVerboseLoggingEnabled) logd(getName() + " group started");
-                        if (mWifiNative.p2pExtListen(false, 0, 0)) {
+                        if (mWifiNative.p2pExtListen(false, 0, 0, null)) {
                             sendP2pListenChangedBroadcast(false);
                         }
                         mWifiNative.p2pStopFind();
@@ -4167,7 +4194,8 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                                         mContext.getResources().getInteger(
                                                 R.integer.config_wifiP2pExtListenPeriodMs),
                                         mContext.getResources().getInteger(
-                                                R.integer.config_wifiP2pExtListenIntervalMs))) {
+                                                R.integer.config_wifiP2pExtListenIntervalMs),
+                                        null)) {
                                     logd(" started listen to receive the invitation Request"
                                             + " frame from Peer device.");
                                     sendP2pListenChangedBroadcast(true);

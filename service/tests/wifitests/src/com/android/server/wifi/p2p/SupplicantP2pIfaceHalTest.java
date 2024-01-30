@@ -485,10 +485,11 @@ public class SupplicantP2pIfaceHalTest extends WifiBaseTest {
         initializeWithAidlImpl(true);
         int period = 2;
         int interval = 3;
-        when(mP2pIfaceHalAidlMock.configureExtListen(anyBoolean(), anyInt(), anyInt()))
+        when(mP2pIfaceHalAidlMock.configureExtListen(anyBoolean(), anyInt(), anyInt(), any()))
                 .thenReturn(true);
-        assertTrue(mDut.configureExtListen(ENABLE, period, interval));
-        verify(mP2pIfaceHalAidlMock).configureExtListen(eq(ENABLE), eq(period), eq(interval));
+        assertTrue(mDut.configureExtListen(ENABLE, period, interval, null));
+        verify(mP2pIfaceHalAidlMock).configureExtListen(
+                eq(ENABLE), eq(period), eq(interval), eq(null));
     }
 
     /**

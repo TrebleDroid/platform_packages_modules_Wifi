@@ -25,6 +25,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.nl80211.WifiNl80211Manager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
+import android.net.wifi.p2p.WifiP2pExtListenParams;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -503,11 +504,13 @@ public class WifiP2pNative {
      * @param enable Enables or disables listening.
      * @param period Period in milliseconds.
      * @param interval Interval in milliseconds.
+     * @param extListenParams Additional parameter struct for this request.
      *
      * @return true, if operation was successful.
      */
-    public boolean p2pExtListen(boolean enable, int period, int interval) {
-        return mSupplicantP2pIfaceHal.configureExtListen(enable, period, interval);
+    public boolean p2pExtListen(boolean enable, int period, int interval,
+            @Nullable WifiP2pExtListenParams extListenParams) {
+        return mSupplicantP2pIfaceHal.configureExtListen(enable, period, interval, extListenParams);
     }
 
     /**
