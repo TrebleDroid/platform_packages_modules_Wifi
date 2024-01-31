@@ -19,6 +19,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
@@ -78,6 +79,7 @@ import androidx.test.filters.SmallTest;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.WifiBaseTest;
 import com.android.server.wifi.WifiInjector;
+import com.android.server.wifi.WifiNative;
 import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.util.NativeUtil;
 
@@ -109,6 +111,10 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
     private @Mock WifiInjector mWifiInjector;
     private @Mock IBinder mServiceBinderMock;
     private @Mock WifiSettingsConfigStore mWifiSettingsConfigStore;
+    private @Mock WifiNative.SupplicantDeathEventHandler mSupplicantHalDeathHandler;
+
+    private ArgumentCaptor<IBinder.DeathRecipient> mSupplicantDeathCaptor =
+            ArgumentCaptor.forClass(IBinder.DeathRecipient.class);
 
     final int mServiceVersion = 2;
     final String mIfaceName = "virtual_interface_name";
@@ -2738,7 +2744,7 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
         }
 
         assertTrue(mDut.initialize());
-        verify(mServiceBinderMock).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
+        verify(mServiceBinderMock).linkToDeath(mSupplicantDeathCaptor.capture(), anyInt());
         assertTrue(mDut.isInitializationComplete());
 
         // Now setup the iface.
@@ -2786,5 +2792,48 @@ public class SupplicantP2pIfaceHalAidlImplTest extends WifiBaseTest {
             }
         }
         return new TestP2pServiceInfo(services);
+    }
+
+    /**
+     * Tests the terminate function and ensures that its callback gets called.
+     */
+    @Test
+    public void testTerminateAndDeadHandler() throws Exception {
+        executeAndValidateInitializationSequence(false, false);
+        mDut.terminate();
+        verify(mISupplicantMock).terminate();
+        // Trigger the supplicant died.
+        mSupplicantDeathCaptor.getValue().binderDied();
+        // Check that terminate cleared all internal state.
+        assertFalse(mDut.isInitializationComplete());
+    }
+
+    /**
+     * Tests the handling of supplicant death notification.
+     */
+    @Test
+    public void testSupplicantDeathCallback() throws Exception {
+        executeAndValidateInitializationSequence(false, false);
+        assertNotNull(mSupplicantDeathCaptor.getValue());
+        assertTrue(mDut.isInitializationComplete());
+        assertTrue(mDut.registerDeathHandler(mSupplicantHalDeathHandler));
+        mSupplicantDeathCaptor.getValue().binderDied();
+        assertFalse(mDut.isInitializationComplete());
+        verify(mSupplicantHalDeathHandler).onDeath();
+    }
+
+    /**
+     * Tests the handling of supplicant death unregister.
+     */
+    @Test
+    public void testSupplicantDeathCallbackUnregister() throws Exception {
+        executeAndValidateInitializationSequence(false, false);
+        assertNotNull(mSupplicantDeathCaptor.getValue());
+        assertTrue(mDut.isInitializationComplete());
+        assertTrue(mDut.registerDeathHandler(mSupplicantHalDeathHandler));
+        assertTrue(mDut.deregisterDeathHandler());
+        mSupplicantDeathCaptor.getValue().binderDied();
+        assertFalse(mDut.isInitializationComplete());
+        verify(mSupplicantHalDeathHandler, never()).onDeath();
     }
 }
