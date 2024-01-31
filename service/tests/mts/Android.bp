@@ -16,6 +16,7 @@
 // Used to test functionality that is only guaranteed to be implemented in the Wifi Mainline module,
 // but is not required if the Wifi Mainline module is not present on the device.
 package {
+    default_team: "trendy_team_fwk_wifi_hal",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
