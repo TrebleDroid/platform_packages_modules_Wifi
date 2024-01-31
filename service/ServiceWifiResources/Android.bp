@@ -16,6 +16,7 @@
 
 // APK to hold all the wifi overlayable resources.
 package {
+    default_team: "trendy_team_fwk_wifi_hal",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -38,5 +39,5 @@ android_app {
 
 android_app_certificate {
     name: "com.android.wifi.resources.certificate",
-    certificate: "resources-certs/com.android.wifi.resources"
+    certificate: "resources-certs/com.android.wifi.resources",
 }
