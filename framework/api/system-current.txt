@@ -529,7 +529,6 @@ package android.net.wifi {
     method @Deprecated public int getAuthType();
     method @Deprecated @Nullable public java.util.List<android.net.MacAddress> getBssidAllowlist();
     method @Deprecated public int getDeletionPriority();
-    method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getDhcpHostnameSetting();
     method @Deprecated @NonNull public byte[] getDppCSignKey();
     method @Deprecated @NonNull public byte[] getDppConnector();
     method @Deprecated @NonNull public byte[] getDppNetAccessKey();
@@ -545,16 +544,14 @@ package android.net.wifi {
     method @Deprecated public static boolean isMetered(@Nullable android.net.wifi.WifiConfiguration, @Nullable android.net.wifi.WifiInfo);
     method @Deprecated public boolean isNoInternetAccessExpected();
     method @Deprecated public boolean isRepeaterEnabled();
+    method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public boolean isSendDhcpHostnameEnabled();
     method @Deprecated public void setBssidAllowlist(@Nullable java.util.List<android.net.MacAddress>);
     method @Deprecated public void setDeletionPriority(int) throws java.lang.IllegalArgumentException;
-    method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void setDhcpHostnameSetting(int);
     method @Deprecated public void setNetworkSelectionStatus(@NonNull android.net.wifi.WifiConfiguration.NetworkSelectionStatus);
     method @Deprecated @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void setRepeaterEnabled(boolean);
+    method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void setSendDhcpHostnameEnabled(boolean);
     method @Deprecated @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
     field @Deprecated @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.WifiConfiguration> CREATOR;
-    field @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int DHCP_HOSTNAME_SETTING_AUTO = 0; // 0x0
-    field @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int DHCP_HOSTNAME_SETTING_DO_NOT_SEND = 2; // 0x2
-    field @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int DHCP_HOSTNAME_SETTING_SEND = 1; // 0x1
     field @Deprecated public static final int INVALID_NETWORK_ID = -1; // 0xffffffff
     field @Deprecated public static final int METERED_OVERRIDE_METERED = 1; // 0x1
     field @Deprecated public static final int METERED_OVERRIDE_NONE = 0; // 0x0
@@ -1565,6 +1562,19 @@ package android.net.wifi.p2p {
     method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.p2p.WifiP2pDiscoveryConfig.Builder setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
   }
 
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public final class WifiP2pExtListenParams implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.p2p.WifiP2pExtListenParams> CREATOR;
+  }
+
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final class WifiP2pExtListenParams.Builder {
+    ctor @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public WifiP2pExtListenParams.Builder();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.p2p.WifiP2pExtListenParams build();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.p2p.WifiP2pExtListenParams.Builder setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
+  }
+
   public class WifiP2pGroup implements android.os.Parcelable {
     method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
     method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
@@ -1584,6 +1594,7 @@ package android.net.wifi.p2p {
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.OVERRIDE_WIFI_CONFIG}) public void setDeviceName(@NonNull android.net.wifi.p2p.WifiP2pManager.Channel, @NonNull String, @Nullable android.net.wifi.p2p.WifiP2pManager.ActionListener);
     method @RequiresPermission(android.Manifest.permission.CONFIGURE_WIFI_DISPLAY) public void setMiracastMode(int);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_STACK, android.Manifest.permission.OVERRIDE_WIFI_CONFIG}) public void setWifiP2pChannels(@NonNull android.net.wifi.p2p.WifiP2pManager.Channel, int, int, @Nullable android.net.wifi.p2p.WifiP2pManager.ActionListener);
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @RequiresPermission(allOf={android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.ACCESS_FINE_LOCATION}, conditional=true) public void startListening(@NonNull android.net.wifi.p2p.WifiP2pManager.Channel, @NonNull android.net.wifi.p2p.WifiP2pExtListenParams, @Nullable android.net.wifi.p2p.WifiP2pManager.ActionListener);
     field public static final String ACTION_WIFI_P2P_PERSISTENT_GROUPS_CHANGED = "android.net.wifi.p2p.action.WIFI_P2P_PERSISTENT_GROUPS_CHANGED";
     field public static final int MIRACAST_DISABLED = 0; // 0x0
     field public static final int MIRACAST_SINK = 2; // 0x2

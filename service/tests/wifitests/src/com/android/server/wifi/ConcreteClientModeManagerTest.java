@@ -61,9 +61,10 @@ import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.ims.ImsMmTelManager;
 import android.telephony.ims.RegistrationManager;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.util.LocalLog;
 import android.util.Log;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.server.wifi.ClientModeManagerBroadcastQueue.QueuedBroadcast;
 import com.android.wifi.resources.R;

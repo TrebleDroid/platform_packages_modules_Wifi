@@ -84,6 +84,7 @@ import android.net.NetworkStack;
 import android.net.TetheringInterface;
 import android.net.TetheringManager;
 import android.net.wifi.CoexUnsafeChannel;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
@@ -93,6 +94,7 @@ import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pExtListenParams;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pInfo;
@@ -108,6 +110,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.PersistableBundle;
 import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -2697,7 +2700,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         // p2pFlush should be invoked once in forceP2pEnabled.
         verify(mWifiNative).p2pFlush();
         verify(mWifiNative, never()).p2pStopFind();
-        verify(mWifiNative, never()).p2pExtListen(anyBoolean(), anyInt(), anyInt());
+        verify(mWifiNative, never()).p2pExtListen(anyBoolean(), anyInt(), anyInt(), eq(null));
     }
 
     /**
@@ -2706,14 +2709,14 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Test
     public void testStartListenFailureWhenNativeCallFailure() throws Exception {
         setTargetSdkGreaterThanT();
-        when(mWifiNative.p2pExtListen(eq(true), anyInt(), anyInt())).thenReturn(false);
+        when(mWifiNative.p2pExtListen(eq(true), anyInt(), anyInt(), any())).thenReturn(false);
         forceP2pEnabled(mClient1);
         sendSimpleMsg(mClientMessenger, WifiP2pManager.START_LISTEN);
         // p2pFlush should be invoked once in forceP2pEnabled.
         verify(mWifiNative).p2pFlush();
         verify(mWifiNative).p2pStopFind();
         verify(mWifiNative).p2pExtListen(eq(true), eq(P2P_EXT_LISTEN_PERIOD_MS),
-                eq(P2P_EXT_LISTEN_INTERVAL_MS));
+                eq(P2P_EXT_LISTEN_INTERVAL_MS), eq(null));
         assertTrue(mClientHandler.hasMessages(WifiP2pManager.START_LISTEN_FAILED));
         if (SdkLevel.isAtLeastT()) {
             verify(mWifiPermissionsUtil, atLeastOnce()).checkNearbyDevicesPermission(
@@ -2732,14 +2735,14 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Test
     public void testStartListenSuccess() throws Exception {
         setTargetSdkGreaterThanT();
-        when(mWifiNative.p2pExtListen(eq(true), anyInt(), anyInt())).thenReturn(true);
+        when(mWifiNative.p2pExtListen(eq(true), anyInt(), anyInt(), any())).thenReturn(true);
         forceP2pEnabled(mClient1);
         sendSimpleMsg(mClientMessenger, WifiP2pManager.START_LISTEN);
         // p2pFlush should be invoked once in forceP2pEnabled.
         verify(mWifiNative).p2pFlush();
         verify(mWifiNative).p2pStopFind();
         verify(mWifiNative).p2pExtListen(eq(true), eq(P2P_EXT_LISTEN_PERIOD_MS),
-                eq(P2P_EXT_LISTEN_INTERVAL_MS));
+                eq(P2P_EXT_LISTEN_INTERVAL_MS), eq(null));
         assertTrue(mClientHandler.hasMessages(WifiP2pManager.START_LISTEN_SUCCEEDED));
         if (SdkLevel.isAtLeastT()) {
             verify(mWifiPermissionsUtil, atLeastOnce()).checkNearbyDevicesPermission(
@@ -2758,14 +2761,14 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Test
     public void testStartListenSuccessWithGroup() throws Exception {
         setTargetSdkGreaterThanT();
-        when(mWifiNative.p2pExtListen(eq(true), anyInt(), anyInt())).thenReturn(true);
+        when(mWifiNative.p2pExtListen(eq(true), anyInt(), anyInt(), any())).thenReturn(true);
         mockEnterGroupCreatedState();
         sendSimpleMsg(mClientMessenger, WifiP2pManager.START_LISTEN);
         // p2pFlush should be invoked once in forceP2pEnabled.
         verify(mWifiNative).p2pFlush();
         verify(mWifiNative, times(2)).p2pStopFind();
         verify(mWifiNative).p2pExtListen(eq(true), eq(P2P_EXT_LISTEN_PERIOD_MS),
-                eq(P2P_EXT_LISTEN_INTERVAL_MS));
+                eq(P2P_EXT_LISTEN_INTERVAL_MS), eq(null));
         assertTrue(mClientHandler.hasMessages(WifiP2pManager.START_LISTEN_SUCCEEDED));
         if (SdkLevel.isAtLeastT()) {
             verify(mWifiPermissionsUtil, atLeastOnce()).checkNearbyDevicesPermission(
@@ -2778,6 +2781,47 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         }
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_P2P_START_LISTENING), anyInt(),
                 anyInt(), anyInt(), anyString(), eq(true));
+    }
+
+    /**
+     * Verify that a caller with proper permission can send WifiP2pManager.START_LISTEN
+     * with additional parameters.
+     */
+    @Test
+    public void testStartListenSuccessWithExtListenParams() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        setTargetSdkGreaterThanT();
+        when(mWifiNative.p2pExtListen(eq(true), anyInt(), anyInt(), any())).thenReturn(true);
+        forceP2pEnabled(mClient1);
+
+        OuiKeyedData vendorDataElement =
+                new OuiKeyedData.Builder(0x00aabbcc, new PersistableBundle()).build();
+        List<OuiKeyedData> vendorData = Arrays.asList(vendorDataElement);
+        WifiP2pExtListenParams extListenParams =
+                new WifiP2pExtListenParams.Builder().setVendorData(vendorData).build();
+
+        Message msg = Message.obtain();
+        msg.what = WifiP2pManager.START_LISTEN;
+        msg.arg1 = WifiP2pManager.WIFI_P2P_EXT_LISTEN_WITH_PARAMS;
+        msg.replyTo = mClientMessenger;
+        msg.obj = new AttributionSource(1000, TEST_PACKAGE_NAME, null);
+
+        Bundle extras = new Bundle();
+        extras.putParcelable(WifiP2pManager.EXTRA_PARAM_KEY_EXT_LISTEN_PARAMS, extListenParams);
+        msg.getData().putBundle(WifiP2pManager.EXTRA_PARAM_KEY_BUNDLE, extras);
+        mP2pStateMachineMessenger.send(Message.obtain(msg));
+        mLooper.dispatchAll();
+
+        // p2pFlush should be invoked once during forceP2pEnabled.
+        verify(mWifiNative).p2pFlush();
+        verify(mWifiNative).p2pStopFind();
+        verify(mWifiNative).p2pExtListen(eq(true), eq(P2P_EXT_LISTEN_PERIOD_MS),
+                eq(P2P_EXT_LISTEN_INTERVAL_MS), any(WifiP2pExtListenParams.class));
+        assertTrue(mClientHandler.hasMessages(WifiP2pManager.START_LISTEN_SUCCEEDED));
+        verify(mWifiPermissionsUtil, atLeastOnce()).checkNearbyDevicesPermission(
+                any(), eq(true), any());
+        verify(mWifiPermissionsUtil, never()).checkCanAccessWifiDirect(
+                any(), any(), anyInt(), anyBoolean());
     }
 
     @Test
@@ -2803,11 +2847,11 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testStopListenFailureWhenNativeCallFailure() throws Exception {
-        when(mWifiNative.p2pExtListen(eq(false), anyInt(), anyInt())).thenReturn(false);
+        when(mWifiNative.p2pExtListen(eq(false), anyInt(), anyInt(), any())).thenReturn(false);
         forceP2pEnabled(mClient1);
         sendSimpleMsg(mClientMessenger, WifiP2pManager.STOP_LISTEN);
         verify(mWifiNative).p2pStopFind();
-        verify(mWifiNative).p2pExtListen(eq(false), anyInt(), anyInt());
+        verify(mWifiNative).p2pExtListen(eq(false), anyInt(), anyInt(), eq(null));
         assertTrue(mClientHandler.hasMessages(WifiP2pManager.STOP_LISTEN_FAILED));
     }
 
@@ -2816,11 +2860,11 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testStopListenSuccess() throws Exception {
-        when(mWifiNative.p2pExtListen(eq(false), anyInt(), anyInt())).thenReturn(true);
+        when(mWifiNative.p2pExtListen(eq(false), anyInt(), anyInt(), any())).thenReturn(true);
         forceP2pEnabled(mClient1);
         sendSimpleMsg(mClientMessenger, WifiP2pManager.STOP_LISTEN);
         verify(mWifiNative).p2pStopFind();
-        verify(mWifiNative).p2pExtListen(eq(false), anyInt(), anyInt());
+        verify(mWifiNative).p2pExtListen(eq(false), anyInt(), anyInt(), eq(null));
         assertTrue(mClientHandler.hasMessages(WifiP2pManager.STOP_LISTEN_SUCCEEDED));
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_P2P_STOP_LISTENING), anyInt(),
                 anyInt(), anyInt(), anyString(), eq(true));
@@ -4070,7 +4114,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testStopListenSuccessWhenNativeCallSucceedInCreatingGroup() throws Exception {
-        when(mWifiNative.p2pExtListen(eq(false), anyInt(), anyInt())).thenReturn(true);
+        when(mWifiNative.p2pExtListen(eq(false), anyInt(), anyInt(), any())).thenReturn(true);
         // Move to group creating state
         testConnectWithConfigValidAsGroupSuccess();
         sendSimpleMsg(mClientMessenger, WifiP2pManager.STOP_LISTEN);
@@ -4085,7 +4129,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testStopListenFailureWhenNativeCallFailInCreatingGroup() throws Exception {
-        when(mWifiNative.p2pExtListen(eq(false), anyInt(), anyInt())).thenReturn(false);
+        when(mWifiNative.p2pExtListen(eq(false), anyInt(), anyInt(), any())).thenReturn(false);
         // Move to group creating state
         testConnectWithConfigValidAsGroupSuccess();
         sendSimpleMsg(mClientMessenger, WifiP2pManager.STOP_LISTEN);
@@ -5493,13 +5537,13 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
 
         when(mWifiPermissionsUtil.checkCanAccessWifiDirect(eq(TEST_PACKAGE_NAME), eq("testFeature"),
                 anyInt(), anyBoolean())).thenReturn(true);
-        when(mWifiNative.p2pExtListen(anyBoolean(), anyInt(), anyInt())).thenReturn(true);
+        when(mWifiNative.p2pExtListen(anyBoolean(), anyInt(), anyInt(), any())).thenReturn(true);
         sendSimpleMsg(mClientMessenger, WifiP2pManager.START_LISTEN);
         verify(mWifiNative).p2pStopFind();
         sendSimpleMsg(mClientMessenger, WifiP2pManager.GET_LISTEN_STATE);
 
         sendSimpleMsg(mClientMessenger, WifiP2pManager.STOP_LISTEN);
-        verify(mWifiNative, times(2)).p2pExtListen(anyBoolean(), anyInt(), anyInt());
+        verify(mWifiNative, times(2)).p2pExtListen(anyBoolean(), anyInt(), anyInt(), eq(null));
         sendSimpleMsg(mClientMessenger, WifiP2pManager.GET_LISTEN_STATE);
 
         verify(mClientHandler, times(5)).sendMessage(mMessageCaptor.capture());
@@ -7480,7 +7524,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
 
     @Test
     public void testGroupStartedTetheringDirectCallback() throws Exception {
-        when(mWifiNative.p2pExtListen(anyBoolean(), anyInt(), anyInt())).thenReturn(true);
+        when(mWifiNative.p2pExtListen(anyBoolean(), anyInt(), anyInt(), any())).thenReturn(true);
         assumeTrue(SdkLevel.isAtLeastS());
         forceP2pEnabled(mClient1);
         verify(mTetheringManager).registerTetheringEventCallback(any(), any());
@@ -7498,7 +7542,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         simulateTetherReady();
         verify(mWifiP2pMetrics).startGroupEvent(group);
         verify(mWifiNative).p2pStopFind();
-        verify(mWifiNative).p2pExtListen(eq(false), anyInt(), anyInt());
+        verify(mWifiNative).p2pExtListen(eq(false), anyInt(), anyInt(), eq(null));
         sendGroupRemovedMsg();
 
         //force to back disabled state
@@ -7576,7 +7620,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Test
     public void testSetListenOnInviteStatusCodeInfoUnavailable() throws Exception {
         forceP2pEnabled(mClient1);
-        when(mWifiNative.p2pExtListen(anyBoolean(), anyInt(), anyInt())).thenReturn(true);
+        when(mWifiNative.p2pExtListen(anyBoolean(), anyInt(), anyInt(), any())).thenReturn(true);
         when(mWifiNative.getGroupCapability(any())).thenReturn(0);
         when(mWifiNative.p2pReinvoke(anyInt(), any())).thenReturn(true);
         when(mWifiNative.p2pGetSsid(any())).thenReturn(null);
@@ -7594,7 +7638,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
 
         verify(mWifiNative, times(2)).p2pStopFind();
         verify(mWifiNative).p2pExtListen(eq(true), eq(P2P_EXT_LISTEN_PERIOD_MS),
-                eq(P2P_EXT_LISTEN_INTERVAL_MS));
+                eq(P2P_EXT_LISTEN_INTERVAL_MS), eq(null));
     }
 
     /**

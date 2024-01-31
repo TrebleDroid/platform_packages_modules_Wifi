@@ -79,7 +79,8 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.test.TestLooper;
-import android.test.suitebuilder.annotation.SmallTest;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.internal.util.WakeupMessage;
 import com.android.modules.utils.build.SdkLevel;

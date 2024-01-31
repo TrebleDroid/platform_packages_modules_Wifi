@@ -23,7 +23,8 @@ import android.content.Context;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.test.TestLooper;
-import android.test.suitebuilder.annotation.SmallTest;
+
+import androidx.test.filters.SmallTest;
 
 import org.junit.After;
 import org.junit.Before;

@@ -17,10 +17,12 @@
 package com.android.server.wifi.p2p;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.ScanResult;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
+import android.net.wifi.p2p.WifiP2pExtListenParams;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -331,10 +333,12 @@ interface ISupplicantP2pIfaceHal {
      * @param enable Enables or disables listening.
      * @param periodInMillis Period in milliseconds.
      * @param intervalInMillis Interval in milliseconds.
+     * @param extListenParams Additional parameter struct for this request.
      *
      * @return true, if operation was successful.
      */
-    boolean configureExtListen(boolean enable, int periodInMillis, int intervalInMillis);
+    boolean configureExtListen(boolean enable, int periodInMillis, int intervalInMillis,
+            @Nullable WifiP2pExtListenParams extListenParams);
 
     /**
      * Set P2P Listen channel.

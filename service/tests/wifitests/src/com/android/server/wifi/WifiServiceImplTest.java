@@ -47,6 +47,8 @@ import static android.net.wifi.WifiManager.LocalOnlyHotspotCallback.REQUEST_REGI
 import static android.net.wifi.WifiManager.NOT_OVERRIDE_EXISTING_NETWORKS_ON_RESTORE;
 import static android.net.wifi.WifiManager.SAP_START_FAILURE_GENERAL;
 import static android.net.wifi.WifiManager.SAP_START_FAILURE_NO_CHANNEL;
+import static android.net.wifi.WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_ALL;
+import static android.net.wifi.WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_NONE;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_ENABLED;
@@ -11988,5 +11990,56 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
                 .thenReturn(true);
         assertThrows(NullPointerException.class, () -> mWifiServiceImpl.enableMscs(null));
+    }
+
+    @Test(expected = SecurityException.class)
+    public void testSetSendDhcpHostnameRestrictionWithoutPermission() {
+        // by default no permissions are given so the call should fail.
+        mWifiServiceImpl.setSendDhcpHostnameRestriction(
+                TEST_PACKAGE_NAME, SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+    }
+
+    @Test
+    public void testSetSendDhcpHostnameRestrictionWithPermission() {
+        // verify setSendDhcpHostnameRestriction with NETWORK_SETTINGS
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        mWifiServiceImpl.setSendDhcpHostnameRestriction(
+                TEST_PACKAGE_NAME, SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+        mLooper.dispatchAll();
+        verify(mWifiGlobals).setSendDhcpHostnameRestriction(eq(SEND_DHCP_HOSTNAME_RESTRICTION_ALL));
+    }
+
+    @Test
+    public void testQuerySendDhcpHostnameRestrictionExceptionCases() {
+        // null listener ==> IllegalArgumentException
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.querySendDhcpHostnameRestriction(TEST_PACKAGE_NAME, null));
+        // by default no permissions are given so the call should fail.
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.querySendDhcpHostnameRestriction(
+                        TEST_PACKAGE_NAME, mock(IIntegerListener.class)));
+    }
+
+    @Test
+    public void testQuerySendDhcpHostnameRestrictionNormalCase() throws Exception {
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        IIntegerListener listener = mock(IIntegerListener.class);
+
+        InOrder inOrder = inOrder(listener);
+        when(mWifiGlobals.getSendDhcpHostnameRestriction())
+                .thenReturn(SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
+        mWifiServiceImpl.querySendDhcpHostnameRestriction(TEST_PACKAGE_NAME, listener);
+        mLooper.dispatchAll();
+        verify(mWifiGlobals).getSendDhcpHostnameRestriction();
+        inOrder.verify(listener).onResult(SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
+
+        when(mWifiGlobals.getSendDhcpHostnameRestriction())
+                .thenReturn(SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+        mWifiServiceImpl.querySendDhcpHostnameRestriction(TEST_PACKAGE_NAME, listener);
+        mLooper.dispatchAll();
+        verify(mWifiGlobals, times(2)).getSendDhcpHostnameRestriction();
+        inOrder.verify(listener).onResult(SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
     }
 }

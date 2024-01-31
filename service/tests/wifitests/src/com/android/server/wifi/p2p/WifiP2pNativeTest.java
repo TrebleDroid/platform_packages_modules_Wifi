@@ -613,10 +613,11 @@ public class WifiP2pNativeTest extends WifiBaseTest {
      */
     @Test
     public void testP2pExtListen() {
-        when(mSupplicantP2pIfaceHalMock.configureExtListen(anyBoolean(), anyInt(), anyInt()))
+        when(mSupplicantP2pIfaceHalMock.configureExtListen(anyBoolean(), anyInt(), anyInt(), any()))
                 .thenReturn(true);
-        assertTrue(mWifiP2pNative.p2pExtListen(true, 10000, 20000));
-        verify(mSupplicantP2pIfaceHalMock).configureExtListen(eq(true), eq(10000), eq(20000));
+        assertTrue(mWifiP2pNative.p2pExtListen(true, 10000, 20000, null));
+        verify(mSupplicantP2pIfaceHalMock).configureExtListen(
+                eq(true), eq(10000), eq(20000), eq(null));
     }
 
     /**

@@ -55,6 +55,8 @@ public class WifiGlobals {
     private final AtomicBoolean mIsBluetoothConnected = new AtomicBoolean(false);
     // Set default to false to check if the value will be overridden by WifiSettingConfigStore.
     private final AtomicBoolean mIsWepAllowed = new AtomicBoolean(false);
+    private final AtomicInteger mSendDhcpHostnameRestriction =
+            new AtomicInteger(WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
 
     // These are read from the overlay, cache them after boot up.
     private final boolean mIsWpa3SaeUpgradeEnabled;
@@ -628,6 +630,22 @@ public class WifiGlobals {
     }
 
     /**
+     * Set the global dhcp hostname restriction.
+     */
+    public void setSendDhcpHostnameRestriction(
+            @WifiManager.SendDhcpHostnameRestriction int restriction) {
+        mSendDhcpHostnameRestriction.set(restriction);
+    }
+
+    /**
+     * Get the global dhcp hostname restriction.
+     */
+    @WifiManager.SendDhcpHostnameRestriction
+    public int getSendDhcpHostnameRestriction() {
+        return mSendDhcpHostnameRestriction.get();
+    }
+
+    /**
      * Get the maximum Wifi temporary disable duration.
      */
     public long getWifiConfigMaxDisableDurationMs() {
@@ -696,5 +714,6 @@ public class WifiGlobals {
             }
         }
         pw.println("mIsSupportMultiInternetDual5G=" + mIsSupportMultiInternetDual5G);
+        pw.println("mSendDhcpHostnameRestriction=" + mSendDhcpHostnameRestriction.get());
     }
 }

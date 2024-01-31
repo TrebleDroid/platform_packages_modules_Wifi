@@ -93,9 +93,10 @@ import android.os.RemoteException;
 import android.os.UserHandle;
 import android.os.WorkSource;
 import android.os.test.TestLooper;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Pair;
 import android.util.Xml;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.internal.util.FastXmlSerializer;
 import com.android.modules.utils.build.SdkLevel;
