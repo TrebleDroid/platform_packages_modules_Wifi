@@ -60,7 +60,7 @@ public class WifiGlobals {
 
     // These are read from the overlay, cache them after boot up.
     private final boolean mIsWpa3SaeUpgradeEnabled;
-    private final boolean mIsWpa3SaeUpgradeOffloadEnabled;
+    private boolean mIsWpa3SaeUpgradeOffloadEnabled;
     private final boolean mIsOweUpgradeEnabled;
     private final boolean mFlushAnqpCacheOnWifiToggleOffEvent;
     private final boolean mIsWpa3SaeH2eSupported;
@@ -444,6 +444,16 @@ public class WifiGlobals {
     public boolean isWpa3SaeUpgradeOffloadEnabled() {
         return mIsWpa3SaeUpgradeOffloadEnabled;
     }
+
+    /**
+     * Helper method to enable WPA3 SAE auto-upgrade offload based on the device capability for
+     * CROSS-AKM support.
+     */
+    public void setWpa3SaeUpgradeOffloadEnabled() {
+        Log.d(TAG, "Device supports CROSS-AKM feature - Enable WPA3 SAE auto-upgrade offload");
+        mIsWpa3SaeUpgradeOffloadEnabled = true;
+    }
+
 
     /**
      * Help method to check if OWE auto-upgrade is enabled.

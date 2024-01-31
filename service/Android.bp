@@ -120,6 +120,7 @@ java_library {
         "service-entitlement",
         "wifi-lite-protos",
         "wifi-nano-protos",
+        "android.net.wifi.flags-aconfig-java",
     ],
     apex_available: ["com.android.wifi"],
 }

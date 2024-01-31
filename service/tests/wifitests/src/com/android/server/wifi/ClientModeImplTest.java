@@ -135,8 +135,10 @@ import android.net.wifi.WifiNetworkAgentSpecifier;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
+import android.net.wifi.flags.Flags;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
+import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.util.ScanResultUtil;
 import android.os.BatteryStatsManager;
@@ -589,6 +591,8 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Mock WifiDeviceStateChangeManager mWifiDeviceStateChangeManager;
     @Mock WifiCountryCode mWifiCountryCode;
 
+    @Mock DeviceWiphyCapabilities mDeviceWiphyCapabilities;
+
     @Captor ArgumentCaptor<WifiConfigManager.OnNetworkUpdateListener> mConfigUpdateListenerCaptor;
     @Captor ArgumentCaptor<WifiNetworkAgent.Callback> mWifiNetworkAgentCallbackCaptor;
     @Captor ArgumentCaptor<WifiCarrierInfoManager.OnCarrierOffloadDisabledListener>
@@ -725,7 +729,10 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiInjector.getWifiDeviceStateChangeManager())
                 .thenReturn(mWifiDeviceStateChangeManager);
         when(mWifiHandlerThread.getLooper()).thenReturn(mLooper.getLooper());
-        when(mWifiGlobals.isWpa3SaeUpgradeEnabled()).thenReturn(true);
+        when(mWifiNative.getDeviceWiphyCapabilities(any())).thenReturn(mDeviceWiphyCapabilities);
+        if (Flags.getDeviceCrossAkmRoamingSupport() && SdkLevel.isAtLeastV()) {
+            when(mDeviceWiphyCapabilities.getMaxNumberAkms()).thenReturn(2);
+        }
         when(mWifiGlobals.isOweUpgradeEnabled()).thenReturn(true);
         when(mWifiGlobals.getClientModeImplNumLogRecs()).thenReturn(100);
         when(mWifiGlobals.isSaveFactoryMacToConfigStoreEnabled()).thenReturn(true);
@@ -755,6 +762,9 @@ public class ClientModeImplTest extends WifiBaseTest {
         initializeCmi();
         // Retrieve factory MAC address on first bootup.
         verify(mWifiNative).getStaFactoryMacAddress(WIFI_IFACE_NAME);
+        if (Flags.getDeviceCrossAkmRoamingSupport() && SdkLevel.isAtLeastV()) {
+            verify(mWifiGlobals).setWpa3SaeUpgradeOffloadEnabled();
+        }
 
         mOsuProvider = PasspointProvisioningTestUtil.generateOsuProvider(true);
         mConnectedNetwork = spy(WifiConfigurationTestUtil.createOpenNetwork());
