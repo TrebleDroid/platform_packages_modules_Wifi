@@ -9839,6 +9839,10 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testDriverCountryCodeChangedStoresAvailableSoftApChannels() throws Exception {
+        setup5GhzSupported();
+        setup24GhzSupported();
+        setup6GhzSupported();
+        setup60GhzSupported();
         mWifiServiceImpl.handleBootCompleted();
         mLooper.dispatchAll();
         when(mWifiPermissionsUtil.isLocationModeEnabled()).thenReturn(true);
@@ -11207,6 +11211,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
         // The supported channels in soft AP capability got invalidated.
         assertEquals(0, capabilityArgumentCaptor.getValue()
                 .getSupportedChannelList(SoftApConfiguration.BAND_2GHZ).length);
+        verify(mWifiNative, times(2)).getUsableChannels(eq(WifiScanner.WIFI_BAND_24_GHZ), anyInt(),
+                anyInt());
     }
 
     /**
