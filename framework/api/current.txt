@@ -55,6 +55,7 @@ package android.net.wifi {
     method @FlaggedApi("com.android.wifi.flags.rtt_11az_ntb_ranging_support") public boolean is80211azNtbResponder();
     method public boolean is80211mcResponder();
     method public boolean isPasspointNetwork();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public boolean isTwtResponder();
     method public void writeToParcel(android.os.Parcel, int);
     field public String BSSID;
     field public static final int CHANNEL_WIDTH_160MHZ = 3; // 0x3

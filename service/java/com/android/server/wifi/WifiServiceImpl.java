@@ -119,6 +119,9 @@ import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.ISuggestionConnectionStatusListener;
 import android.net.wifi.ISuggestionUserApprovalStatusListener;
 import android.net.wifi.ITrafficStateCallback;
+import android.net.wifi.ITwtCallback;
+import android.net.wifi.ITwtCapabilitiesListener;
+import android.net.wifi.ITwtStatsListener;
 import android.net.wifi.IWifiBandsListener;
 import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.IWifiLowLatencyLockListener;
@@ -154,6 +157,9 @@ import android.net.wifi.WifiSsid;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.hotspot2.PasspointConfiguration;
+import android.net.wifi.twt.TwtCallback;
+import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSession;
 import android.net.wifi.util.ScanResultUtil;
 import android.os.AsyncTask;
 import android.os.Binder;
@@ -8176,5 +8182,59 @@ public class WifiServiceImpl extends BaseWifiService {
                     + " Missing NETWORK_SETTINGS permission");
         }
         return mWifiGlobals.forceOverlayConfigValue(configString, value, isEnabled);
+    }
+
+    /**
+     * See {@link WifiManager#getTwtCapabilities(Executor, Consumer)}
+     */
+    @Override
+    public void getTwtCapabilities(ITwtCapabilitiesListener listener, Bundle extras) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        enforceAnyPermissionOf(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        if (mVerboseLoggingEnabled) {
+            mLog.info("getTwtCapabilities:  Uid=% Package Name=%").c(Binder.getCallingUid()).c(
+                    getPackageName(extras)).flush();
+        }
+        if (listener == null) {
+            throw new IllegalArgumentException("listener should not be null");
+        }
+        mWifiThreadRunner.post(() -> {
+            try {
+                // TODO: Implementation. Returning not supported.
+                Bundle twtCapabilities = new Bundle();
+                twtCapabilities.putBoolean(WifiManager.TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER,
+                        false);
+                listener.onResult(twtCapabilities);
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage(), e);
+            }
+        });
+    }
+
+    /**
+     * See {@link WifiManager#setupTwtSession(TwtRequest, Executor, TwtCallback)}
+     */
+    @Override
+    public void setupTwtSession(TwtRequest twtRequest, ITwtCallback iTwtCallback, Bundle extras) {
+        // TODO: Implementation
+    }
+
+    /**
+     * See {@link TwtSession#getStats(Executor, Consumer)}}
+     */
+    @Override
+    public void getStatsTwtSession(int sessionId, ITwtStatsListener iTwtStatsListener,
+            Bundle extras) {
+        // TODO: Implementation
+    }
+
+    /**
+     * See {@link TwtSession#teardown()}
+     */
+    @Override
+    public void teardownTwtSession(int sessionId, Bundle extras) {
+        // TODO: Implementation
     }
 }
