@@ -28,6 +28,8 @@ import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pServiceInfo;
 
+import com.android.server.wifi.WifiNative;
+
 import java.util.List;
 import java.util.Set;
 
@@ -603,4 +605,30 @@ interface ISupplicantP2pIfaceHal {
      */
     boolean configureEapolIpAddressAllocationParams(int ipAddressGo, int ipAddressMask,
             int ipAddressStart, int ipAddressEnd);
+
+    /**
+     * Terminate the supplicant daemon & wait for its death.
+     * Note: Aidl only since it was added from HIDL 1.1
+     */
+    default void terminate() {};
+
+    /**
+     * Registers a death notification for supplicant.
+     * @return Returns true on success.
+     *
+     * Note: Aidl only.
+     */
+    default boolean registerDeathHandler(@NonNull WifiNative.SupplicantDeathEventHandler handler) {
+        return false;
+    };
+
+    /**
+     * Deregisters a death notification for supplicant.
+     * @return Returns true on success.
+     *
+     * Note: Aidl only.
+     */
+    default boolean deregisterDeathHandler() {
+        return false;
+    };
 }

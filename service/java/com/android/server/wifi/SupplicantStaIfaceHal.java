@@ -843,16 +843,22 @@ public class SupplicantStaIfaceHal {
     }
 
     /**
+     * Check whether the HAL service is using AIDL.
+     *
+     * @return true if the AIDL service is being used, false otherwise.
+     */
+    public boolean isAidlService() {
+        return mStaIfaceHal != null && mStaIfaceHal instanceof SupplicantStaIfaceHalAidlImpl;
+    }
+
+    /**
      * Check whether the AIDL service is running at least the expected version.
      *
      * @param expectedVersion Version number to check.
      * @return true if the AIDL service is available and >= the expected version, false otherwise.
      */
     public boolean isAidlServiceVersionAtLeast(int expectedVersion) {
-        if (mStaIfaceHal == null || mStaIfaceHal instanceof SupplicantStaIfaceHalHidlImpl) {
-            return false;
-        }
-        return ((SupplicantStaIfaceHalAidlImpl) mStaIfaceHal)
+        return isAidlService() && ((SupplicantStaIfaceHalAidlImpl) mStaIfaceHal)
                 .isServiceVersionAtLeast(expectedVersion);
     }
 
