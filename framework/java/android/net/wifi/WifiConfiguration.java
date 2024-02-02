@@ -1477,6 +1477,12 @@ public class WifiConfiguration implements Parcelable {
     public boolean allowAutojoin = true;
 
     /**
+     * Wi-Fi7 is enabled by user for this network.
+     * Default true.
+     */
+    private boolean mWifi7Enabled = true;
+
+    /**
      * @hide
      */
     public void setIpProvisioningTimedOut(boolean value) {
@@ -3712,6 +3718,7 @@ public class WifiConfiguration implements Parcelable {
         sbuf.append("\n");
         sbuf.append("IsDppConfigurator: ").append(this.mIsDppConfigurator).append("\n");
         sbuf.append("HasEncryptedPreSharedKey: ").append(hasEncryptedPreSharedKey()).append("\n");
+        sbuf.append(" setWifi7Enabled=").append(mWifi7Enabled);
         return sbuf.toString();
     }
 
@@ -4160,6 +4167,7 @@ public class WifiConfiguration implements Parcelable {
                     ? source.mEncryptedPreSharedKeyIv.clone() : new byte[0];
             mIpProvisioningTimedOut = source.mIpProvisioningTimedOut;
             mVendorData = new ArrayList<>(source.mVendorData);
+            mWifi7Enabled = source.mWifi7Enabled;
         }
     }
 
@@ -4259,6 +4267,7 @@ public class WifiConfiguration implements Parcelable {
         dest.writeByteArray(mEncryptedPreSharedKeyIv);
         dest.writeBoolean(mIpProvisioningTimedOut);
         dest.writeList(mVendorData);
+        dest.writeBoolean(mWifi7Enabled);
     }
 
     /** Implement the Parcelable interface {@hide} */
@@ -4384,6 +4393,7 @@ public class WifiConfiguration implements Parcelable {
                     }
                     config.mIpProvisioningTimedOut = in.readBoolean();
                     config.mVendorData = ParcelUtil.readOuiKeyedDataList(in);
+                    config.mWifi7Enabled = in.readBoolean();
                     return config;
                 }
 
@@ -4732,5 +4742,29 @@ public class WifiConfiguration implements Parcelable {
         }
         Objects.requireNonNull(vendorData);
         mVendorData = vendorData;
+    }
+
+    /**
+     * Whether Wi-Fi 7 is enabled for this network.
+     *
+     * @return true if enabled; false otherwise
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public boolean isWifi7Enabled() {
+        return mWifi7Enabled;
+    }
+
+    /**
+     * Sets whether Wi-Fi 7 is enabled for this network.
+     *
+     * @param enabled true if enabled; false otherwise
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public void setWifi7Enabled(boolean enabled) {
+        mWifi7Enabled = enabled;
     }
 }
