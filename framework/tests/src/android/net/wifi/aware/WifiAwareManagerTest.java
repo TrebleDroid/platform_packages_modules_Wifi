@@ -41,6 +41,8 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.MacAddress;
 import android.net.wifi.IBooleanListener;
+import android.net.wifi.OuiKeyedData;
+import android.net.wifi.OuiKeyedDataUtil;
 import android.net.wifi.RttManager;
 import android.net.wifi.SynchronousExecutor;
 import android.net.wifi.util.HexEncoding;
@@ -66,6 +68,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -822,6 +825,10 @@ public class WifiAwareManagerTest {
         collector.checkThat("mMinDistanceMm", subscribeConfig.mMinDistanceMm, equalTo(0));
         collector.checkThat("mMaxDistanceMmSet", subscribeConfig.mMaxDistanceMmSet, equalTo(false));
         collector.checkThat("mMaxDistanceMm", subscribeConfig.mMaxDistanceMm, equalTo(0));
+        if (SdkLevel.isAtLeastV()) {
+            collector.checkThat("mVendorData", subscribeConfig.getVendorData(),
+                    equalTo(Collections.emptyList()));
+        }
     }
 
     @Test
@@ -834,15 +841,21 @@ public class WifiAwareManagerTest {
         final boolean enableTerminateNotification = false;
         final int minDistance = 10;
         final int maxDistance = 50;
+        final List<OuiKeyedData> vendorData = OuiKeyedDataUtil.createTestOuiKeyedDataList(5);
 
-        SubscribeConfig subscribeConfig = new SubscribeConfig.Builder().setServiceName(serviceName)
-                .setServiceSpecificInfo(serviceSpecificInfo.getBytes()).setMatchFilter(
-                    new TlvBufferUtils.TlvIterable(0, 1, matchFilter).toList())
-                .setSubscribeType(subscribeType)
-                .setTtlSec(subscribeTtl)
-                .setTerminateNotificationEnabled(enableTerminateNotification)
-                .setMinDistanceMm(minDistance)
-                .setMaxDistanceMm(maxDistance).build();
+        SubscribeConfig.Builder subscribeConfigBuilder =
+                new SubscribeConfig.Builder().setServiceName(serviceName)
+                        .setServiceSpecificInfo(serviceSpecificInfo.getBytes()).setMatchFilter(
+                                new TlvBufferUtils.TlvIterable(0, 1, matchFilter).toList())
+                        .setSubscribeType(subscribeType)
+                        .setTtlSec(subscribeTtl)
+                        .setTerminateNotificationEnabled(enableTerminateNotification)
+                        .setMinDistanceMm(minDistance)
+                        .setMaxDistanceMm(maxDistance);
+        if (SdkLevel.isAtLeastV()) {
+            subscribeConfigBuilder.setVendorData(vendorData);
+        }
+        SubscribeConfig subscribeConfig = subscribeConfigBuilder.build();
 
         collector.checkThat("mServiceName", serviceName.getBytes(),
                 equalTo(subscribeConfig.mServiceName));
@@ -858,6 +871,10 @@ public class WifiAwareManagerTest {
         collector.checkThat("mMinDistanceMm", minDistance, equalTo(subscribeConfig.mMinDistanceMm));
         collector.checkThat("mMaxDistanceMmSet", true, equalTo(subscribeConfig.mMaxDistanceMmSet));
         collector.checkThat("mMaxDistanceMm", maxDistance, equalTo(subscribeConfig.mMaxDistanceMm));
+        if (SdkLevel.isAtLeastV()) {
+            collector.checkThat("mVendorData", vendorData,
+                    equalTo(subscribeConfig.getVendorData()));
+        }
     }
 
     @Test
@@ -870,15 +887,21 @@ public class WifiAwareManagerTest {
         final boolean enableTerminateNotification = true;
         final int minDistance = 10;
         final int maxDistance = 50;
+        final List<OuiKeyedData> vendorData = OuiKeyedDataUtil.createTestOuiKeyedDataList(5);
 
-        SubscribeConfig subscribeConfig = new SubscribeConfig.Builder().setServiceName(serviceName)
-                .setServiceSpecificInfo(serviceSpecificInfo.getBytes()).setMatchFilter(
-                        new TlvBufferUtils.TlvIterable(0, 1, matchFilter).toList())
-                .setSubscribeType(subscribeType)
-                .setTtlSec(subscribeTtl)
-                .setTerminateNotificationEnabled(enableTerminateNotification)
-                .setMinDistanceMm(minDistance)
-                .setMaxDistanceMm(maxDistance).build();
+        SubscribeConfig.Builder subscribeConfigBuilder =
+                new SubscribeConfig.Builder().setServiceName(serviceName)
+                        .setServiceSpecificInfo(serviceSpecificInfo.getBytes()).setMatchFilter(
+                                new TlvBufferUtils.TlvIterable(0, 1, matchFilter).toList())
+                        .setSubscribeType(subscribeType)
+                        .setTtlSec(subscribeTtl)
+                        .setTerminateNotificationEnabled(enableTerminateNotification)
+                        .setMinDistanceMm(minDistance)
+                        .setMaxDistanceMm(maxDistance);
+        if (SdkLevel.isAtLeastV()) {
+            subscribeConfigBuilder.setVendorData(vendorData);
+        }
+        SubscribeConfig subscribeConfig = subscribeConfigBuilder.build();
 
         Parcel parcelW = Parcel.obtain();
         subscribeConfig.writeToParcel(parcelW, 0);
@@ -922,6 +945,10 @@ public class WifiAwareManagerTest {
         collector.checkThat("mEnableTerminateNotification",
                 publishConfig.mEnableTerminateNotification, equalTo(true));
         collector.checkThat("mEnableRanging", publishConfig.mEnableRanging, equalTo(false));
+        if (SdkLevel.isAtLeastV()) {
+            collector.checkThat("mVendorData", publishConfig.getVendorData(),
+                    equalTo(Collections.emptyList()));
+        }
     }
 
     @Test
@@ -933,14 +960,20 @@ public class WifiAwareManagerTest {
         final int publishTtl = 15;
         final boolean enableTerminateNotification = false;
         final boolean enableRanging = true;
+        final List<OuiKeyedData> vendorData = OuiKeyedDataUtil.createTestOuiKeyedDataList(5);
 
-        PublishConfig publishConfig = new PublishConfig.Builder().setServiceName(serviceName)
-                .setServiceSpecificInfo(serviceSpecificInfo.getBytes()).setMatchFilter(
-                        new TlvBufferUtils.TlvIterable(0, 1, matchFilter).toList())
-                .setPublishType(publishType)
-                .setTtlSec(publishTtl)
-                .setTerminateNotificationEnabled(enableTerminateNotification)
-                .setRangingEnabled(enableRanging).build();
+        PublishConfig.Builder publishConfigBuilder =
+                new PublishConfig.Builder().setServiceName(serviceName)
+                        .setServiceSpecificInfo(serviceSpecificInfo.getBytes()).setMatchFilter(
+                            new TlvBufferUtils.TlvIterable(0, 1, matchFilter).toList())
+                        .setPublishType(publishType)
+                        .setTtlSec(publishTtl)
+                        .setTerminateNotificationEnabled(enableTerminateNotification)
+                        .setRangingEnabled(enableRanging);
+        if (SdkLevel.isAtLeastV()) {
+            publishConfigBuilder.setVendorData(vendorData);
+        }
+        PublishConfig publishConfig = publishConfigBuilder.build();
 
         collector.checkThat("mServiceName", serviceName.getBytes(),
                 equalTo(publishConfig.mServiceName));
@@ -952,6 +985,10 @@ public class WifiAwareManagerTest {
         collector.checkThat("mEnableTerminateNotification", enableTerminateNotification,
                 equalTo(publishConfig.mEnableTerminateNotification));
         collector.checkThat("mEnableRanging", enableRanging, equalTo(publishConfig.mEnableRanging));
+        if (SdkLevel.isAtLeastV()) {
+            collector.checkThat("mVendorData", vendorData, equalTo(
+                    publishConfig.getVendorData()));
+        }
     }
 
     @Test
@@ -963,14 +1000,21 @@ public class WifiAwareManagerTest {
         final int publishTtl = 15;
         final boolean enableTerminateNotification = false;
         final boolean enableRanging = true;
+        final List<OuiKeyedData> vendorData = OuiKeyedDataUtil.createTestOuiKeyedDataList(5);
 
-        PublishConfig publishConfig = new PublishConfig.Builder().setServiceName(serviceName)
-                .setServiceSpecificInfo(serviceSpecificInfo.getBytes()).setMatchFilter(
-                        new TlvBufferUtils.TlvIterable(0, 1, matchFilter).toList())
-                .setPublishType(publishType)
-                .setTtlSec(publishTtl)
-                .setTerminateNotificationEnabled(enableTerminateNotification)
-                .setRangingEnabled(enableRanging).build();
+        PublishConfig.Builder publishConfigBuilder =
+                new PublishConfig.Builder().setServiceName(serviceName)
+                        .setServiceSpecificInfo(serviceSpecificInfo.getBytes()).setMatchFilter(
+                                new TlvBufferUtils.TlvIterable(0, 1, matchFilter)
+                                        .toList())
+                        .setPublishType(publishType)
+                        .setTtlSec(publishTtl)
+                        .setTerminateNotificationEnabled(enableTerminateNotification)
+                        .setRangingEnabled(enableRanging);
+        if (SdkLevel.isAtLeastV()) {
+            publishConfigBuilder.setVendorData(vendorData);
+        }
+        PublishConfig publishConfig = publishConfigBuilder.build();
 
         Parcel parcelW = Parcel.obtain();
         publishConfig.writeToParcel(parcelW, 0);

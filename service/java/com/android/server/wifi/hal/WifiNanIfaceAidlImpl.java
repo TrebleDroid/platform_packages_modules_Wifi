@@ -65,6 +65,7 @@ import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.aware.Capabilities;
+import com.android.server.wifi.util.HalAidlUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -856,6 +857,12 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.txType = NanTxType.BROADCAST;
         req.pairingConfig = createAidlPairingConfig(publishConfig.getPairingConfig());
         req.identityKey = copyArray(nik, 16);
+
+        if (SdkLevel.isAtLeastV() && !publishConfig.getVendorData().isEmpty()) {
+            req.vendorData =
+                    HalAidlUtil.frameworkToHalOuiKeyedDataList(publishConfig.getVendorData());
+        }
+
         return req;
     }
 
@@ -919,6 +926,12 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.pairingConfig = createAidlPairingConfig(subscribeConfig.getPairingConfig());
         req.identityKey = copyArray(nik, 16);
         req.intfAddr = new android.hardware.wifi.MacAddress[0];
+
+        if (SdkLevel.isAtLeastV() && !subscribeConfig.getVendorData().isEmpty()) {
+            req.vendorData =
+                    HalAidlUtil.frameworkToHalOuiKeyedDataList(subscribeConfig.getVendorData());
+        }
+
         return req;
     }
 
