@@ -16,16 +16,23 @@
 
 package android.net.wifi.p2p;
 
+import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
+import android.net.wifi.OuiKeyedData;
+import android.net.wifi.ParcelUtil;
 import android.net.wifi.ScanResult;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -175,6 +182,26 @@ public class WifiP2pDevice implements Parcelable {
         "(?:[0-9a-f]{2}:){5}[0-9a-f]{2} p2p_dev_addr=((?:[0-9a-f]{2}:){5}[0-9a-f]{2})"
     );
 
+    /** List of {@link OuiKeyedData} providing vendor-specific configuration data. */
+    private @NonNull List<OuiKeyedData> mVendorData = Collections.emptyList();
+
+    /**
+     * Return the vendor-provided configuration data, if it exists. See also {@link
+     * #setVendorData(List)}
+     *
+     * @return Vendor configuration data, or empty list if it does not exist.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @SystemApi
+    @NonNull
+    public List<OuiKeyedData> getVendorData() {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        return mVendorData;
+    }
 
     public WifiP2pDevice() {
     }
@@ -348,6 +375,27 @@ public class WifiP2pDevice implements Parcelable {
     }
 
     /**
+     * Set additional vendor-provided configuration data.
+     *
+     * @param vendorData List of {@link android.net.wifi.OuiKeyedData} containing the
+     *                   vendor-provided configuration data. Note that multiple elements with
+     *                   the same OUI are allowed.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @SystemApi
+    public void setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        if (vendorData == null) {
+            throw new IllegalArgumentException("setVendorData received a null value");
+        }
+        mVendorData = vendorData;
+    }
+
+    /**
      * Get the vendor-specific information elements received as part of the discovery
      * of the peer device.
      *
@@ -390,6 +438,7 @@ public class WifiP2pDevice implements Parcelable {
         sbuf.append("\n status: ").append(status);
         sbuf.append("\n wfdInfo: ").append(wfdInfo);
         sbuf.append("\n vendorElements: ").append(mVendorElements);
+        sbuf.append("\n vendorData: ").append(mVendorData);
         return sbuf.toString();
     }
 
@@ -416,6 +465,7 @@ public class WifiP2pDevice implements Parcelable {
             if (null != source.mVendorElements) {
                 mVendorElements = new ArrayList<>(source.mVendorElements);
             }
+            mVendorData = new ArrayList<>(source.mVendorData);
         }
     }
 
@@ -437,6 +487,7 @@ public class WifiP2pDevice implements Parcelable {
             dest.writeInt(0);
         }
         dest.writeTypedList(mVendorElements);
+        dest.writeList(mVendorData);
     }
 
     /** Implement the Parcelable interface */
@@ -458,6 +509,7 @@ public class WifiP2pDevice implements Parcelable {
                 }
                 device.mVendorElements = in.createTypedArrayList(
                         ScanResult.InformationElement.CREATOR);
+                device.mVendorData = ParcelUtil.readOuiKeyedDataList(in);
                 return device;
             }
 

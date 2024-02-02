@@ -20,7 +20,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
+import android.net.wifi.OuiKeyedDataUtil;
 import android.net.wifi.ScanResult;
+import android.os.Parcel;
 
 import androidx.test.filters.SmallTest;
 
@@ -137,5 +139,39 @@ public class WifiP2pDeviceTest {
                         0, new byte[]{1, 2, 3, 4})));
         device.setVendorElements(ies);
         assertEquals(ies, device.getVendorElements());
+    }
+
+    /** Tests that this class can be properly parceled and unparceled. */
+    @Test
+    public void testParcelReadWrite() {
+        WifiP2pDevice device = new WifiP2pDevice();
+        device.deviceName = "deviceName";
+        device.deviceAddress = "11:22:33:44:55:66";
+        device.primaryDeviceType = "primaryDeviceType";
+        device.secondaryDeviceType = "secondaryDeviceType";
+        device.wpsConfigMethodsSupported = 0x0008;
+        device.deviceCapability = 1;
+        device.groupCapability = 1;
+        device.status = WifiP2pDevice.CONNECTED;
+        if (SdkLevel.isAtLeastV()) {
+            device.setVendorData(OuiKeyedDataUtil.createTestOuiKeyedDataList(5));
+        }
+
+        Parcel parcel = Parcel.obtain();
+        device.writeToParcel(parcel, 0);
+        parcel.setDataPosition(0); // Rewind data position back to the beginning for read.
+        WifiP2pDevice unparceledDevice = WifiP2pDevice.CREATOR.createFromParcel(parcel);
+
+        assertEquals(device.deviceName, unparceledDevice.deviceName);
+        assertEquals(device.deviceAddress, unparceledDevice.deviceAddress);
+        assertEquals(device.primaryDeviceType, unparceledDevice.primaryDeviceType);
+        assertEquals(device.secondaryDeviceType, unparceledDevice.secondaryDeviceType);
+        assertEquals(device.wpsConfigMethodsSupported, unparceledDevice.wpsConfigMethodsSupported);
+        assertEquals(device.deviceCapability, unparceledDevice.deviceCapability);
+        assertEquals(device.groupCapability, unparceledDevice.groupCapability);
+        assertEquals(device.status, unparceledDevice.status);
+        if (SdkLevel.isAtLeastV()) {
+            assertEquals(device.getVendorData(), unparceledDevice.getVendorData());
+        }
     }
 }

@@ -3338,6 +3338,9 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         mSavedPeerConfig.wps.setup = WpsInfo.KEYPAD;
                         mSavedPeerConfig.deviceAddress = device.deviceAddress;
                         mSavedPeerConfig.wps.pin = provDisc.pin;
+                        if (SdkLevel.isAtLeastV() && provDisc.getVendorData() != null) {
+                            mSavedPeerConfig.setVendorData(provDisc.getVendorData());
+                        }
 
                         notifyP2pProvDiscShowPinRequest(provDisc.pin, device.deviceAddress);
                         mPeers.updateStatus(device.deviceAddress, WifiP2pDevice.INVITED);
@@ -4728,6 +4731,10 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                                 break;
                             }
                             newPeerConfig.deviceAddress = provDisc.device.deviceAddress;
+                        }
+                        if (SdkLevel.isAtLeastV() && provDisc != null
+                                && provDisc.getVendorData() != null) {
+                            newPeerConfig.setVendorData(provDisc.getVendorData());
                         }
                         if (message.what == WifiP2pMonitor.P2P_PROV_DISC_ENTER_PIN_EVENT) {
                             newPeerConfig.wps.setup = WpsInfo.KEYPAD;

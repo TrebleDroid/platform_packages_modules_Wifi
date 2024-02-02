@@ -205,8 +205,29 @@ public class WifiP2pConfig implements Parcelable {
     private @NonNull List<OuiKeyedData> mVendorData = Collections.emptyList();
 
     /**
+     * Set additional vendor-provided configuration data.
+     *
+     * @param vendorData List of {@link android.net.wifi.OuiKeyedData} containing the
+     *                   vendor-provided configuration data. Note that multiple elements with
+     *                   the same OUI are allowed.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @SystemApi
+    public void setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        if (vendorData == null) {
+            throw new IllegalArgumentException("setVendorData received a null value");
+        }
+        mVendorData = vendorData;
+    }
+
+    /**
      * Return the vendor-provided configuration data, if it exists. See also {@link
-     * Builder#setVendorData(List)}
+     * #setVendorData(List)}
      *
      * @return Vendor configuration data, or empty list if it does not exist.
      * @hide
@@ -389,7 +410,6 @@ public class WifiP2pConfig implements Parcelable {
         private int mNetId = WifiP2pGroup.NETWORK_ID_TEMPORARY;
         private int mGroupClientIpProvisioningMode = GROUP_CLIENT_IP_PROVISIONING_MODE_IPV4_DHCP;
         private boolean mJoinExistingGroup = false;
-        private @NonNull List<OuiKeyedData> mVendorData = Collections.emptyList();
 
         /**
          * Specify the peer's MAC address. If not set, the device will
@@ -662,30 +682,6 @@ public class WifiP2pConfig implements Parcelable {
         }
 
         /**
-         * Set additional vendor-provided configuration data.
-         *
-         * @param vendorData List of {@link android.net.wifi.OuiKeyedData} containing the
-         *                   vendor-provided configuration data. Note that multiple elements with
-         *                   the same OUI are allowed.
-         * @return Builder for chaining.
-         * @hide
-         */
-        @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
-        @SystemApi
-        @NonNull
-        public Builder setVendorData(@NonNull List<OuiKeyedData> vendorData) {
-            if (!SdkLevel.isAtLeastV()) {
-                throw new UnsupportedOperationException();
-            }
-            if (vendorData == null) {
-                throw new IllegalArgumentException("setVendorData received a null value");
-            }
-            mVendorData = vendorData;
-            return this;
-        }
-
-        /**
          * Build {@link WifiP2pConfig} given the current requests made on the builder.
          * @return {@link WifiP2pConfig} constructed based on builder method calls.
          */
@@ -720,7 +716,6 @@ public class WifiP2pConfig implements Parcelable {
             config.netId = mNetId;
             config.mGroupClientIpProvisioningMode = mGroupClientIpProvisioningMode;
             config.mJoinExistingGroup = mJoinExistingGroup;
-            config.mVendorData = new ArrayList<>(mVendorData);
             return config;
         }
     }
