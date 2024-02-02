@@ -965,7 +965,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return ConcreteClientModeManager.class.getSimpleName() + "."
                         + IdleState.class.getSimpleName() + "."
                         + getWhatToString(what);
@@ -1044,7 +1044,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return ConcreteClientModeManager.class.getSimpleName() + "."
                         + StartedState.class.getSimpleName() + "."
                         + getWhatToString(what);
@@ -1170,7 +1170,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return ConcreteClientModeManager.class.getSimpleName() + "."
                         + ScanOnlyModeState.class.getSimpleName() + "."
                         + getWhatToString(what);
@@ -1242,7 +1242,7 @@ public class ConcreteClientModeManager implements ClientModeManager {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return ConcreteClientModeManager.class.getSimpleName() + "."
                         + ConnectModeState.class.getSimpleName() + "."
                         + getWhatToString(what);

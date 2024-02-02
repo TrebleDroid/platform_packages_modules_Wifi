@@ -107,7 +107,6 @@ import android.util.StatsEvent;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.MessageUtils;
-import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
 import com.android.internal.util.WakeupMessage;
 import com.android.modules.utils.BasicShellCommandHandler;
@@ -116,6 +115,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.Clock;
 import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.InterfaceConflictManager;
+import com.android.server.wifi.RunnerState;
 import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.aware.PairingConfigManager.PairingSecurityAssociationInfo;
 import com.android.server.wifi.hal.WifiNanIface.NanStatusCode;
@@ -2167,9 +2167,9 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     class WifiAwareStateMachine extends StateMachine {
         private static final int TRANSACTION_ID_IGNORE = 0;
 
-        private final DefaultState mDefaultState = new DefaultState();
-        private final WaitState mWaitState = new WaitState();
-        private final WaitForResponseState mWaitForResponseState = new WaitForResponseState();
+        private final DefaultState mDefaultState;
+        private final WaitState mWaitState;
+        private final WaitForResponseState mWaitForResponseState;
         private final WaitingState mWaitingState = new WaitingState(this);
 
         private short mNextTransactionId = 1;
@@ -2198,7 +2198,11 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
 
         WifiAwareStateMachine(String name, Looper looper) {
             super(name, looper);
-
+            final int threshold = mContext.getResources().getInteger(
+                    R.integer.config_wifiConfigurationWifiRunnerThresholdInMs);
+            mDefaultState = new DefaultState(threshold);
+            mWaitState = new WaitState(threshold);
+            mWaitForResponseState = new WaitForResponseState(threshold);
             addState(mDefaultState);
             /* --> */ addState(mWaitState, mDefaultState);
             /* ----> */ addState(mWaitingState, mWaitState);
@@ -2330,9 +2334,27 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             mFwQueuedSendMessages.clear();
         }
 
-        private class DefaultState extends State {
+        private class DefaultState extends RunnerState {
+
+            DefaultState(int threshold) {
+                super(threshold, mWifiInjector.getWifiHandlerLocalLog());
+            }
+
             @Override
-            public boolean processMessage(Message msg) {
+            public String getMessageLogRec(int what) {
+                return WifiAwareStateManager.class.getSimpleName() + "."
+                        + DefaultState.class.getSimpleName() + "." + getWhatToString(what);
+            }
+
+            @Override
+            public void enterImpl() {
+            }
+
+            @Override
+            public void exitImpl() {
+            }
+            @Override
+            public boolean processMessageImpl(Message msg) {
                 if (mVdbg) {
                     Log.v(TAG, getName() + msg.toString());
                 }
@@ -2381,9 +2403,27 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
         }
 
-        private class WaitState extends State {
+        private class WaitState extends RunnerState {
+
+            WaitState(int threshold) {
+                super(threshold, mWifiInjector.getWifiHandlerLocalLog());
+            }
+
             @Override
-            public boolean processMessage(Message msg) {
+            public String getMessageLogRec(int what) {
+                return WifiAwareStateManager.class.getSimpleName() + "."
+                        + WaitState.class.getSimpleName() + "." + getWhatToString(what);
+            }
+
+            @Override
+            public void enterImpl() {
+            }
+
+            @Override
+            public void exitImpl() {
+            }
+            @Override
+            public boolean processMessageImpl(Message msg) {
                 if (mVdbg) {
                     Log.v(TAG, getName() + msg.toString());
                 }
@@ -2412,12 +2452,22 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
         }
 
-        private class WaitForResponseState extends State {
+        private class WaitForResponseState extends RunnerState {
             private static final long AWARE_COMMAND_TIMEOUT = 5_000;
             private WakeupMessage mTimeoutMessage;
 
+            WaitForResponseState(int threshold) {
+                super(threshold, mWifiInjector.getWifiHandlerLocalLog());
+            }
+
             @Override
-            public void enter() {
+            public String getMessageLogRec(int what) {
+                return WifiAwareStateManager.class.getSimpleName() + "."
+                        + WaitForResponseState.class.getSimpleName() + "." + getWhatToString(what);
+            }
+
+            @Override
+            public void enterImpl() {
                 mTimeoutMessage = new WakeupMessage(mContext, getHandler(), HAL_COMMAND_TIMEOUT_TAG,
                         MESSAGE_TYPE_RESPONSE_TIMEOUT, mCurrentCommand.arg1, mCurrentTransactionId);
                 mTimeoutMessage.schedule(SystemClock.elapsedRealtime() + AWARE_COMMAND_TIMEOUT);
@@ -2425,12 +2475,12 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
 
             @Override
-            public void exit() {
+            public void exitImpl() {
                 mTimeoutMessage.cancel();
             }
 
             @Override
-            public boolean processMessage(Message msg) {
+            public boolean processMessageImpl(Message msg) {
                 if (mVdbg) {
                     Log.v(TAG, getName() + msg.toString());
                 }

@@ -188,6 +188,11 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
                 Context.POWER_SERVICE);
         when(mMockContext.getSystemService(PowerManager.class)).thenReturn(mMockPowerManager);
         when(mMockContext.getSystemService(StatsManager.class)).thenReturn(mStatsManager);
+        mResources = new MockResources();
+        mResources.setBoolean(R.bool.config_wifiAllowMultipleNetworksOnSameAwareNdi, false);
+        mResources.setBoolean(R.bool.config_wifiAwareNdpSecurityUpdateOnSameNdi, false);
+        mResources.setInteger(R.integer.config_wifiConfigurationWifiRunnerThresholdInMs, 4000);
+        when(mMockContext.getResources()).thenReturn(mResources);
 
         when(mInterfaceConflictManager.manageInterfaceConflictForStateMachine(any(), any(), any(),
                 any(), any(), eq(HalDeviceManager.HDM_CREATE_IFACE_NAN), any(), anyBoolean()))
@@ -220,11 +225,6 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
 
         mDut.mDataPathMgr.mNetdWrapper = mMockNetdWrapper;
         mDut.mDataPathMgr.mNiWrapper = mMockNetworkInterface;
-
-        mResources = new MockResources();
-        mResources.setBoolean(R.bool.config_wifiAllowMultipleNetworksOnSameAwareNdi, false);
-        mResources.setBoolean(R.bool.config_wifiAwareNdpSecurityUpdateOnSameNdi, false);
-        when(mMockContext.getResources()).thenReturn(mResources);
     }
 
     /**
