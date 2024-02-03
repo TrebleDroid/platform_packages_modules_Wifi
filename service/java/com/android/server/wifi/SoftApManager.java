@@ -1148,7 +1148,7 @@ public class SoftApManager implements ActiveModeManager {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return SoftApManager.class.getSimpleName() + "." + IdleState.class.getSimpleName()
                         + "." + getWhatToString(what);
             }
@@ -1387,19 +1387,19 @@ public class SoftApManager implements ActiveModeManager {
             }
 
             @Override
-            void enterImpl() {
+            public void enterImpl() {
                 mWifiInjector.getWifiCountryCode().registerListener(mCountryCodeChangeListener);
                 sendMessageDelayed(CMD_DRIVER_COUNTRY_CODE_CHANGE_TIMED_OUT, TIMEOUT_MS);
             }
 
             @Override
-            void exitImpl() {
+            public void exitImpl() {
                 mWifiInjector.getWifiCountryCode().unregisterListener(mCountryCodeChangeListener);
                 removeMessages(CMD_DRIVER_COUNTRY_CODE_CHANGE_TIMED_OUT);
             }
 
             @Override
-            boolean processMessageImpl(Message message) {
+            public boolean processMessageImpl(Message message) {
                 if (message.what == CMD_DRIVER_COUNTRY_CODE_CHANGED) {
                     if (!TextUtils.equals(mCountryCode, (String) message.obj)) {
                         Log.i(getTag(), "Ignore country code changed: " + message.obj);
@@ -1410,7 +1410,7 @@ public class SoftApManager implements ActiveModeManager {
                     mCurrentSoftApCapability.setCountryCode(mCountryCode);
                     mCurrentSoftApCapability =
                             ApConfigUtil.updateSoftApCapabilityWithAvailableChannelList(
-                                    mCurrentSoftApCapability, mContext, mWifiNative);
+                                    mCurrentSoftApCapability, mContext, mWifiNative, null);
                     updateSafeChannelFrequencyList();
                     if (isBridgedMode()) {
                         SoftApConfiguration tempConfig =
@@ -1459,7 +1459,7 @@ public class SoftApManager implements ActiveModeManager {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return SoftApManager.class.getSimpleName() + "." + RunnerState.class.getSimpleName()
                         + "." + getWhatToString(what);
             }
@@ -1919,7 +1919,7 @@ public class SoftApManager implements ActiveModeManager {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return SoftApManager.class.getSimpleName() + "." + RunnerState.class.getSimpleName()
                         + "." + getWhatToString(what);
             }

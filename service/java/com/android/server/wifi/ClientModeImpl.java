@@ -4673,7 +4673,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "."
                     + ConnectableState.class.getSimpleName() + "." + getWhatToString(what);
         }
@@ -5617,7 +5617,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "."
                     + ConnectingOrConnectedState.class.getSimpleName() + "." + getWhatToString(
                     what);
@@ -6040,7 +6040,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "."
                     + L2ConnectingState.class.getSimpleName() + "." + getWhatToString(what);
         }
@@ -6467,7 +6467,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "."
                     + L2ConnectedState.class.getSimpleName() + "." + getWhatToString(what);
         }
@@ -6987,7 +6987,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "."
                     + WaitBeforeL3ProvisioningState.class.getSimpleName() + "."
                     + getWhatToString(what);
@@ -7028,7 +7028,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "."
                     + L3ProvisioningState.class.getSimpleName() + "." + getWhatToString(what);
         }
@@ -7122,7 +7122,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "." + RoamingState.class.getSimpleName()
                     + "." + getWhatToString(what);
         }
@@ -7316,7 +7316,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "."
                     + L3ConnectedState.class.getSimpleName() + "." + getWhatToString(what);
         }
@@ -7612,7 +7612,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         }
 
         @Override
-        String getMessageLogRec(int what) {
+        public String getMessageLogRec(int what) {
             return ClientModeImpl.class.getSimpleName() + "."
                     + DisconnectedState.class.getSimpleName() + "." + getWhatToString(what);
         }

@@ -58,6 +58,7 @@ import com.android.server.wifi.BuildProperties;
 import com.android.server.wifi.Clock;
 import com.android.server.wifi.FrameworkFacade;
 import com.android.server.wifi.InterfaceConflictManager;
+import com.android.server.wifi.RunnerHandler;
 import com.android.server.wifi.SystemBuildProperties;
 import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.WifiSettingsConfigStore;
@@ -129,7 +130,9 @@ public class WifiAwareServiceImpl extends IWifiAwareManager.Stub {
         mWifiPermissionsUtil = wifiPermissionsUtil;
         mStateManager = awareStateManager;
         mShellCommand = awareShellCommand;
-        mHandler = new Handler(handlerThread.getLooper());
+        mHandler = new RunnerHandler(handlerThread.getLooper(), mContext.getResources()
+                .getInteger(R.integer.config_wifiConfigurationWifiRunnerThresholdInMs),
+                WifiInjector.getInstance().getWifiHandlerLocalLog());
         mWifiAwareNativeManager = wifiAwareNativeManager;
         mWifiAwareNativeApi = wifiAwareNativeApi;
         mWifiAwareNativeCallback = wifiAwareNativeCallback;
