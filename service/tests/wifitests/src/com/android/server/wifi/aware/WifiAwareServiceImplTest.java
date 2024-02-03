@@ -18,6 +18,7 @@ package com.android.server.wifi.aware;
 
 import static android.net.wifi.aware.Characteristics.WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128;
 
+import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_AWARE_VERBOSE_LOGGING_ENABLED;
 
 import static org.junit.Assert.assertEquals;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -39,7 +41,6 @@ import static org.mockito.Mockito.when;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.aware.Characteristics;
 import android.net.wifi.aware.ConfigRequest;
@@ -56,22 +57,27 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.test.TestLooper;
+import android.util.LocalLog;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.dx.mockito.inline.extended.StaticMockitoSession;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.DeviceConfigFacade;
 import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.InterfaceConflictManager;
+import com.android.server.wifi.MockResources;
 import com.android.server.wifi.WifiBaseTest;
+import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.util.NetdWrapper;
 import com.android.server.wifi.util.WifiPermissionsUtil;
 import com.android.server.wifi.util.WifiPermissionsWrapper;
 import com.android.wifi.resources.R;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -119,6 +125,9 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
     @Mock private WifiSettingsConfigStore mWifiSettingsConfigStore;
     @Mock private InterfaceConflictManager mInterfaceConflictManager;
     @Mock private DeviceConfigFacade mDeviceConfigFacade;
+    @Mock private WifiInjector mWifiInjector;
+    @Mock private LocalLog mLocalLog;
+    private StaticMockitoSession mStaticMockSession;
 
     /**
      * Using instead of spy to avoid native crash failures - possibly due to
@@ -147,6 +156,11 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
+        mStaticMockSession = mockitoSession()
+                .mockStatic(WifiInjector.class)
+                .startMocking();
+        lenient().when(WifiInjector.getInstance()).thenReturn(mWifiInjector);
+        when(mWifiInjector.getWifiHandlerLocalLog()).thenReturn(mLocalLog);
         mMockLooper = new TestLooper();
 
         when(mHandlerThreadMock.getLooper()).thenReturn(mMockLooper.getLooper());
@@ -171,10 +185,11 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
                 .thenReturn(InterfaceConflictManager.ICM_EXECUTE_COMMAND);
 
         mDut = new WifiAwareServiceImplSpy(mContextMock);
-        Resources resources = mock(Resources.class);
+        MockResources resources = new MockResources();
+        resources.setInteger(R.integer.config_wifiVerboseLoggingAlwaysOnLevel, 0);
+        resources.setInteger(R.integer.config_wifiConfigurationWifiRunnerThresholdInMs, 4000);
         when(mContextMock.getResources()).thenReturn(resources);
-        when(resources.getInteger(
-                        R.integer.config_wifiVerboseLoggingAlwaysOnLevel)).thenReturn(0);
+
         mDut.fakeUid = mDefaultUid;
         mDut.start(mHandlerThreadMock, mAwareStateManagerMock, mWifiAwareShellCommandMock,
                 mAwareMetricsMock, mWifiPermissionsUtil, mPermissionsWrapperMock,
@@ -186,6 +201,11 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
         verify(mAwareStateManagerMock).start(eq(mContextMock), any(), eq(mAwareMetricsMock),
                 eq(mWifiPermissionsUtil), eq(mPermissionsWrapperMock), any(), any(),
                 eq(mInterfaceConflictManager));
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        mStaticMockSession.finishMocking();
     }
 
     /**
