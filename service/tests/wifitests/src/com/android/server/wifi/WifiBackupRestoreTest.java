@@ -257,6 +257,7 @@ public class WifiBackupRestoreTest extends WifiBaseTest {
                     + "<int name=\"DeletionPriority\" value=\"0\" />\n"
                     + "<int name=\"NumRebootsSinceLastUse\" value=\"0\" />\n"
                     + "<boolean name=\"RepeaterEnabled\" value=\"false\" />\n"
+                    + "<boolean name=\"EnableWifi7\" value=\"true\" />\n"
                     + "<SecurityParamsList>\n"
                     + "<SecurityParams>\n"
                     + "<int name=\"SecurityType\" value=\"2\" />\n"

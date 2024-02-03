@@ -611,7 +611,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 }
                 case "network-requests-remove-user-approved-access-points": {
                     String packageName = getNextArgRequired();
-                    mWifiNetworkFactory.removeApp(packageName);
+                    mWifiThreadRunner.post(() -> mWifiNetworkFactory.removeApp(packageName));
                     return 0;
                 }
                 case "clear-user-disabled-networks": {

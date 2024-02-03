@@ -545,12 +545,14 @@ package android.net.wifi {
     method @Deprecated public boolean isNoInternetAccessExpected();
     method @Deprecated public boolean isRepeaterEnabled();
     method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public boolean isSendDhcpHostnameEnabled();
+    method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public boolean isWifi7Enabled();
     method @Deprecated public void setBssidAllowlist(@Nullable java.util.List<android.net.MacAddress>);
     method @Deprecated public void setDeletionPriority(int) throws java.lang.IllegalArgumentException;
     method @Deprecated public void setNetworkSelectionStatus(@NonNull android.net.wifi.WifiConfiguration.NetworkSelectionStatus);
     method @Deprecated @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void setRepeaterEnabled(boolean);
     method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void setSendDhcpHostnameEnabled(boolean);
     method @Deprecated @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
+    method @Deprecated @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void setWifi7Enabled(boolean);
     field @Deprecated @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.WifiConfiguration> CREATOR;
     field @Deprecated public static final int INVALID_NETWORK_ID = -1; // 0xffffffff
     field @Deprecated public static final int METERED_OVERRIDE_METERED = 1; // 0x1
@@ -1447,19 +1449,23 @@ package android.net.wifi.aware {
   }
 
   public final class PublishConfig implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
     method public boolean isSuspendable();
   }
 
   public static final class PublishConfig.Builder {
     method @NonNull @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public android.net.wifi.aware.PublishConfig.Builder setSuspendable(boolean);
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.aware.PublishConfig.Builder setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
   }
 
   public final class SubscribeConfig implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
     method public boolean isSuspendable();
   }
 
   public static final class SubscribeConfig.Builder {
     method @NonNull @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public android.net.wifi.aware.SubscribeConfig.Builder setSuspendable(boolean);
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.aware.SubscribeConfig.Builder setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
   }
 
   public class WifiAwareManager {
@@ -1547,11 +1553,16 @@ package android.net.wifi.p2p {
   public class WifiP2pConfig implements android.os.Parcelable {
     method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
     method public boolean isJoinExistingGroup();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
   }
 
   public static final class WifiP2pConfig.Builder {
     method @NonNull public android.net.wifi.p2p.WifiP2pConfig.Builder setJoinExistingGroup(boolean);
-    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.p2p.WifiP2pConfig.Builder setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
+  }
+
+  public class WifiP2pDevice implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
   }
 
   @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public final class WifiP2pDiscoveryConfig implements android.os.Parcelable {

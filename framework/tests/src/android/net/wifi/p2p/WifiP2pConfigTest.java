@@ -263,12 +263,11 @@ public class WifiP2pConfigTest {
      * Verify WifiP2pConfig basic operations
      */
     public void testWifiP2pConfig() throws Exception {
-        WifiP2pConfig.Builder builder = new WifiP2pConfig.Builder();
-        builder.setDeviceAddress(MacAddress.fromString(DEVICE_ADDRESS));
+        WifiP2pConfig config = new WifiP2pConfig();
+        config.deviceAddress = DEVICE_ADDRESS;
         if (SdkLevel.isAtLeastV()) {
-            builder.setVendorData(OuiKeyedDataUtil.createTestOuiKeyedDataList(5));
+            config.setVendorData(OuiKeyedDataUtil.createTestOuiKeyedDataList(5));
         }
-        WifiP2pConfig config = builder.build();
 
         WifiP2pConfig copiedConfig = new WifiP2pConfig(config);
         // no equals operator, use toString for comparison.

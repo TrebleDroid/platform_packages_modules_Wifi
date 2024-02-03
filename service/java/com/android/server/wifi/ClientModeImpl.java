@@ -1244,6 +1244,16 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 // nothing to do.
                 return;
             }
+
+            if (newConfig.isWifi7Enabled() != oldConfig.isWifi7Enabled()) {
+                Log.w(getTag(), "Wi-Fi " + (newConfig.isWifi7Enabled() ? "enabled" : "disabled")
+                        + " triggering disconnect");
+                mFrameworkDisconnectReasonOverride =
+                        WifiStatsLog.WIFI_DISCONNECT_REPORTED__FAILURE_CODE__DISCONNECT_NETWORK_WIFI7_TOGGLED;
+                sendMessage(CMD_DISCONNECT, StaEvent.DISCONNECT_NETWORK_WIFI7_TOGGLED);
+                return;
+            }
+
             boolean isMetered = WifiConfiguration.isMetered(newConfig, mWifiInfo);
             boolean wasMetered = WifiConfiguration.isMetered(oldConfig, mWifiInfo);
             // Check if user/app change meteredOverride or trusted for connected network.

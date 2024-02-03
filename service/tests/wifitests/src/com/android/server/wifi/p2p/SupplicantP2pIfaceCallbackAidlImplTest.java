@@ -37,6 +37,8 @@ import android.hardware.wifi.supplicant.P2pDeviceFoundEventParams;
 import android.hardware.wifi.supplicant.P2pGoNegotiationReqEventParams;
 import android.hardware.wifi.supplicant.P2pGroupStartedEventParams;
 import android.hardware.wifi.supplicant.P2pInvitationEventParams;
+import android.hardware.wifi.supplicant.P2pPeerClientDisconnectedEventParams;
+import android.hardware.wifi.supplicant.P2pPeerClientJoinedEventParams;
 import android.hardware.wifi.supplicant.P2pProvDiscStatusCode;
 import android.hardware.wifi.supplicant.P2pProvisionDiscoveryCompletedEventParams;
 import android.hardware.wifi.supplicant.P2pStatusCode;
@@ -56,6 +58,7 @@ import androidx.test.filters.SmallTest;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.WifiBaseTest;
 import com.android.server.wifi.p2p.WifiP2pServiceImpl.P2pStatus;
+import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import org.junit.Before;
@@ -156,6 +159,79 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
                 fakeDeviceName, fakeConfigMethods,
                 fakeCapabilities, fakeGroupCapabilities,
                 null);
+
+        // Make sure we issued a broadcast each time.
+        verify(mMonitor, times(2)).broadcastP2pDeviceFound(
+                anyString(), any(WifiP2pDevice.class));
+    }
+
+    private static OuiKeyedData generateHalOuiKeyedData(int oui) {
+        PersistableBundle bundle = new PersistableBundle();
+        bundle.putString("stringKey", "stringValue");
+        bundle.putInt("intKey", 789);
+
+        OuiKeyedData data = new OuiKeyedData();
+        data.oui = oui;
+        data.vendorData = bundle;
+        return data;
+    }
+
+    private static OuiKeyedData[] generateHalOuiKeyedDataList(int size) {
+        OuiKeyedData[] dataList = new OuiKeyedData[size];
+        for (int i = 0; i < size; i++) {
+            dataList[i] = generateHalOuiKeyedData(i + 1);
+        }
+        return dataList;
+    }
+
+    /**
+     * Sunny day scenario for testOnDeviceFoundWithParams call.
+     */
+    @Test
+    public void testOnDeviceFoundWithParams_success() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        initializeDut(3 /* serviceVersion */);
+        byte[] fakePrimaryDeviceTypeBytes = { 0x00, 0x01, 0x02, -1, 0x04, 0x05, 0x06, 0x07 };
+        String fakePrimaryDeviceTypeString = "1-02FF0405-1543";
+        String fakeDeviceName = "test device name";
+        short fakeConfigMethods = 0x1234;
+        byte fakeCapabilities = 123;
+        int fakeGroupCapabilities = 456;
+        OuiKeyedData[] halVendorData = generateHalOuiKeyedDataList(5);
+
+        P2pDeviceFoundEventParams params = new P2pDeviceFoundEventParams();
+        params.srcAddress = mDeviceAddress1Bytes;
+        params.p2pDeviceAddress = mDeviceAddress2Bytes;
+        params.primaryDeviceType = fakePrimaryDeviceTypeBytes;
+        params.deviceName = fakeDeviceName;
+        params.configMethods = fakeConfigMethods;
+        params.deviceCapabilities = fakeCapabilities;
+        params.groupCapabilities = fakeGroupCapabilities;
+        params.wfdDeviceInfo = mDeviceInfoBytes;
+        params.vendorData = halVendorData;
+
+        doAnswer(new AnswerWithArguments() {
+            public void answer(String iface, WifiP2pDevice device) {
+                // NOTE: mDeviceAddress1Bytes seems to be ignored by
+                // legacy implementation of WifiP2pDevice.
+                assertEquals(iface, mIface);
+                assertEquals(device.deviceName, fakeDeviceName);
+                assertEquals(device.primaryDeviceType, fakePrimaryDeviceTypeString);
+                assertEquals(device.deviceCapability, fakeCapabilities);
+                assertEquals(device.groupCapability, fakeGroupCapabilities);
+                assertEquals(device.wpsConfigMethodsSupported, fakeConfigMethods);
+                assertEquals(device.deviceAddress, mDeviceAddress2String);
+                assertEquals(device.status, WifiP2pDevice.AVAILABLE);
+                assertEquals(device.getVendorData(),
+                        HalAidlUtil.halToFrameworkOuiKeyedDataList(halVendorData));
+            }
+        }).when(mMonitor).broadcastP2pDeviceFound(
+                anyString(), any(WifiP2pDevice.class));
+
+        mDut.onDeviceFoundWithParams(params);
+
+        params.wfdDeviceInfo = null;
+        mDut.onDeviceFoundWithParams(params);
 
         // Make sure we issued a broadcast each time.
         verify(mMonitor, times(2)).broadcastP2pDeviceFound(
@@ -543,6 +619,59 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
     }
 
     /**
+     * Sunny day scenario for onGroupStartedWithParams call when the parameters
+     * include vendor data.
+     */
+    @Test
+    public void testOnGroupStartedWithParams_vendorData_success() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        initializeDut(3 /* serviceVersion */);
+        String fakeName = "group name";
+        String fakePassphrase = "secret";
+        byte[] fakeSsidBytesList = new byte[] {0x30, 0x31, 0x32, 0x33};
+        String fakeSsidString = "0123";
+        HashSet<String> passwords = new HashSet<String>();
+        OuiKeyedData[] halVendorData = generateHalOuiKeyedDataList(5);
+
+        P2pGroupStartedEventParams params = new P2pGroupStartedEventParams();
+        params.groupInterfaceName = fakeName;
+        params.isGroupOwner = true;
+        params.ssid = fakeSsidBytesList;
+        params.frequencyMHz = 1;
+        params.psk = null;
+        params.passphrase = fakePassphrase;
+        params.isPersistent = true;
+        params.goDeviceAddress = mDeviceAddress1Bytes;
+        params.isP2pClientEapolIpAddressInfoPresent = true;
+        params.vendorData = halVendorData;
+
+        doAnswer(new AnswerWithArguments() {
+            public void answer(String iface, WifiP2pGroup group) {
+                assertEquals(iface, mIface);
+                assertNotNull(group.getOwner());
+                assertEquals(group.getOwner().deviceAddress, mDeviceAddress1String);
+                assertEquals(group.getNetworkId(), WifiP2pGroup.NETWORK_ID_PERSISTENT);
+                passwords.add(group.getPassphrase());
+                assertEquals(group.getInterface(), fakeName);
+                assertEquals(group.getNetworkName(), fakeSsidString);
+                assertEquals(group.getVendorData(),
+                        HalAidlUtil.halToFrameworkOuiKeyedDataList(halVendorData));
+            }
+        }).when(mMonitor).broadcastP2pGroupStarted(
+                anyString(), any(WifiP2pGroup.class));
+
+        mDut.onGroupStartedWithParams(params);
+        assertTrue(passwords.contains(fakePassphrase));
+
+        params.passphrase = null;
+        mDut.onGroupStartedWithParams(params);
+        assertTrue(passwords.contains(null));
+
+        verify(mMonitor, times(2)).broadcastP2pGroupStarted(
+                anyString(), any(WifiP2pGroup.class));
+    }
+
+    /**
      * Failing scenarios for onGroupStartedWithParams call.
      */
     @Test
@@ -706,6 +835,35 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
         assertEquals(WifiP2pProvDiscEvent.PBC_REQ, discEventCaptor.getValue().event);
     }
 
+    /**
+     * Test provision discovery event callback when the event contains vendor data.
+     */
+    @Test
+    public void testOnProvisionDiscoveryCompletedEvent_vendorData() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        initializeDut(3 /* serviceVersion */);
+        OuiKeyedData[] halVendorData = generateHalOuiKeyedDataList(5);
+        List<android.net.wifi.OuiKeyedData> frameworkVendorData =
+                HalAidlUtil.halToFrameworkOuiKeyedDataList(halVendorData);
+
+        P2pProvisionDiscoveryCompletedEventParams params =
+                new P2pProvisionDiscoveryCompletedEventParams();
+        params.p2pDeviceAddress = DEVICE_ADDRESS;
+        params.isRequest = false;
+        params.status = P2pProvDiscStatusCode.SUCCESS;
+        params.configMethods = WpsConfigMethods.DISPLAY;
+        params.generatedPin = "12345678";
+        params.vendorData = halVendorData;
+
+        ArgumentCaptor<WifiP2pProvDiscEvent> discEventCaptor =
+                ArgumentCaptor.forClass(WifiP2pProvDiscEvent.class);
+        mDut.onProvisionDiscoveryCompletedEvent(params);
+        verify(mMonitor).broadcastP2pProvisionDiscoveryEnterPin(
+                anyString(), discEventCaptor.capture());
+        assertEquals(WifiP2pProvDiscEvent.ENTER_PIN, discEventCaptor.getValue().event);
+        assertEquals(frameworkVendorData, discEventCaptor.getValue().getVendorData());
+    }
+
     private void verifyProvisionDiscoveryFailureEvent(
             int halStatus, int expectedStatus) throws Exception {
         byte[] p2pDeviceAddr = DEVICE_ADDRESS;
@@ -790,6 +948,30 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
         mDut.onStaAuthorized(mDeviceAddress1Bytes, NativeUtil.ANY_MAC_BYTES);
         verify(mMonitor).broadcastP2pApStaConnected(any(String.class), p2pDeviceCaptor.capture());
         assertEquals(mDeviceAddress1String, p2pDeviceCaptor.getValue().deviceAddress);
+    }
+
+    /**
+     * Test onPeerClientJoined when the parameters include vendor data.
+     */
+    @Test
+    public void testOnPeerClientJoined() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        initializeDut(3 /* serviceVersion */);
+        OuiKeyedData[] halVendorData = generateHalOuiKeyedDataList(5);
+        List<android.net.wifi.OuiKeyedData> frameworkVendorData =
+                HalAidlUtil.halToFrameworkOuiKeyedDataList(halVendorData);
+
+        P2pPeerClientJoinedEventParams params = new P2pPeerClientJoinedEventParams();
+        params.clientInterfaceAddress = mDeviceAddress1Bytes;
+        params.clientDeviceAddress = mDeviceAddress2Bytes;
+        params.vendorData = halVendorData;
+
+        ArgumentCaptor<WifiP2pDevice> p2pDeviceCaptor =
+                ArgumentCaptor.forClass(WifiP2pDevice.class);
+        mDut.onPeerClientJoined(params);
+        verify(mMonitor).broadcastP2pApStaConnected(eq(mIface), p2pDeviceCaptor.capture());
+        assertEquals(mDeviceAddress2String, p2pDeviceCaptor.getValue().deviceAddress);
+        assertEquals(frameworkVendorData, p2pDeviceCaptor.getValue().getVendorData());
     }
 
     // TLVS hex data encoded as a hex string.
@@ -967,6 +1149,30 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(WifiP2pDevice.class);
         verify(mMonitor).broadcastP2pApStaDisconnected(eq(mIface), p2pDeviceCaptor.capture());
         assertEquals(mDeviceAddress2String, p2pDeviceCaptor.getValue().deviceAddress);
+    }
+
+    /**
+     * Test onPeerClientDisconnected when the parameters include vendor data.
+     */
+    @Test
+    public void testOnPeerClientDisconnected() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        initializeDut(3 /* serviceVersion */);
+        OuiKeyedData[] halVendorData = generateHalOuiKeyedDataList(5);
+        List<android.net.wifi.OuiKeyedData> frameworkVendorData =
+                HalAidlUtil.halToFrameworkOuiKeyedDataList(halVendorData);
+
+        P2pPeerClientDisconnectedEventParams params = new P2pPeerClientDisconnectedEventParams();
+        params.clientInterfaceAddress = mDeviceAddress1Bytes;
+        params.clientDeviceAddress = mDeviceAddress2Bytes;
+        params.vendorData = halVendorData;
+
+        ArgumentCaptor<WifiP2pDevice> p2pDeviceCaptor =
+                ArgumentCaptor.forClass(WifiP2pDevice.class);
+        mDut.onPeerClientDisconnected(params);
+        verify(mMonitor).broadcastP2pApStaDisconnected(eq(mIface), p2pDeviceCaptor.capture());
+        assertEquals(mDeviceAddress2String, p2pDeviceCaptor.getValue().deviceAddress);
+        assertEquals(frameworkVendorData, p2pDeviceCaptor.getValue().getVendorData());
     }
 
     /**
