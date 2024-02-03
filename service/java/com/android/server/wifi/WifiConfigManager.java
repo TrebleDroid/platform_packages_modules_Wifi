@@ -4431,12 +4431,11 @@ public class WifiConfigManager {
                 Log.d(TAG, "Set altSubjectMatch to " + altSubjectNames);
             }
             newConfig.enterpriseConfig.setAltSubjectMatch(altSubjectNames);
-        } else {
-            if (mVerboseLoggingEnabled) {
-                Log.d(TAG, "Set domainSuffixMatch to " + serverCertInfo.commonName);
-            }
-            newConfig.enterpriseConfig.setDomainSuffixMatch(serverCertInfo.commonName);
         }
+        if (mVerboseLoggingEnabled) {
+            Log.d(TAG, "Set domainSuffixMatch to " + serverCertInfo.commonName);
+        }
+        newConfig.enterpriseConfig.setDomainSuffixMatch(serverCertInfo.commonName);
         newConfig.enterpriseConfig.setUserApproveNoCaCert(false);
         // Trigger an update to install CA certificate and the corresponding configuration.
         NetworkUpdateResult result = addOrUpdateNetwork(newConfig, internalConfig.creatorUid);
