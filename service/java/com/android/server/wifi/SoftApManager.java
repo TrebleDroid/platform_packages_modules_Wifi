@@ -1410,7 +1410,7 @@ public class SoftApManager implements ActiveModeManager {
                     mCurrentSoftApCapability.setCountryCode(mCountryCode);
                     mCurrentSoftApCapability =
                             ApConfigUtil.updateSoftApCapabilityWithAvailableChannelList(
-                                    mCurrentSoftApCapability, mContext, mWifiNative);
+                                    mCurrentSoftApCapability, mContext, mWifiNative, null);
                     updateSafeChannelFrequencyList();
                     if (isBridgedMode()) {
                         SoftApConfiguration tempConfig =

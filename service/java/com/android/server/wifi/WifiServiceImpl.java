@@ -846,8 +846,6 @@ public class WifiServiceImpl extends BaseWifiService {
             // Start to listen country code change to avoid query supported channels causes boot
             // time increased.
             mCountryCode.registerListener(mCountryCodeTracker);
-            mTetheredSoftApTracker.handleBootCompleted();
-            mLohsSoftApTracker.handleBootCompleted();
             mWifiInjector.getSarManager().handleBootCompleted();
             mWifiInjector.getSsidTranslator().handleBootCompleted();
             mWifiInjector.getPasspointManager().handleBootCompleted();
@@ -1878,8 +1876,36 @@ public class WifiServiceImpl extends BaseWifiService {
                         Log.e(TAG, "Country code not consistent! expect " + countryCode + " actual "
                                 + mCountryCode.getCurrentDriverCountryCode());
                     }
-                    mTetheredSoftApTracker.updateAvailChannelListInSoftApCapability(countryCode);
-                    mLohsSoftApTracker.updateAvailChannelListInSoftApCapability(countryCode);
+                    // Store Soft AP channels for reference after a reboot before the driver is up.
+                    Resources res = mContext.getResources();
+                    mSettingsConfigStore.put(WifiSettingsConfigStore.WIFI_SOFT_AP_COUNTRY_CODE,
+                            countryCode);
+                    List<Integer> freqs = new ArrayList<>();
+                    SparseArray<int[]> channelMap = new SparseArray<>(
+                            SoftApConfiguration.BAND_TYPES.length);
+                    for (int band : SoftApConfiguration.BAND_TYPES) {
+                        if (!ApConfigUtil.isSoftApBandSupported(mContext, band)) {
+                            continue;
+                        }
+                        List<Integer> freqsForBand = ApConfigUtil.getAvailableChannelFreqsForBand(
+                                band, mWifiNative, res, true);
+                        if (freqsForBand != null) {
+                            freqs.addAll(freqsForBand);
+                            int[] channel = new int[freqsForBand.size()];
+                            for (int i = 0; i < freqsForBand.size(); i++) {
+                                channel[i] = ScanResult.convertFrequencyMhzToChannelIfSupported(
+                                        freqsForBand.get(i));
+                            }
+                            channelMap.put(band, channel);
+                        }
+                    }
+                    mSettingsConfigStore.put(
+                            WifiSettingsConfigStore.WIFI_AVAILABLE_SOFT_AP_FREQS_MHZ,
+                            new JSONArray(freqs).toString());
+                    mTetheredSoftApTracker.updateAvailChannelListInSoftApCapability(countryCode,
+                            channelMap);
+                    mLohsSoftApTracker.updateAvailChannelListInSoftApCapability(countryCode,
+                            channelMap);
                     mActiveModeWarden.updateSoftApCapability(
                             mTetheredSoftApTracker.getSoftApCapability(),
                             WifiManager.IFACE_IP_MODE_TETHERED);
@@ -1888,21 +1914,6 @@ public class WifiServiceImpl extends BaseWifiService {
                     mActiveModeWarden.updateSoftApCapability(
                             mLohsSoftApTracker.getSoftApCapability(),
                             WifiManager.IFACE_IP_MODE_LOCAL_ONLY);
-                    // Store Soft AP channels for reference after a reboot before the driver is up.
-                    Resources res = mContext.getResources();
-                    mSettingsConfigStore.put(WifiSettingsConfigStore.WIFI_SOFT_AP_COUNTRY_CODE,
-                            countryCode);
-                    List<Integer> freqs = new ArrayList<>();
-                    for (int band : SoftApConfiguration.BAND_TYPES) {
-                        List<Integer> freqsForBand = ApConfigUtil.getAvailableChannelFreqsForBand(
-                                band, mWifiNative, res, true);
-                        if (freqsForBand != null) {
-                            freqs.addAll(freqsForBand);
-                        }
-                    }
-                    mSettingsConfigStore.put(
-                            WifiSettingsConfigStore.WIFI_AVAILABLE_SOFT_AP_FREQS_MHZ,
-                            new JSONArray(freqs).toString());
                 }
                 if (SdkLevel.isAtLeastT()) {
                     int itemCount = mRegisteredDriverCountryCodeListeners.beginBroadcast();
@@ -2022,10 +2033,6 @@ public class WifiServiceImpl extends BaseWifiService {
             }
         }
 
-        public void handleBootCompleted() {
-            updateAvailChannelListInSoftApCapability(mCountryCode.getCurrentDriverCountryCode());
-        }
-
         public SoftApCapability getSoftApCapability() {
             synchronized (mLock) {
                 if (mSoftApCapability == null) {
@@ -2034,14 +2041,15 @@ public class WifiServiceImpl extends BaseWifiService {
                             mSoftApCapability, mWifiInjector.getSettingsConfigStore());
                     // Default country code
                     mSoftApCapability = updateSoftApCapabilityWithAvailableChannelList(
-                            mSoftApCapability, mCountryCode.getCountryCode());
+                            mSoftApCapability, mCountryCode.getCountryCode(), null);
                 }
                 return mSoftApCapability;
             }
         }
 
         private SoftApCapability updateSoftApCapabilityWithAvailableChannelList(
-                @NonNull SoftApCapability softApCapability, @Nullable String countryCode) {
+                @NonNull SoftApCapability softApCapability, @Nullable String countryCode,
+                @Nullable SparseArray<int[]> channelMap) {
             if (!mIsBootComplete) {
                 // The available channel list is from wificond or HAL.
                 // It might be a failure or stuck during wificond or HAL init.
@@ -2051,12 +2059,13 @@ public class WifiServiceImpl extends BaseWifiService {
                 mSoftApCapability.setCountryCode(countryCode);
             }
             return ApConfigUtil.updateSoftApCapabilityWithAvailableChannelList(
-                    softApCapability, mContext, mWifiNative);
+                    softApCapability, mContext, mWifiNative, channelMap);
         }
 
-        public void updateAvailChannelListInSoftApCapability(@Nullable String countryCode) {
+        public void updateAvailChannelListInSoftApCapability(@Nullable String countryCode,
+                @Nullable SparseArray<int[]> channelMap) {
             onCapabilityChanged(updateSoftApCapabilityWithAvailableChannelList(
-                    getSoftApCapability(), countryCode));
+                    getSoftApCapability(), countryCode, channelMap));
         }
 
         public boolean registerSoftApCallback(ISoftApCallback callback) {
