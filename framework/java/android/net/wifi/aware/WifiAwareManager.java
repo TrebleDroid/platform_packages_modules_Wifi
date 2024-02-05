@@ -41,6 +41,7 @@ import android.net.NetworkSpecifier;
 import android.net.wifi.IBooleanListener;
 import android.net.wifi.IIntegerListener;
 import android.net.wifi.IListListener;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiManager;
 import android.net.wifi.util.HexEncoding;
 import android.os.Binder;
@@ -1068,7 +1069,7 @@ public class WifiAwareManager {
         @Override
         public void onMatch(int peerId, byte[] serviceSpecificInfo, byte[] matchFilter,
                 int peerCipherSuite, byte[] scid, String pairingAlias,
-                AwarePairingConfig pairingConfig) {
+                AwarePairingConfig pairingConfig, @Nullable OuiKeyedData[] vendorData) {
             if (VDBG) Log.v(TAG, "onMatch: peerId=" + peerId);
 
             mHandler.post(() -> {
@@ -1078,7 +1079,7 @@ public class WifiAwareManager {
                 mOriginalCallback.onServiceDiscovered(
                         new ServiceDiscoveryInfo(new PeerHandle(peerId), peerCipherSuite,
                                 serviceSpecificInfo, matchFilterList, scid, pairingAlias,
-                                pairingConfig));
+                                pairingConfig, vendorData));
             });
         }
 
@@ -1098,7 +1099,7 @@ public class WifiAwareManager {
         @Override
         public void onMatchWithDistance(int peerId, byte[] serviceSpecificInfo, byte[] matchFilter,
                 int distanceMm, int peerCipherSuite, byte[] scid, String pairingAlias,
-                AwarePairingConfig pairingConfig) {
+                AwarePairingConfig pairingConfig, @Nullable OuiKeyedData[] vendorData) {
             if (VDBG) {
                 Log.v(TAG, "onMatchWithDistance: peerId=" + peerId + ", distanceMm=" + distanceMm);
             }
@@ -1116,7 +1117,8 @@ public class WifiAwareManager {
                                 matchFilterList,
                                 scid,
                                 pairingAlias,
-                                pairingConfig),
+                                pairingConfig,
+                                vendorData),
                         distanceMm);
             });
         }
