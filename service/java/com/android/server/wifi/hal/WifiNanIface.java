@@ -19,6 +19,7 @@ package com.android.server.wifi.hal;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.aware.AwarePairingConfig;
 import android.net.wifi.aware.ConfigRequest;
 import android.net.wifi.aware.PublishConfig;
@@ -741,11 +742,13 @@ public class WifiNanIface implements WifiHal.WifiInterface {
          *             identifying the PMK used for setting up the Secure Data Path.
          * @param peerCipherType Cipher type for data-paths constructed in the context of this
          *                       discovery session.
+         * @param vendorData Additional vendor-specific parameters, or null if not provided.
          */
         void eventMatch(byte discoverySessionId, int peerId, byte[] addr,
                 byte[] serviceSpecificInfo, byte[] matchFilter, int rangingIndicationType,
                 int rangingMeasurementInMm, byte[] scid, int peerCipherType, byte[] nonce,
-                byte[] tag, AwarePairingConfig pairingConfig);
+                byte[] tag, AwarePairingConfig pairingConfig,
+                @Nullable List<OuiKeyedData> vendorData);
 
         /**
          * Indicates that a previously discovered match (service) has expired.

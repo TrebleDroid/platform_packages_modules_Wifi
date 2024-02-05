@@ -24,6 +24,8 @@ import static com.android.server.wifi.aware.WifiAwareStateManager.INSTANT_MODE_D
 import static com.android.server.wifi.aware.WifiAwareStateManager.NAN_PAIRING_REQUEST_TYPE_SETUP;
 import static com.android.server.wifi.aware.WifiAwareStateManager.NAN_PAIRING_REQUEST_TYPE_VERIFICATION;
 
+import android.annotation.NonNull;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.aware.AwarePairingConfig;
 import android.net.wifi.aware.IWifiAwareDiscoverySessionCallback;
@@ -41,6 +43,7 @@ import com.android.server.wifi.hal.WifiNanIface.NanStatusCode;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Manages the state of a single Aware discovery session (publish or subscribe).
@@ -586,16 +589,21 @@ public class WifiAwareDiscoverySessionState {
     public int onMatch(int requestorInstanceId, byte[] peerMac, byte[] serviceSpecificInfo,
             byte[] matchFilter, int rangingIndication, int rangeMm, int peerCipherSuite,
             byte[] scid, String pairingAlias,
-            AwarePairingConfig pairingConfig) {
+            AwarePairingConfig pairingConfig, @NonNull List<OuiKeyedData> vendorDataList) {
         int peerId = getPeerIdOrAddIfNew(requestorInstanceId, peerMac);
+        OuiKeyedData[] vendorDataArray = null;
+        if (!vendorDataList.isEmpty()) {
+            vendorDataArray = new OuiKeyedData[vendorDataList.size()];
+            vendorDataList.toArray(vendorDataArray);
+        }
 
         try {
             if (rangingIndication == 0) {
                 mCallback.onMatch(peerId, serviceSpecificInfo, matchFilter, peerCipherSuite, scid,
-                        pairingAlias, pairingConfig);
+                        pairingAlias, pairingConfig, vendorDataArray);
             } else {
                 mCallback.onMatchWithDistance(peerId, serviceSpecificInfo, matchFilter, rangeMm,
-                        peerCipherSuite, scid, pairingAlias, pairingConfig);
+                        peerCipherSuite, scid, pairingAlias, pairingConfig, vendorDataArray);
             }
         } catch (RemoteException e) {
             Log.w(TAG, "onMatch: RemoteException (FYI): " + e);
