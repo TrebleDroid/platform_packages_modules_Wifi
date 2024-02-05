@@ -21,11 +21,13 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
+import android.net.MacAddress;
 import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ParcelUtil;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
@@ -33,6 +35,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.wifi.flags.Flags;
 
 import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -275,7 +278,33 @@ public class WifiP2pGroup implements Parcelable {
         for (WifiP2pDevice client : mClients) {
             if (client.equals(device)) return;
         }
-        mClients.add(device);
+        mClients.add(new WifiP2pDevice(device));
+    }
+
+    /** @hide */
+    public void setClientInterfaceMacAddress(@NonNull String deviceAddress,
+            @NonNull final MacAddress interfaceMacAddress) {
+        for (WifiP2pDevice client : mClients) {
+            if (client.deviceAddress.equals(deviceAddress)) {
+                Log.i("setClientInterfaceMacAddress", " device: " + deviceAddress
+                        + " interfaceAddress: " + interfaceMacAddress.toString());
+                client.setInterfaceMacAddress(interfaceMacAddress);
+                break;
+            }
+        }
+    }
+    /** @hide */
+    public void setClientIpAddress(@NonNull final MacAddress interfaceMacAddress,
+            @NonNull final InetAddress ipAddress) {
+        for (WifiP2pDevice client : mClients) {
+            if (client.getInterfaceMacAddress().equals(interfaceMacAddress)) {
+                Log.i("setClientIpAddress", "Update the IP address"
+                        + " device: " + client.deviceAddress + " interfaceAddress: "
+                        + interfaceMacAddress.toString() + " IP: " + ipAddress.getHostAddress());
+                client.setIpAddress(ipAddress);
+                break;
+            }
+        }
     }
 
     /** @hide */

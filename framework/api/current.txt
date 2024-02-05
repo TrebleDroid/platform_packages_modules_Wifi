@@ -1276,6 +1276,7 @@ package android.net.wifi.p2p {
     ctor public WifiP2pDevice();
     ctor public WifiP2pDevice(android.net.wifi.p2p.WifiP2pDevice);
     method public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @Nullable public java.net.InetAddress getIpAddress();
     method @NonNull public java.util.List<android.net.wifi.ScanResult.InformationElement> getVendorElements();
     method @Nullable public android.net.wifi.p2p.WifiP2pWfdInfo getWfdInfo();
     method public boolean isGroupOwner();

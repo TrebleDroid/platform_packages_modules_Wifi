@@ -50,6 +50,7 @@ import android.net.MacAddress;
 import android.net.NetworkInfo;
 import android.net.NetworkStack;
 import android.net.StaticIpConfiguration;
+import android.net.TetheredClient;
 import android.net.TetheringInterface;
 import android.net.TetheringManager;
 import android.net.TetheringManager.TetheringEventCallback;
@@ -340,6 +341,9 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
     private static final int UPDATE_P2P_DISALLOWED_CHANNELS =   BASE + 36;
     // Delayed message to timeout group creation
     public static final int P2P_REJECTION_RESUME_AFTER_DELAY = BASE + 37;
+
+
+    static final int TETHER_INTERFACE_CLIENTS_CHANGED         =   BASE + 38;
 
     public static final int ENABLED                         = 1;
     public static final int DISABLED                        = 0;
@@ -1154,6 +1158,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
         private final P2pRejectWaitState mP2pRejectWaitState = new P2pRejectWaitState();
 
         private final WifiP2pMonitor mWifiMonitor = mWifiInjector.getWifiP2pMonitor();
+
         private final WifiP2pDeviceList mPeers = new WifiP2pDeviceList();
         private String mInterfaceName;
         private TetheringEventCallback mTetheringEventCallback =
@@ -1166,6 +1171,12 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         logd(getName() + " Tethering localOnlyInterfacesChanged"
                                 + " callback for ifaceList: " + ifaceList);
                         sendMessage(TETHER_INTERFACE_STATE_CHANGED, ifaceList);
+                    }
+                    @Override
+                    public void onClientsChanged(Collection<TetheredClient> clients) {
+                        synchronized (mLock) {
+                            sendMessage(TETHER_INTERFACE_CLIENTS_CHANGED, clients);
+                        }
                     }
                 };
 
@@ -1401,6 +1412,8 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                     return "SET_MIRACAST_MODE";
                 case TETHER_INTERFACE_STATE_CHANGED:
                     return "TETHER_INTERFACE_STATE_CHANGED";
+                case TETHER_INTERFACE_CLIENTS_CHANGED:
+                    return "TETHER_INTERFACE_CLIENTS_CHANGED";
                 case UPDATE_P2P_DISALLOWED_CHANNELS:
                     return "UPDATE_P2P_DISALLOWED_CHANNELS";
                 case WifiP2pManager.ADD_EXTERNAL_APPROVER:
@@ -2088,6 +2101,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                     case IPC_PROVISIONING_SUCCESS:
                     case IPC_PROVISIONING_FAILURE:
                     case TETHER_INTERFACE_STATE_CHANGED:
+                    case TETHER_INTERFACE_CLIENTS_CHANGED:
                     case UPDATE_P2P_DISALLOWED_CHANNELS:
                     case WifiP2pMonitor.P2P_PROV_DISC_FAILURE_EVENT:
                     case SET_MIRACAST_MODE:
@@ -4424,13 +4438,14 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                 WifiP2pDevice device;
                 String deviceAddress;
                 switch (message.what) {
-                    case WifiP2pMonitor.AP_STA_CONNECTED_EVENT:
+                    case WifiP2pMonitor.AP_STA_CONNECTED_EVENT: {
                         if (message.obj == null) {
                             Log.e(TAG, "Illegal argument(s)");
                             break;
                         }
                         device = (WifiP2pDevice) message.obj;
                         deviceAddress = device.deviceAddress;
+                        MacAddress interfaceMacAddress = device.getInterfaceMacAddress();
                         // Clear timeout that was set when group was started.
                         mWifiNative.setP2pGroupIdle(mGroup.getInterface(), 0);
                         if (deviceAddress != null) {
@@ -4438,6 +4453,11 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                                 mGroup.addClient(mPeers.get(deviceAddress));
                             } else {
                                 mGroup.addClient(deviceAddress);
+                            }
+                            mGroup.setClientInterfaceMacAddress(deviceAddress, interfaceMacAddress);
+                            if (SdkLevel.isAtLeastV() && device.getIpAddress() != null) {
+                                mGroup.setClientIpAddress(interfaceMacAddress,
+                                        device.getIpAddress());
                             }
                             mPeers.updateStatus(deviceAddress, WifiP2pDevice.CONNECTED);
                             if (mVerboseLoggingEnabled) logd(getName() + " ap sta connected");
@@ -4450,7 +4470,8 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         }
                         sendP2pConnectionChangedBroadcast();
                         break;
-                    case WifiP2pMonitor.AP_STA_DISCONNECTED_EVENT:
+                    }
+                    case WifiP2pMonitor.AP_STA_DISCONNECTED_EVENT: {
                         if (message.obj == null) {
                             Log.e(TAG, "Illegal argument(s)");
                             break;
@@ -4489,6 +4510,34 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                             loge("Disconnect on unknown device: " + device);
                         }
                         break;
+                    }
+                    case TETHER_INTERFACE_CLIENTS_CHANGED: {
+                        if (mGroup == null) break;
+                        if (!mGroup.isGroupOwner()) break;
+                        if (TextUtils.isEmpty(mGroup.getInterface())) break;
+
+                        Collection<TetheredClient> connectedClients =
+                                (Collection<TetheredClient>) message.obj;
+                        if (connectedClients == null) break;
+                        for (TetheredClient client : connectedClients) {
+                            logd("TETHER_INTERFACE_CLIENTS_CHANGED - client: " + client);
+                            if (client.getTetheringType() == TetheringManager.TETHERING_WIFI_P2P) {
+                                if (client.getAddresses().size() == 0) {
+                                    continue;
+                                }
+                                TetheredClient.AddressInfo info = client.getAddresses().get(0);
+                                MacAddress interfaceMacAddress = client.getMacAddress();
+                                LinkAddress linkAddressInfo = info.getAddress();
+                                InetAddress ipAddress = linkAddressInfo.getAddress();
+                                mGroup.setClientIpAddress(interfaceMacAddress, ipAddress);
+                            } else {
+                                loge("Received onClientsChanged cb from a non-p2p tether type: "
+                                        + client.getTetheringType());
+                            }
+                        }
+                        sendP2pConnectionChangedBroadcast();
+                        break;
+                    }
                     case IPC_PRE_DHCP_ACTION:
                         mWifiNative.setP2pPowerSave(mGroup.getInterface(), false);
                         try {
