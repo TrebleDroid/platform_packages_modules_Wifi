@@ -47,8 +47,6 @@ import static android.net.wifi.WifiManager.LocalOnlyHotspotCallback.REQUEST_REGI
 import static android.net.wifi.WifiManager.NOT_OVERRIDE_EXISTING_NETWORKS_ON_RESTORE;
 import static android.net.wifi.WifiManager.SAP_START_FAILURE_GENERAL;
 import static android.net.wifi.WifiManager.SAP_START_FAILURE_NO_CHANNEL;
-import static android.net.wifi.WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_ALL;
-import static android.net.wifi.WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_NONE;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_ENABLED;
@@ -12033,7 +12031,15 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testSetSendDhcpHostnameRestrictionWithoutPermission() {
         // by default no permissions are given so the call should fail.
         mWifiServiceImpl.setSendDhcpHostnameRestriction(
-                TEST_PACKAGE_NAME, SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+                TEST_PACKAGE_NAME, WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetSendDhcpHostnameRestrictionInvalidFlags() {
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        mWifiServiceImpl.setSendDhcpHostnameRestriction(
+                TEST_PACKAGE_NAME, -1);
     }
 
     @Test
@@ -12042,9 +12048,10 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
         mWifiServiceImpl.setSendDhcpHostnameRestriction(
-                TEST_PACKAGE_NAME, SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+                TEST_PACKAGE_NAME, WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN);
         mLooper.dispatchAll();
-        verify(mWifiGlobals).setSendDhcpHostnameRestriction(eq(SEND_DHCP_HOSTNAME_RESTRICTION_ALL));
+        verify(mWifiGlobals).setSendDhcpHostnameRestriction(
+                eq(WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN));
     }
 
     @Test
@@ -12066,18 +12073,18 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         InOrder inOrder = inOrder(listener);
         when(mWifiGlobals.getSendDhcpHostnameRestriction())
-                .thenReturn(SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
+                .thenReturn(0);
         mWifiServiceImpl.querySendDhcpHostnameRestriction(TEST_PACKAGE_NAME, listener);
         mLooper.dispatchAll();
         verify(mWifiGlobals).getSendDhcpHostnameRestriction();
-        inOrder.verify(listener).onResult(SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
+        inOrder.verify(listener).onResult(0);
 
         when(mWifiGlobals.getSendDhcpHostnameRestriction())
-                .thenReturn(SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+                .thenReturn(WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN);
         mWifiServiceImpl.querySendDhcpHostnameRestriction(TEST_PACKAGE_NAME, listener);
         mLooper.dispatchAll();
         verify(mWifiGlobals, times(2)).getSendDhcpHostnameRestriction();
-        inOrder.verify(listener).onResult(SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+        inOrder.verify(listener).onResult(WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN);
     }
 
     @Test

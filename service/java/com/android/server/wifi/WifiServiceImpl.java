@@ -249,6 +249,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 /**
  * WifiService handles remote WiFi operation requests by implementing
@@ -8153,6 +8154,12 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("setSendDhcpHostnameRestriction:% uid=% package=%").c(restriction)
                     .c(callingUid).c(packageName).flush();
         }
+        if ((restriction
+                & ~WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN
+                & ~WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_SECURE) != 0) {
+            throw new IllegalArgumentException("Unknown dhcp hostname restriction flags: "
+                    + restriction);
+        }
         if (!isSettingsOrSuw(callingPid, callingUid)
                 && !mWifiPermissionsUtil.isDeviceOwner(callingUid, packageName)) {
             throw new SecurityException("Uid " + callingUid
@@ -8162,7 +8169,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     /**
-     * See {@link WifiManager#querySendDhcpHostnameRestriction(Executor, Consumer)}
+     * See {@link WifiManager#querySendDhcpHostnameRestriction(Executor, IntConsumer)}
      */
     @Override
     public void querySendDhcpHostnameRestriction(@NonNull String packageName,

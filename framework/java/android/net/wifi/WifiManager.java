@@ -113,6 +113,7 @@ import java.util.StringTokenizer;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 /**
  * This class provides the primary API for managing all aspects of Wi-Fi
@@ -12195,39 +12196,31 @@ public class WifiManager {
     }
 
     /**
-     * No restriction for sending the DHCP hostname.
-     */
-    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_NONE = 0;
-
-    /**
      * Do not send the DHCP hostname to open networks.
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_OPEN = 1;
+    public static final int FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN = 1 << 0;
 
     /**
-     * Do not send the DHCP hostname to any network.
+     * Do not send the DHCP hostname to secure network.
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_ALL = 2;
+    public static final int FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_SECURE = 1 << 1;
 
     /** @hide */
-    @IntDef(prefix = { "SEND_DHCP_HOSTNAME_RESTRICTION_" }, value = {
-            SEND_DHCP_HOSTNAME_RESTRICTION_NONE,
-            SEND_DHCP_HOSTNAME_RESTRICTION_OPEN,
-            SEND_DHCP_HOSTNAME_RESTRICTION_ALL,
+    @IntDef(flag = true, prefix = { "FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_" }, value = {
+            FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN,
+            FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_SECURE,
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface SendDhcpHostnameRestriction {}
 
     /**
-     * Set a global restriction on which networks to send the device hostname to during DHCP.
+     * Sets the global restrictions on which networks to send the device hostname to during DHCP.
      *
-     * @param restriction One of {@link #SEND_DHCP_HOSTNAME_RESTRICTION_NONE},
-     *                    {@link #SEND_DHCP_HOSTNAME_RESTRICTION_OPEN} or
-     *                    {@link #SEND_DHCP_HOSTNAME_RESTRICTION_ALL}.
-     *
+     * @param restriction Bitmask of {@link SendDhcpHostnameRestriction}, or none to indicate no
+     *                    restriction.
+     * @throws IllegalArgumentException if input is invalid
      * @throws SecurityException if the calling app is not a Device Owner (DO), or a privileged app
      *                           that has one of the permissions required by this API.
      */
@@ -12246,13 +12239,11 @@ public class WifiManager {
 
     /**
      * Query the global restriction on which networks to send the device hostname to during DHCP.
-     * @see #setDhcpHostnameRestriction(int)
+     * @see #setSendDhcpHostnameRestriction(int)
      *
      * @param executor The executor on which callback will be invoked.
-     * @param resultsCallback An asynchronous callback that will return one of
-     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_NONE},
-     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_OPEN} or
-     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_ALL}.
+     * @param resultsCallback An asynchronous callback that will return a bitmask of
+     *                        {@link SendDhcpHostnameRestriction}.
      *
      * @throws SecurityException if the calling app is not a Device Owner (DO), or a privileged app
      *                           that has one of the permissions required by this API.
@@ -12263,7 +12254,7 @@ public class WifiManager {
             android.Manifest.permission.NETWORK_SETUP_WIZARD
     })
     public void querySendDhcpHostnameRestriction(@NonNull @CallbackExecutor Executor executor,
-            @NonNull Consumer<Integer> resultsCallback) {
+            @NonNull IntConsumer resultsCallback) {
         Objects.requireNonNull(executor, "executor cannot be null");
         Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
         try {
