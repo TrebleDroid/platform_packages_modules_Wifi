@@ -56,12 +56,17 @@ import android.hardware.wifi.supplicant.KeyMgmtMask;
 import android.hardware.wifi.supplicant.LegacyMode;
 import android.hardware.wifi.supplicant.MloLinksInfo;
 import android.hardware.wifi.supplicant.MscsParams.FrameClassifierFields;
+import android.hardware.wifi.supplicant.MsduDeliveryInfo;
+import android.hardware.wifi.supplicant.MsduDeliveryInfo.DeliveryRatio;
 import android.hardware.wifi.supplicant.PortRange;
+import android.hardware.wifi.supplicant.QosCharacteristics;
+import android.hardware.wifi.supplicant.QosCharacteristics.QosCharacteristicsMask;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParams;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParamsMask;
 import android.hardware.wifi.supplicant.QosPolicyData;
 import android.hardware.wifi.supplicant.QosPolicyRequestType;
 import android.hardware.wifi.supplicant.QosPolicyScsData;
+import android.hardware.wifi.supplicant.QosPolicyScsData.LinkDirection;
 import android.hardware.wifi.supplicant.QosPolicyScsRequestStatus;
 import android.hardware.wifi.supplicant.QosPolicyScsRequestStatusCode;
 import android.hardware.wifi.supplicant.QosPolicyStatus;
@@ -2895,11 +2900,107 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
                         hasSrcIp, srcIp, hasDstIp, dstIp, srcPort, dstPortRange, protocol));
     }
 
+    @VisibleForTesting
+    protected static byte frameworkToHalDeliveryRatio(
+            @android.net.wifi.QosCharacteristics.DeliveryRatio int frameworkRatio) {
+        switch (frameworkRatio) {
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_95:
+                return DeliveryRatio.RATIO_95;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_96:
+                return DeliveryRatio.RATIO_96;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_97:
+                return DeliveryRatio.RATIO_97;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_98:
+                return DeliveryRatio.RATIO_98;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99:
+                return DeliveryRatio.RATIO_99;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99_9:
+                return DeliveryRatio.RATIO_99_9;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99_99:
+                return DeliveryRatio.RATIO_99_99;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99_999:
+                return DeliveryRatio.RATIO_99_999;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99_9999:
+                return DeliveryRatio.RATIO_99_9999;
+            default:
+                Log.e(TAG, "Invalid delivery ratio received: " + frameworkRatio);
+                return DeliveryRatio.RATIO_95;
+        }
+    }
+
+    @VisibleForTesting
+    protected static byte frameworkToHalPolicyDirection(
+            @QosPolicyParams.Direction int frameworkDirection) {
+        switch (frameworkDirection) {
+            case QosPolicyParams.DIRECTION_UPLINK:
+                return LinkDirection.UPLINK;
+            case QosPolicyParams.DIRECTION_DOWNLINK:
+                return LinkDirection.DOWNLINK;
+            default:
+                Log.e(TAG, "Invalid direction received: " + frameworkDirection);
+                return LinkDirection.DOWNLINK;
+        }
+    }
+
+    /**
+     * Convert from a framework QosCharacteristics to its HAL equivalent.
+     */
+    @VisibleForTesting
+    protected static QosCharacteristics frameworkToHalQosCharacteristics(
+            android.net.wifi.QosCharacteristics frameworkChars) {
+        QosCharacteristics halChars = new QosCharacteristics();
+        halChars.minServiceIntervalUs = frameworkChars.getMinServiceIntervalMicros();
+        halChars.maxServiceIntervalUs = frameworkChars.getMaxServiceIntervalMicros();
+        halChars.minDataRateKbps = frameworkChars.getMinDataRateKbps();
+        halChars.delayBoundUs = frameworkChars.getDelayBoundMicros();
+
+        int optionalFieldMask = 0;
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MAX_MSDU_SIZE)) {
+            optionalFieldMask |= QosCharacteristicsMask.MAX_MSDU_SIZE;
+            halChars.maxMsduSizeOctets = (char) frameworkChars.getMaxMsduSizeOctets();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.SERVICE_START_TIME)) {
+            optionalFieldMask |= QosCharacteristicsMask.SERVICE_START_TIME;
+            optionalFieldMask |= QosCharacteristicsMask.SERVICE_START_TIME_LINK_ID;
+            halChars.serviceStartTimeUs = frameworkChars.getServiceStartTimeMicros();
+            halChars.serviceStartTimeLinkId = (byte) frameworkChars.getServiceStartTimeLinkId();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MEAN_DATA_RATE)) {
+            optionalFieldMask |= QosCharacteristicsMask.MEAN_DATA_RATE;
+            halChars.meanDataRateKbps = frameworkChars.getMeanDataRateKbps();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.BURST_SIZE)) {
+            optionalFieldMask |= QosCharacteristicsMask.BURST_SIZE;
+            halChars.burstSizeOctets = frameworkChars.getBurstSizeOctets();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MSDU_LIFETIME)) {
+            optionalFieldMask |= QosCharacteristicsMask.MSDU_LIFETIME;
+            halChars.msduLifetimeMs = (char) frameworkChars.getMsduLifetimeMillis();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MSDU_DELIVERY_INFO)) {
+            optionalFieldMask |= QosCharacteristicsMask.MSDU_DELIVERY_INFO;
+            MsduDeliveryInfo deliveryInfo = new MsduDeliveryInfo();
+            deliveryInfo.deliveryRatio =
+                    frameworkToHalDeliveryRatio(frameworkChars.getDeliveryRatio());
+            deliveryInfo.countExponent = (byte) frameworkChars.getCountExponent();
+            halChars.msduDeliveryInfo = deliveryInfo;
+        }
+
+        halChars.optionalFieldMask = optionalFieldMask;
+        return halChars;
+    }
+
     /**
      * Convert from a framework {@link QosPolicyParams} to a HAL QosPolicyScsData object.
      */
     @VisibleForTesting
-    protected static QosPolicyScsData frameworkToHalQosPolicyScsData(QosPolicyParams params) {
+    protected QosPolicyScsData frameworkToHalQosPolicyScsData(QosPolicyParams params) {
         QosPolicyScsData halData = new QosPolicyScsData();
         halData.policyId = (byte) params.getTranslatedPolicyId();
         halData.userPriority = (byte) params.getUserPriority();
@@ -2943,13 +3044,20 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
             paramsMask |= QosPolicyClassifierParamsMask.FLOW_LABEL;
             classifierParams.flowLabelIpv6 = params.getFlowLabel();
         }
+        if (SdkLevel.isAtLeastV() && isServiceVersionAtLeast(3)) {
+            halData.direction = frameworkToHalPolicyDirection(params.getDirection());
+            if (params.getQosCharacteristics() != null) {
+                halData.QosCharacteristics =
+                        frameworkToHalQosCharacteristics(params.getQosCharacteristics());
+            }
+        }
 
         classifierParams.classifierParamMask = paramsMask;
         halData.classifierParams = classifierParams;
         return halData;
     }
 
-    private static QosPolicyScsData[] frameworkToHalQosPolicyScsDataList(
+    private QosPolicyScsData[] frameworkToHalQosPolicyScsDataList(
             List<QosPolicyParams> frameworkPolicies) {
         QosPolicyScsData[] halDataList = new QosPolicyScsData[frameworkPolicies.size()];
         int index = 0;
