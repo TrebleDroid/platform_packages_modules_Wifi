@@ -68,6 +68,7 @@ import android.net.MacAddress;
 import android.net.wifi.IBooleanListener;
 import android.net.wifi.IIntegerListener;
 import android.net.wifi.IListListener;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
@@ -347,6 +348,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     private static final String MESSAGE_BUNDLE_KEY_BOOTSTRAPPING_IS_COME_BACK_REQUEST =
             "bootstrapping_is_come_back";
     private static final String MESSAGE_BUNDLE_KEY_CALLER_TYPE = "caller_type";
+    private static final String MESSAGE_BUNDLE_KEY_VENDOR_DATA = "vendor_data";
     private WifiAwareNativeApi mWifiAwareNativeApi;
     private WifiAwareNativeManager mWifiAwareNativeManager;
 
@@ -1938,7 +1940,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     public void onMatchNotification(int pubSubId, int requestorInstanceId, byte[] peerMac,
             byte[] serviceSpecificInfo, byte[] matchFilter, int rangingIndication, int rangeMm,
             byte[] scid, int peerCipherSuite, byte[] nonce, byte[] tag,
-            AwarePairingConfig pairingConfig) {
+            AwarePairingConfig pairingConfig, @Nullable List<OuiKeyedData> vendorData) {
         Message msg = mSm.obtainMessage(MESSAGE_TYPE_NOTIFICATION);
         msg.arg1 = NOTIFICATION_TYPE_MATCH;
         msg.arg2 = pubSubId;
@@ -1953,6 +1955,8 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         msg.getData().putByteArray(MESSAGE_BUNDLE_KEY_NONCE, nonce);
         msg.getData().putByteArray(MESSAGE_BUNDLE_KEY_TAG, tag);
         msg.getData().putParcelable(MESSAGE_BUNDLE_KEY_PAIRING_CONFIG, pairingConfig);
+        msg.getData().putParcelableArrayList(MESSAGE_BUNDLE_KEY_VENDOR_DATA,
+                vendorData != null ? new ArrayList<>(vendorData) : new ArrayList<>());
         mSm.sendMessage(msg);
     }
 
@@ -2559,10 +2563,12 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                     byte[] tag = msg.getData().getByteArray(MESSAGE_BUNDLE_KEY_TAG);
                     AwarePairingConfig pairingConfig = msg.getData()
                             .getParcelable(MESSAGE_BUNDLE_KEY_PAIRING_CONFIG);
+                    ArrayList<OuiKeyedData> vendorData =
+                            msg.getData().getParcelableArrayList(MESSAGE_BUNDLE_KEY_VENDOR_DATA);
 
                     onMatchLocal(pubSubId, requesterInstanceId, peerMac, serviceSpecificInfo,
                             matchFilter, rangingIndication, rangeMm, cipherSuite, scid, nonce, tag,
-                            pairingConfig);
+                            pairingConfig, vendorData);
                     break;
                 }
                 case NOTIFICATION_TYPE_MATCH_EXPIRED: {
@@ -5119,7 +5125,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     private void onMatchLocal(int pubSubId, int requestorinstanceid, byte[] peerMac,
             byte[] serviceSpecificInfo, byte[] matchFilter, int rangingIndication, int rangeMm,
             int cipherSuite, byte[] scid, byte[] nonce, byte[] tag,
-            AwarePairingConfig pairingConfig) {
+            AwarePairingConfig pairingConfig, @NonNull List<OuiKeyedData> vendorData) {
         if (mVerboseLoggingEnabled) {
             Log.v(TAG, "onMatch: pubSubId=" + pubSubId
                     + ", requestorInstanceId=" + requestorinstanceid
@@ -5143,7 +5149,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                 data.first.getCallingPackage(), nonce, tag, peerMac);
         int peerId = data.second.onMatch(requestorinstanceid, peerMac, serviceSpecificInfo,
                 matchFilter, rangingIndication, rangeMm, cipherSuite, scid, pairingAlias,
-                pairingConfig);
+                pairingConfig, vendorData);
         if (TextUtils.isEmpty(pairingAlias)) {
             return;
         }
