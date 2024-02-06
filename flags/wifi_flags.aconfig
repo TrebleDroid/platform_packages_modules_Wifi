@@ -1,4 +1,5 @@
 package: "com.android.wifi.flags"
+container: "com.android.wifi"
 
 flag {
     name: "test_flag_function"
