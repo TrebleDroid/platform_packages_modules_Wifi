@@ -17,6 +17,7 @@
 package com.android.server.wifi;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.DhcpResultsParcelable;
 import android.net.MacAddress;
 import android.net.Network;
@@ -47,7 +48,7 @@ public interface ClientModeDefaults extends ClientMode {
     default void dump(FileDescriptor fd, PrintWriter pw, String[] args) { }
 
     default void connectNetwork(NetworkUpdateResult result, ActionListenerWrapper wrapper,
-            int callingUid, @NonNull String packageName) {
+            int callingUid, @NonNull String packageName, @Nullable String attributionTag) {
         // wifi off, can't connect.
         wrapper.sendFailure(WifiManager.ActionListener.FAILURE_BUSY);
     }
