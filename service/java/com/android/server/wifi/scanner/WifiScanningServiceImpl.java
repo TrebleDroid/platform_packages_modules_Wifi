@@ -87,7 +87,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -1561,7 +1560,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                         "reason=" + reason + ", " + description);
                 try {
                     entry.clientInfo.mListener.onFailure(reason, description);
-                } catch (RemoteException e) {
+                } catch (Exception e) {
                     loge("Failed to call onFailure: " + entry.clientInfo);
                 }
                 entry.clientInfo.unregister();
@@ -3082,7 +3081,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             }
             try {
                 mListener.asBinder().unlinkToDeath(mDeathRecipient, 0);
-            } catch (NoSuchElementException e) {
+            } catch (Exception e) {
                 Log.e(TAG, "Failed to unregister death recipient! " + mListener);
             }
 
@@ -3154,7 +3153,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                 try {
                     mListener.onSuccess();
                     mLog.trace("onSuccess").flush();
-                } catch (RemoteException e) {
+                } catch (Exception e) {
                     // There's not much we can do if reply can't be sent!
                 }
             } else {
@@ -3170,7 +3169,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                             .c(reason)
                             .c(description)
                             .flush();
-                } catch (RemoteException e) {
+                } catch (Exception e) {
                     // There's not much we can do if reply can't be sent!
                 }
             } else {
