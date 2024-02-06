@@ -1152,7 +1152,7 @@ public class WifiNetworkFactory extends NetworkFactory {
                 new NetworkUpdateResult(networkId),
                 new ActionListenerWrapper(listener),
                 mActiveSpecificNetworkRequest.getRequestorUid(),
-                mActiveSpecificNetworkRequest.getRequestorPackageName());
+                mActiveSpecificNetworkRequest.getRequestorPackageName(), null);
 
         // Post an alarm to handle connection timeout.
         scheduleConnectionTimeout();

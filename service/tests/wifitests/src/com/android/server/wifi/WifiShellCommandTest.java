@@ -105,7 +105,6 @@ public class WifiShellCommandTest extends WifiBaseTest {
     @Mock WifiDiagnostics mWifiDiagnostics;
     @Mock DeviceConfigFacade mDeviceConfig;
     @Mock WifiScanner mWifiScanner;
-
     WifiShellCommand mWifiShellCommand;
 
     @Before
@@ -826,7 +825,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
             return (wifiConfiguration.SSID.equals("\"ssid1234\"")
                     && wifiConfiguration.macRandomizationSetting
                     == WifiConfiguration.RANDOMIZATION_NONE);
-        }), eq(-1), any(), any());
+        }), eq(-1), any(), any(), any());
     }
 
     @Test
@@ -841,7 +840,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
             return (wifiConfiguration.SSID.equals("\"ssid1234\"")
                     && wifiConfiguration.macRandomizationSetting
                     == WifiConfiguration.RANDOMIZATION_NON_PERSISTENT);
-        }), eq(-1), any(), any());
+        }), eq(-1), any(), any(), any());
     }
 
     @Test
@@ -860,14 +859,14 @@ public class WifiShellCommandTest extends WifiBaseTest {
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"connect-network", "012345", "open", "-x"});
         verify(mWifiService, never()).connect(argThat(wifiConfiguration ->
-                (wifiConfiguration.SSID.equals("012345"))), eq(-1), any());
+                (wifiConfiguration.SSID.equals("012345"))), eq(-1), any(), any(), any());
 
         BinderUtil.setUid(Process.ROOT_UID);
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"connect-network", "012345", "open", "-x"});
         verify(mWifiService).connect(argThat(wifiConfiguration ->
-                (wifiConfiguration.SSID.equals("012345"))), eq(-1), any(), any());
+                (wifiConfiguration.SSID.equals("012345"))), eq(-1), any(), any(), any());
     }
 
     @Test

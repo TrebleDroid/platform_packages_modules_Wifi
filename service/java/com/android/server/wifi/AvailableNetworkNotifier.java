@@ -467,7 +467,7 @@ public class AvailableNetworkNotifier {
                             // only keep netId, discard other fields
                             new NetworkUpdateResult(result.getNetworkId()),
                             new ActionListenerWrapper(listener),
-                            Process.SYSTEM_UID, mContext.getOpPackageName()));
+                            Process.SYSTEM_UID, mContext.getOpPackageName(), null));
             addNetworkToBlocklist(mRecommendedNetwork.SSID);
         }
 
