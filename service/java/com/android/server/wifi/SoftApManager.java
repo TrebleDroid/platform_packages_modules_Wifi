@@ -477,7 +477,8 @@ public class SoftApManager implements ActiveModeManager {
                         apConfig.getTargetMode(),
                         mCurrentSoftApConfiguration,
                         mCurrentSoftApCapability,
-                        mCountryCode);
+                        mCountryCode,
+                        apConfig.getTetheringRequest());
         if (mCurrentSoftApConfiguration != null) {
             mIsUnsetBssid = mCurrentSoftApConfiguration.getBssid() == null;
             if (mCurrentSoftApCapability.areFeaturesSupported(
@@ -636,7 +637,8 @@ public class SoftApManager implements ActiveModeManager {
                 mSpecifiedModeConfiguration.getTargetMode(),
                 mSpecifiedModeConfiguration.getSoftApConfiguration(),
                 mCurrentSoftApCapability,
-                mCountryCode);
+                mCountryCode,
+                mSpecifiedModeConfiguration.getTetheringRequest());
     }
 
     /**
@@ -743,6 +745,7 @@ public class SoftApManager implements ActiveModeManager {
         intent.putExtra(WifiManager.EXTRA_WIFI_AP_INTERFACE_NAME, mApInterfaceName);
         intent.putExtra(
                 WifiManager.EXTRA_WIFI_AP_MODE, mSpecifiedModeConfiguration.getTargetMode());
+
         if (SdkLevel.isAtLeastSv2()) {
             mContext.sendBroadcastAsUser(intent, UserHandle.ALL,
                     android.Manifest.permission.ACCESS_WIFI_STATE);
@@ -1354,7 +1357,8 @@ public class SoftApManager implements ActiveModeManager {
                                         mSpecifiedModeConfiguration.getTargetMode(),
                                         newConfig,
                                         mCurrentSoftApCapability,
-                                        mCountryCode);
+                                        mCountryCode,
+                                        mSpecifiedModeConfiguration.getTetheringRequest());
                         Log.d(getTag(), "Configuration changed to " + newConfig);
                         // Idle mode, update all configurations.
                         mCurrentSoftApConfiguration = newConfig;
@@ -2074,7 +2078,8 @@ public class SoftApManager implements ActiveModeManager {
                                             mSpecifiedModeConfiguration.getTargetMode(),
                                             newConfig,
                                             mCurrentSoftApCapability,
-                                            mCountryCode);
+                                            mCountryCode,
+                                            mSpecifiedModeConfiguration.getTetheringRequest());
                             Log.d(getTag(), "Configuration changed to " + newConfig);
                             if (mCurrentSoftApConfiguration.getMaxNumberOfClients()
                                     != newConfig.getMaxNumberOfClients()) {

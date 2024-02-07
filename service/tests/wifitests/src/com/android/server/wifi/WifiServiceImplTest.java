@@ -146,6 +146,7 @@ import android.net.DhcpResultsParcelable;
 import android.net.MacAddress;
 import android.net.Network;
 import android.net.NetworkStack;
+import android.net.TetheringManager;
 import android.net.Uri;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.IActionListener;
@@ -2101,6 +2102,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertNull(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2132,6 +2134,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         WifiConfigurationTestUtil.assertConfigurationEqualForSoftAp(
                 config,
                 mSoftApModeConfigCaptor.getValue().getSoftApConfiguration().toWifiConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_SOFT_AP), anyInt(),
                 anyInt(), anyInt(), anyString(), eq(true));
     }
@@ -2169,6 +2172,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         WifiConfigurationTestUtil.assertConfigurationEqualForSoftAp(
                 config,
                 mSoftApModeConfigCaptor.getValue().getSoftApConfiguration().toWifiConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
         verify(mContext).enforceCallingOrSelfPermission(
                 eq(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK), any());
     }
@@ -2194,6 +2198,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         WifiConfigurationTestUtil.assertConfigurationEqualForSoftAp(
                 config,
                 mSoftApModeConfigCaptor.getValue().getSoftApConfiguration().toWifiConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2206,6 +2211,73 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertNull(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
+        verify(mLastCallerInfoManager).put(eq(WifiManager.API_TETHERED_HOTSPOT), anyInt(),
+                anyInt(), anyInt(), anyString(), eq(true));
+    }
+
+    /**
+     * Verify a SecurityException is thrown when a caller without the correct permission attempts to
+     * call startTetheredHotspotRequest().
+     */
+    @Test(expected = SecurityException.class)
+    public void testStartTetheredHotspotRequestWithoutPermissionThrowsException() throws Exception {
+        when(mContext.checkCallingOrSelfPermission(android.Manifest.permission.NETWORK_STACK))
+                .thenReturn(PackageManager.PERMISSION_DENIED);
+        doThrow(new SecurityException()).when(mContext).enforceCallingOrSelfPermission(
+                eq(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK), any());
+        mLooper.startAutoDispatch();
+        TetheringManager.TetheringRequest request = new TetheringManager.TetheringRequest.Builder(
+                TetheringManager.TETHERING_WIFI).build();
+        mWifiServiceImpl.startTetheredHotspotRequest(request, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+    }
+
+    /**
+     * Verify that startTetheredHotspotRequest() succeeds if the caller does not have the
+     * NETWORK_STACK permission but does have the MAINLINE_NETWORK_STACK permission.
+     */
+    @Test
+    public void testStartTetheredHotspotRequestNetworkStackWithMainlineNetworkStackSucceeds() {
+        when(mContext.checkCallingOrSelfPermission(android.Manifest.permission.NETWORK_STACK))
+                .thenReturn(PackageManager.PERMISSION_DENIED);
+        mLooper.startAutoDispatch();
+        TetheringManager.TetheringRequest request = new TetheringManager.TetheringRequest.Builder(
+                TetheringManager.TETHERING_WIFI).build();
+        boolean result = mWifiServiceImpl.startTetheredHotspotRequest(request, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+        assertTrue(result);
+        verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
+                eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
+        assertThat(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration()).isNull();
+        assertThat(mSoftApModeConfigCaptor.getValue().getTetheringRequest()).isEqualTo(request);
+        verify(mContext).enforceCallingOrSelfPermission(
+                eq(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK), any());
+    }
+
+    /**
+     * Verify startTetheredHotspot fails with a null request.
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testStartTetheredHotspotNullRequestFails() {
+        mLooper.startAutoDispatch();
+        mWifiServiceImpl.startTetheredHotspotRequest(null, TEST_PACKAGE_NAME);
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+    }
+
+    /**
+     * Verify caller with proper permission can call startTetheredHotspot from a TetheringRequest.
+     */
+    @Test
+    public void testStartTetheredHotspotRequestWithPermissions() {
+        TetheringManager.TetheringRequest request = new TetheringManager.TetheringRequest.Builder(
+                TetheringManager.TETHERING_WIFI).build();
+        boolean result = mWifiServiceImpl.startTetheredHotspotRequest(request, TEST_PACKAGE_NAME);
+        assertTrue(result);
+        verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
+                eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
+        assertNull(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertThat(mSoftApModeConfigCaptor.getValue().getTetheringRequest()).isEqualTo(request);
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_TETHERED_HOTSPOT), anyInt(),
                 anyInt(), anyInt(), anyString(), eq(true));
     }
@@ -2232,6 +2304,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2434,6 +2507,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2492,6 +2566,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2551,6 +2626,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2609,6 +2685,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2643,6 +2720,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .setBand(SoftApConfiguration.BAND_60GHZ)
                 .build();
         boolean result = mWifiServiceImpl.startTetheredHotspot(config, TEST_PACKAGE_NAME);
+
         assertFalse(result);
         verify(mActiveModeWarden, never()).startSoftAp(any(), any());
     }
@@ -2665,6 +2743,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2696,6 +2775,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
         verify(mContext).enforceCallingOrSelfPermission(
                 eq(NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK), any());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -2712,6 +2792,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertNull(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -3368,6 +3449,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testStartLocalOnlyHotspotSingleRegistrationReturnsRequestRegistered() {
         registerLOHSRequestFull();
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(), any());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
     }
 
     /**
@@ -3467,6 +3549,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         WifiConfigurationTestUtil.assertConfigurationEqualForSoftAp(
                 config,
                 mSoftApModeConfigCaptor.getValue().getSoftApConfiguration().toWifiConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
         mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
         mWifiServiceImpl.updateInterfaceIpState(WIFI_IFACE_NAME, IFACE_IP_MODE_TETHERED);
         mLooper.dispatchAll();
@@ -3492,6 +3575,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).startSoftAp(mSoftApModeConfigCaptor.capture(),
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
+        assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
         mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
         mWifiServiceImpl.updateInterfaceIpState(WIFI_IFACE_NAME, IFACE_IP_MODE_TETHERED);
         mLooper.dispatchAll();
