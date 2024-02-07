@@ -78,9 +78,11 @@ import android.content.res.Resources;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.InetAddresses;
+import android.net.LinkAddress;
 import android.net.MacAddress;
 import android.net.NetworkInfo;
 import android.net.NetworkStack;
+import android.net.TetheredClient;
 import android.net.TetheringInterface;
 import android.net.TetheringManager;
 import android.net.wifi.CoexUnsafeChannel;
@@ -172,6 +174,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -186,8 +189,10 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     private static final String TAG = "WifiP2pServiceImplTest";
     private static final String IFACE_NAME_P2P = "mockP2p0";
     private static final String P2P_GO_IP = "192.168.49.1";
+    private static final String P2P_PEER_IP = "192.168.49.50";
     private static final long STATE_CHANGE_WAITING_TIME = 1000;
     private static final String thisDeviceMac = "11:22:33:44:55:66";
+    private static final String PEER_INTERFACE_ADDRESS = "aa:bb:cc:dd:aa:bb";
     private static final String thisDeviceName = "thisDeviceName";
     private static final String ANONYMIZED_DEVICE_ADDRESS = "02:00:00:00:00:00";
     private static final String TEST_PACKAGE_NAME = "com.p2p.test";
@@ -281,6 +286,10 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Mock TetheringManager mTetheringManager;
     @Mock WifiDiagnostics mWifiDiagnostics;
     @Mock WifiP2pConnection mWifiP2pConnection;
+    @Mock Collection<TetheredClient> mClients;
+    @Mock TetheredClient mTetheredClient;
+    @Mock TetheredClient.AddressInfo mAddressInfo;
+    @Mock  List<TetheredClient.AddressInfo> mAddresses;
 
     private void generatorTestData() {
         mTestWifiP2pGroup = new WifiP2pGroup();
@@ -409,6 +418,14 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                                     IFACE_NAME_P2P)}))));
             mLooper.dispatchAll();
         }
+    }
+
+    private void simulateOnClientsChanged() throws Exception {
+        List<TetheredClient> clients = new ArrayList<>(1);
+        clients.add(mTetheredClient);
+        mClients = clients;
+        mTetheringEventCallback.onClientsChanged(mClients);
+        mLooper.dispatchAll();
     }
 
     /**
@@ -664,6 +681,32 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         Message msg = Message.obtain();
         msg.what = WifiP2pMonitor.P2P_INVITATION_RECEIVED_EVENT;
         msg.obj = group;
+        mP2pStateMachineMessenger.send(Message.obtain(msg));
+        mLooper.dispatchAll();
+    }
+
+    /**
+     * Send WifiP2pMonitor.AP_STA_CONNECTED_EVENT.
+     *
+     * @param device Peer device information.
+     */
+    private void sendApStaConnectedEvent(WifiP2pDevice device) throws Exception {
+        Message msg = Message.obtain();
+        msg.what = WifiP2pMonitor.AP_STA_CONNECTED_EVENT;
+        msg.obj = device;
+        mP2pStateMachineMessenger.send(Message.obtain(msg));
+        mLooper.dispatchAll();
+    }
+
+    /**
+     * Send WifiP2pMonitor.AP_STA_DISCONNECTED_EVENT.
+     *
+     * @param device Peer device information.
+     */
+    private void sendApStaDisConnectedEvent(WifiP2pDevice device) throws Exception {
+        Message msg = Message.obtain();
+        msg.what = WifiP2pMonitor.AP_STA_DISCONNECTED_EVENT;
+        msg.obj = device;
         mP2pStateMachineMessenger.send(Message.obtain(msg));
         mLooper.dispatchAll();
     }
@@ -3364,6 +3407,144 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         simulateTetherReady();
         verify(mWifiP2pMetrics).endConnectionEvent(
                 eq(P2pConnectionEvent.CLF_NONE));
+    }
+
+    @Test
+    public void testOnClientsChangedOnApStaConnection() throws Exception {
+        when(mTetheredClient.getTetheringType()).thenReturn(TetheringManager.TETHERING_WIFI_P2P);
+        when(mTetheredClient.getAddresses()).thenReturn(mAddresses);
+        when(mAddresses.size()).thenReturn(1);
+        when(mAddresses.get(0)).thenReturn(mAddressInfo);
+        when(mTetheredClient.getMacAddress())
+                .thenReturn(MacAddress.fromString(PEER_INTERFACE_ADDRESS));
+        when(mAddressInfo.getAddress()).thenReturn(new LinkAddress(P2P_PEER_IP + "/" + "24"));
+
+        forceP2pEnabled(mClient1);
+
+        // Update the P2P peer list.
+        WifiP2pDeviceList peers;
+        WifiP2pDevice dev;
+        mockPeersList();
+        sendRequestPeersMsg(mClientMessenger);
+        verify(mClientHandler, times(1)).sendMessage(mMessageCaptor.capture());
+
+        // Start the P2P GO.
+        WifiP2pGroup group = new WifiP2pGroup();
+        group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
+        group.setNetworkName("DIRECT-xy-NEW");
+        group.setOwner(new WifiP2pDevice("thisDeviceMac"));
+        group.setIsGroupOwner(true);
+        group.setInterface(IFACE_NAME_P2P);
+        sendGroupStartedMsg(group);
+        simulateTetherReady();
+
+        // Trigger AP_STA_CONNECTED event & validate the results.
+        WifiP2pDevice connectedClientDevice = new WifiP2pDevice(mTestWifiP2pDevice);
+        connectedClientDevice.setInterfaceMacAddress(MacAddress.fromString(PEER_INTERFACE_ADDRESS));
+        sendApStaConnectedEvent(connectedClientDevice);
+        simulateOnClientsChanged();
+        // Verify that the connected client is added to the p2p group client list.
+        sendRequestGroupInfoMsg(mClientMessenger);
+        verify(mClientHandler, times(2)).sendMessage(mMessageCaptor.capture());
+        assertEquals(WifiP2pManager.RESPONSE_GROUP_INFO, mMessageCaptor.getValue().what);
+        WifiP2pGroup wifiP2pGroup = (WifiP2pGroup) mMessageCaptor.getValue().obj;
+        assertEquals(1, wifiP2pGroup.getClientList().size());
+        WifiP2pDevice client = wifiP2pGroup.getClientList().iterator().next();
+        assertNotNull(client);
+        assertEquals(mTestWifiP2pDevice.deviceAddress, client.deviceAddress);
+        assertEquals(MacAddress.fromString(PEER_INTERFACE_ADDRESS),
+                client.getInterfaceMacAddress());
+        if (SdkLevel.isAtLeastV()) {
+            assertEquals(InetAddresses.parseNumericAddress(P2P_PEER_IP), client.getIpAddress());
+        }
+
+        // Verify that the interface MAC address and IP address is not updated in the P2P peer list.
+        sendRequestPeersMsg(mClientMessenger);
+        verify(mClientHandler, times(3)).sendMessage(mMessageCaptor.capture());
+        peers = (WifiP2pDeviceList) mMessageCaptor.getValue().obj;
+        assertEquals(WifiP2pManager.RESPONSE_PEERS, mMessageCaptor.getValue().what);
+        dev = peers.get(mTestWifiP2pDevice.deviceAddress);
+        assertNotNull(dev);
+        assertNull(dev.getInterfaceMacAddress());
+        if (SdkLevel.isAtLeastV()) {
+            assertNull(dev.getIpAddress());
+        }
+
+    }
+
+    @Test
+    public void testApStaConnectedDisconnectedEventWithEapolIPAddress() throws Exception {
+        forceP2pEnabled(mClient1);
+
+        WifiP2pDeviceList peers;
+        WifiP2pDevice dev;
+        WifiP2pGroup wifiP2pGroup;
+
+        // Update the P2P Peer list.
+        mockPeersList();
+        sendRequestPeersMsg(mClientMessenger);
+        verify(mClientHandler, times(1)).sendMessage(mMessageCaptor.capture());
+
+        // Start the P2P GO.
+        WifiP2pGroup group = new WifiP2pGroup();
+        group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
+        group.setNetworkName("DIRECT-xy-NEW");
+        group.setOwner(new WifiP2pDevice("thisDeviceMac"));
+        group.setIsGroupOwner(true);
+        group.setInterface(IFACE_NAME_P2P);
+        sendGroupStartedMsg(group);
+        simulateTetherReady();
+
+        // Trigger AP_STA_CONNECTED event & validate the results.
+        WifiP2pDevice connectedClientDevice = new WifiP2pDevice(mTestWifiP2pDevice);
+        connectedClientDevice.setInterfaceMacAddress(MacAddress.fromString(PEER_INTERFACE_ADDRESS));
+        connectedClientDevice.setIpAddress(InetAddresses.parseNumericAddress(P2P_PEER_IP));
+        sendApStaConnectedEvent(connectedClientDevice);
+        // Verify that the connected client is added to the p2p group client list.
+        sendRequestGroupInfoMsg(mClientMessenger);
+        verify(mClientHandler, times(2)).sendMessage(mMessageCaptor.capture());
+        assertEquals(WifiP2pManager.RESPONSE_GROUP_INFO, mMessageCaptor.getValue().what);
+        wifiP2pGroup = (WifiP2pGroup) mMessageCaptor.getValue().obj;
+        assertEquals(1, wifiP2pGroup.getClientList().size());
+        WifiP2pDevice client = wifiP2pGroup.getClientList().iterator().next();
+        assertNotNull(client);
+        assertEquals(mTestWifiP2pDevice.deviceAddress, client.deviceAddress);
+        assertEquals(MacAddress.fromString(PEER_INTERFACE_ADDRESS),
+                client.getInterfaceMacAddress());
+        if (SdkLevel.isAtLeastV()) {
+            assertEquals(InetAddresses.parseNumericAddress(P2P_PEER_IP), client.getIpAddress());
+        }
+
+        // Verify that the interface MAC address and IP address is not set in the P2P peer list.
+        sendRequestPeersMsg(mClientMessenger);
+        verify(mClientHandler, times(3)).sendMessage(mMessageCaptor.capture());
+        peers = (WifiP2pDeviceList) mMessageCaptor.getValue().obj;
+        assertEquals(WifiP2pManager.RESPONSE_PEERS, mMessageCaptor.getValue().what);
+        dev = peers.get(mTestWifiP2pDevice.deviceAddress);
+        assertNotNull(dev);
+        assertNull(dev.getInterfaceMacAddress());
+        if (SdkLevel.isAtLeastV()) {
+            assertNull(dev.getIpAddress());
+        }
+
+        // Trigger AP_STA_DISCONNECTED event & validate the results.
+        sendApStaDisConnectedEvent(connectedClientDevice);
+        // Verify that the client is removed from the P2P group client list.
+        sendRequestGroupInfoMsg(mClientMessenger);
+        verify(mClientHandler, times(4)).sendMessage(mMessageCaptor.capture());
+        assertEquals(WifiP2pManager.RESPONSE_GROUP_INFO, mMessageCaptor.getValue().what);
+        wifiP2pGroup = (WifiP2pGroup) mMessageCaptor.getValue().obj;
+        assertNotNull(wifiP2pGroup);
+        assertEquals(0, wifiP2pGroup.getClientList().size());
+
+        // Verify that the P2P device is not removed from the P2P peer list.
+        sendRequestPeersMsg(mClientMessenger);
+        verify(mClientHandler, times(5)).sendMessage(mMessageCaptor.capture());
+        peers = (WifiP2pDeviceList) mMessageCaptor.getValue().obj;
+        assertEquals(WifiP2pManager.RESPONSE_PEERS, mMessageCaptor.getValue().what);
+        dev = peers.get(mTestWifiP2pDevice.deviceAddress);
+        assertNotNull(dev);
+        assertEquals(mTestWifiP2pDevice.deviceAddress, dev.deviceAddress);
     }
 
     /**

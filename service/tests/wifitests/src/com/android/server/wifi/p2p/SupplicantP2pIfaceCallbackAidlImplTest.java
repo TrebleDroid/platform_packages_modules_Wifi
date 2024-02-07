@@ -44,6 +44,7 @@ import android.hardware.wifi.supplicant.P2pProvisionDiscoveryCompletedEventParam
 import android.hardware.wifi.supplicant.P2pStatusCode;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.hardware.wifi.supplicant.WpsDevPasswordId;
+import android.net.MacAddress;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -951,7 +952,7 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
     }
 
     /**
-     * Test onPeerClientJoined when the parameters include vendor data.
+     * Test onPeerClientJoined
      */
     @Test
     public void testOnPeerClientJoined() {
@@ -965,12 +966,15 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
         params.clientInterfaceAddress = mDeviceAddress1Bytes;
         params.clientDeviceAddress = mDeviceAddress2Bytes;
         params.vendorData = halVendorData;
+        params.clientIpAddress = 0xc831a8c0;
 
         ArgumentCaptor<WifiP2pDevice> p2pDeviceCaptor =
                 ArgumentCaptor.forClass(WifiP2pDevice.class);
         mDut.onPeerClientJoined(params);
         verify(mMonitor).broadcastP2pApStaConnected(eq(mIface), p2pDeviceCaptor.capture());
         assertEquals(mDeviceAddress2String, p2pDeviceCaptor.getValue().deviceAddress);
+        assertEquals(MacAddress.fromBytes(mDeviceAddress1Bytes),
+                p2pDeviceCaptor.getValue().getInterfaceMacAddress());
         assertEquals(frameworkVendorData, p2pDeviceCaptor.getValue().getVendorData());
     }
 
@@ -1152,7 +1156,7 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
     }
 
     /**
-     * Test onPeerClientDisconnected when the parameters include vendor data.
+     * Test onP2pApStaDisconnected callback
      */
     @Test
     public void testOnPeerClientDisconnected() {
@@ -1172,6 +1176,8 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
         mDut.onPeerClientDisconnected(params);
         verify(mMonitor).broadcastP2pApStaDisconnected(eq(mIface), p2pDeviceCaptor.capture());
         assertEquals(mDeviceAddress2String, p2pDeviceCaptor.getValue().deviceAddress);
+        assertEquals(MacAddress.fromBytes(mDeviceAddress1Bytes),
+                p2pDeviceCaptor.getValue().getInterfaceMacAddress());
         assertEquals(frameworkVendorData, p2pDeviceCaptor.getValue().getVendorData());
     }
 
