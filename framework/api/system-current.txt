@@ -1435,6 +1435,17 @@ package android.net.wifi.aware {
     field public static final int UNSET_PARAMETER = -1; // 0xffffffff
   }
 
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public final class ConfigRequest implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.aware.ConfigRequest> CREATOR;
+  }
+
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final class ConfigRequest.Builder {
+    ctor public ConfigRequest.Builder();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.aware.ConfigRequest build();
+  }
+
   public class DiscoverySession implements java.lang.AutoCloseable {
     method @Deprecated public android.net.NetworkSpecifier createNetworkSpecifierPmk(@NonNull android.net.wifi.aware.PeerHandle, @NonNull byte[]);
     method @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public void resume();
