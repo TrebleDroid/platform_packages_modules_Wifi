@@ -18,13 +18,21 @@ package android.net.wifi.aware;
 
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
+import android.annotation.RequiresApi;
 import android.annotation.SystemApi;
+import android.net.wifi.OuiKeyedData;
+import android.net.wifi.ParcelUtil;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.wifi.flags.Flags;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Defines a request object to configure a Wi-Fi Aware network. Built using
@@ -110,14 +118,21 @@ public final class ConfigRequest implements Parcelable {
      */
     public final int mDiscoveryWindowInterval[];
 
+    /**
+     * List of {@link OuiKeyedData} providing vendor-specific configuration data.
+     */
+    private final List<OuiKeyedData> mVendorData;
+
     private ConfigRequest(boolean support5gBand, boolean support6gBand, int masterPreference,
-            int clusterLow, int clusterHigh, int[] discoveryWindowInterval) {
+            int clusterLow, int clusterHigh, int[] discoveryWindowInterval,
+            @NonNull List<OuiKeyedData> vendorData) {
         mSupport5gBand = support5gBand;
         mSupport6gBand = support6gBand;
         mMasterPreference = masterPreference;
         mClusterLow = clusterLow;
         mClusterHigh = clusterHigh;
         mDiscoveryWindowInterval = discoveryWindowInterval;
+        mVendorData = vendorData;
     }
 
     @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
@@ -128,7 +143,9 @@ public final class ConfigRequest implements Parcelable {
                 + ", mMasterPreference=" + mMasterPreference
                 + ", mClusterLow=" + mClusterLow
                 + ", mClusterHigh=" + mClusterHigh
-                + ", mDiscoveryWindowInterval=" + Arrays.toString(mDiscoveryWindowInterval) + "]";
+                + ", mDiscoveryWindowInterval=" + Arrays.toString(mDiscoveryWindowInterval)
+                + ", mVendorData=" + mVendorData
+                + "]";
     }
 
     @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
@@ -146,6 +163,7 @@ public final class ConfigRequest implements Parcelable {
         dest.writeInt(mClusterLow);
         dest.writeInt(mClusterHigh);
         dest.writeIntArray(mDiscoveryWindowInterval);
+        dest.writeList(mVendorData);
     }
 
     @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
@@ -163,9 +181,10 @@ public final class ConfigRequest implements Parcelable {
             int clusterLow = in.readInt();
             int clusterHigh = in.readInt();
             int discoveryWindowInterval[] = in.createIntArray();
+            List<OuiKeyedData> vendorData = ParcelUtil.readOuiKeyedDataList(in);
 
             return new ConfigRequest(support5gBand, support6gBand, masterPreference, clusterLow,
-                    clusterHigh, discoveryWindowInterval);
+                    clusterHigh, discoveryWindowInterval, vendorData);
         }
     };
 
@@ -186,7 +205,8 @@ public final class ConfigRequest implements Parcelable {
                 && mSupport6gBand == lhs.mSupport6gBand
                 && mMasterPreference == lhs.mMasterPreference
                 && mClusterLow == lhs.mClusterLow && mClusterHigh == lhs.mClusterHigh
-                && Arrays.equals(mDiscoveryWindowInterval, lhs.mDiscoveryWindowInterval);
+                && Arrays.equals(mDiscoveryWindowInterval, lhs.mDiscoveryWindowInterval)
+                && Objects.equals(mVendorData, lhs.mVendorData);
     }
 
     @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
@@ -200,6 +220,7 @@ public final class ConfigRequest implements Parcelable {
         result = 31 * result + mClusterLow;
         result = 31 * result + mClusterHigh;
         result = 31 * result + Arrays.hashCode(mDiscoveryWindowInterval);
+        result = 31 * result + mVendorData.hashCode();
 
         return result;
     }
@@ -256,6 +277,27 @@ public final class ConfigRequest implements Parcelable {
             throw new IllegalArgumentException(
                 "Invalid discovery window interval for 6GHz: valid is UNSET or [0,5]");
         }
+        if (mVendorData == null) {
+            throw new IllegalArgumentException("Vendor data list must be non-null");
+        }
+    }
+
+    /**
+     * Get the vendor-provided configuration data, if it exists. See {@link
+     * Builder#setVendorData(List)}
+     *
+     * @return Vendor configuration data, or empty list if it does not exist.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @SystemApi
+    @NonNull
+    public List<OuiKeyedData> getVendorData() {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        return mVendorData != null ? mVendorData : Collections.emptyList();
     }
 
     /**
@@ -270,6 +312,7 @@ public final class ConfigRequest implements Parcelable {
         private int mClusterHigh = CLUSTER_ID_MAX;
         private int[] mDiscoveryWindowInterval = {DW_INTERVAL_NOT_INIT, DW_INTERVAL_NOT_INIT,
                 DW_INTERVAL_NOT_INIT};
+        private List<OuiKeyedData> mVendorData = Collections.emptyList();
 
         /**
          * Specify whether 5G band support is required in this request. Disabled by default.
@@ -406,6 +449,30 @@ public final class ConfigRequest implements Parcelable {
         }
 
         /**
+         * Set additional vendor-provided configuration data.
+         *
+         * @param vendorData List of {@link android.net.wifi.OuiKeyedData} containing the
+         *                   vendor-provided configuration data. Note that multiple elements with
+         *                   the same OUI are allowed.
+         * @return Builder for chaining.
+         * @hide
+         */
+        @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @SystemApi
+        @NonNull
+        public Builder setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+            if (!SdkLevel.isAtLeastV()) {
+                throw new UnsupportedOperationException();
+            }
+            if (vendorData == null) {
+                throw new IllegalArgumentException("setVendorData received a null value");
+            }
+            mVendorData = vendorData;
+            return this;
+        }
+
+        /**
          * Build {@link ConfigRequest} given the current requests made on the
          * builder.
          */
@@ -418,7 +485,7 @@ public final class ConfigRequest implements Parcelable {
             }
 
             return new ConfigRequest(mSupport5gBand, mSupport6gBand, mMasterPreference, mClusterLow,
-                    mClusterHigh, mDiscoveryWindowInterval);
+                    mClusterHigh, mDiscoveryWindowInterval, mVendorData);
         }
     }
 }
