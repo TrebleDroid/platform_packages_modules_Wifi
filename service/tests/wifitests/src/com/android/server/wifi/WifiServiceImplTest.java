@@ -12048,4 +12048,20 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mWifiGlobals, times(2)).getSendDhcpHostnameRestriction();
         inOrder.verify(listener).onResult(SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
     }
+
+    /*
+     * Verify that Pno is supported.
+     */
+    @Test
+    public void testIsPnoSupported() {
+        when(mWifiGlobals.isBackgroundScanSupported()).thenReturn(false);
+        assertFalse(mWifiServiceImpl.isPnoSupported());
+        when(mActiveModeWarden.getSupportedFeatureSet()).thenReturn(0L);
+        assertFalse(mWifiServiceImpl.isPnoSupported());
+
+        when(mActiveModeWarden.getSupportedFeatureSet()).thenReturn(WifiManager.WIFI_FEATURE_PNO);
+        assertTrue(mWifiServiceImpl.isPnoSupported());
+        when(mWifiGlobals.isBackgroundScanSupported()).thenReturn(true);
+        assertTrue(mWifiServiceImpl.isPnoSupported());
+    }
 }

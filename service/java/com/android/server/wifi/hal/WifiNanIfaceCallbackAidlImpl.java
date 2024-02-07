@@ -48,6 +48,7 @@ import android.hardware.wifi.NanStatusCode;
 import android.hardware.wifi.NanSuspensionModeChangeInd;
 import android.hardware.wifi.NpkSecurityAssociation;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.aware.AwarePairingConfig;
 import android.net.wifi.aware.Characteristics;
 import android.net.wifi.aware.WifiAwareChannelInfo;
@@ -397,6 +398,10 @@ public class WifiNanIfaceCallbackAidlImpl extends IWifiNanIfaceEventCallback.Stu
             serviceSpecificInfo = event.extendedServiceSpecificInfo;
             isExtendedServiceSpecificInfo = true;
         }
+        List<OuiKeyedData> vendorData = null;
+        if (WifiHalAidlImpl.isServiceVersionAtLeast(2) && event.vendorData != null) {
+            vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(event.vendorData);
+        }
         if (mVerboseLoggingEnabled) {
             Log.v(
                     TAG,
@@ -438,7 +443,8 @@ public class WifiNanIfaceCallbackAidlImpl extends IWifiNanIfaceEventCallback.Stu
                         toPublicDataPathCipherSuites(event.peerCipherType),
                         event.peerNira.nonce,
                         event.peerNira.tag,
-                        createPublicPairingConfig(event.peerPairingConfig));
+                        createPublicPairingConfig(event.peerPairingConfig),
+                        vendorData);
     }
 
     private AwarePairingConfig createPublicPairingConfig(NanPairingConfig nativePairingConfig) {

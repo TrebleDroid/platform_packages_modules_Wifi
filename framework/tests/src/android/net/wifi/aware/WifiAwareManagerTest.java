@@ -343,6 +343,8 @@ public class WifiAwareManagerTest {
         final PeerHandle peerHandle = new PeerHandle(873);
         final String string1 = "hey from here...";
         final byte[] matchFilter = { 1, 12, 2, 31, 32 };
+        final OuiKeyedData[] vendorData = new OuiKeyedData[5];
+        OuiKeyedDataUtil.createTestOuiKeyedDataList(5).toArray(vendorData);
         final int messageId = 2123;
         final int reason = AWARE_STATUS_ERROR;
 
@@ -382,7 +384,7 @@ public class WifiAwareManagerTest {
         // (3) ...
         publishSession.getValue().sendMessage(peerHandle, messageId, string1.getBytes());
         sessionProxyCallback.getValue().onMatch(peerHandle.peerId, string1.getBytes(), matchFilter,
-                0, new byte[0], null, null);
+                0, new byte[0], null, null, vendorData);
         sessionProxyCallback.getValue().onMessageReceived(peerHandle.peerId, string1.getBytes());
         sessionProxyCallback.getValue().onMessageSendFail(messageId, reason);
         sessionProxyCallback.getValue().onMessageSendSuccess(messageId);
@@ -502,6 +504,8 @@ public class WifiAwareManagerTest {
         final PeerHandle peerHandle = new PeerHandle(873);
         final String string1 = "hey from here...";
         final byte[] matchFilter = { 1, 12, 3, 31, 32 }; // bad data!
+        final OuiKeyedData[] vendorData = new OuiKeyedData[5];
+        OuiKeyedDataUtil.createTestOuiKeyedDataList(5).toArray(vendorData);
         final int messageId = 2123;
         final int reason = AWARE_STATUS_ERROR;
         final int distanceMm = 100;
@@ -540,9 +544,9 @@ public class WifiAwareManagerTest {
         // (3) ...
         subscribeSession.getValue().sendMessage(peerHandle, messageId, string1.getBytes());
         sessionProxyCallback.getValue().onMatch(peerHandle.peerId, string1.getBytes(), matchFilter,
-                0, new byte[0], null, null);
+                0, new byte[0], null, null, vendorData);
         sessionProxyCallback.getValue().onMatchWithDistance(peerHandle.peerId, string1.getBytes(),
-                matchFilter, distanceMm, 0, new byte[0], null, null);
+                matchFilter, distanceMm, 0, new byte[0], null, null, vendorData);
         sessionProxyCallback.getValue().onMessageReceived(peerHandle.peerId, string1.getBytes());
         sessionProxyCallback.getValue().onMessageSendFail(messageId, reason);
         sessionProxyCallback.getValue().onMessageSendSuccess(messageId);
