@@ -21,6 +21,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
+import android.net.MacAddress;
 import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ParcelUtil;
 import android.net.wifi.ScanResult;
@@ -34,6 +35,8 @@ import androidx.annotation.RequiresApi;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.wifi.flags.Flags;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -60,6 +63,15 @@ public class WifiP2pDevice implements Parcelable {
      * The device MAC address uniquely identifies a Wi-Fi p2p device
      */
     public String deviceAddress = "";
+    /**
+     * The device interface MAC address. This field is valid when the device is a part of the group
+     */
+    @Nullable private MacAddress mInterfaceMacAddress;
+
+    /**
+     * The IP address of the device. This field is valid when the device is a part of the group.
+     */
+    @Nullable private InetAddress mIpAddress;
 
     /**
      * Primary device type identifies the type of device. For example, an application
@@ -352,6 +364,7 @@ public class WifiP2pDevice implements Parcelable {
         if (!deviceAddress.equals(device.deviceAddress)) {
             throw new IllegalArgumentException("deviceAddress does not match");
         }
+        mInterfaceMacAddress = device.mInterfaceMacAddress;
         deviceName = device.deviceName;
         primaryDeviceType = device.primaryDeviceType;
         secondaryDeviceType = device.secondaryDeviceType;
@@ -408,6 +421,52 @@ public class WifiP2pDevice implements Parcelable {
         return new ArrayList<>(mVendorElements);
     }
 
+    /**
+     * Get the device interface MAC address if the device is a part of the group; otherwise null.
+     *
+     * @return the interface MAC address if the device is a part of the group; otherwise null.
+     * @hide
+     */
+    @Nullable public MacAddress getInterfaceMacAddress() {
+        return mInterfaceMacAddress;
+    }
+
+    /**
+     * Set the device interface MAC address.
+     * @hide
+     */
+    public void setInterfaceMacAddress(@Nullable MacAddress interfaceAddress) {
+        mInterfaceMacAddress = interfaceAddress;
+    }
+
+    /**
+     * Get the IP address of the connected client device.
+     * The application should listen to {@link WifiP2pManager#WIFI_P2P_CONNECTION_CHANGED_ACTION}
+     * broadcast to obtain the IP address of the connected client. When system assigns the IP
+     * address, the connected P2P device information ({@link WifiP2pGroup#getClientList()}) in the
+     * group is updated with the IP address and broadcast the group information using
+     * {@link WifiP2pManager#EXTRA_WIFI_P2P_GROUP} extra of the
+     * {@link WifiP2pManager#WIFI_P2P_CONNECTION_CHANGED_ACTION} broadcast intent.
+     *
+     * Alternatively, the application can request for the group details with
+     * {@link WifiP2pManager#requestGroupInfo} and use ({@link WifiP2pGroup#getClientList()}) to
+     * obtain the connected client details.
+     *
+     * @return the IP address if the device is a part of the group; otherwise null.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @Nullable public InetAddress getIpAddress() {
+        return mIpAddress;
+    }
+
+    /**
+     * Set the IP address of the device.
+     * @hide
+     */
+    public void setIpAddress(InetAddress ipAddress) {
+        mIpAddress = ipAddress;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -430,6 +489,10 @@ public class WifiP2pDevice implements Parcelable {
         StringBuffer sbuf = new StringBuffer();
         sbuf.append("Device: ").append(deviceName);
         sbuf.append("\n deviceAddress: ").append(deviceAddress);
+        sbuf.append("\n interfaceMacAddress: ")
+                .append(mInterfaceMacAddress == null ? "none" : mInterfaceMacAddress.toString());
+        sbuf.append("\n ipAddress: ")
+                .append(mIpAddress == null ? "none" : mIpAddress.getHostAddress());
         sbuf.append("\n primary type: ").append(primaryDeviceType);
         sbuf.append("\n secondary type: ").append(secondaryDeviceType);
         sbuf.append("\n wps: ").append(wpsConfigMethodsSupported);
@@ -453,6 +516,8 @@ public class WifiP2pDevice implements Parcelable {
         if (source != null) {
             deviceName = source.deviceName;
             deviceAddress = source.deviceAddress;
+            mInterfaceMacAddress = source.mInterfaceMacAddress;
+            mIpAddress = source.mIpAddress;
             primaryDeviceType = source.primaryDeviceType;
             secondaryDeviceType = source.secondaryDeviceType;
             wpsConfigMethodsSupported = source.wpsConfigMethodsSupported;
@@ -474,6 +539,13 @@ public class WifiP2pDevice implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(deviceName);
         dest.writeString(deviceAddress);
+        dest.writeParcelable(mInterfaceMacAddress, flags);
+        if (mIpAddress != null) {
+            dest.writeByte((byte) 1);
+            dest.writeByteArray(mIpAddress.getAddress());
+        } else {
+            dest.writeByte((byte) 0);
+        }
         dest.writeString(primaryDeviceType);
         dest.writeString(secondaryDeviceType);
         dest.writeInt(wpsConfigMethodsSupported);
@@ -498,6 +570,15 @@ public class WifiP2pDevice implements Parcelable {
                 WifiP2pDevice device = new WifiP2pDevice();
                 device.deviceName = in.readString();
                 device.deviceAddress = in.readString();
+                device.mInterfaceMacAddress = in.readParcelable(MacAddress.class.getClassLoader());
+                if (in.readByte() == 1) {
+                    try {
+                        device.mIpAddress = InetAddress.getByAddress(in.createByteArray());
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                        return new WifiP2pDevice();
+                    }
+                }
                 device.primaryDeviceType = in.readString();
                 device.secondaryDeviceType = in.readString();
                 device.wpsConfigMethodsSupported = in.readInt();

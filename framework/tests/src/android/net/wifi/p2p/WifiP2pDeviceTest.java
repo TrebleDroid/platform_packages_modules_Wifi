@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
+import android.net.MacAddress;
 import android.net.wifi.OuiKeyedDataUtil;
 import android.net.wifi.ScanResult;
 import android.os.Parcel;
@@ -30,6 +31,8 @@ import com.android.modules.utils.build.SdkLevel;
 
 import org.junit.Test;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +42,8 @@ import java.util.List;
  */
 @SmallTest
 public class WifiP2pDeviceTest {
+    private static final MacAddress INTERFACE_MAC_ADDRESS =
+            MacAddress.fromString("aa:bb:cc:dd:ee:10");
 
     /**
      * Compare two p2p devices.
@@ -173,5 +178,33 @@ public class WifiP2pDeviceTest {
         if (SdkLevel.isAtLeastV()) {
             assertEquals(device.getVendorData(), unparceledDevice.getVendorData());
         }
+    }
+
+    /**
+     * Test the setter/getter for device interface MAC address.
+     */
+    @Test
+    public void testInterfaceMacAddressSetterGetter() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        WifiP2pDevice device = new WifiP2pDevice();
+        device.setInterfaceMacAddress(INTERFACE_MAC_ADDRESS);
+        assertEquals(INTERFACE_MAC_ADDRESS, device.getInterfaceMacAddress());
+    }
+
+    /**
+     * Test the setter/getter for device IP address.
+     */
+    @Test
+    public void testIpAddressSetterGetter() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        WifiP2pDevice device = new WifiP2pDevice();
+        InetAddress ipAddress;
+        try {
+            ipAddress = InetAddress.getByName("192.168.49.1");
+        } catch (UnknownHostException e) {
+            return;
+        }
+        device.setIpAddress(ipAddress);
+        assertEquals("192.168.49.1", device.getIpAddress().getHostAddress());
     }
 }

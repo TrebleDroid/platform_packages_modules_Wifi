@@ -33,6 +33,7 @@ import android.hardware.wifi.supplicant.P2pProvisionDiscoveryCompletedEventParam
 import android.hardware.wifi.supplicant.P2pStatusCode;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.hardware.wifi.supplicant.WpsDevPasswordId;
+import android.net.MacAddress;
 import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WpsInfo;
@@ -51,7 +52,7 @@ import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.io.ByteArrayInputStream;
-import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -626,22 +627,25 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
         mMonitor.broadcastP2pServiceDiscoveryResponse(mInterface, response);
     }
 
-    private WifiP2pDevice createStaEventDevice(byte[] srcAddress, byte[] p2pDeviceAddress) {
+    private WifiP2pDevice createStaEventDevice(byte[] interfaceAddress, byte[] p2pDeviceAddress,
+            InetAddress ipAddress) {
         WifiP2pDevice device = new WifiP2pDevice();
         byte[] deviceAddressBytes;
         // Legacy STAs may not supply a p2pDeviceAddress (signaled by a zero'd p2pDeviceAddress)
-        // In this case, use srcAddress instead
+        // In this case, use interfaceAddress instead
         if (!Arrays.equals(NativeUtil.ANY_MAC_BYTES, p2pDeviceAddress)) {
             deviceAddressBytes = p2pDeviceAddress;
         } else {
-            deviceAddressBytes = srcAddress;
+            deviceAddressBytes = interfaceAddress;
         }
         try {
             device.deviceAddress = NativeUtil.macAddressFromByteArray(deviceAddressBytes);
+            device.setInterfaceMacAddress(MacAddress.fromBytes(interfaceAddress));
         } catch (Exception e) {
             Log.e(TAG, "Could not decode MAC address", e);
             return null;
         }
+        device.setIpAddress(ipAddress);
         return device;
     }
 
@@ -679,12 +683,13 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
     private void onP2pApStaConnected(
             String groupIfName, byte[] srcAddress, byte[] p2pDeviceAddress, int ipAddress,
             @Nullable List<OuiKeyedData> vendorData) {
+        InetAddress ipAddressClient = null;
         logd("STA authorized on " + (TextUtils.isEmpty(groupIfName) ? mInterface : groupIfName));
         if (ipAddress != 0) {
-            Inet4Address ipAddressClient = intToInet4AddressHTL(ipAddress);
+            ipAddressClient = intToInet4AddressHTL(ipAddress);
             logd("IP Address of Client: " + ipAddressClient.getHostAddress());
         }
-        WifiP2pDevice device = createStaEventDevice(srcAddress, p2pDeviceAddress);
+        WifiP2pDevice device = createStaEventDevice(srcAddress, p2pDeviceAddress, ipAddressClient);
         if (device == null) {
             return;
         }
@@ -730,7 +735,7 @@ public class SupplicantP2pIfaceCallbackAidlImpl extends ISupplicantP2pIfaceCallb
             String groupIfName, byte[] srcAddress, byte[] p2pDeviceAddress,
             @Nullable List<OuiKeyedData> vendorData) {
         logd("STA deauthorized on " + (TextUtils.isEmpty(groupIfName) ? mInterface : groupIfName));
-        WifiP2pDevice device = createStaEventDevice(srcAddress, p2pDeviceAddress);
+        WifiP2pDevice device = createStaEventDevice(srcAddress, p2pDeviceAddress, null);
         if (device == null) {
             return;
         }

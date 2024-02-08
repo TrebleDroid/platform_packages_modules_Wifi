@@ -1757,7 +1757,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
     /**
      * Get the Passpoint unique identifier for the current connection
      *
-     * @return Passpoint unique identifier
+     * @return Passpoint unique identifier, or null if this connection is not Passpoint.
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public @Nullable String getPasspointUniqueId() {
