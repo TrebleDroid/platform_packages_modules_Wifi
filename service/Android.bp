@@ -47,7 +47,6 @@ java_library {
 
     sdk_version: "system_server_current",
     lint: {
-        strict_updatability_linting: true,
         baseline_filename: "lint-baseline.xml",
     },
     libs: [
@@ -158,9 +157,6 @@ java_library {
         "com.android.wifi",
         "test_com.android.wifi",
     ],
-    lint: {
-        baseline_filename: "lint-baseline.xml",
-    },
 }
 
 // Statsd auto-generated code
