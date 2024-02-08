@@ -102,12 +102,34 @@
 
     <issue
         id="NewApi"
+        message="Call requires API level 35 (current min is 30): `getVendorData`"
+        errorLine1="            if (!config.getVendorData().isEmpty()) {"
+        errorLine2="                        ~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/service/java/com/android/server/wifi/p2p/SupplicantP2pIfaceHalAidlImpl.java"
+            line="589"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 35 (current min is 30): `getVendorData`"
+        errorLine1="                        HalAidlUtil.frameworkToHalOuiKeyedDataList(config.getVendorData());"
+        errorLine2="                                                                          ~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/service/java/com/android/server/wifi/p2p/SupplicantP2pIfaceHalAidlImpl.java"
+            line="591"
+            column="75"/>
+    </issue>
+
+    <issue
+        id="NewApi"
         message="Call requires API level 33 (current min is 30): `setMaxChannelBandwidth`"
         errorLine1="                    configBuilder.setMaxChannelBandwidth(SoftApInfo.CHANNEL_WIDTH_20MHZ);"
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="packages/modules/Wifi/service/java/com/android/server/wifi/WifiShellCommand.java"
-            line="2333"
+            line="2359"
             column="35"/>
     </issue>
 
@@ -118,7 +140,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="packages/modules/Wifi/service/java/com/android/server/wifi/WifiShellCommand.java"
-            line="2335"
+            line="2361"
             column="35"/>
     </issue>
 
@@ -129,7 +151,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="packages/modules/Wifi/service/java/com/android/server/wifi/WifiShellCommand.java"
-            line="2337"
+            line="2363"
             column="35"/>
     </issue>
 
@@ -140,7 +162,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="packages/modules/Wifi/service/java/com/android/server/wifi/WifiShellCommand.java"
-            line="2339"
+            line="2365"
             column="35"/>
     </issue>
 
@@ -151,7 +173,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="packages/modules/Wifi/service/java/com/android/server/wifi/WifiShellCommand.java"
-            line="2341"
+            line="2367"
             column="35"/>
     </issue>
 
