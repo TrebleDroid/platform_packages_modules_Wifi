@@ -121,6 +121,7 @@ import android.os.test.TestLooper;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.ArraySet;
+import android.util.LocalLog;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -289,7 +290,8 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Mock Collection<TetheredClient> mClients;
     @Mock TetheredClient mTetheredClient;
     @Mock TetheredClient.AddressInfo mAddressInfo;
-    @Mock  List<TetheredClient.AddressInfo> mAddresses;
+    @Mock List<TetheredClient.AddressInfo> mAddresses;
+    @Mock LocalLog mLocalLog;
 
     private void generatorTestData() {
         mTestWifiP2pGroup = new WifiP2pGroup();
@@ -1409,6 +1411,8 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 .config_p2pWaitForPeerInviteOnInviteStatusInfoUnavailable)).thenReturn(false);
         when(mResources.getBoolean(R.bool
                 .config_wifiP2pGoIpAddressAllocationInEapolFrames)).thenReturn(false);
+        when(mResources.getInteger(R.integer.config_wifiConfigurationWifiRunnerThresholdInMs))
+                .thenReturn(4000);
         when(mResources.getConfiguration()).thenReturn(mConfiguration);
         when(mWifiInjector.getFrameworkFacade()).thenReturn(mFrameworkFacade);
         when(mWifiInjector.getUserManager()).thenReturn(mUserManager);
@@ -1491,6 +1495,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mCoexManager.getCoexUnsafeChannels()).thenReturn(Collections.emptyList());
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
         when(mWifiInjector.getWifiDiagnostics()).thenReturn(mWifiDiagnostics);
+        when(mWifiInjector.getWifiHandlerLocalLog()).thenReturn(mLocalLog);
         when(mDeviceConfigFacade.isP2pFailureBugreportEnabled()).thenReturn(false);
         when(mContext.getSystemService(TetheringManager.class)).thenReturn(mTetheringManager);
 
