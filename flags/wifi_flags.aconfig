@@ -168,4 +168,5 @@ flag {
     namespace: "wifi"
     description: "Add new API to configure d2d usage when wifi is off"
     bug: "295792510"
+    is_fixed_read_only: true
 }
