@@ -94,6 +94,7 @@ public class WifiGlobals {
     private boolean mDisableUnwantedNetworkOnLowRssi = false;
     private final boolean mIsAfcSupportedOnDevice;
     private boolean mDisableNudDisconnectsForWapiInSpecificCc = false;
+    private boolean mD2dAllowedControlSupportedWhenInfraStaDisabled = false;
     private Set<String> mMacRandomizationUnsupportedSsidPrefixes = new ArraySet<>();
     private Map<String, BiFunction<String, Boolean, Boolean>> mOverrideMethods = new HashMap<>();
 
@@ -169,6 +170,8 @@ public class WifiGlobals {
                 && mContext.getResources().getBoolean(R.bool.config_wifi6ghzSupport);
         mWifiConfigMaxDisableDurationMs = mContext.getResources()
                 .getInteger(R.integer.config_wifiDisableTemporaryMaximumDurationMs);
+        mD2dAllowedControlSupportedWhenInfraStaDisabled = mContext.getResources()
+                .getBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled);
         Set<String> unsupportedSsidPrefixes = new ArraySet<>(mContext.getResources().getStringArray(
                 R.array.config_wifiForceDisableMacRandomizationSsidPrefixList));
         mCountryCodeToAfcServers = getCountryCodeToAfcServersMap();
@@ -663,6 +666,13 @@ public class WifiGlobals {
     }
 
     /**
+     * Get whether or not d2d is available when infra STA is disabled.
+     */
+    public boolean isD2dAllowedControlSupportedWhenInfraStaDisabled() {
+        return mD2dAllowedControlSupportedWhenInfraStaDisabled;
+    }
+
+    /**
      * Force Overlay Config Value for background scan.
      */
     public boolean forceOverlayConfigValue(String configString, String value,
@@ -710,6 +720,8 @@ public class WifiGlobals {
         pw.println("mRepeatedNudFailuresWindowMs=" + mRepeatedNudFailuresWindowMs);
         pw.println("mCarrierSpecificEapFailureConfigMapPerCarrierId mapping below:");
         pw.println("mWifiConfigMaxDisableDurationMs=" + mWifiConfigMaxDisableDurationMs);
+        pw.println("mD2dAllowedControlSupportedWhenInfraStaDisabled="
+                + mD2dAllowedControlSupportedWhenInfraStaDisabled);
         for (int i = 0; i < mCarrierSpecificEapFailureConfigMapPerCarrierId.size(); i++) {
             int carrierId = mCarrierSpecificEapFailureConfigMapPerCarrierId.keyAt(i);
             SparseArray<CarrierSpecificEapFailureConfig> perFailureMap =

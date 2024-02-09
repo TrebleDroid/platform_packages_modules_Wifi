@@ -340,6 +340,7 @@
           <item type="array" name="config_wifiUnknownAkmToKnownAkmMapping" />
           <item type="integer" name="config_wifi80211azMinTimeBetweenNtbMeasurementsMicros"/>
           <item type="integer" name="config_wifi80211azMaxTimeBetweenNtbMeasurementsMicros"/>
+          <item type="bool" name="config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled" />
 
           <!-- Params from config.xml that can be overlayed -->
 

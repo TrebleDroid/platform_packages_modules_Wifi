@@ -479,6 +479,7 @@ package android.net.wifi {
     method @RequiresPermission(android.Manifest.permission.ACCESS_WIFI_STATE) public boolean isAutoWakeupEnabled();
     method public boolean isBridgedApConcurrencySupported();
     method @RequiresPermission(android.Manifest.permission.ACCESS_WIFI_STATE) public boolean isCarrierNetworkOffloadEnabled(int, boolean);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public boolean isD2dSupportedWhenInfraStaDisabled();
     method public boolean isDecoratedIdentitySupported();
     method @Deprecated public boolean isDeviceToApRttSupported();
     method public boolean isDualBandSimultaneousSupported();

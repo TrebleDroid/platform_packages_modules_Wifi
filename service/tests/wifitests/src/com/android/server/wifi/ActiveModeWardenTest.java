@@ -1147,6 +1147,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mWifiNative).getSupportedFeatureSet(null);
         verify(mWifiNative).isStaApConcurrencySupported();
         verify(mWifiNative).isStaStaConcurrencySupported();
+        verify(mWifiNative).isP2pStaConcurrencySupported();
         verifyZeroInteractions(mWifiNative);
     }
 
@@ -5321,5 +5322,13 @@ public class ActiveModeWardenTest extends WifiBaseTest {
     public void testWpaPersonalNotDeprecated() throws Exception {
         when(mWifiGlobals.isWpaPersonalDeprecated()).thenReturn(false);
         enterClientModeActiveState(false, TEST_FEATURE_SET | WifiManager.WIFI_FEATURE_WPA_PERSONAL);
+    }
+
+    @Test
+    public void testD2dSupportedWhenInfraStaDisabled() throws Exception {
+        when(mWifiGlobals.isD2dAllowedControlSupportedWhenInfraStaDisabled()).thenReturn(true);
+        when(mWifiNative.isP2pStaConcurrencySupported()).thenReturn(false);
+        enterClientModeActiveState(false,
+                TEST_FEATURE_SET | WifiManager.WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED);
     }
 }

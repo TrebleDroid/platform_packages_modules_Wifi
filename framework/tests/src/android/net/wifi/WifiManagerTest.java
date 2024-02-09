@@ -45,6 +45,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_ADDITIONAL_STA_MBB;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_ADDITIONAL_STA_MULTI_INTERNET;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_ADDITIONAL_STA_RESTRICTED;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_AP_STA;
+import static android.net.wifi.WifiManager.WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_DECORATED_IDENTITY;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_DPP;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_DPP_AKM;
@@ -4230,5 +4231,18 @@ public class WifiManagerTest {
         verify(mWifiService).teardownTwtSession(eq(10), bundleCaptor.capture());
         verify(mContext.getAttributionSource()).equals(
                 bundleCaptor.getValue().getParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE));
+    }
+
+    /**
+     * Test behavior of isD2dSupportedWhenInfraStaDisabled.
+     */
+    @Test
+    public void testIsD2dSupportedWhenInfraStaDisabled() throws Exception {
+        when(mWifiService.getSupportedFeatures())
+                .thenReturn(new Long(WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED));
+        assertTrue(mWifiManager.isD2dSupportedWhenInfraStaDisabled());
+        when(mWifiService.getSupportedFeatures())
+                .thenReturn(new Long(~WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED));
+        assertFalse(mWifiManager.isD2dSupportedWhenInfraStaDisabled());
     }
 }
