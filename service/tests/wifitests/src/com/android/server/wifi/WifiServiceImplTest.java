@@ -11465,7 +11465,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .thenReturn(true);
     }
 
-    private List<QosPolicyParams> createQosPolicyParamsList(int size, boolean uniqueIds) {
+    private List<QosPolicyParams> createDownlinkQosPolicyParamsList(int size, boolean uniqueIds) {
         List<QosPolicyParams> policyParamsList = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             int policyId = uniqueIds ? i + 2 : 5;
@@ -11478,6 +11478,22 @@ public class WifiServiceImplTest extends WifiBaseTest {
         return policyParamsList;
     }
 
+    private static List<QosPolicyParams> createUplinkQosPolicyParamsList(int size) {
+        List<QosPolicyParams> policyParamsList = new ArrayList<>();
+        QosCharacteristics mockQosCharacteristics = mock(QosCharacteristics.class);
+        when(mockQosCharacteristics.validate()).thenReturn(true);
+
+        for (int i = 0; i < size; i++) {
+            int policyId = i + 2;
+            policyParamsList.add(new QosPolicyParams.Builder(
+                    policyId, QosPolicyParams.DIRECTION_UPLINK)
+                    .setQosCharacteristics(mockQosCharacteristics)
+                    .build());
+        }
+
+        return policyParamsList;
+    }
+
     /**
      * Verify that addQosPolicies works correctly.
      */
@@ -11486,13 +11502,21 @@ public class WifiServiceImplTest extends WifiBaseTest {
         assumeTrue(SdkLevel.isAtLeastU());
         enableQosPolicyFeature();
 
-        List<QosPolicyParams> paramsList = createQosPolicyParamsList(5, true);
+        List<QosPolicyParams> paramsList = createDownlinkQosPolicyParamsList(5, true);
         IBinder binder = mock(IBinder.class);
         IListListener listener = mock(IListListener.class);
         mWifiServiceImpl.addQosPolicies(paramsList, binder, TEST_PACKAGE_NAME, listener);
+        int expectedNumCalls = 1;
+
+        if (SdkLevel.isAtLeastV()) {
+            // Uplink policies are supported on SDK >= V
+            paramsList = createUplinkQosPolicyParamsList(5);
+            mWifiServiceImpl.addQosPolicies(paramsList, binder, TEST_PACKAGE_NAME, listener);
+            expectedNumCalls += 1;
+        }
 
         mLooper.dispatchAll();
-        verify(mApplicationQosPolicyRequestHandler).queueAddRequest(
+        verify(mApplicationQosPolicyRequestHandler, times(expectedNumCalls)).queueAddRequest(
                 anyList(), any(), any(), anyInt());
     }
 
@@ -11503,7 +11527,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testAddQosPoliciesError() throws RemoteException {
         assumeTrue(SdkLevel.isAtLeastU());
         enableQosPolicyFeature();
-        List<QosPolicyParams> paramsList = createQosPolicyParamsList(5, true);
+        List<QosPolicyParams> paramsList = createDownlinkQosPolicyParamsList(5, true);
         IBinder binder = mock(IBinder.class);
         IListListener listener = mock(IListListener.class);
 
@@ -11527,10 +11551,10 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 mWifiServiceImpl.addQosPolicies(paramsList, binder, TEST_PACKAGE_NAME, null));
 
         // Invalid QoS policy params list
-        List<QosPolicyParams> emptyList = createQosPolicyParamsList(0, true);
-        List<QosPolicyParams> largeList = createQosPolicyParamsList(
+        List<QosPolicyParams> emptyList = createDownlinkQosPolicyParamsList(0, true);
+        List<QosPolicyParams> largeList = createDownlinkQosPolicyParamsList(
                 WifiManager.getMaxNumberOfPoliciesPerQosRequest() + 1, true);
-        List<QosPolicyParams> duplicatePolicyList = createQosPolicyParamsList(5, false);
+        List<QosPolicyParams> duplicatePolicyList = createDownlinkQosPolicyParamsList(5, false);
         assertThrows(IllegalArgumentException.class, () ->
                 mWifiServiceImpl.addQosPolicies(emptyList, binder, TEST_PACKAGE_NAME,
                         listener));
@@ -11542,7 +11566,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                         duplicatePolicyList, binder, TEST_PACKAGE_NAME, listener));
 
         if (SdkLevel.isAtLeastV()) {
-            List<QosPolicyParams> mixedDirectionList = createQosPolicyParamsList(1, true);
+            List<QosPolicyParams> mixedDirectionList = createDownlinkQosPolicyParamsList(1, true);
             QosCharacteristics mockQosCharacteristics = mock(QosCharacteristics.class);
             when(mockQosCharacteristics.validate()).thenReturn(true);
             mixedDirectionList.add(
