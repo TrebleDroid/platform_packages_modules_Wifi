@@ -19,12 +19,14 @@ package android.net.wifi.aware;
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.ACCESS_WIFI_STATE;
 import static android.Manifest.permission.CHANGE_WIFI_STATE;
+import static android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION;
 import static android.Manifest.permission.NEARBY_WIFI_DEVICES;
 import static android.Manifest.permission.OVERRIDE_WIFI_CONFIG;
 import static android.net.wifi.ScanResult.WIFI_BAND_24_GHZ;
 import static android.net.wifi.ScanResult.WIFI_BAND_5_GHZ;
 
 import android.annotation.CallbackExecutor;
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -56,6 +58,7 @@ import androidx.annotation.RequiresApi;
 
 import com.android.modules.utils.HandlerExecutor;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -517,6 +520,40 @@ public class WifiAwareManager {
             @NonNull IdentityChangedListener identityChangedListener,
             @Nullable Handler handler) {
         attach(handler, null, attachCallback, identityChangedListener, false, null);
+    }
+
+    /**
+     * Attach to the Wi-Fi Aware service - enabling the application to create discovery sessions or
+     * create connections to peers. See {@link #attach(AttachCallback, IdentityChangedListener,
+     * Handler)} for more information.
+     *
+     * This version allows callers to provide an instance of {@link ConfigRequest}.
+     *
+     * @param configRequest Parameters for this request.
+     * @param executor The executor to execute the listener of the {@code attachCallback} object.
+     * @param attachCallback A callback for attach events, extended from {@link AttachCallback}.
+     * @param identityChangedListener A callback for changed identity or cluster ID, extended from
+     * {@link IdentityChangedListener}.
+     * @hide
+     */
+    @RequiresPermission(allOf = {
+            ACCESS_WIFI_STATE,
+            CHANGE_WIFI_STATE,
+            ACCESS_FINE_LOCATION,
+            NEARBY_WIFI_DEVICES,
+            MANAGE_WIFI_NETWORK_SELECTION}, conditional = true)
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @SystemApi
+    public void attach(@NonNull ConfigRequest configRequest,
+            @NonNull @CallbackExecutor Executor executor, @NonNull AttachCallback attachCallback,
+            @NonNull IdentityChangedListener identityChangedListener) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        Objects.requireNonNull(configRequest);
+        Objects.requireNonNull(executor);
+        attach(null, configRequest, attachCallback, identityChangedListener, false, executor);
     }
 
     /** @hide */

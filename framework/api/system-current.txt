@@ -1435,6 +1435,19 @@ package android.net.wifi.aware {
     field public static final int UNSET_PARAMETER = -1; // 0xffffffff
   }
 
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public final class ConfigRequest implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public java.util.List<android.net.wifi.OuiKeyedData> getVendorData();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.aware.ConfigRequest> CREATOR;
+  }
+
+  @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") public static final class ConfigRequest.Builder {
+    ctor public ConfigRequest.Builder();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.aware.ConfigRequest build();
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @NonNull public android.net.wifi.aware.ConfigRequest.Builder setVendorData(@NonNull java.util.List<android.net.wifi.OuiKeyedData>);
+  }
+
   public class DiscoverySession implements java.lang.AutoCloseable {
     method @Deprecated public android.net.NetworkSpecifier createNetworkSpecifierPmk(@NonNull android.net.wifi.aware.PeerHandle, @NonNull byte[]);
     method @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public void resume();
@@ -1473,6 +1486,7 @@ package android.net.wifi.aware {
   }
 
   public class WifiAwareManager {
+    method @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters") @RequiresPermission(allOf={android.Manifest.permission.ACCESS_WIFI_STATE, android.Manifest.permission.CHANGE_WIFI_STATE, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.NEARBY_WIFI_DEVICES, android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION}, conditional=true) public void attach(@NonNull android.net.wifi.aware.ConfigRequest, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.aware.AttachCallback, @NonNull android.net.wifi.aware.IdentityChangedListener);
     method @RequiresPermission(allOf={android.Manifest.permission.ACCESS_WIFI_STATE, android.Manifest.permission.CHANGE_WIFI_STATE, android.Manifest.permission.OVERRIDE_WIFI_CONFIG}) public void attachOffload(@NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.aware.AttachCallback);
     method @RequiresPermission(allOf={android.Manifest.permission.CHANGE_WIFI_STATE, android.Manifest.permission.OVERRIDE_WIFI_CONFIG}) public void enableInstantCommunicationMode(boolean);
     method @RequiresPermission(allOf={android.Manifest.permission.OVERRIDE_WIFI_CONFIG, android.Manifest.permission.CHANGE_WIFI_STATE}) public void setAwareParams(@Nullable android.net.wifi.aware.AwareParams);
