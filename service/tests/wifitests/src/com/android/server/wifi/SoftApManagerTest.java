@@ -71,6 +71,7 @@ import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.SoftApState;
 import android.net.wifi.WifiClient;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiInfo;
@@ -522,8 +523,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 .thenReturn(InterfaceConflictManager.ICM_ABORT_COMMAND);
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_TETHERED);
 
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_USER_REJECTED);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_USER_REJECTED, TEST_TETHERING_REQUEST, null)));
         verify(mListener).onStartFailure(mSoftApManager);
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_INTERFACE_CONFLICT_USER_REJECTED),
@@ -586,8 +587,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         mSoftApManager = createSoftApManager(nullApConfig, ROLE_SOFTAP_TETHERED);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_GENERAL, TEST_TETHERING_REQUEST, null)));
         verify(mListener).onStartFailure(mSoftApManager);
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         if (SdkLevel.isAtLeastSv2()) {
@@ -622,8 +623,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         mSoftApManager = createSoftApManager(nullApConfig, ROLE_SOFTAP_TETHERED);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_GENERAL, TEST_TETHERING_REQUEST, null)));
         verify(mListener).onStartFailure(mSoftApManager);
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         if (SdkLevel.isAtLeastSv2()) {
@@ -664,8 +665,8 @@ public class SoftApManagerTest extends WifiBaseTest {
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_TETHERED);
         verify(mWifiNative).isItPossibleToCreateApIface(any());
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_GENERAL, TEST_TETHERING_REQUEST, null)));
         verify(mListener).onStartFailure(mSoftApManager);
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         if (SdkLevel.isAtLeastSv2()) {
@@ -701,8 +702,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         mSoftApManager = createSoftApManager(nullApConfig, ROLE_SOFTAP_TETHERED);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mCallback).onStateChanged(eq(new SoftApState(
+                WifiManager.WIFI_AP_STATE_FAILED, WifiManager.SAP_START_FAILURE_GENERAL,
+                TEST_TETHERING_REQUEST, "")));
         verify(mWifiNative).isItPossibleToCreateApIface(any());
         verify(mListener).onStartFailure(mSoftApManager);
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
@@ -1013,8 +1015,9 @@ public class SoftApManagerTest extends WifiBaseTest {
         mSoftApManager = createSoftApManager(
                 softApModeConfig, ROLE_SOFTAP_TETHERED);
 
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mCallback).onStateChanged(eq(new SoftApState(
+                WifiManager.WIFI_AP_STATE_FAILED, WifiManager.SAP_START_FAILURE_GENERAL,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         verify(mListener).onStartFailure(mSoftApManager);
         verify(mWifiNative).teardownInterface(TEST_INTERFACE_NAME);
         verify(mWifiMetrics).writeSoftApStartedEvent(
@@ -1042,7 +1045,9 @@ public class SoftApManagerTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
-        order.verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLING, 0);
+        order.verify(mCallback).onStateChanged(eq(new SoftApState(
+                WifiManager.WIFI_AP_STATE_DISABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         if (SdkLevel.isAtLeastSv2()) {
             order.verify(mContext).sendBroadcastAsUser(intentCaptor.capture(),
                 eq(UserHandle.ALL), eq(android.Manifest.permission.ACCESS_WIFI_STATE));
@@ -1054,7 +1059,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 WIFI_AP_STATE_ENABLED, HOTSPOT_NO_ERROR, TEST_INTERFACE_NAME,
                 softApModeConfig.getTargetMode());
 
-        order.verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        order.verify(mCallback).onStateChanged(eq(new SoftApState(
+                WIFI_AP_STATE_DISABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         verify(mSarManager).setSapWifiState(WifiManager.WIFI_AP_STATE_DISABLED);
         verify(mWifiDiagnostics).stopLogging(TEST_INTERFACE_NAME);
         if (SdkLevel.isAtLeastSv2()) {
@@ -1091,7 +1098,9 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         mLooper.dispatchAll();
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
-        order.verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLING, 0);
+        order.verify(mCallback).onStateChanged(eq(new SoftApState(
+                WifiManager.WIFI_AP_STATE_DISABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         if (SdkLevel.isAtLeastSv2()) {
             order.verify(mContext).sendBroadcastAsUser(intentCaptor.capture(),
                 eq(UserHandle.ALL), eq(android.Manifest.permission.ACCESS_WIFI_STATE));
@@ -1103,7 +1112,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 WIFI_AP_STATE_ENABLED, HOTSPOT_NO_ERROR, TEST_INTERFACE_NAME,
                 softApModeConfig.getTargetMode());
 
-        order.verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        order.verify(mCallback).onStateChanged(eq(new SoftApState(
+                WifiManager.WIFI_AP_STATE_DISABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         if (SdkLevel.isAtLeastSv2()) {
             order.verify(mContext).sendBroadcastAsUser(intentCaptor.capture(),
                 eq(UserHandle.ALL), eq(android.Manifest.permission.ACCESS_WIFI_STATE));
@@ -1131,8 +1142,10 @@ public class SoftApManagerTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mListener).onStopped(mSoftApManager);
 
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLING, 0);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_DISABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_DISABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
 
         reset(mCallback);
 
@@ -1163,8 +1176,9 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         mLooper.dispatchAll();
 
-        order.verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        order.verify(mCallback).onStateChanged(eq(new SoftApState(
+                WifiManager.WIFI_AP_STATE_FAILED, WifiManager.SAP_START_FAILURE_GENERAL,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         order.verify(mListener).onStopped(mSoftApManager);
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         if (SdkLevel.isAtLeastSv2()) {
@@ -1228,8 +1242,9 @@ public class SoftApManagerTest extends WifiBaseTest {
         mSoftApHalCallbackCaptor.getValue().onFailure();
         mLooper.dispatchAll();
 
-        order.verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        order.verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_GENERAL,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         order.verify(mListener).onStopped(mSoftApManager);
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         if (SdkLevel.isAtLeastSv2()) {
@@ -2263,9 +2278,11 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_LOCAL_ONLY);
         mLooper.dispatchAll();
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLING, 0);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_ENABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         verify(mWifiNative, never()).setApMacAddress(any(), any());
     }
 
@@ -2286,9 +2303,11 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_LOCAL_ONLY);
         mLooper.dispatchAll();
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLING, 0);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_ENABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_GENERAL,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         assertThat(mac.getValue()).isEqualTo(TEST_CLIENT_MAC_ADDRESS);
     }
 
@@ -2311,9 +2330,11 @@ public class SoftApManagerTest extends WifiBaseTest {
         when(mWifiNative.setApMacAddress(eq(TEST_INTERFACE_NAME), mac.capture())).thenReturn(false);
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_LOCAL_ONLY);
         mLooper.dispatchAll();
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLING, 0);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_ENABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_GENERAL,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
     }
 
     @Test
@@ -2513,7 +2534,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 eq(mSoftApManager), anyList());
         ArgumentCaptor<SoftApConfiguration> configCaptor =
                 ArgumentCaptor.forClass(SoftApConfiguration.class);
-        order.verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLING, 0);
+        order.verify(mCallback).onStateChanged(eq(new SoftApState(
+                WifiManager.WIFI_AP_STATE_ENABLING, 0,
+                softApConfig.getTetheringRequest(), TEST_INTERFACE_NAME)));
         if (!TextUtils.isEmpty(softApConfig.getCountryCode())
                 && !TextUtils.equals(
                         softApConfig.getCountryCode(),
@@ -2547,7 +2570,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 ? expectedConfigWithFrameworkACS : expectedConfig);
         mWifiNativeInterfaceCallbackCaptor.getValue().onUp(TEST_INTERFACE_NAME);
         mLooper.dispatchAll();
-        order.verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLED, 0);
+        order.verify(mCallback).onStateChanged(eq(new SoftApState(
+                WifiManager.WIFI_AP_STATE_ENABLED, 0,
+                softApConfig.getTetheringRequest(), TEST_INTERFACE_NAME)));
         order.verify(mCallback).onConnectedClientsOrInfoChanged(eq(mTestSoftApInfoMap),
                   eq(mTestWifiClientsMap), eq(expectedConfig.getBands().length > 1));
         verify(mSarManager).setSapWifiState(WifiManager.WIFI_AP_STATE_ENABLED);
@@ -2664,9 +2689,11 @@ public class SoftApManagerTest extends WifiBaseTest {
                 noClientControlCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_TETHERED);
 
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLING, 0);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_ENABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         verify(mWifiMetrics).incrementSoftApStartResult(false,
                 WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION);
         verify(mListener).onStartFailure(mSoftApManager);
@@ -2692,9 +2719,11 @@ public class SoftApManagerTest extends WifiBaseTest {
                 noSaeCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_TETHERED);
 
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLING, 0);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_ENABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         verify(mListener).onStartFailure(mSoftApManager);
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_UNSUPPORTED_CONFIG),
@@ -2724,9 +2753,11 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         mSoftApManager = createSoftApManager(apConfig, ROLE_SOFTAP_TETHERED);
 
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLING, 0);
-        verify(mCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION);
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_ENABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
+        verify(mCallback).onStateChanged(eq(new SoftApState(WifiManager.WIFI_AP_STATE_FAILED,
+                WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME)));
         verify(mWifiMetrics).incrementSoftApStartResult(false,
                 WifiManager.SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION);
         verify(mListener).onStartFailure(mSoftApManager);

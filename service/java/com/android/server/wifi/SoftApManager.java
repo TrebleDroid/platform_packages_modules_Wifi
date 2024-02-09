@@ -31,6 +31,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.SoftApState;
 import android.net.wifi.WifiAnnotations;
 import android.net.wifi.WifiClient;
 import android.net.wifi.WifiContext;
@@ -730,7 +731,11 @@ public class SoftApManager implements ActiveModeManager {
      */
     private void updateApState(int newState, int currentState, int reason) {
         mCurrentApState = newState;
-        mSoftApCallback.onStateChanged(newState, reason);
+        mSoftApCallback.onStateChanged(new SoftApState(
+                newState,
+                reason,
+                mSpecifiedModeConfiguration.getTetheringRequest(),
+                mApInterfaceName));
 
         //send the AP state change broadcast
         final Intent intent = new Intent(WifiManager.WIFI_AP_STATE_CHANGED_ACTION);

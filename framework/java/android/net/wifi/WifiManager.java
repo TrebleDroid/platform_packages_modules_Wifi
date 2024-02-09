@@ -6616,8 +6616,17 @@ public class WifiManager {
          *                      {@link #SAP_START_FAILURE_NO_CHANNEL},
          *                      {@link #SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION},
          *                      {@link #SAP_START_FAILURE_USER_REJECTED}
+         * @deprecated Use {@link #onStateChanged(StateInfo)}.
          */
         default void onStateChanged(@WifiApState int state, @SapStartFailure int failureReason) {}
+
+        /**
+         * Called when soft AP state changes.
+         *
+         * @param state the new state.
+         */
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+        default void onStateChanged(@NonNull SoftApState state) {}
 
         /**
          * Called when the connected clients to soft AP changes.
@@ -6753,15 +6762,16 @@ public class WifiManager {
         }
 
         @Override
-        public void onStateChanged(int state, int failureReason) {
+        public void onStateChanged(SoftApState state) {
             if (mVerboseLoggingEnabled) {
-                Log.v(TAG, "SoftApCallbackProxy on mode " + mIpMode + ", onStateChanged: state="
-                        + state + ", failureReason=" + failureReason);
+                Log.v(TAG, "SoftApCallbackProxy on mode " + mIpMode
+                        + ", onStateChanged: " + state);
             }
 
             Binder.clearCallingIdentity();
             mExecutor.execute(() -> {
-                mCallback.onStateChanged(state, failureReason);
+                mCallback.onStateChanged(state);
+                mCallback.onStateChanged(state.getState(), state.getFailureReason());
             });
         }
 

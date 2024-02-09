@@ -505,6 +505,16 @@ package android.net.wifi {
     field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.SoftApInfo> CREATOR;
   }
 
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public final class SoftApState implements android.os.Parcelable {
+    method public int describeContents();
+    method public int getFailureReason();
+    method @Nullable public String getIface();
+    method public int getState();
+    method @Nullable public android.net.TetheringManager.TetheringRequest getTetheringRequest();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.SoftApState> CREATOR;
+  }
+
   @FlaggedApi("com.android.wifi.flags.uri_parser") public final class UriParserResults implements android.os.Parcelable {
     method @FlaggedApi("com.android.wifi.flags.uri_parser") public int describeContents();
     method @FlaggedApi("com.android.wifi.flags.uri_parser") @Nullable public String getInformation();
@@ -1017,7 +1027,8 @@ package android.net.wifi {
     method public default void onConnectedClientsChanged(@NonNull android.net.wifi.SoftApInfo, @NonNull java.util.List<android.net.wifi.WifiClient>);
     method @Deprecated public default void onInfoChanged(@NonNull android.net.wifi.SoftApInfo);
     method public default void onInfoChanged(@NonNull java.util.List<android.net.wifi.SoftApInfo>);
-    method public default void onStateChanged(int, int);
+    method @Deprecated public default void onStateChanged(int, int);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onStateChanged(@NonNull android.net.wifi.SoftApState);
   }
 
   public static interface WifiManager.TrafficStateCallback {

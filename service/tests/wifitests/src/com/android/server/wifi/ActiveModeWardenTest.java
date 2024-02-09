@@ -16,6 +16,8 @@
 
 package com.android.server.wifi;
 
+import static android.net.wifi.WifiManager.SAP_START_FAILURE_GENERAL;
+import static android.net.wifi.WifiManager.WIFI_AP_STATE_FAILED;
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
 
@@ -75,6 +77,7 @@ import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.SoftApState;
 import android.net.wifi.WifiClient;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
@@ -1005,10 +1008,12 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         enterSoftApActiveMode();
 
         mSoftApListener.onStarted(mSoftApManager);
-        mSoftApManagerCallback.onStateChanged(WifiManager.WIFI_AP_STATE_ENABLED, 0);
+        SoftApState softApState = new SoftApState(
+                WifiManager.WIFI_AP_STATE_ENABLED, 0, null, null);
+        mSoftApManagerCallback.onStateChanged(softApState);
         mLooper.dispatchAll();
 
-        verify(mSoftApStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLED, 0);
+        verify(mSoftApStateMachineCallback).onStateChanged(softApState);
     }
 
     /**
@@ -1022,10 +1027,12 @@ public class ActiveModeWardenTest extends WifiBaseTest {
                 null));
 
         mSoftApListener.onStarted(mSoftApManager);
-        mSoftApManagerCallback.onStateChanged(WifiManager.WIFI_AP_STATE_ENABLED, 0);
+        SoftApState softApState = new SoftApState(
+                WifiManager.WIFI_AP_STATE_ENABLED, 0, null, null);
+        mSoftApManagerCallback.onStateChanged(softApState);
         mLooper.dispatchAll();
 
-        verify(mSoftApStateMachineCallback, never()).onStateChanged(anyInt(), anyInt());
+        verify(mSoftApStateMachineCallback, never()).onStateChanged(softApState);
         verify(mSoftApStateMachineCallback, never()).onConnectedClientsOrInfoChanged(any(),
                 any(), anyBoolean());
     }
@@ -1229,12 +1236,14 @@ public class ActiveModeWardenTest extends WifiBaseTest {
 
         mSoftApListener.onStopped(mSoftApManager);
         mLooper.dispatchAll();
-        mSoftApManagerCallback.onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        SoftApState softApState = new SoftApState(
+                WifiManager.WIFI_AP_STATE_DISABLED, 0, null, null);
+        mSoftApManagerCallback.onStateChanged(softApState);
         mLooper.dispatchAll();
 
         shutdownWifi();
 
-        verify(mSoftApStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        verify(mSoftApStateMachineCallback).onStateChanged(softApState);
     }
 
     /**
@@ -1247,10 +1256,12 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         shutdownWifi();
 
         mSoftApListener.onStopped(mSoftApManager);
-        mSoftApManagerCallback.onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        SoftApState softApState = new SoftApState(
+                WifiManager.WIFI_AP_STATE_DISABLED, 0, null, null);
+        mSoftApManagerCallback.onStateChanged(softApState);
         mLooper.dispatchAll();
 
-        verify(mSoftApStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        verify(mSoftApStateMachineCallback).onStateChanged(softApState);
         verify(mModeChangeCallback).onActiveModeManagerRemoved(mSoftApManager);
     }
 
@@ -2254,8 +2265,12 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         assertInDisabledState();
 
         // verify triggered Soft AP failure callback
-        verify(mSoftApStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        ArgumentCaptor<SoftApState> softApStateCaptor =
+                ArgumentCaptor.forClass(SoftApState.class);
+        verify(mSoftApStateMachineCallback).onStateChanged(softApStateCaptor.capture());
+        assertThat(softApStateCaptor.getValue().getState()).isEqualTo(WIFI_AP_STATE_FAILED);
+        assertThat(softApStateCaptor.getValue().getFailureReason())
+                .isEqualTo(SAP_START_FAILURE_GENERAL);
 
         // try to start LOHS
         mActiveModeWarden.startSoftAp(
@@ -2268,8 +2283,10 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         assertInDisabledState();
 
         // verify triggered LOHS failure callback
-        verify(mLohsStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mLohsStateMachineCallback).onStateChanged(softApStateCaptor.capture());
+        assertThat(softApStateCaptor.getValue().getState()).isEqualTo(WIFI_AP_STATE_FAILED);
+        assertThat(softApStateCaptor.getValue().getFailureReason())
+                .isEqualTo(SAP_START_FAILURE_GENERAL);
     }
 
     /**

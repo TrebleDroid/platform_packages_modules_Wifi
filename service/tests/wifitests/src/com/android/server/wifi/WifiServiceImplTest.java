@@ -186,6 +186,7 @@ import android.net.wifi.SecurityParams;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.SoftApState;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiBands;
 import android.net.wifi.WifiClient;
@@ -332,6 +333,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
                     SECURITY_NONE));
     private static final int TEST_AP_FREQUENCY = 2412;
     private static final int TEST_AP_BANDWIDTH = SoftApInfo.CHANNEL_WIDTH_20MHZ;
+    private static final TetheringManager.TetheringRequest TEST_TETHERING_REQUEST =
+            new TetheringManager.TetheringRequest.Builder(TetheringManager.TETHERING_WIFI).build();
+    private static final String TEST_IFACE_NAME = "test-wlan0";
     private static final int NETWORK_CALLBACK_ID = 1100;
     private static final String TEST_CAP = "[RSN-PSK-CCMP]";
     private static final String TEST_SSID = "Sid's Place";
@@ -1363,7 +1367,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
     private void changeLohsState(int apState, int previousState, int error) {
         // TestUtil.sendWifiApStateChanged(mBroadcastReceiverCaptor.getValue(), mContext,
         //        apState, previousState, error, WIFI_IFACE_NAME, IFACE_IP_MODE_LOCAL_ONLY);
-        mLohsApCallback.onStateChanged(apState, error);
+        mLohsApCallback.onStateChanged(new SoftApState(apState, error,
+                TEST_TETHERING_REQUEST, TEST_IFACE_NAME));
     }
 
     /**
@@ -1377,7 +1382,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verifyApRegistration();
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        mStateMachineSoftApCallback.onStateChanged(
+                new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                        TEST_TETHERING_REQUEST, TEST_IFACE_NAME));
 
         when(mSettingsStore.handleWifiToggled(eq(true))).thenReturn(true);
         when(mContext.checkPermission(
@@ -1403,7 +1410,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verifyApRegistration();
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        mStateMachineSoftApCallback.onStateChanged(
+                new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                        TEST_TETHERING_REQUEST, TEST_IFACE_NAME));
 
         when(mContext.checkPermission(
                 eq(android.Manifest.permission.NETWORK_SETTINGS), anyInt(), anyInt()))
@@ -1879,8 +1888,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         // send an ap state change to verify WifiServiceImpl is updated
         verifyApRegistration();
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_FAILED, SAP_START_FAILURE_GENERAL);
+        mStateMachineSoftApCallback.onStateChanged(
+                new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                        TEST_TETHERING_REQUEST, TEST_IFACE_NAME));
+        mStateMachineSoftApCallback.onStateChanged(
+                new SoftApState(
+                        WIFI_AP_STATE_FAILED, SAP_START_FAILURE_GENERAL,
+                        TEST_TETHERING_REQUEST, TEST_IFACE_NAME));
         mLooper.dispatchAll();
 
         assertEquals(WifiManager.WIFI_AP_STATE_FAILED, mWifiServiceImpl.getWifiApEnabledState());
@@ -3550,7 +3564,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 config,
                 mSoftApModeConfigCaptor.getValue().getSoftApConfiguration().toWifiConfiguration());
         assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        mStateMachineSoftApCallback.onStateChanged(
+                new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                        TEST_TETHERING_REQUEST, TEST_IFACE_NAME));
         mWifiServiceImpl.updateInterfaceIpState(WIFI_IFACE_NAME, IFACE_IP_MODE_TETHERED);
         mLooper.dispatchAll();
         assertEquals(WIFI_AP_STATE_ENABLED, mWifiServiceImpl.getWifiApEnabledState());
@@ -3576,7 +3592,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 eq(new WorkSource(Binder.getCallingUid(), TEST_PACKAGE_NAME)));
         assertThat(config).isEqualTo(mSoftApModeConfigCaptor.getValue().getSoftApConfiguration());
         assertNull(mSoftApModeConfigCaptor.getValue().getTetheringRequest());
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        mStateMachineSoftApCallback.onStateChanged(
+                new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                        TEST_TETHERING_REQUEST, TEST_IFACE_NAME));
         mWifiServiceImpl.updateInterfaceIpState(WIFI_IFACE_NAME, IFACE_IP_MODE_TETHERED);
         mLooper.dispatchAll();
         assertEquals(WIFI_AP_STATE_ENABLED, mWifiServiceImpl.getWifiApEnabledState());
@@ -3596,7 +3614,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
         WifiConfiguration config = createValidWifiApConfiguration();
         mLooper.startAutoDispatch();
         assertTrue(mWifiServiceImpl.startSoftAp(config, TEST_PACKAGE_NAME));
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        mStateMachineSoftApCallback.onStateChanged(
+                new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                        TEST_TETHERING_REQUEST, TEST_IFACE_NAME));
         mWifiServiceImpl.updateInterfaceIpState(WIFI_IFACE_NAME, IFACE_IP_MODE_TETHERED);
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
@@ -4009,7 +4029,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .when(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
         mWifiServiceImpl.registerSoftApCallback(mClientSoftApCallback);
         mLooper.dispatchAll();
-        verify(mClientSoftApCallback, never()).onStateChanged(WIFI_AP_STATE_DISABLED, 0);
+        verify(mClientSoftApCallback, never()).onStateChanged(any());
         verify(mClientSoftApCallback, never()).onConnectedClientsOrInfoChanged(
                 any(), any(), anyBoolean(), anyBoolean());
         verify(mClientSoftApCallback, never()).onCapabilityChanged(any());
@@ -4022,7 +4042,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
     private void registerSoftApCallbackAndVerify(ISoftApCallback callback) throws Exception {
         mWifiServiceImpl.registerSoftApCallback(callback);
         mLooper.dispatchAll();
-        verify(callback).onStateChanged(WIFI_AP_STATE_DISABLED, 0);
+        verify(callback).onStateChanged(
+                eq(new SoftApState(WIFI_AP_STATE_DISABLED, 0, null, null)));
         verify(callback).onConnectedClientsOrInfoChanged(new HashMap<String, SoftApInfo>(),
                 new HashMap<String, List<WifiClient>>(), false, true);
         verify(callback).onCapabilityChanged(ApConfigUtil.updateCapabilityFromResource(mContext));
@@ -4078,7 +4099,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
         reset(mClientSoftApCallback);
         when(mClientSoftApCallback.asBinder()).thenReturn(mAppBinder);
         // Change state from default before registering the second callback
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        SoftApState state = new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_IFACE_NAME);
+        mStateMachineSoftApCallback.onStateChanged(state);
         mStateMachineSoftApCallback.onConnectedClientsOrInfoChanged(
                 mTestSoftApInfos, mTestSoftApClients, false);
         mStateMachineSoftApCallback.onBlockedClientConnecting(testWifiClient, 0);
@@ -4087,7 +4110,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         // Register another callback and verify the new state is returned in the immediate callback
         mWifiServiceImpl.registerSoftApCallback(mAnotherSoftApCallback);
         mLooper.dispatchAll();
-        verify(mAnotherSoftApCallback).onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        verify(mAnotherSoftApCallback).onStateChanged(eq(state));
         verify(mAnotherSoftApCallback).onConnectedClientsOrInfoChanged(
                 eq(mTestSoftApInfos), eq(mTestSoftApClients), eq(false), eq(true));
         // Verify only first callback will receive onBlockedClientConnecting since it call after
@@ -4100,13 +4123,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         // Update soft AP state and verify the remaining callback receives the event
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_FAILED,
-                SAP_START_FAILURE_NO_CHANNEL);
+        state = new SoftApState(
+                WIFI_AP_STATE_FAILED, SAP_START_FAILURE_NO_CHANNEL,
+                TEST_TETHERING_REQUEST, TEST_IFACE_NAME);
+        mStateMachineSoftApCallback.onStateChanged(state);
         mLooper.dispatchAll();
-        verify(mClientSoftApCallback, never()).onStateChanged(WIFI_AP_STATE_FAILED,
-                SAP_START_FAILURE_NO_CHANNEL);
-        verify(mAnotherSoftApCallback).onStateChanged(WIFI_AP_STATE_FAILED,
-                SAP_START_FAILURE_NO_CHANNEL);
+        verify(mClientSoftApCallback, never()).onStateChanged(eq(state));
+        verify(mAnotherSoftApCallback).onStateChanged(eq(state));
     }
 
     /**
@@ -4162,9 +4185,12 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void callsRegisteredCallbacksOnSoftApStateChangedEvent() throws Exception {
         registerSoftApCallbackAndVerify(mClientSoftApCallback);
 
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        SoftApState state = new SoftApState(
+                WIFI_AP_STATE_ENABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_IFACE_NAME);
+        mStateMachineSoftApCallback.onStateChanged(state);
         mLooper.dispatchAll();
-        verify(mClientSoftApCallback).onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        verify(mClientSoftApCallback).onStateChanged(eq(state));
     }
 
     /**
@@ -4175,7 +4201,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void updatesSoftApStateAndConnectedClientsOnSoftApEvents() throws Exception {
         WifiClient testWifiClient = new WifiClient(MacAddress.fromString("22:33:44:55:66:77"),
                 WIFI_IFACE_NAME2);
-        mStateMachineSoftApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        SoftApState state = new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_IFACE_NAME);
+        mStateMachineSoftApCallback.onStateChanged(state);
         mStateMachineSoftApCallback.onConnectedClientsOrInfoChanged(
                 mTestSoftApInfos, mTestSoftApClients, false);
         mStateMachineSoftApCallback.onBlockedClientConnecting(testWifiClient, 0);
@@ -4183,7 +4211,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         // Register callback after num clients and soft AP are changed.
         mWifiServiceImpl.registerSoftApCallback(mClientSoftApCallback);
         mLooper.dispatchAll();
-        verify(mClientSoftApCallback).onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        verify(mClientSoftApCallback).onStateChanged(eq(state));
         verify(mClientSoftApCallback).onConnectedClientsOrInfoChanged(
                 eq(mTestSoftApInfos), eq(mTestSoftApClients), eq(false), eq(true));
         // Don't need to invoke callback when register.
@@ -10582,7 +10610,12 @@ public class WifiServiceImplTest extends WifiBaseTest {
             throws Exception {
         mWifiServiceImpl.registerLocalOnlyHotspotSoftApCallback(mClientSoftApCallback, bundle);
         mLooper.dispatchAll();
-        verify(mClientSoftApCallback).onStateChanged(WIFI_AP_STATE_DISABLED, 0);
+
+        ArgumentCaptor<SoftApState> softApStateCaptor =
+                ArgumentCaptor.forClass(SoftApState.class);
+        verify(mClientSoftApCallback).onStateChanged(softApStateCaptor.capture());
+        assertThat(softApStateCaptor.getValue().getState()).isEqualTo(WIFI_AP_STATE_DISABLED);
+        assertThat(softApStateCaptor.getValue().getFailureReason()).isEqualTo(0);
         verify(mClientSoftApCallback).onConnectedClientsOrInfoChanged(
                 new HashMap<String, SoftApInfo>(),
                 new HashMap<String, List<WifiClient>>(), false, true);
@@ -10646,7 +10679,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
         reset(mClientSoftApCallback);
         when(mClientSoftApCallback.asBinder()).thenReturn(mAppBinder);
         // Change state from default before registering the second callback
-        mLohsApCallback.onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        SoftApState state = new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_IFACE_NAME);
+        mLohsApCallback.onStateChanged(state);
         mLohsApCallback.onConnectedClientsOrInfoChanged(
                 mTestSoftApInfos, mTestSoftApClients, false);
         mLohsApCallback.onBlockedClientConnecting(testWifiClient, 0);
@@ -10655,7 +10690,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         // Register another callback and verify the new state is returned in the immediate callback
         mWifiServiceImpl.registerLocalOnlyHotspotSoftApCallback(mAnotherSoftApCallback, mExtras);
         mLooper.dispatchAll();
-        verify(mAnotherSoftApCallback).onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        verify(mAnotherSoftApCallback).onStateChanged(eq(state));
         verify(mAnotherSoftApCallback).onConnectedClientsOrInfoChanged(
                 eq(mTestSoftApInfos), eq(mTestSoftApClients), eq(false), eq(true));
         // Verify only first callback will receive onBlockedClientConnecting since it call after
@@ -10668,13 +10703,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         // Update soft AP state and verify the remaining callback receives the event
-        mLohsApCallback.onStateChanged(WIFI_AP_STATE_FAILED,
-                SAP_START_FAILURE_NO_CHANNEL);
+        state = new SoftApState(
+                WIFI_AP_STATE_FAILED, SAP_START_FAILURE_NO_CHANNEL,
+                TEST_TETHERING_REQUEST, TEST_IFACE_NAME);
+        mLohsApCallback.onStateChanged(state);
         mLooper.dispatchAll();
-        verify(mClientSoftApCallback, never()).onStateChanged(WIFI_AP_STATE_FAILED,
-                SAP_START_FAILURE_NO_CHANNEL);
-        verify(mAnotherSoftApCallback).onStateChanged(WIFI_AP_STATE_FAILED,
-                SAP_START_FAILURE_NO_CHANNEL);
+        verify(mClientSoftApCallback, never()).onStateChanged(eq(state));
+        verify(mAnotherSoftApCallback).onStateChanged(eq(state));
     }
 
     /**
