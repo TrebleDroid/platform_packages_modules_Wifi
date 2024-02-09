@@ -2325,6 +2325,8 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                         -> "NOTIFICATION_TYPE_ON_BOOTSTRAPPING_CONFIRM";
                 case NOTIFICATION_TYPE_ON_SUSPENSION_MODE_CHANGED
                         -> "NOTIFICATION_TYPE_ON_SUSPENSION_MODE_CHANGED";
+                case RunnerState.STATE_ENTER_CMD -> "Enter";
+                case RunnerState.STATE_EXIT_CMD -> "Exit";
                 default -> {
                     Log.wtf(TAG, "unknown message what: " + what);
                     yield "what:" + what;
