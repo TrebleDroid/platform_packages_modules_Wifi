@@ -174,7 +174,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
 
     /**
      * See comments for {@link IWifiNanIface#enableAndConfigure(short, ConfigRequest, boolean,
-     *                         boolean, boolean, boolean, int, int, WifiNanIface.PowerParameters)}
+     * boolean, boolean, boolean, int, int, int, WifiNanIface.PowerParameters)}
      */
     @Override
     public boolean enableAndConfigure(short transactionId, ConfigRequest configRequest,
@@ -732,6 +732,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.debugConfigs.useSdfInBandVal[NanBandIndex.NAN_BAND_5GHZ] = true;
         req.debugConfigs.useSdfInBandVal[NanBandIndex.NAN_BAND_6GHZ] = true;
         updateConfigForPowerSettings(req.configParams, configSupplemental, powerParameters);
+        updateConfigRequestVendorData(req.configParams, configRequest);
         return req;
     }
 
@@ -759,6 +760,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.bandSpecificConfig[NanBandIndex.NAN_BAND_5GHZ] = nanBandSpecificConfigs[1];
         req.bandSpecificConfig[NanBandIndex.NAN_BAND_6GHZ] = nanBandSpecificConfigs[2];
         updateConfigForPowerSettings(req, configSupplemental, powerParameters);
+        updateConfigRequestVendorData(req, configRequest);
         return req;
     }
 
@@ -787,6 +789,15 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         if (override != -1) {
             cfg.validDiscoveryWindowIntervalVal = true;
             cfg.discoveryWindowIntervalVal = (byte) override;
+        }
+    }
+
+    private static void updateConfigRequestVendorData(
+            NanConfigRequest halReq, ConfigRequest frameworkReq) {
+        if (SdkLevel.isAtLeastV() && WifiHalAidlImpl.isServiceVersionAtLeast(2)
+                && !frameworkReq.getVendorData().isEmpty()) {
+            halReq.vendorData =
+                    HalAidlUtil.frameworkToHalOuiKeyedDataList(frameworkReq.getVendorData());
         }
     }
 

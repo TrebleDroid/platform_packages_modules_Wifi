@@ -355,7 +355,7 @@ public class WifiInjector {
         mWifiP2pMonitor = new WifiP2pMonitor();
         mSupplicantP2pIfaceHal = new SupplicantP2pIfaceHal(mWifiP2pMonitor, mWifiGlobals, this);
         mWifiP2pNative = new WifiP2pNative(mWifiCondManager, mWifiNative, mWifiMetrics,
-                mWifiVendorHal, mSupplicantP2pIfaceHal, mHalDeviceManager, mPropertyService);
+                mWifiVendorHal, mSupplicantP2pIfaceHal, mHalDeviceManager, mPropertyService, this);
         SubscriptionManager subscriptionManager =
                 mContext.getSystemService(SubscriptionManager.class);
         if (SdkLevel.isAtLeastS()) {

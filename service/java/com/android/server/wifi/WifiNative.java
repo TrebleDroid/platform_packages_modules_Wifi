@@ -22,6 +22,8 @@ import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_NATIVE_SUPPORTED_FEATURES;
+import static com.android.server.wifi.p2p.WifiP2pNative.P2P_IFACE_NAME;
+import static com.android.server.wifi.p2p.WifiP2pNative.P2P_INTERFACE_PROPERTY;
 
 import android.annotation.IntDef;
 import android.annotation.NonNull;
@@ -348,13 +350,15 @@ public class WifiNative {
     /**
      * Meta-info about every iface that is active.
      */
-    private static class Iface {
+    public static class Iface {
         /** Type of ifaces possible */
         public static final int IFACE_TYPE_AP = 0;
         public static final int IFACE_TYPE_STA_FOR_CONNECTIVITY = 1;
         public static final int IFACE_TYPE_STA_FOR_SCAN = 2;
+        public static final int IFACE_TYPE_P2P = 3;
 
-        @IntDef({IFACE_TYPE_AP, IFACE_TYPE_STA_FOR_CONNECTIVITY, IFACE_TYPE_STA_FOR_SCAN})
+        @IntDef({IFACE_TYPE_AP, IFACE_TYPE_STA_FOR_CONNECTIVITY, IFACE_TYPE_STA_FOR_SCAN,
+                IFACE_TYPE_P2P})
         @Retention(RetentionPolicy.SOURCE)
         public @interface IfaceType{}
 
@@ -476,6 +480,11 @@ public class WifiNative {
                 }
             }
             return false;
+        }
+
+        /** Checks if there are any P2P iface active. */
+        private boolean hasAnyP2pIface() {
+            return hasAnyIfaceOfType(Iface.IFACE_TYPE_P2P);
         }
 
         /** Checks if there are any STA (for connectivity) iface active. */
@@ -701,10 +710,19 @@ public class WifiNative {
     private void stopSupplicantIfNecessary() {
         synchronized (mLock) {
             if (!mIfaceMgr.hasAnyStaIfaceForConnectivity()) {
-                if (!mSupplicantStaIfaceHal.deregisterDeathHandler()) {
-                    Log.e(TAG, "Failed to deregister supplicant death handler");
+                if (mSupplicantStaIfaceHal.isInitializationStarted()) {
+                    if (!mSupplicantStaIfaceHal.deregisterDeathHandler()) {
+                        Log.e(TAG, "Failed to deregister supplicant death handler");
+                    }
+
                 }
-                mSupplicantStaIfaceHal.terminate();
+                if (!mIfaceMgr.hasAnyP2pIface()) {
+                    if (mSupplicantStaIfaceHal.isInitializationStarted()) {
+                        mSupplicantStaIfaceHal.terminate();
+                    } else {
+                        mWifiInjector.getWifiP2pNative().stopP2pSupplicantIfNecessary();
+                    }
+                }
             }
         }
     }
@@ -1194,6 +1212,68 @@ public class WifiNative {
                 Log.i(TAG, "Vendor Hal not supported, ignoring createApIface.");
                 return handleIfaceCreationWhenVendorHalNotSupported(iface);
             }
+        }
+    }
+
+    private String createP2pIfaceFromHalOrGetNameFromProperty(
+            HalDeviceManager.InterfaceDestroyedListener p2pInterfaceDestroyedListener,
+            Handler handler, WorkSource requestorWs) {
+        synchronized (mLock) {
+            if (mWifiVendorHal.isVendorHalSupported()) {
+                return mWifiInjector.getHalDeviceManager().createP2pIface(
+                    p2pInterfaceDestroyedListener, handler, requestorWs);
+            } else {
+                Log.i(TAG, "Vendor Hal not supported, ignoring createStaIface.");
+                return mPropertyService.getString(P2P_INTERFACE_PROPERTY, P2P_IFACE_NAME);
+            }
+        }
+    }
+
+    /**
+     * Helper function to handle creation of P2P iface.
+     * For devices which do not the support the HAL, this will bypass HalDeviceManager &
+     * teardown any existing iface.
+     */
+    public Iface createP2pIface(
+            HalDeviceManager.InterfaceDestroyedListener p2pInterfaceDestroyedListener,
+            Handler handler, WorkSource requestorWs) {
+        synchronized (mLock) {
+            // Make sure HAL is started for p2p
+            if (!startHal()) {
+                Log.e(TAG, "Failed to start Hal");
+                mWifiMetrics.incrementNumSetupP2pInterfaceFailureDueToHal();
+                return null;
+            }
+            // maintain iface status in WifiNative
+            Iface iface = mIfaceMgr.allocateIface(Iface.IFACE_TYPE_P2P);
+            if (iface == null) {
+                Log.e(TAG, "Failed to allocate new P2P iface");
+                stopHalAndWificondIfNecessary();
+                return null;
+            }
+            iface.name = createP2pIfaceFromHalOrGetNameFromProperty(
+                    p2pInterfaceDestroyedListener, handler, requestorWs);
+            if (TextUtils.isEmpty(iface.name)) {
+                Log.e(TAG, "Failed to create P2p iface in HalDeviceManager");
+                mIfaceMgr.removeIface(iface.id);
+                mWifiMetrics.incrementNumSetupP2pInterfaceFailureDueToHal();
+                stopHalAndWificondIfNecessary();
+                return null;
+            }
+            return iface;
+        }
+    }
+
+    /**
+     * Teardown P2p iface with input interface Id which was returned by createP2pIface.
+     *
+     * @param interfaceId the interface identify which was gerenated when creating P2p iface.
+     */
+    public void teardownP2pIface(int interfaceId) {
+        synchronized (mLock) {
+            mIfaceMgr.removeIface(interfaceId);
+            stopHalAndWificondIfNecessary();
+            stopSupplicantIfNecessary();
         }
     }
 
@@ -5002,28 +5082,34 @@ public class WifiNative {
         return mHostapdHal.isSoftApInstanceDiedHandlerSupported();
     }
 
-    @VisibleForTesting
     /** Checks if there are any STA (for connectivity) iface active. */
+    @VisibleForTesting
     boolean hasAnyStaIfaceForConnectivity() {
         return mIfaceMgr.hasAnyStaIfaceForConnectivity();
     }
 
-    @VisibleForTesting
     /** Checks if there are any STA (for scan) iface active. */
+    @VisibleForTesting
     boolean hasAnyStaIfaceForScan() {
         return mIfaceMgr.hasAnyStaIfaceForScan();
     }
 
-    @VisibleForTesting
     /** Checks if there are any AP iface active. */
+    @VisibleForTesting
     boolean hasAnyApIface() {
         return mIfaceMgr.hasAnyApIface();
     }
 
-    @VisibleForTesting
     /** Checks if there are any iface active. */
+    @VisibleForTesting
     boolean hasAnyIface() {
         return mIfaceMgr.hasAnyIface();
+    }
+
+    /** Checks if there are any P2P iface active. */
+    @VisibleForTesting
+    boolean hasAnyP2pIface() {
+        return mIfaceMgr.hasAnyP2pIface();
     }
 
     /**

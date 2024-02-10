@@ -5464,6 +5464,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         int clusterHigh = ConfigRequest.CLUSTER_ID_MAX;
         int[] discoveryWindowInterval =
                 {ConfigRequest.DW_INTERVAL_NOT_INIT, ConfigRequest.DW_INTERVAL_NOT_INIT};
+        List<OuiKeyedData> vendorData = null;
         if (configRequest != null) {
             support5gBand = configRequest.mSupport5gBand;
             support6gBand = configRequest.mSupport6gBand;
@@ -5515,6 +5516,10 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                             cr.mDiscoveryWindowInterval[band]);
                 }
             }
+
+            if (SdkLevel.isAtLeastV() && !cr.getVendorData().isEmpty()) {
+                vendorData = cr.getVendorData();
+            }
         }
         ConfigRequest.Builder builder = new ConfigRequest.Builder().setSupport5gBand(support5gBand)
                 .setMasterPreference(masterPreference).setClusterLow(clusterLow)
@@ -5522,6 +5527,16 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         for (int band = ConfigRequest.NAN_BAND_24GHZ; band <= ConfigRequest.NAN_BAND_5GHZ; ++band) {
             if (discoveryWindowInterval[band] != ConfigRequest.DW_INTERVAL_NOT_INIT) {
                 builder.setDiscoveryWindowInterval(band, discoveryWindowInterval[band]);
+            }
+        }
+        if (SdkLevel.isAtLeastV()) {
+            // Always use the vendor data from the incoming ConfigRequest if provided.
+            // Otherwise, use the most recent vendor data in the mClients list.
+            if (configRequest != null && !configRequest.getVendorData().isEmpty()) {
+                vendorData = configRequest.getVendorData();
+            }
+            if (vendorData != null) {
+                builder.setVendorData(vendorData);
             }
         }
         return builder.build();
