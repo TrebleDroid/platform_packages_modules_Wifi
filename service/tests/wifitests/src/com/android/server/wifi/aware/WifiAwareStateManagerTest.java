@@ -3067,6 +3067,12 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         }
     }
 
+    private List<OuiKeyedData> generateVendorData(int oui) {
+        OuiKeyedData vendorDataElement =
+                new OuiKeyedData.Builder(oui, new PersistableBundle()).build();
+        return Arrays.asList(vendorDataElement);
+    }
+
     /**
      * Test sequence of configuration: (1) config1, (2) config2 - incompatible,
      * (3) config3 - compatible with config1 (requiring upgrade), (4) disconnect
@@ -3087,15 +3093,20 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         final int dwInterval1Band24 = 2;
         final int dwInterval3Band24 = 1;
         final int dwInterval3Band5 = 0;
+        final List<OuiKeyedData> vendorData1 = generateVendorData(1);
+        final List<OuiKeyedData> vendorData3 = generateVendorData(3);
 
         ArgumentCaptor<Short> transactionId = ArgumentCaptor.forClass(Short.class);
         ArgumentCaptor<ConfigRequest> crCapture = ArgumentCaptor.forClass(ConfigRequest.class);
 
-        ConfigRequest configRequest1 = new ConfigRequest.Builder()
+        ConfigRequest.Builder builder = new ConfigRequest.Builder()
                 .setClusterLow(5).setClusterHigh(100)
                 .setMasterPreference(masterPref1)
-                .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_24GHZ, dwInterval1Band24)
-                .build();
+                .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_24GHZ, dwInterval1Band24);
+        if (SdkLevel.isAtLeastV()) {
+            builder.setVendorData(vendorData1);
+        }
+        ConfigRequest configRequest1 = builder.build();
 
         ConfigRequest configRequest2 = new ConfigRequest.Builder()
                 .setSupport5gBand(true) // compatible
@@ -3104,7 +3115,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
                 .setMasterPreference(0) // compatible
                 .build();
 
-        ConfigRequest configRequest3  = new ConfigRequest.Builder()
+        builder = new ConfigRequest.Builder()
                 .setSupport5gBand(true) // compatible (will use true)
                 .setSupport6gBand(false)
                 .setClusterLow(5).setClusterHigh(100) // identical (hence compatible)
@@ -3112,8 +3123,11 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
                 // compatible: will use min
                 .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_24GHZ, dwInterval3Band24)
                 // compatible: will use interval3 since interval1 not init
-                .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_5GHZ, dwInterval3Band5)
-                .build();
+                .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_5GHZ, dwInterval3Band5);
+        if (SdkLevel.isAtLeastV()) {
+            builder.setVendorData(vendorData3);
+        }
+        ConfigRequest configRequest3 = builder.build();
 
         IWifiAwareEventCallback mockCallback1 = mock(IWifiAwareEventCallback.class);
         IWifiAwareEventCallback mockCallback2 = mock(IWifiAwareEventCallback.class);
@@ -3167,6 +3181,11 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         collector.checkThat("dw interval on 5: ~min", dwInterval3Band5,
                 equalTo(crCapture.getValue().mDiscoveryWindowInterval[ConfigRequest
                         .NAN_BAND_5GHZ]));
+        if (SdkLevel.isAtLeastV()) {
+            // Vendor data from the provided ConfigRequest should be prioritized during the merge
+            collector.checkThat("merge: vendor data 3", crCapture.getValue().getVendorData(),
+                    equalTo(vendorData3));
+        }
 
         // (4) disconnect config3: downgrade to config1
         mDut.disconnect(clientId3);

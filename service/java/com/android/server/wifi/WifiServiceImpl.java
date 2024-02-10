@@ -7629,8 +7629,8 @@ public class WifiServiceImpl extends BaseWifiService {
         return policyIdSet.size() == policyIds.length;
     }
 
-    private boolean policiesHaveDirection(List<QosPolicyParams> policyList,
-            @QosPolicyParams.Direction int direction) {
+    private boolean policiesHaveSameDirection(List<QosPolicyParams> policyList) {
+        int direction = policyList.get(0).getDirection();
         for (QosPolicyParams policy : policyList) {
             if (policy.getDirection() != direction) {
                 return false;
@@ -7681,12 +7681,18 @@ public class WifiServiceImpl extends BaseWifiService {
             return;
         }
 
-        // Only downlink policies are currently supported.
         if (policyParamsList.size() == 0
                 || policyParamsList.size() > WifiManager.getMaxNumberOfPoliciesPerQosRequest()
                 || !policyIdsAreUnique(policyParamsList)
-                || !policiesHaveDirection(policyParamsList, QosPolicyParams.DIRECTION_DOWNLINK)) {
+                || !policiesHaveSameDirection(policyParamsList)) {
             throw new IllegalArgumentException("policyParamsList is invalid");
+        }
+
+        if (!SdkLevel.isAtLeastV()
+                && policyParamsList.get(0).getDirection() == QosPolicyParams.DIRECTION_UPLINK) {
+            Log.e(TAG, "Uplink QoS policies are only supported on SDK >= V");
+            rejectAllQosPolicies(policyParamsList, listener);
+            return;
         }
 
         mWifiThreadRunner.post(() -> {

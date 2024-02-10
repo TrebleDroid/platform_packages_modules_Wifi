@@ -35,6 +35,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -78,10 +79,12 @@ import android.hardware.wifi.supplicant.LegacyMode;
 import android.hardware.wifi.supplicant.MloLink;
 import android.hardware.wifi.supplicant.MloLinksInfo;
 import android.hardware.wifi.supplicant.MscsParams.FrameClassifierFields;
+import android.hardware.wifi.supplicant.MsduDeliveryInfo;
 import android.hardware.wifi.supplicant.OceRssiBasedAssocRejectAttr;
 import android.hardware.wifi.supplicant.OsuMethod;
 import android.hardware.wifi.supplicant.PmkSaCacheData;
 import android.hardware.wifi.supplicant.PortRange;
+import android.hardware.wifi.supplicant.QosCharacteristics.QosCharacteristicsMask;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParams;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParamsMask;
 import android.hardware.wifi.supplicant.QosPolicyData;
@@ -103,6 +106,7 @@ import android.net.DscpPolicy;
 import android.net.MacAddress;
 import android.net.NetworkAgent;
 import android.net.wifi.MscsParams;
+import android.net.wifi.QosCharacteristics;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
@@ -2464,8 +2468,35 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
                 .setDestinationPort(10)
                 .build();
         frameworkPolicy.setTranslatedPolicyId(translatedPolicyId);
-        QosPolicyScsData halPolicy = SupplicantStaIfaceHalAidlImpl
-                .frameworkToHalQosPolicyScsData(frameworkPolicy);
+        QosPolicyScsData halPolicy = mDut.frameworkToHalQosPolicyScsData(frameworkPolicy);
+        compareQosPolicyParamsToHal(frameworkPolicy, halPolicy);
+    }
+
+    /**
+     * Tests the conversion method
+     * {@link SupplicantStaIfaceHalAidlImpl#frameworkToHalQosPolicyScsData(QosPolicyParams)}
+     * when the instance contains QosCharacteristics.
+     */
+    @Test
+    public void testFrameworkToHalQosPolicyScsDataWithCharacteristics() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mISupplicantMock.getInterfaceVersion()).thenReturn(3);
+        assertTrue(mDut.startDaemon()); // retrieves and caches the interface version
+
+        QosCharacteristics frameworkChars = new QosCharacteristics.Builder(
+                2000, 5000, 500, 2)
+                .setMaxMsduSizeOctets(4)
+                .setServiceStartTimeInfo(250, 0x5)
+                .setMeanDataRateKbps(1500)
+                .setMsduLifetimeMillis(400)
+                .setMsduDeliveryInfo(QosCharacteristics.DELIVERY_RATIO_99, 5)
+                .build();
+        QosPolicyParams frameworkPolicy = new QosPolicyParams.Builder(
+                5 /* policyId */, QosPolicyParams.DIRECTION_UPLINK)
+                .setQosCharacteristics(frameworkChars)
+                .build();
+        frameworkPolicy.setTranslatedPolicyId(15);
+        QosPolicyScsData halPolicy = mDut.frameworkToHalQosPolicyScsData(frameworkPolicy);
         compareQosPolicyParamsToHal(frameworkPolicy, halPolicy);
     }
 
@@ -2576,6 +2607,55 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         return qosPolicyData;
     }
 
+    private static void compareFrameworkQosCharacteristicsToHal(
+            android.net.wifi.QosCharacteristics frameworkChars,
+            android.hardware.wifi.supplicant.QosCharacteristics halChars) {
+        assertEquals(frameworkChars.getMinServiceIntervalMicros(), halChars.minServiceIntervalUs);
+        assertEquals(frameworkChars.getMaxServiceIntervalMicros(), halChars.maxServiceIntervalUs);
+        assertEquals(frameworkChars.getMinDataRateKbps(), halChars.minDataRateKbps);
+        assertEquals(frameworkChars.getDelayBoundMicros(), halChars.delayBoundUs);
+
+        int paramsMask = halChars.optionalFieldMask;
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MAX_MSDU_SIZE)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.MAX_MSDU_SIZE);
+            assertEquals((char) frameworkChars.getMaxMsduSizeOctets(), halChars.maxMsduSizeOctets);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.SERVICE_START_TIME)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.SERVICE_START_TIME);
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.SERVICE_START_TIME_LINK_ID);
+            assertEquals(frameworkChars.getServiceStartTimeMicros(), halChars.serviceStartTimeUs);
+            assertEquals((byte) frameworkChars.getServiceStartTimeLinkId(),
+                    halChars.serviceStartTimeLinkId);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MEAN_DATA_RATE)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.MEAN_DATA_RATE);
+            assertEquals(frameworkChars.getMeanDataRateKbps(), halChars.meanDataRateKbps);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.BURST_SIZE)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.BURST_SIZE);
+            assertEquals(frameworkChars.getBurstSizeOctets(), halChars.burstSizeOctets);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MSDU_LIFETIME)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.MSDU_LIFETIME);
+            assertEquals((char) frameworkChars.getMsduLifetimeMillis(), halChars.msduLifetimeMs);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MSDU_DELIVERY_INFO)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.MSDU_DELIVERY_INFO);
+            MsduDeliveryInfo halDeliveryInfo = halChars.msduDeliveryInfo;
+            int convertedFrameworkRatio =
+                    SupplicantStaIfaceHalAidlImpl.frameworkToHalDeliveryRatio(
+                            frameworkChars.getDeliveryRatio());
+            assertEquals(convertedFrameworkRatio, halDeliveryInfo.deliveryRatio);
+            assertEquals((byte) frameworkChars.getCountExponent(), halDeliveryInfo.countExponent);
+        }
+    }
+
     private void compareQosPolicyParamsToHal(QosPolicyParams frameworkPolicy,
             QosPolicyScsData halPolicy) {
         assertEquals((byte) frameworkPolicy.getTranslatedPolicyId(), halPolicy.policyId);
@@ -2611,6 +2691,17 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         if (frameworkPolicy.getDscp() != QosPolicyParams.DSCP_ANY) {
             assertNotEquals(0, paramsMask & QosPolicyClassifierParamsMask.DSCP);
             assertEquals((byte) frameworkPolicy.getDscp(), classifierParams.dscp);
+        }
+
+        if (mDut.isServiceVersionAtLeast(3)) {
+            int convertedFrameworkDirection =
+                    SupplicantStaIfaceHalAidlImpl.frameworkToHalPolicyDirection(
+                            frameworkPolicy.getDirection());
+            assertEquals(convertedFrameworkDirection, halPolicy.direction);
+            if (frameworkPolicy.getQosCharacteristics() != null) {
+                compareFrameworkQosCharacteristicsToHal(
+                        frameworkPolicy.getQosCharacteristics(), halPolicy.QosCharacteristics);
+            }
         }
     }
 

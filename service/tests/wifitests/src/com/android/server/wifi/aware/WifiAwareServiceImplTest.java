@@ -22,6 +22,7 @@ import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSess
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_AWARE_VERBOSE_LOGGING_ENABLED;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.when;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.aware.Characteristics;
 import android.net.wifi.aware.ConfigRequest;
@@ -55,6 +57,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.os.test.TestLooper;
 import android.util.LocalLog;
@@ -86,7 +89,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 
 /**
@@ -258,15 +263,69 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testConnectWithConfig() {
-        ConfigRequest configRequest = new ConfigRequest.Builder().setMasterPreference(55).build();
+        int clusterLow = 15;
+        ConfigRequest configRequest = new ConfigRequest.Builder()
+                .setClusterLow(clusterLow)
+                .build();
         String callingPackage = "com.google.somePackage";
         String callingFeatureId = "com.google.someFeature";
         mDut.connect(mBinderMock, callingPackage, callingFeatureId, mCallbackMock,
                 configRequest, false, mExtras, false);
 
+        ArgumentCaptor<ConfigRequest> configRequestCaptor =
+                ArgumentCaptor.forClass(ConfigRequest.class);
         verify(mAwareStateManagerMock).connect(anyInt(), anyInt(), anyInt(), eq(callingPackage),
-                eq(callingFeatureId), eq(mCallbackMock), eq(configRequest), eq(false), any(),
-                eq(false));
+                eq(callingFeatureId), eq(mCallbackMock), configRequestCaptor.capture(), eq(false),
+                any(), eq(false));
+
+        // Since the caller has the network stack permission,
+        // the provided ConfigRequest should be unmodified
+        assertEquals(clusterLow, configRequestCaptor.getValue().mClusterLow);
+    }
+
+    /**
+     * Validate connect() when a non-null config is passed and the caller has the
+     * manage network selection permission.
+     */
+    @Test
+    public void testConnectWithManageNetworkSelectionPermission() {
+        // Caller has none of the permissions required to include a ConfigRequest
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(false);
+        when(mContextMock.checkCallingOrSelfPermission(anyString()))
+                .thenReturn(PackageManager.PERMISSION_DENIED);
+
+        int clusterLow = 15;
+        OuiKeyedData vendorDataElement =
+                new OuiKeyedData.Builder(0x00aabbcc, new PersistableBundle()).build();
+        List<OuiKeyedData> vendorData = Arrays.asList(vendorDataElement);
+        ConfigRequest configRequest = new ConfigRequest.Builder()
+                .setClusterLow(clusterLow)
+                .setVendorData(vendorData)
+                .build();
+
+        String callingPackage = "com.google.somePackage";
+        String callingFeatureId = "com.google.someFeature";
+        assertThrows(SecurityException.class, () ->
+                mDut.connect(mBinderMock, callingPackage, callingFeatureId, mCallbackMock,
+                        configRequest, false, mExtras, false));
+
+        // Caller has the manage network selection permission
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(true);
+        ArgumentCaptor<ConfigRequest> configRequestCaptor =
+                ArgumentCaptor.forClass(ConfigRequest.class);
+        mDut.connect(mBinderMock, callingPackage, callingFeatureId, mCallbackMock,
+                configRequest, false, mExtras, false);
+        verify(mAwareStateManagerMock).connect(anyInt(), anyInt(), anyInt(), eq(callingPackage),
+                eq(callingFeatureId), eq(mCallbackMock), configRequestCaptor.capture(),
+                eq(false), any(), eq(false));
+
+        // Since the caller does not have the network stack permission, all ConfigRequest fields
+        // except the vendor data should be reset to a default value
+        assertEquals(vendorData, configRequestCaptor.getValue().getVendorData());
+        assertNotEquals(clusterLow, configRequestCaptor.getValue().mClusterLow);
     }
 
     /**

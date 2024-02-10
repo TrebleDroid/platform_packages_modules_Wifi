@@ -679,14 +679,18 @@ public class WifiAwareManagerTest {
         final boolean supportBand6g = true;
         final int dwWindow5GHz = 3;
         final int dwWindow6GHz = 4;
+        final List<OuiKeyedData> vendorData = OuiKeyedDataUtil.createTestOuiKeyedDataList(5);
 
-        ConfigRequest configRequest = new ConfigRequest.Builder().setClusterHigh(clusterHigh)
+        ConfigRequest.Builder builder = new ConfigRequest.Builder().setClusterHigh(clusterHigh)
                 .setClusterLow(clusterLow).setMasterPreference(masterPreference)
                 .setSupport5gBand(supportBand5g)
                 .setSupport6gBand(supportBand6g)
                 .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_5GHZ, dwWindow5GHz)
-                .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_6GHZ, dwWindow6GHz)
-                .build();
+                .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_6GHZ, dwWindow6GHz);
+        if (SdkLevel.isAtLeastV()) {
+            builder.setVendorData(vendorData);
+        }
+        ConfigRequest configRequest = builder.build();
 
         collector.checkThat("mClusterHigh", clusterHigh, equalTo(configRequest.mClusterHigh));
         collector.checkThat("mClusterLow", clusterLow, equalTo(configRequest.mClusterLow));
@@ -702,6 +706,9 @@ public class WifiAwareManagerTest {
                 equalTo(configRequest.mDiscoveryWindowInterval[ConfigRequest.NAN_BAND_5GHZ]));
         collector.checkThat("mDiscoveryWindowInterval[6GHz]", dwWindow6GHz,
                 equalTo(configRequest.mDiscoveryWindowInterval[ConfigRequest.NAN_BAND_6GHZ]));
+        if (SdkLevel.isAtLeastV()) {
+            collector.checkThat("mVendorData", vendorData, equalTo(configRequest.getVendorData()));
+        }
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -784,15 +791,19 @@ public class WifiAwareManagerTest {
         final int dwWindow24GHz = 1;
         final int dwWindow5GHz = 5;
         final int dwWindow6GHz = 4;
+        final List<OuiKeyedData> vendorData = OuiKeyedDataUtil.createTestOuiKeyedDataList(5);
 
-        ConfigRequest configRequest = new ConfigRequest.Builder().setClusterHigh(clusterHigh)
+        ConfigRequest.Builder builder = new ConfigRequest.Builder().setClusterHigh(clusterHigh)
                 .setClusterLow(clusterLow).setMasterPreference(masterPreference)
                 .setSupport5gBand(supportBand5g)
                 .setSupport6gBand(supportBand6g)
                 .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_24GHZ, dwWindow24GHz)
                 .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_5GHZ, dwWindow5GHz)
-                .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_6GHZ, dwWindow6GHz)
-                .build();
+                .setDiscoveryWindowInterval(ConfigRequest.NAN_BAND_6GHZ, dwWindow6GHz);
+        if (SdkLevel.isAtLeastV()) {
+            builder.setVendorData(vendorData);
+        }
+        ConfigRequest configRequest = builder.build();
 
         Parcel parcelW = Parcel.obtain();
         configRequest.writeToParcel(parcelW, 0);

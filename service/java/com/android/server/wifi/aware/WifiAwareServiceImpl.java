@@ -337,7 +337,22 @@ public class WifiAwareServiceImpl extends IWifiAwareManager.Stub {
         }
 
         if (configRequest != null) {
-            enforceNetworkStackPermission();
+            boolean networkStackPermission = checkNetworkStackPermission();
+            boolean manageNetworkSelectionPermission =
+                    mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(uid);
+            if (!(networkStackPermission || manageNetworkSelectionPermission)) {
+                throw new SecurityException("Insufficient permission to include a ConfigRequest");
+            }
+
+            if (!networkStackPermission) {
+                // OEM apps with only the network selection permission can provide a config request,
+                // but they should only modify the vendor data field.
+                ConfigRequest.Builder builder = new ConfigRequest.Builder();
+                if (SdkLevel.isAtLeastV()) {
+                    builder.setVendorData(configRequest.getVendorData());
+                }
+                configRequest = builder.build();
+            }
         } else {
             configRequest = new ConfigRequest.Builder().build();
         }
@@ -352,7 +367,7 @@ public class WifiAwareServiceImpl extends IWifiAwareManager.Stub {
         }
 
         if (mVerboseLoggingEnabled) {
-            Log.v(TAG, "connect: uid=" + uid + ", clientId=" + clientId + ", configRequest"
+            Log.v(TAG, "connect: uid=" + uid + ", clientId=" + clientId + ", configRequest="
                     + configRequest + ", notifyOnIdentityChanged=" + notifyOnIdentityChanged);
         }
 
@@ -834,5 +849,10 @@ public class WifiAwareServiceImpl extends IWifiAwareManager.Stub {
 
     private void enforceNetworkStackPermission() {
         mContext.enforceCallingOrSelfPermission(Manifest.permission.NETWORK_STACK, TAG);
+    }
+
+    private boolean checkNetworkStackPermission() {
+        return mContext.checkCallingOrSelfPermission(Manifest.permission.NETWORK_STACK)
+                == PackageManager.PERMISSION_GRANTED;
     }
 }
