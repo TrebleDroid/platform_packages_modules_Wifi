@@ -172,6 +172,9 @@ import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.ISuggestionConnectionStatusListener;
 import android.net.wifi.ISuggestionUserApprovalStatusListener;
 import android.net.wifi.ITrafficStateCallback;
+import android.net.wifi.ITwtCallback;
+import android.net.wifi.ITwtCapabilitiesListener;
+import android.net.wifi.ITwtStatsListener;
 import android.net.wifi.IWifiBandsListener;
 import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.IWifiLowLatencyLockListener;
@@ -206,6 +209,8 @@ import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.hotspot2.PasspointConfiguration;
 import android.net.wifi.hotspot2.pps.Credential;
 import android.net.wifi.hotspot2.pps.HomeSp;
+import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSessionCallback;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -490,7 +495,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Mock WifiRoamingModeManager mWifiRoamingModeManager;
     @Captor ArgumentCaptor<Intent> mIntentCaptor;
     @Captor ArgumentCaptor<List> mListCaptor;
-
+    @Mock TwtManager mTwtManager;
     @Rule
     // For frameworks
     public TestRule compatChangeRule = new PlatformCompatChangeRule();
@@ -675,6 +680,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 LocationManager.FUSED_PROVIDER, LocationManager.PASSIVE_PROVIDER,
                 LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER));
         when(mWifiInjector.getWifiRoamingModeManager()).thenReturn(mWifiRoamingModeManager);
+        when(mWifiInjector.getTwtManager()).thenReturn(mTwtManager);
 
         doAnswer(new AnswerWithArguments() {
             public void answer(Runnable onStoppedListener) throws Throwable {
@@ -12509,5 +12515,110 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiSettingsConfigStore, times(2)).get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED));
         inOrder.verify(listener).onResult(false);
+    }
+
+    @Test
+    public void testGetTwtCapabilities() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        ITwtCapabilitiesListener iTwtCapabilitiesListener = mock(ITwtCapabilitiesListener.class);
+        // Test permission check
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_DENIED);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.getTwtCapabilities(iTwtCapabilitiesListener, mExtras));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_GRANTED);
+        // Test with null parameters
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.getTwtCapabilities(null, mExtras));
+        // Test getTwtCapabilities call
+        mWifiServiceImpl.getTwtCapabilities(iTwtCapabilitiesListener, mExtras);
+        mLooper.dispatchAll();
+        verify(mTwtManager).getTwtCapabilities(eq(WIFI_IFACE_NAME), eq(iTwtCapabilitiesListener));
+    }
+
+    @Test
+    public void testSetupTwtSession() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        ITwtCallback iTwtCallback = mock(ITwtCallback.class);
+        TwtRequest twtRequest = mock(TwtRequest.class);
+        // Test permission check
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_DENIED);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.setupTwtSession(twtRequest, iTwtCallback, mExtras));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_GRANTED);
+        // Test with null parameters
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.setupTwtSession(null, iTwtCallback, mExtras));
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.setupTwtSession(twtRequest, null, mExtras));
+        // Test with station not connected
+        when(mClientModeManager.isConnected()).thenReturn(false);
+        mWifiServiceImpl.setupTwtSession(twtRequest, iTwtCallback, mExtras);
+        mLooper.dispatchAll();
+        verify(iTwtCallback).onFailure(eq(TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE));
+        // Test setupTwtSession with station connected
+        when(mClientModeManager.isConnected()).thenReturn(true);
+        mWifiServiceImpl.setupTwtSession(twtRequest, iTwtCallback, mExtras);
+        mLooper.dispatchAll();
+        verify(mTwtManager).setupTwtSession(eq(WIFI_IFACE_NAME), eq(twtRequest), eq(iTwtCallback),
+                eq(Binder.getCallingUid()));
+    }
+
+    @Test
+    public void testGetStatsTwtSession() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        int sessionId = 10;
+        ITwtStatsListener iTwtStatsListener = mock(ITwtStatsListener.class);
+        // Test permission check
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_DENIED);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.getStatsTwtSession(sessionId, iTwtStatsListener, mExtras));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_GRANTED);
+        // Test with null parameters
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.getStatsTwtSession(sessionId, null, mExtras));
+        // Test getStatsTwtSession call
+        mWifiServiceImpl.getStatsTwtSession(sessionId, iTwtStatsListener, mExtras);
+        mLooper.dispatchAll();
+        verify(mTwtManager).getStatsTwtSession(eq(WIFI_IFACE_NAME), eq(iTwtStatsListener),
+                eq(sessionId));
+    }
+
+    @Test
+    public void testTeardownTwtSession() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        int sessionId = 10;
+        // Test permission check
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_DENIED);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.teardownTwtSession(sessionId, mExtras));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_GRANTED);
+        // Test teardownTwtSession call
+        mWifiServiceImpl.teardownTwtSession(sessionId, mExtras);
+        mLooper.dispatchAll();
+        verify(mTwtManager).tearDownTwtSession(eq(WIFI_IFACE_NAME), eq(sessionId));
     }
 }

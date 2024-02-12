@@ -394,6 +394,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private WifiNetworkSelectionConfig mNetworkSelectionConfig;
     private ApplicationQosPolicyRequestHandler mApplicationQosPolicyRequestHandler;
     private final AfcManager mAfcManager;
+    private final TwtManager mTwtManager;
 
     /**
      * The wrapper of SoftApCallback is used in WifiService internally.
@@ -572,6 +573,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mApplicationQosPolicyRequestHandler = mWifiInjector.getApplicationQosPolicyRequestHandler();
         mWifiPulledAtomLogger = mWifiInjector.getWifiPulledAtomLogger();
         mAfcManager = mWifiInjector.getAfcManager();
+        mTwtManager = mWifiInjector.getTwtManager();
     }
 
     /**
@@ -869,6 +871,7 @@ public class WifiServiceImpl extends BaseWifiService {
             updateVerboseLoggingEnabled();
             mWifiInjector.getWifiDeviceStateChangeManager().handleBootCompleted();
             setPulledAtomCallbacks();
+            mTwtManager.registerWifiNativeTwtEvents();
         });
     }
 
@@ -8456,15 +8459,8 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new IllegalArgumentException("listener should not be null");
         }
         mWifiThreadRunner.post(() -> {
-            try {
-                // TODO: Implementation. Returning not supported.
-                Bundle twtCapabilities = new Bundle();
-                twtCapabilities.putBoolean(WifiManager.TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER,
-                        false);
-                listener.onResult(twtCapabilities);
-            } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage(), e);
-            }
+            mTwtManager.getTwtCapabilities(
+                    mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(), listener);
         });
     }
 
@@ -8473,16 +8469,59 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public void setupTwtSession(TwtRequest twtRequest, ITwtCallback iTwtCallback, Bundle extras) {
-        // TODO: Implementation
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        if (iTwtCallback == null) {
+            throw new IllegalArgumentException("Callback should not be null");
+        }
+        if (twtRequest == null) {
+            throw new IllegalArgumentException("twtRequest should not be null");
+        }
+        enforceAnyPermissionOf(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        int callingUid = Binder.getCallingUid();
+        if (mVerboseLoggingEnabled) {
+            mLog.info("setupTwtSession:  Uid=% Package Name=%").c(callingUid).c(
+                    getPackageName(extras)).flush();
+        }
+        mWifiThreadRunner.post(() -> {
+            try {
+                if (!mActiveModeWarden.getPrimaryClientModeManager().isConnected()) {
+                    iTwtCallback.onFailure(TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE);
+                    return;
+                }
+                mTwtManager.setupTwtSession(
+                        mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
+                        twtRequest, iTwtCallback, callingUid);
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage(), e);
+            }
+        });
     }
 
+    /**
     /**
      * See {@link TwtSession#getStats(Executor, Consumer)}}
      */
     @Override
     public void getStatsTwtSession(int sessionId, ITwtStatsListener iTwtStatsListener,
             Bundle extras) {
-        // TODO: Implementation
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        if (iTwtStatsListener == null) {
+            throw new IllegalArgumentException("Callback should not be null");
+        }
+        enforceAnyPermissionOf(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        if (mVerboseLoggingEnabled) {
+            mLog.info("getStatsTwtSession:  Uid=% Package Name=%").c(Binder.getCallingUid()).c(
+                    getPackageName(extras)).flush();
+        }
+        mWifiThreadRunner.post(() -> {
+            mTwtManager.getStatsTwtSession(
+                    mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
+                    iTwtStatsListener, sessionId);
+        });
     }
 
     /**
@@ -8490,7 +8529,18 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public void teardownTwtSession(int sessionId, Bundle extras) {
-        // TODO: Implementation
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        enforceAnyPermissionOf(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        if (mVerboseLoggingEnabled) {
+            mLog.info("teardownTwtSession:  Uid=% Package Name=%").c(Binder.getCallingUid()).c(
+                    getPackageName(extras)).flush();
+        }
+        mWifiThreadRunner.post(() -> {
+            mTwtManager.tearDownTwtSession(
+                    mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(), sessionId);
+        });
     }
 
     /**
