@@ -2327,8 +2327,16 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                         -> "NOTIFICATION_TYPE_ON_SUSPENSION_MODE_CHANGED";
                 case RunnerState.STATE_ENTER_CMD -> "Enter";
                 case RunnerState.STATE_EXIT_CMD -> "Exit";
+                case MESSAGE_TYPE_COMMAND -> "MESSAGE_TYPE_COMMAND";
+                case MESSAGE_TYPE_RESPONSE -> "MESSAGE_TYPE_RESPONSE";
+                case MESSAGE_TYPE_NOTIFICATION -> "MESSAGE_TYPE_NOTIFICATION";
+                case MESSAGE_TYPE_RESPONSE_TIMEOUT -> "MESSAGE_TYPE_RESPONSE_TIMEOUT";
+                case MESSAGE_TYPE_SEND_MESSAGE_TIMEOUT -> "MESSAGE_TYPE_SEND_MESSAGE_TIMEOUT";
+                case MESSAGE_TYPE_DATA_PATH_TIMEOUT -> "MESSAGE_TYPE_DATA_PATH_TIMEOUT";
+                case MESSAGE_TYPE_PAIRING_TIMEOUT -> "MESSAGE_TYPE_PAIRING_TIMEOUT";
+                case MESSAGE_TYPE_BOOTSTRAPPING_TIMEOUT -> "MESSAGE_TYPE_BOOTSTRAPPING_TIMEOUT";
                 default -> {
-                    Log.wtf(TAG, "unknown message what: " + what);
+                    Log.e(TAG, "unknown message what: " + what);
                     yield "what:" + what;
                 }
             };
