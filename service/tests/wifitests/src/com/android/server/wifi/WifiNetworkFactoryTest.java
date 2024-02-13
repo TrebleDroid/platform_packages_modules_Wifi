@@ -3240,9 +3240,17 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
     @Test
     public void testNetworkSpecifierUserApprovalConfigStoreLoad()
             throws Exception {
+        // Setup scan data for WPA-PSK networks.
+        setupScanData(SCAN_RESULT_TYPE_WPA_PSK,
+                TEST_SSID_1, TEST_SSID_2, TEST_SSID_3, TEST_SSID_4);
+
+        // Choose the matching scan result.
+        ScanResult matchingScanResult = mTestScanDatas[0].getResults()[0];
+        when(mWifiScanner.getSingleScanResults())
+                .thenReturn(Arrays.asList(mTestScanDatas[0].getResults()));
         Map<String, Set<AccessPoint>> approvedAccessPointsMapToRead = new HashMap<>();
         Set<AccessPoint> approvedAccessPoints = Set.of(
-                new AccessPoint(TEST_SSID_1, MacAddress.fromString(TEST_BSSID_1),
+                new AccessPoint(TEST_SSID_1, MacAddress.fromString(matchingScanResult.BSSID),
                             WifiConfiguration.SECURITY_TYPE_PSK));
         approvedAccessPointsMapToRead.put(TEST_PACKAGE_NAME_1, approvedAccessPoints);
         mDataSource.fromDeserialized(approvedAccessPointsMapToRead);
@@ -3251,7 +3259,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         PatternMatcher ssidPatternMatch =
                 new PatternMatcher(TEST_SSID_1, PatternMatcher.PATTERN_LITERAL);
         Pair<MacAddress, MacAddress> bssidPatternMatch =
-                Pair.create(MacAddress.fromString(TEST_BSSID_1),
+                Pair.create(MacAddress.fromString(matchingScanResult.BSSID),
                         MacAddress.BROADCAST_ADDRESS);
         attachWifiNetworkSpecifierAndAppInfo(
                 ssidPatternMatch, bssidPatternMatch, WifiConfigurationTestUtil.createPskNetwork(),
@@ -3313,6 +3321,8 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         // 2. Second request for the same access point (user approval bypass).
         ScanResult matchingScanResult = mTestScanDatas[0].getResults()[0];
+        when(mWifiScanner.getSingleScanResults())
+                .thenReturn(Arrays.asList(mTestScanDatas[0].getResults()));
 
         PatternMatcher ssidPatternMatch =
                 new PatternMatcher(TEST_SSID_1, PatternMatcher.PATTERN_LITERAL);
@@ -3369,6 +3379,8 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         // Choose the matching scan result.
         ScanResult matchingScanResult = mTestScanDatas[0].getResults()[0];
+        when(mWifiScanner.getSingleScanResults())
+                .thenReturn(Arrays.asList(mTestScanDatas[0].getResults()));
 
         // Setup CDM approval for the scan result.
         when(mCompanionDeviceManager.isDeviceAssociatedForWifiConnection(
@@ -3432,6 +3444,8 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         // Choose the matching scan result.
         ScanResult matchingScanResult = mTestScanDatas[0].getResults()[0];
+        when(mWifiScanner.getSingleScanResults())
+                .thenReturn(Arrays.asList(mTestScanDatas[0].getResults()));
 
         // Setup shell approval for the scan result.
         mWifiNetworkFactory.setUserApprovedApp(TEST_PACKAGE_NAME_1, true);

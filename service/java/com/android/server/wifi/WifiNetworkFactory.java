@@ -921,12 +921,12 @@ public class WifiNetworkFactory extends NetworkFactory {
                                 mActiveSpecificNetworkRequest.getRequestorPackageName()));
             }
 
-
-            if (!triggerConnectIfUserApprovedMatchFound(revokeNormalBypass)) {
+            ScanResult[] cachedScanResults = getFilteredCachedScanResults();
+            if (!triggerConnectIfUserApprovedMatchFound(revokeNormalBypass, cachedScanResults)) {
                 // Didn't find an approved match, send the matching results to UI and trigger
                 // periodic scans for finding a network in the request.
                 // Fetch the latest cached scan results to speed up network matching.
-                ScanResult[] cachedScanResults = getFilteredCachedScanResults();
+
                 if (mVerboseLoggingEnabled) {
                     Log.v(TAG, "Using cached " + cachedScanResults.length + " scan results");
                 }
@@ -1660,7 +1660,7 @@ public class WifiNetworkFactory extends NetworkFactory {
             ScanResult[] scanResults) {
         if (mActiveSpecificNetworkRequestSpecifier == null) {
             Log.e(TAG, "Scan results received with no active network request. Ignoring...");
-            return new ArrayList<>();
+            return Collections.emptyList();
         }
         List<ScanResult> matchedScanResults = new ArrayList<>();
         WifiNetworkSpecifier wns = mActiveSpecificNetworkRequestSpecifier;
@@ -1929,7 +1929,8 @@ public class WifiNetworkFactory extends NetworkFactory {
      *
      * @return true if a pre-approved network was found for connection, false otherwise.
      */
-    private boolean triggerConnectIfUserApprovedMatchFound(boolean revokeNormalBypass) {
+    private boolean triggerConnectIfUserApprovedMatchFound(boolean revokeNormalBypass,
+            ScanResult[] scanResults) {
         if (mActiveSpecificNetworkRequestSpecifier == null) return false;
         boolean requestForSingleAccessPoint = isActiveRequestForSingleAccessPoint();
         if (!requestForSingleAccessPoint && !isActiveRequestForSingleNetwork()) {
@@ -1954,7 +1955,9 @@ public class WifiNetworkFactory extends NetworkFactory {
             }
             return false;
         }
-        if (requestForSingleAccessPoint) {
+        List<ScanResult> matchedScanResults =
+                getNetworksMatchingActiveNetworkRequest(scanResults);
+        if (requestForSingleAccessPoint && !matchedScanResults.isEmpty()) {
             Log.v(TAG, "Approved access point found in matching scan results. "
                     + "Triggering connect " + ssid + "/" + bssid);
             // Request is for a single AP which is already approved. Connect directly.
