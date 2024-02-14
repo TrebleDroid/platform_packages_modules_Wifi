@@ -4023,6 +4023,12 @@ public class WifiManager {
      */
     public static final long WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT = 1L << 61;
 
+    /**
+     * Supports device-to-device connections when infra STA is disabled.
+     * @hide
+     */
+    public static final long WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED = 1L << 62;
+
     private long getSupportedFeatures() {
         try {
             return mService.getSupportedFeatures();
@@ -4301,6 +4307,15 @@ public class WifiManager {
      */
     public boolean isBridgedApConcurrencySupported() {
         return isFeatureSupported(WIFI_FEATURE_BRIDGED_AP);
+    }
+
+    /**
+     * @return true if this devices supports device-to-device (D2d) Wi-Fi use-cases
+     * such as Wi-Fi Direct when infra station (STA) is disabled.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public boolean isD2dSupportedWhenInfraStaDisabled() {
+        return isFeatureSupported(WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED);
     }
 
     /**

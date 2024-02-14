@@ -340,4 +340,16 @@ public class WifiGlobalsTest extends WifiBaseTest {
                 "true", true));
         assertTrue(mWifiGlobals.isBackgroundScanSupported());
     }
+
+    @Test
+    public void isD2dSupportedWhenInfraStaDisabled() {
+        mResources.setBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled,
+                true);
+        mWifiGlobals = new WifiGlobals(mContext);
+        assertTrue(mWifiGlobals.isD2dAllowedControlSupportedWhenInfraStaDisabled());
+        mResources.setBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled,
+                false);
+        mWifiGlobals = new WifiGlobals(mContext);
+        assertFalse(mWifiGlobals.isD2dAllowedControlSupportedWhenInfraStaDisabled());
+    }
 }

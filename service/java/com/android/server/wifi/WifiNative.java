@@ -21,6 +21,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_OWE;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_P2P;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_NATIVE_SUPPORTED_FEATURES;
 import static com.android.server.wifi.p2p.WifiP2pNative.P2P_IFACE_NAME;
 import static com.android.server.wifi.p2p.WifiP2pNative.P2P_INTERFACE_PROPERTY;
@@ -3746,6 +3747,19 @@ public class WifiNative {
             return mWifiVendorHal.canDeviceSupportCreateTypeCombo(
                     new SparseArray<Integer>() {{
                             put(HDM_CREATE_IFACE_STA, 2);
+                    }});
+        }
+    }
+
+    /**
+     * Returns whether P2p + STA concurrency is supported or not.
+     */
+    public boolean isP2pStaConcurrencySupported() {
+        synchronized (mLock) {
+            return mWifiVendorHal.canDeviceSupportCreateTypeCombo(
+                    new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_STA, 1);
+                            put(HDM_CREATE_IFACE_P2P, 1);
                     }});
         }
     }

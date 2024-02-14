@@ -1312,4 +1312,7 @@
          precedence over individual responder settings, effectively enforcing a system-wide maximum
          measurement interval for non-trigger based ranging operations. -->
     <integer translatable="false" name="config_wifi80211azMaxTimeBetweenNtbMeasurementsMicros">15000000</integer>
+
+    <!-- Boolean indicating whether the device supports d2d allowed control when infra STA is disabled  -->
+    <bool translatable="false" name ="config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled">false</bool>
 </resources>
