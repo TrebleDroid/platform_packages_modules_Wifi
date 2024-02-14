@@ -54,6 +54,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.BackgroundThread;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.aware.WifiAwareMetrics;
+import com.android.server.wifi.b2b.WifiRoamingModeManager;
 import com.android.server.wifi.coex.CoexManager;
 import com.android.server.wifi.hotspot2.PasspointManager;
 import com.android.server.wifi.hotspot2.PasspointNetworkNominateHelper;
@@ -266,6 +267,7 @@ public class WifiInjector {
     @NonNull private final WifiDialogManager mWifiDialogManager;
     @NonNull private final SsidTranslator mSsidTranslator;
     @NonNull private final ApplicationQosPolicyRequestHandler mApplicationQosPolicyRequestHandler;
+    private final WifiRoamingModeManager mWifiRoamingModeManager;
 
     public WifiInjector(WifiContext context) {
         if (context == null) {
@@ -615,6 +617,9 @@ public class WifiInjector {
         // {@link LocationManager#getCurrentLocation}, so we need to pass mContextWithAttributionTag
         // instead of mContext to the AfcManager.
         mAfcManager = new AfcManager(mContextWithAttributionTag, this);
+        mWifiRoamingModeManager = new WifiRoamingModeManager(mWifiNative,
+                mActiveModeWarden, new WifiRoamingConfigStore(mWifiConfigManager,
+                mWifiConfigStore));
     }
 
     /**
@@ -674,6 +679,7 @@ public class WifiInjector {
         mWifiDialogManager.enableVerboseLogging(verboseEnabled);
         mExternalPnoScanRequestManager.enableVerboseLogging(verboseEnabled);
         mMultiInternetWifiNetworkFactory.enableVerboseLogging(verboseEnabled);
+        mWifiRoamingModeManager.enableVerboseLogging(verboseEnabled);
     }
 
     public UserManager getUserManager() {
@@ -1307,5 +1313,9 @@ public class WifiInjector {
     @NonNull
     public AlarmManager getAlarmManager() {
         return mAlarmManager;
+    }
+
+    public WifiRoamingModeManager getWifiRoamingModeManager() {
+        return mWifiRoamingModeManager;
     }
 }

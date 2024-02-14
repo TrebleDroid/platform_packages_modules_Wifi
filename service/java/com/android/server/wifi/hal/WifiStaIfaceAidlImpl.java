@@ -56,6 +56,7 @@ import android.net.apf.ApfCapabilities;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiAnnotations;
 import android.net.wifi.WifiManager;
+import android.net.wifi.WifiManager.RoamingMode;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
 import android.net.wifi.WifiUsabilityStatsEntry;
@@ -715,6 +716,47 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
         }
     }
 
+    /**
+     * See comments for {@link IWifiStaIface#setRoamingMode(int)}
+     */
+    public @WifiStatusCode int setRoamingMode(@RoamingMode int roamingMode) {
+        final String methodStr = "setRoamingMode";
+        @WifiStatusCode int errorCode = WifiStatusCode.ERROR_UNKNOWN;
+        synchronized (mLock) {
+            try {
+                if (checkIfaceAndLogFailure(methodStr)) {
+                    mWifiStaIface.setRoamingState(frameworkToHalRoamingMode(roamingMode));
+                    errorCode = WifiStatusCode.SUCCESS;
+                }
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+                errorCode = WifiStatusCode.ERROR_NOT_STARTED;
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+                errorCode = e.errorCode;
+            } catch (IllegalArgumentException e) {
+                handleIllegalArgumentException(e, methodStr);
+                errorCode = WifiStatusCode.ERROR_INVALID_ARGS;
+            }
+            return errorCode;
+        }
+    }
+
+    private static byte frameworkToHalRoamingMode(
+            @WifiManager.RoamingMode int mode) {
+        switch (mode) {
+            case WifiManager.ROAMING_MODE_NONE:
+                return StaRoamingState.DISABLED;
+            case WifiManager.ROAMING_MODE_NORMAL:
+                return StaRoamingState.ENABLED;
+            case WifiManager.ROAMING_MODE_AGGRESSIVE:
+                return StaRoamingState.AGGRESSIVE;
+            default:
+                throw new IllegalArgumentException("frameworkToHalRoamingMode Invalid mode: "
+                        + mode);
+        }
+    }
+
     private class StaIfaceEventCallback extends IWifiStaIfaceEventCallback.Stub {
         @Override
         public void onBackgroundScanFailure(int cmdId) {
@@ -1068,6 +1110,10 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
         if (hasCapability(halFeatureSet,
                 android.hardware.wifi.IWifiStaIface.FeatureSetMask.SCAN_RAND)) {
             features |= WifiManager.WIFI_FEATURE_SCAN_RAND;
+        }
+        if (hasCapability(halFeatureSet,
+                android.hardware.wifi.IWifiStaIface.FeatureSetMask.ROAMING_MODE_CONTROL)) {
+            features |= WifiManager.WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT;
         }
         return features;
     }

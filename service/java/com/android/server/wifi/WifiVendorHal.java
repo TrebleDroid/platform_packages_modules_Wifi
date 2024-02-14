@@ -31,6 +31,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiManager;
+import android.net.wifi.WifiManager.RoamingMode;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
 import android.os.Handler;
@@ -2019,5 +2020,17 @@ public class WifiVendorHal {
     public boolean setAfcChannelAllowance(WifiChip.AfcChannelAllowance afcChannelAllowance) {
         if (mWifiChip == null) return false;
         return mWifiChip.setAfcChannelAllowance(afcChannelAllowance);
+    }
+
+    /**
+     * See {@link WifiNative#setRoamingMode(String, int)}.
+     */
+    public @WifiStatusCode int setRoamingMode(@NonNull String ifaceName,
+                                              @RoamingMode int roamingMode) {
+        synchronized (sLock) {
+            WifiStaIface iface = getStaIface(ifaceName);
+            if (iface == null) return WifiStatusCode.ERROR_WIFI_IFACE_INVALID;
+            return iface.setRoamingMode(roamingMode);
+        }
     }
 }

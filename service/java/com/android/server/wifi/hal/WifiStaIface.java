@@ -16,12 +16,16 @@
 
 package com.android.server.wifi.hal;
 
+import static android.net.wifi.WifiManager.ROAMING_MODE_NORMAL;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
+import android.hardware.wifi.WifiStatusCode;
 import android.net.MacAddress;
 import android.net.apf.ApfCapabilities;
 import android.net.wifi.ScanResult;
+import android.net.wifi.WifiManager.RoamingMode;
 import android.net.wifi.WifiScanner;
 import android.util.Log;
 
@@ -370,5 +374,13 @@ public class WifiStaIface implements WifiHal.WifiInterface {
     public boolean setDtimMultiplier(int multiplier) {
         return validateAndCall("setDtimMultiplier", false,
                 () -> mWifiStaIface.setDtimMultiplier(multiplier));
+    }
+
+    /**
+     * See comments for {@link IWifiStaIface#setRoamingMode(int)}
+     */
+    public @WifiStatusCode int setRoamingMode(@RoamingMode int roamingMode) {
+        return validateAndCall("setRoamingMode", ROAMING_MODE_NORMAL,
+                () -> mWifiStaIface.setRoamingMode(roamingMode));
     }
 }

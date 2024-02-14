@@ -120,6 +120,8 @@ import android.net.wifi.WifiUsabilityStatsEntry.ContentionTimeStats;
 import android.net.wifi.WifiUsabilityStatsEntry.LinkStats;
 import android.net.wifi.WifiUsabilityStatsEntry.RadioStats;
 import android.net.wifi.WifiUsabilityStatsEntry.RateStats;
+import android.net.wifi.twt.TwtCallback;
+import android.net.wifi.twt.TwtRequest;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -4157,5 +4159,76 @@ public class WifiManagerTest {
         mWifiManager.queryWepAllowed(executor, resultsSetCallback);
         verify(mWifiService).queryWepAllowed(
                 any(IBooleanListener.Stub.class));
+    }
+
+    @Test
+    public void testGetTwtCapabilities() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        Consumer<Bundle> resultCallback = mock(Consumer.class);
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        ArgumentCaptor<Bundle> bundleCaptor = ArgumentCaptor.forClass(Bundle.class);
+        // Null check
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.getTwtCapabilities(executor, null));
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.getTwtCapabilities(null, resultCallback));
+        // Get and verify
+        mWifiManager.getTwtCapabilities(executor, resultCallback);
+        verify(mWifiService).getTwtCapabilities(any(ITwtCapabilitiesListener.Stub.class),
+                bundleCaptor.capture());
+        verify(mContext.getAttributionSource()).equals(
+                bundleCaptor.getValue().getParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE));
+    }
+
+    @Test
+    public void testSetupTwtSession() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        TwtCallback resultCallback = mock(TwtCallback.class);
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        ArgumentCaptor<Bundle> bundleCaptor = ArgumentCaptor.forClass(Bundle.class);
+        TwtRequest twtRequest = mock(TwtRequest.class);
+        // Null check
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.setupTwtSession(null, executor, resultCallback));
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.setupTwtSession(twtRequest, null, resultCallback));
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.setupTwtSession(twtRequest, executor, null));
+        // Call twtSessionSetup and verify
+        mWifiManager.setupTwtSession(twtRequest, executor, resultCallback);
+        verify(mWifiService).setupTwtSession(any(TwtRequest.class), any(ITwtCallback.class),
+                bundleCaptor.capture());
+        verify(mContext.getAttributionSource()).equals(
+                bundleCaptor.getValue().getParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE));
+    }
+
+    @Test
+    public void testGetStatsTwtSession() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        Consumer<Bundle> resultCallback = mock(Consumer.class);
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        ArgumentCaptor<Bundle> bundleCaptor = ArgumentCaptor.forClass(Bundle.class);
+        // Null check
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.getStatsTwtSession(0, null, resultCallback));
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.getStatsTwtSession(0, executor, null));
+        // Call twtSessionGetStats and verify
+        mWifiManager.getStatsTwtSession(2, executor, resultCallback);
+        verify(mWifiService).getStatsTwtSession(eq(2), any(ITwtStatsListener.class),
+                bundleCaptor.capture());
+        verify(mContext.getAttributionSource()).equals(
+                bundleCaptor.getValue().getParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE));
+    }
+
+    @Test
+    public void testTeardownTwtSession() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        ArgumentCaptor<Bundle> bundleCaptor = ArgumentCaptor.forClass(Bundle.class);
+        // Call twtSessionTeardown and verify
+        mWifiManager.teardownTwtSession(10);
+        verify(mWifiService).teardownTwtSession(eq(10), bundleCaptor.capture());
+        verify(mContext.getAttributionSource()).equals(
+                bundleCaptor.getValue().getParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE));
     }
 }

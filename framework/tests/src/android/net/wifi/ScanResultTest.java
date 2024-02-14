@@ -263,6 +263,7 @@ public class ScanResultTest {
                 + "standard: 11ac, "
                 + "80211mcResponder: is not supported, "
                 + "80211azNtbResponder: is not supported, "
+                + "TWT Responder: no, "
                 + "Radio Chain Infos: null, interface name: test_ifname", scanResult.toString());
     }
 
@@ -286,6 +287,7 @@ public class ScanResultTest {
                 + "standard: 11ac, "
                 + "80211mcResponder: is not supported, "
                 + "80211azNtbResponder: is not supported, "
+                + "TWT Responder: no, "
                 + "Radio Chain Infos: [RadioChainInfo: id=0, level=-45, "
                 + "RadioChainInfo: id=1, level=-54], interface name: test_ifname",
                 scanResult.toString());
@@ -305,6 +307,7 @@ public class ScanResultTest {
                 + "standard: 11ac, "
                 + "80211mcResponder: is not supported, "
                 + "80211azNtbResponder: is not supported, "
+                + "TWT Responder: no, "
                 + "Radio Chain Infos: null, interface name: test_ifname", scanResult.toString());
     }
 

@@ -45,6 +45,7 @@ import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
+import android.net.wifi.WifiManager.RoamingMode;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiScanner.ScanData;
 import android.net.wifi.WifiSsid;
@@ -5316,4 +5317,15 @@ public class WifiNative {
         mSupplicantStaIfaceHal.disableMscs(ifaceName);
     }
 
+    /**
+     * Set the roaming mode value.
+     *
+     * @param ifaceName   Name of the interface.
+     * @param roamingMode {@link android.net.wifi.WifiManager.RoamingMode}.
+     * @return {@link WifiStatusCode#SUCCESS} if success, otherwise error code.
+     */
+    public @WifiStatusCode int setRoamingMode(@NonNull String ifaceName,
+                                              @RoamingMode int roamingMode) {
+        return mWifiVendorHal.setRoamingMode(ifaceName, roamingMode);
+    }
 }

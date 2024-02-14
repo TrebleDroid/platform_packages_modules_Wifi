@@ -729,6 +729,7 @@ package android.net.wifi {
     method @NonNull @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.OVERRIDE_WIFI_CONFIG}) public android.net.wifi.SoftApConfiguration getSoftApConfiguration();
     method @NonNull @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION}, conditional=true) public java.util.Set<android.net.wifi.WifiSsid> getSsidsAllowlist();
     method @FlaggedApi("com.android.wifi.flags.mlo_link_capabilities_info") @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public void getSupportedSimultaneousBandCombinations(@NonNull java.util.concurrent.Executor, @NonNull java.util.function.Consumer<java.util.List<int[]>>);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public void getTwtCapabilities(@NonNull java.util.concurrent.Executor, @NonNull java.util.function.Consumer<android.os.Bundle>);
     method public int getVerboseLoggingLevel();
     method @RequiresPermission(android.Manifest.permission.ACCESS_WIFI_STATE) public void getWifiActivityEnergyInfoAsync(@NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.WifiManager.OnWifiActivityEnergyInfoListener);
     method @Deprecated @Nullable @RequiresPermission(android.Manifest.permission.ACCESS_WIFI_STATE) public android.net.wifi.WifiConfiguration getWifiApConfiguration();
@@ -796,6 +797,7 @@ package android.net.wifi {
     method @RequiresPermission(android.Manifest.permission.WIFI_UPDATE_USABILITY_STATS_SCORE) public boolean setWifiConnectedNetworkScorer(@NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.WifiManager.WifiConnectedNetworkScorer);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void setWifiPasspointEnabled(boolean);
     method @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public boolean setWifiScoringEnabled(boolean);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public void setupTwtSession(@NonNull android.net.wifi.twt.TwtRequest, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.twt.TwtCallback);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void startEasyConnectAsConfiguratorInitiator(@NonNull String, int, int, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.EasyConnectStatusCallback);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void startEasyConnectAsEnrolleeInitiator(@NonNull String, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.EasyConnectStatusCallback);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void startEasyConnectAsEnrolleeResponder(@Nullable String, int, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.EasyConnectStatusCallback);
@@ -914,6 +916,11 @@ package android.net.wifi {
     field public static final int SAP_START_FAILURE_NO_CHANNEL = 1; // 0x1
     field public static final int SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION = 2; // 0x2
     field public static final int SAP_START_FAILURE_USER_REJECTED = 3; // 0x3
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final String TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER = "key_requester";
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final String TWT_CAPABILITIES_KEY_INT_MAX_WAKE_DURATION_MICROS = "key_max_wake_duration";
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final String TWT_CAPABILITIES_KEY_INT_MIN_WAKE_DURATION_MICROS = "key_min_wake_duration";
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final String TWT_CAPABILITIES_KEY_LONG_MAX_WAKE_INTERVAL_MICROS = "key_max_wake_interval";
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final String TWT_CAPABILITIES_KEY_LONG_MIN_WAKE_INTERVAL_MICROS = "key_min_wake_interval";
     field public static final int VERBOSE_LOGGING_LEVEL_DISABLED = 0; // 0x0
     field public static final int VERBOSE_LOGGING_LEVEL_ENABLED = 1; // 0x1
     field public static final int VERBOSE_LOGGING_LEVEL_ENABLED_SHOW_KEY = 2; // 0x2
@@ -1693,6 +1700,60 @@ package android.net.wifi.rtt {
   public class WifiRttManager {
     method @RequiresPermission(allOf={android.Manifest.permission.LOCATION_HARDWARE}) public void cancelRanging(@Nullable android.os.WorkSource);
     method @RequiresPermission(allOf={android.Manifest.permission.LOCATION_HARDWARE, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.CHANGE_WIFI_STATE, android.Manifest.permission.ACCESS_WIFI_STATE, android.Manifest.permission.NEARBY_WIFI_DEVICES}, conditional=true) public void startRanging(@Nullable android.os.WorkSource, @NonNull android.net.wifi.rtt.RangingRequest, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.rtt.RangingResultCallback);
+  }
+
+}
+
+package android.net.wifi.twt {
+
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public interface TwtCallback {
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onCreate(@NonNull android.net.wifi.twt.TwtSession);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onFailure(int);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onTeardown(int);
+    field public static final int TWT_ERROR_CODE_AP_NOT_SUPPORTED = 1; // 0x1
+    field public static final int TWT_ERROR_CODE_AP_OUI_BLOCKLISTED = 2; // 0x2
+    field public static final int TWT_ERROR_CODE_AP_REJECTED = 3; // 0x3
+    field public static final int TWT_ERROR_CODE_FAIL = 0; // 0x0
+    field public static final int TWT_ERROR_CODE_INVALID_PARAMS = 4; // 0x4
+    field public static final int TWT_ERROR_CODE_MAX_SESSIONS_REACHED = 5; // 0x5
+    field public static final int TWT_ERROR_CODE_NOT_AVAILABLE = 6; // 0x6
+    field public static final int TWT_ERROR_CODE_NOT_SUPPORTED = 7; // 0x7
+    field public static final int TWT_ERROR_CODE_TIMEOUT = 8; // 0x8
+    field public static final int TWT_REASON_CODE_INTERNALLY_INITIATED = 2; // 0x2
+    field public static final int TWT_REASON_CODE_LOCALLY_REQUESTED = 1; // 0x1
+    field public static final int TWT_REASON_CODE_PEER_INITIATED = 3; // 0x3
+    field public static final int TWT_REASON_CODE_UNKNOWN = 0; // 0x0
+  }
+
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public final class TwtRequest implements android.os.Parcelable {
+    method public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @IntRange(from=android.net.wifi.MloLink.INVALID_MLO_LINK_ID, to=0xf) public int getLinkId();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getMaxWakeDurationMicros();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public long getMaxWakeIntervalMicros();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getMinWakeDurationMicros();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public long getMinWakeIntervalMicros();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.twt.TwtRequest> CREATOR;
+  }
+
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final class TwtRequest.Builder {
+    ctor @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public TwtRequest.Builder(int, int, long, long);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @NonNull public android.net.wifi.twt.TwtRequest build();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @IntRange(from=0x0, to=0xf) @NonNull public android.net.wifi.twt.TwtRequest.Builder setLinkId(int);
+  }
+
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public interface TwtSession {
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getMloLinkId();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void getStats(@NonNull java.util.concurrent.Executor, @NonNull java.util.function.Consumer<android.os.Bundle>);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getWakeDurationMicros();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public long getWakeIntervalMicros();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void teardown();
+    field public static final String TWT_STATS_KEY_INT_AVERAGE_EOSP_DURATION_MICROS = "key_avg_eosp_dur";
+    field public static final String TWT_STATS_KEY_INT_AVERAGE_RX_PACKET_COUNT = "key_avg_rx_pkt_count";
+    field public static final String TWT_STATS_KEY_INT_AVERAGE_RX_PACKET_SIZE = "key_avg_rx_pkt_size";
+    field public static final String TWT_STATS_KEY_INT_AVERAGE_TX_PACKET_COUNT = "key_avg_tx_pkt_count";
+    field public static final String TWT_STATS_KEY_INT_AVERAGE_TX_PACKET_SIZE = "key_avg_tx_pkt_size";
+    field public static final String TWT_STATS_KEY_INT_EOSP_COUNT = "key_eosp_count";
   }
 
 }

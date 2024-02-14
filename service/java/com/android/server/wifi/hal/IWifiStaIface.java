@@ -17,8 +17,10 @@
 package com.android.server.wifi.hal;
 
 import android.annotation.Nullable;
+import android.hardware.wifi.WifiStatusCode;
 import android.net.MacAddress;
 import android.net.apf.ApfCapabilities;
+import android.net.wifi.WifiManager.RoamingMode;
 import android.net.wifi.WifiScanner;
 
 import com.android.server.wifi.WifiLinkLayerStats;
@@ -265,4 +267,12 @@ public interface IWifiStaIface {
      * @return true if successful, false otherwise.
      */
     boolean setDtimMultiplier(int multiplier);
+
+    /**
+     * Set the roaming mode.
+     *
+     * @param roamingMode {@link android.net.wifi.WifiManager.RoamingMode}.
+     * @return {@link WifiStatusCode#SUCCESS} if success, otherwise error code.
+     */
+    @WifiStatusCode int setRoamingMode(@RoamingMode int roamingMode);
 }
