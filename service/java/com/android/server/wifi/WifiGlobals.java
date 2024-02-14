@@ -55,6 +55,7 @@ public class WifiGlobals {
     private final AtomicBoolean mIsBluetoothConnected = new AtomicBoolean(false);
     // Set default to false to check if the value will be overridden by WifiSettingConfigStore.
     private final AtomicBoolean mIsWepAllowed = new AtomicBoolean(false);
+    private final AtomicBoolean mIsD2dStaConcurrencySupported = new AtomicBoolean(false);
     private final AtomicInteger mSendDhcpHostnameRestriction =
             new AtomicInteger(WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
 
@@ -643,6 +644,21 @@ public class WifiGlobals {
     }
 
     /**
+     * Set whether the device supports device-to-device + STA concurrency.
+     */
+    public void setD2dStaConcurrencySupported(boolean isSupported) {
+        mIsD2dStaConcurrencySupported.set(isSupported);
+    }
+
+    /**
+     * Returns whether the device supports device-to-device when infra STA is disabled.
+     */
+    public boolean isD2dSupportedWhenInfraStaDisabled() {
+        return mD2dAllowedControlSupportedWhenInfraStaDisabled
+                && !mIsD2dStaConcurrencySupported.get();
+    }
+
+    /**
      * Set the global dhcp hostname restriction.
      */
     public void setSendDhcpHostnameRestriction(
@@ -663,13 +679,6 @@ public class WifiGlobals {
      */
     public long getWifiConfigMaxDisableDurationMs() {
         return mWifiConfigMaxDisableDurationMs;
-    }
-
-    /**
-     * Get whether or not d2d is available when infra STA is disabled.
-     */
-    public boolean isD2dAllowedControlSupportedWhenInfraStaDisabled() {
-        return mD2dAllowedControlSupportedWhenInfraStaDisabled;
     }
 
     /**
@@ -722,6 +731,8 @@ public class WifiGlobals {
         pw.println("mWifiConfigMaxDisableDurationMs=" + mWifiConfigMaxDisableDurationMs);
         pw.println("mD2dAllowedControlSupportedWhenInfraStaDisabled="
                 + mD2dAllowedControlSupportedWhenInfraStaDisabled);
+        pw.println("IsD2dSupportedWhenInfraStaDisabled="
+                + isD2dSupportedWhenInfraStaDisabled());
         for (int i = 0; i < mCarrierSpecificEapFailureConfigMapPerCarrierId.size(); i++) {
             int carrierId = mCarrierSpecificEapFailureConfigMapPerCarrierId.keyAt(i);
             SparseArray<CarrierSpecificEapFailureConfig> perFailureMap =

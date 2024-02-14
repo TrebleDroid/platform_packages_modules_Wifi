@@ -69,6 +69,7 @@ import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_TR
 import static com.android.server.wifi.LocalOnlyHotspotRequestInfo.HOTSPOT_NO_ERROR;
 import static com.android.server.wifi.SelfRecovery.REASON_API_CALL;
 import static com.android.server.wifi.WifiConfigurationTestUtil.SECURITY_NONE;
+import static com.android.server.wifi.WifiSettingsConfigStore.D2D_ALLOWED_WHEN_INFRA_STA_DISABLED;
 import static com.android.server.wifi.WifiSettingsConfigStore.SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI;
 import static com.android.server.wifi.WifiSettingsConfigStore.SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_STA_FACTORY_MAC_ADDRESS;
@@ -11929,7 +11930,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiSettingsConfigStore).get(eq(WIFI_WEP_ALLOWED));
         verify(mWifiGlobals).setWepAllowed(eq(false));
-        // verify setWepAllowed with MANAGE_WIFI_NETWORK_SELECTION
+        // verify setWepAllowed with MANAGE_WIFI_NETWORK_SETTING
         when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
         mWifiServiceImpl.setWepAllowed(true);
         mLooper.dispatchAll();
@@ -12230,5 +12231,50 @@ public class WifiServiceImplTest extends WifiBaseTest {
         assertTrue(mWifiServiceImpl.isPnoSupported());
         when(mWifiGlobals.isBackgroundScanSupported()).thenReturn(true);
         assertTrue(mWifiServiceImpl.isPnoSupported());
+    }
+
+    @Test
+    public void testSetD2dAllowedWhenInfraStaDisabled() throws Exception {
+        // by default no permissions are given so the call should fail.
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.setD2dAllowedWhenInfraStaDisabled(true));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        // verify setD2DAllowedWhenInfraStaDisabled with MANAGE_WIFI_NETWORK_SETTING
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        mWifiServiceImpl.setD2dAllowedWhenInfraStaDisabled(true);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).put(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED), eq(true));
+
+        mWifiServiceImpl.setD2dAllowedWhenInfraStaDisabled(false);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).put(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED), eq(false));
+    }
+
+    @Test
+    public void testQueryD2dAllowedWhenInfraStaDisabled() throws Exception {
+        // null listener ==> IllegalArgumentException
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.queryD2dAllowedWhenInfraStaDisabled(null));
+
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        IBooleanListener listener = mock(IBooleanListener.class);
+
+        InOrder inOrder = inOrder(listener);
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(true);
+        mWifiServiceImpl.queryD2dAllowedWhenInfraStaDisabled(listener);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED));
+        inOrder.verify(listener).onResult(true);
+
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(false);
+        mWifiServiceImpl.queryD2dAllowedWhenInfraStaDisabled(listener);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore, times(2)).get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED));
+        inOrder.verify(listener).onResult(false);
     }
 }

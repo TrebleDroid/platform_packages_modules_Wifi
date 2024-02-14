@@ -5326,9 +5326,11 @@ public class ActiveModeWardenTest extends WifiBaseTest {
 
     @Test
     public void testD2dSupportedWhenInfraStaDisabled() throws Exception {
-        when(mWifiGlobals.isD2dAllowedControlSupportedWhenInfraStaDisabled()).thenReturn(true);
-        when(mWifiNative.isP2pStaConcurrencySupported()).thenReturn(false);
-        enterClientModeActiveState(false,
-                TEST_FEATURE_SET | WifiManager.WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED);
+        when(mWifiNative.isP2pStaConcurrencySupported()).thenReturn(true);
+        when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
+        mActiveModeWarden = createActiveModeWarden();
+        mActiveModeWarden.start();
+        verify(mWifiGlobals).setD2dStaConcurrencySupported(true);
+        verify(mWifiGlobals, atLeastOnce()).isD2dSupportedWhenInfraStaDisabled();
     }
 }

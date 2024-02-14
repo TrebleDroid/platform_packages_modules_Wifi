@@ -4301,4 +4301,27 @@ public class WifiManagerTest {
                 .thenReturn(new Long(~WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED));
         assertFalse(mWifiManager.isD2dSupportedWhenInfraStaDisabled());
     }
+
+    @Test
+    public void testSetD2dAllowedInfraStaDisabled() throws Exception {
+        mWifiManager.setD2dAllowedWhenInfraStaDisabled(true);
+        verify(mWifiService).setD2dAllowedWhenInfraStaDisabled(true);
+        mWifiManager.setD2dAllowedWhenInfraStaDisabled(false);
+        verify(mWifiService).setD2dAllowedWhenInfraStaDisabled(false);
+    }
+
+    @Test
+    public void testQueryD2dAllowedInfraStaDisabled() throws Exception {
+        Consumer<Boolean> resultsSetCallback = mock(Consumer.class);
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        // Null executor/callback exception.
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.queryD2dAllowedWhenInfraStaDisabled(null, resultsSetCallback));
+        assertThrows("null listener should trigger exception", NullPointerException.class,
+                () -> mWifiManager.queryD2dAllowedWhenInfraStaDisabled(executor, null));
+        // Set and verify.
+        mWifiManager.queryD2dAllowedWhenInfraStaDisabled(executor, resultsSetCallback);
+        verify(mWifiService).queryD2dAllowedWhenInfraStaDisabled(
+                any(IBooleanListener.Stub.class));
+    }
 }

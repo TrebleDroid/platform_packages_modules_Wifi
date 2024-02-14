@@ -12645,4 +12645,68 @@ public class WifiManager {
             throw e.rethrowFromSystemServer();
         }
     }
+
+    /**
+     * Allows a privileged application to set whether or not this device allows
+     * device-to-device connections when infra STA is disabled. Callers can use
+     * {@link #queryD2dAllowedWhenInfraStaDisabled(Executor, Consumer)} to check the currently
+     * set value.
+     *
+     * Note: This functionality is supported only when the device support device-to-device
+     * when infra STA is disabled. Use {@link #isD2dSupportedWhenInfraStaDisabled()} to
+     * know if device supported device-to-device when infra STA is disabled.
+     *
+     * @param isAllowed whether or not the device allows to device-to-device connectivity when
+     *                  infra STA is disabled.
+     * @throws SecurityException if the caller does not have permission.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD
+    })
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void setD2dAllowedWhenInfraStaDisabled(boolean isAllowed) {
+        try {
+            mService.setD2dAllowedWhenInfraStaDisabled(isAllowed);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Query whether or not this device is configured to allow D2d connection when
+     * infra STA is disabled.
+     * see: {@link #setD2dAllowedWhenInfraStaDisabled(boolean)}.
+     *
+     *
+     * @param executor The executor on which callback will be invoked.
+     * @param resultsCallback An asynchronous callback that will return {@code Boolean} indicating
+     *                        whether device-to-device connection is allowed or disallowed
+     *                        when infra STA is disabled.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public void queryD2dAllowedWhenInfraStaDisabled(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<Boolean> resultsCallback) {
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
+        try {
+            mService.queryD2dAllowedWhenInfraStaDisabled(
+                    new IBooleanListener.Stub() {
+                        @Override
+                        public void onResult(boolean value) {
+                            Binder.clearCallingIdentity();
+                            executor.execute(() -> {
+                                resultsCallback.accept(value);
+                            });
+                        }
+                    });
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
 }
