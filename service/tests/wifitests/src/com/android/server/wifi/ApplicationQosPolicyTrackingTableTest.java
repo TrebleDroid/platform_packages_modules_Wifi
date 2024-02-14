@@ -20,7 +20,10 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import android.net.wifi.QosCharacteristics;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.WifiManager;
 
@@ -54,6 +57,20 @@ public class ApplicationQosPolicyTrackingTableTest {
                     policyIdStart + i, QosPolicyParams.DIRECTION_DOWNLINK)
                     .setUserPriority(QosPolicyParams.USER_PRIORITY_BACKGROUND_LOW)
                     .setIpVersion(QosPolicyParams.IP_VERSION_4)
+                    .build());
+        }
+        return policyList;
+    }
+
+    private List<QosPolicyParams> generateUplinkPolicyList(int size, int policyIdStart) {
+        QosCharacteristics mockQosCharacteristics = mock(QosCharacteristics.class);
+        when(mockQosCharacteristics.validate()).thenReturn(true);
+
+        List<QosPolicyParams> policyList = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            policyList.add(new QosPolicyParams.Builder(
+                    policyIdStart + i, QosPolicyParams.DIRECTION_UPLINK)
+                    .setQosCharacteristics(mockQosCharacteristics)
                     .build());
         }
         return policyList;
@@ -264,22 +281,53 @@ public class ApplicationQosPolicyTrackingTableTest {
     }
 
     /**
-     * Tests the {@link ApplicationQosPolicyTrackingTable#getAllPolicies()} method.
+     * Tests the {@link ApplicationQosPolicyTrackingTable#getAllPolicies(int)} method when
+     * all policies have the same direction.
      */
     @Test
-    public void testGetAllPolicies() {
+    public void testGetAllPoliciesSameDirection() {
         // Empty table should return an empty list.
-        List<QosPolicyParams> retrievedPolicies = mDut.getAllPolicies();
+        List<QosPolicyParams> retrievedPolicies =
+                mDut.getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK);
         assertTrue(retrievedPolicies.isEmpty());
 
-        // Fill table with policies from multiple requesters.
+        // Fill table with downlink policies from multiple requesters.
         List<QosPolicyParams> policyList = generatePolicyList(
                 NUM_VIRTUAL_POLICY_IDS / 2, TEST_PHYSICAL_POLICY_ID_START);
         mDut.addPolicies(policyList, TEST_UID);
         mDut.addPolicies(policyList, TEST_UID + 1);
 
         // getAllPolicies should return all policies across all requesters.
-        retrievedPolicies = mDut.getAllPolicies();
+        retrievedPolicies = mDut.getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK);
         assertEquals(NUM_VIRTUAL_POLICY_IDS, retrievedPolicies.size());
+    }
+
+    /**
+     * Tests the {@link ApplicationQosPolicyTrackingTable#getAllPolicies(int)} method when
+     * the policies in the table have different directions.
+     */
+    @Test
+    public void testGetAllPoliciesDifferentDirection() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        List<QosPolicyParams> downlinkPolicies = generatePolicyList(
+                NUM_VIRTUAL_POLICY_IDS / 2, TEST_PHYSICAL_POLICY_ID_START);
+        mDut.addPolicies(downlinkPolicies, TEST_UID);
+
+        // Table should contain several downlink and no uplink policies.
+        List<QosPolicyParams> retrievedPolicies =
+                mDut.getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK);
+        assertEquals(downlinkPolicies.size(), retrievedPolicies.size());
+        retrievedPolicies = mDut.getAllPolicies(QosPolicyParams.DIRECTION_UPLINK);
+        assertEquals(0, retrievedPolicies.size());
+
+        List<QosPolicyParams> uplinkPolicies = generateUplinkPolicyList(
+                NUM_VIRTUAL_POLICY_IDS / 2, TEST_PHYSICAL_POLICY_ID_START);
+        mDut.addPolicies(uplinkPolicies, TEST_UID + 1);
+
+        // Table should contain both uplink and downlink policies.
+        retrievedPolicies = mDut.getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK);
+        assertEquals(downlinkPolicies.size(), retrievedPolicies.size());
+        retrievedPolicies = mDut.getAllPolicies(QosPolicyParams.DIRECTION_UPLINK);
+        assertEquals(uplinkPolicies.size(), retrievedPolicies.size());
     }
 }

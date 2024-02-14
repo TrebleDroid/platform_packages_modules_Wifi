@@ -214,13 +214,18 @@ public class ApplicationQosPolicyTrackingTable {
     /**
      * Get all policies that are tracked by this table.
      *
+     * @param direction Direction of the policies to retrieve.
      * @return List of policies, or empty list if there are no policies in the table.
      */
-    public List<QosPolicyParams> getAllPolicies() {
+    public List<QosPolicyParams> getAllPolicies(@QosPolicyParams.Direction int direction) {
         if (mPolicyHashToPolicyMap.isEmpty()) {
             return new ArrayList<>();
         }
-        return mPolicyHashToPolicyMap.values().stream().toList();
+        return mPolicyHashToPolicyMap
+                .values()
+                .stream()
+                .filter(p -> p.getDirection() == direction)
+                .toList();
     }
 
     /**
