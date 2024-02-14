@@ -56,8 +56,7 @@ public class WifiGlobals {
     // Set default to false to check if the value will be overridden by WifiSettingConfigStore.
     private final AtomicBoolean mIsWepAllowed = new AtomicBoolean(false);
     private final AtomicBoolean mIsD2dStaConcurrencySupported = new AtomicBoolean(false);
-    private final AtomicInteger mSendDhcpHostnameRestriction =
-            new AtomicInteger(WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
+    private final AtomicInteger mSendDhcpHostnameRestriction = new AtomicInteger();
 
     // These are read from the overlay, cache them after boot up.
     private final boolean mIsWpa3SaeUpgradeEnabled;
