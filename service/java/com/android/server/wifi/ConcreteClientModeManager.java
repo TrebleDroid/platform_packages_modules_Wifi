@@ -475,6 +475,10 @@ public class ConcreteClientModeManager implements ClientModeManager {
      * Get deferring time before turning off WiFi.
      */
     private int getWifiOffDeferringTimeMs() {
+        if (mRole != ROLE_CLIENT_PRIMARY && !isSecondaryInternet()) {
+            Log.d(getTag(), "Do not defer stop for non-internet providing CMMs");
+            return 0;
+        }
         SubscriptionManager subscriptionManager =
                 mContext.getSystemService(SubscriptionManager.class);
         if (subscriptionManager == null) {
