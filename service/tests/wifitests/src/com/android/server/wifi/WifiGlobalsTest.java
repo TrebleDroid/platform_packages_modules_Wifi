@@ -290,6 +290,17 @@ public class WifiGlobalsTest extends WifiBaseTest {
         assertFalse(mWifiGlobals.isWepAllowed());
     }
 
+
+    @Test
+    public void isSwPnoEnabled() {
+        mResources.setBoolean(R.bool.config_wifiSwPnoEnabled, true);
+        mWifiGlobals = new WifiGlobals(mContext);
+        assertTrue(mWifiGlobals.isSwPnoEnabled());
+        mResources.setBoolean(R.bool.config_wifiSwPnoEnabled, false);
+        mWifiGlobals = new WifiGlobals(mContext);
+        assertFalse(mWifiGlobals.isSwPnoEnabled());
+    }
+
     /**
      * Verify Force Overlay Config Value
      */
