@@ -36,6 +36,7 @@ import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
+import android.annotation.StringDef;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.SystemService;
@@ -63,6 +64,9 @@ import android.net.wifi.hotspot2.ProvisioningCallback;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.net.wifi.twt.TwtCallback;
+import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSession;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -2149,6 +2153,38 @@ public class WifiManager {
     }
 
     /**
+     * Roaming is disabled.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int ROAMING_MODE_NONE = 0;
+
+    /**
+     * Chipset has roaming trigger capability based on the score calculated
+     * using multiple parameters. If device is configured to this mode then it
+     * will be using chipset's normal (default) roaming.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int ROAMING_MODE_NORMAL = 1;
+
+    /**
+     * Allows the device to roam more quickly than the normal roaming mode.
+     * Used in cases such as where APs are installed in a high density.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int ROAMING_MODE_AGGRESSIVE = 2;
+
+    /**
+     * @hide
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = {"ROAMING_MODE_"}, value = {
+            ROAMING_MODE_NONE,
+            ROAMING_MODE_NORMAL,
+            ROAMING_MODE_AGGRESSIVE})
+    public @interface RoamingMode {
+    }
+
+    /**
      * Create a new WifiManager instance.
      * Applications will almost always want to use
      * {@link android.content.Context#getSystemService Context.getSystemService} to retrieve
@@ -3980,6 +4016,12 @@ public class WifiManager {
      * @hide
      */
     public static final long WIFI_FEATURE_WPA_PERSONAL = 1L << 60;
+
+    /**
+     * Support for Roaming Mode
+     * @hide
+     */
+    public static final long WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT = 1L << 61;
 
     private long getSupportedFeatures() {
         try {
@@ -12220,6 +12262,370 @@ public class WifiManager {
                             });
                         }
                     });
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * @return true if this device supports Aggressive roaming mode
+     * {@link #setPerSsidRoamingMode(WifiSsid, int)}
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public boolean isAggressiveRoamingModeSupported() {
+        return isFeatureSupported(WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT);
+    }
+
+    /**
+     * This API allows a privileged application to set roaming mode per SSID.
+     *
+     * Available for DO/COPE apps.
+     * Other apps require {@code android.Manifest.permission#NETWORK_SETTINGS} or
+     * {@code android.Manifest.permission#MANAGE_WIFI_NETWORK_SELECTION} permission.
+     *
+     * @param ssid SSID to be mapped to apply roaming policy
+     * @param roamingMode refer {@link RoamingMode} for supported modes.
+     * @throws IllegalArgumentException if mode value is not in {@link RoamingMode}.
+     * @throws NullPointerException if the caller provided a null input.
+     * @throws SecurityException if caller does not have the required permission.
+     * @throws UnsupportedOperationException if the set operation is not supported on this SDK or
+     *                                       if the feature is not available
+     *                                       {@link #isAggressiveRoamingModeSupported()}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @SuppressLint("RequiresPermission")
+    public void setPerSsidRoamingMode(@NonNull WifiSsid ssid, @RoamingMode int roamingMode) {
+        if (roamingMode < ROAMING_MODE_NONE || roamingMode > ROAMING_MODE_AGGRESSIVE) {
+            throw new IllegalArgumentException("invalid roaming mode: " + roamingMode);
+        }
+        Objects.requireNonNull(ssid, "ssid cannot be null");
+        try {
+            mService.setPerSsidRoamingMode(ssid, roamingMode, mContext.getOpPackageName());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * This API allows a privileged application to remove roaming mode policy
+     * configured using the {@link #setPerSsidRoamingMode(WifiSsid, int)}.
+     *
+     * Available for DO/COPE apps.
+     * Other apps require {@code android.Manifest.permission#NETWORK_SETTINGS} or
+     * {@code android.Manifest.permission#MANAGE_WIFI_NETWORK_SELECTION} permission.
+     *
+     * @param ssid SSID to be removed from the roaming mode policy.
+     * @throws NullPointerException if the caller provided a null input.
+     * @throws SecurityException if caller does not have the required permission.
+     * @throws UnsupportedOperationException if the set operation is not supported on this SDK or
+     *                                       if the feature is not available
+     *                                       {@link #isAggressiveRoamingModeSupported()}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @SuppressLint("RequiresPermission")
+    public void removePerSsidRoamingMode(@NonNull WifiSsid ssid) {
+        Objects.requireNonNull(ssid, "ssid cannot be null");
+        try {
+            mService.removePerSsidRoamingMode(ssid, mContext.getOpPackageName());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * This API allows a privileged application to get roaming mode policies
+     * configured using the {@link #setPerSsidRoamingMode(WifiSsid, int)}.
+     *
+     * Available for DO/COPE apps.
+     * Other apps require {@code android.Manifest.permission#NETWORK_SETTINGS} or
+     * {@code android.Manifest.permission#MANAGE_WIFI_NETWORK_SELECTION} permission.
+     *
+     * @param executor The executor on which callback will be invoked.
+     * @param resultsCallback An asynchronous callback that will return the corresponding
+     *                        roaming policies for the API caller.
+     * @throws SecurityException if caller does not have the required permission.
+     * @throws UnsupportedOperationException if the get operation is not supported on this SDK or
+     *                                       if the feature is not available
+     *                                       {@link #isAggressiveRoamingModeSupported()}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @SuppressLint("RequiresPermission")
+    public void getPerSsidRoamingModes(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<Map<String, Integer>> resultsCallback) {
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
+        try {
+            mService.getPerSsidRoamingModes(mContext.getOpPackageName(), new IMapListener.Stub() {
+                @Override
+                public void onResult(Map roamingPolicies) {
+                    Binder.clearCallingIdentity();
+                    executor.execute(() -> {
+                        resultsCallback.accept(roamingPolicies);
+                    });
+                }
+            });
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Bundle key to check target wake time requester mode supported or not
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final String TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER =
+            "key_requester";
+
+    /**
+     * Bundle key to get minimum wake duration supported in microseconds
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final String TWT_CAPABILITIES_KEY_INT_MIN_WAKE_DURATION_MICROS =
+            "key_min_wake_duration";
+    /**
+     * Bundle key to get maximum wake duration supported in microseconds
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final String TWT_CAPABILITIES_KEY_INT_MAX_WAKE_DURATION_MICROS =
+            "key_max_wake_duration";
+    /**
+     * Bundle key to get minimum wake interval supported in microseconds
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final String TWT_CAPABILITIES_KEY_LONG_MIN_WAKE_INTERVAL_MICROS =
+            "key_min_wake_interval";
+    /**
+     * Bundle key to get maximum wake interval supported in microseconds
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final String TWT_CAPABILITIES_KEY_LONG_MAX_WAKE_INTERVAL_MICROS =
+            "key_max_wake_interval";
+
+    /** @hide */
+    @StringDef(prefix = { "TWT_CAPABILITIES_KEY_"}, value = {
+            TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER,
+            TWT_CAPABILITIES_KEY_INT_MIN_WAKE_DURATION_MICROS,
+            TWT_CAPABILITIES_KEY_INT_MAX_WAKE_DURATION_MICROS,
+            TWT_CAPABILITIES_KEY_LONG_MIN_WAKE_INTERVAL_MICROS,
+            TWT_CAPABILITIES_KEY_LONG_MAX_WAKE_INTERVAL_MICROS,
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface TwtCapabilities {}
+
+    /**
+     * Get target wake time (TWT) capabilities of the primary station interface.
+     *
+     * Note: Target wake time feature is only supported for primary station. If Wi-Fi is off or the
+     * capability is not available the asynchronous callback will be called with the bundle
+     * with values { false, -1, -1, -1, -1 }.
+     *
+     * @param executor Executor to execute listener callback
+     * @param resultCallback An asynchronous callback that will return a bundle for target wake time
+     *                       capabilities. See {@link TwtCapabilities} for the string keys for
+     *                       the bundle.
+     * @throws SecurityException if the caller does not have permission.
+     * @throws NullPointerException if the caller provided null inputs.
+     * @throws UnsupportedOperationException if the API is not supported.
+     * @hide
+     */
+    @SystemApi
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public void getTwtCapabilities(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<Bundle> resultCallback) {
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultCallback, "resultCallback cannot be null");
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        try {
+            Bundle extras = new Bundle();
+            extras.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE,
+                    mContext.getAttributionSource());
+            mService.getTwtCapabilities(
+                    new ITwtCapabilitiesListener.Stub() {
+                        @Override
+                        public void onResult(Bundle value) {
+                            Binder.clearCallingIdentity();
+                            executor.execute(() -> {
+                                resultCallback.accept(value);
+                            });
+                        }
+                    }, extras);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    private class TwtCallbackProxy extends ITwtCallback.Stub {
+        private final Executor mExecutor;
+        private final TwtCallback mCallback;
+
+        private TwtCallbackProxy(Executor executor, TwtCallback callback) {
+            mExecutor = executor;
+            mCallback = callback;
+        }
+
+        @Override
+        public void onFailure(@TwtCallback.TwtErrorCode int errorCode) throws RemoteException {
+            if (mVerboseLoggingEnabled) {
+                Log.v(TAG, "TwtCallbackProxy: onFailure(errorCode = " + errorCode + " )");
+            }
+            Binder.clearCallingIdentity();
+            mExecutor.execute(() -> mCallback.onFailure(errorCode));
+        }
+
+        @Override
+        public void onTeardown(@TwtCallback.TwtReasonCode int reasonCode)
+                throws RemoteException {
+            if (mVerboseLoggingEnabled) {
+                Log.v(TAG, "TwtCallbackProxy: onTeardown(errorCode = " + reasonCode + " )");
+            }
+            Binder.clearCallingIdentity();
+            mExecutor.execute(() -> mCallback.onTeardown(reasonCode));
+        }
+
+        @Override
+        public void onCreate(int wakeDuration, long wakeInterval, int mloLinkId, int owner,
+                int sessionId) throws RemoteException {
+            if (mVerboseLoggingEnabled) {
+                Log.v(TAG, "TwtCallbackProxy: onCreate " + sessionId);
+            }
+
+            WifiTwtSession wifiTwtSession = new WifiTwtSession(WifiManager.this, wakeDuration,
+                    wakeInterval, mloLinkId, owner, sessionId);
+            Binder.clearCallingIdentity();
+            mExecutor.execute(() -> mCallback.onCreate(wifiTwtSession));
+        }
+    }
+
+    /**
+     * Set up a TWT session with a TWT responder capable AP. Only supported for primary connected
+     * station which is a TWT requester. See {@link #getTwtCapabilities(Executor, Consumer)} and
+     * {@link ScanResult#isTwtResponder()} to check station and AP support.
+     *
+     * Following callbacks are invoked,
+     *  - {@link TwtCallback#onFailure(int)} upon error with error code.
+     *  - {@link TwtCallback#onCreate(TwtSession)} upon TWT session creation.
+     *  - {@link TwtCallback#onTeardown(int)} upon TWT session teardown.
+     *
+     * Note: {@link #getTwtCapabilities(Executor, Consumer)} gives {@link TwtCapabilities} which can
+     * be used to fill in the valid TWT wake interval and duration ranges for {@link TwtRequest}.
+     *
+     * @param twtRequest TWT request
+     * @param executor Executor to execute listener callback on
+     * @param callback Callback to register
+     * @throws SecurityException if the caller does not have permission.
+     * @throws NullPointerException if the caller provided null inputs.
+     * @throws UnsupportedOperationException if the API is not supported.
+     * @hide
+     */
+    @SystemApi
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public void setupTwtSession(@NonNull TwtRequest twtRequest,
+            @NonNull @CallbackExecutor Executor executor, @NonNull TwtCallback callback) {
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(callback, "callback cannot be null");
+        Objects.requireNonNull(twtRequest, "twtRequest cannot be null");
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        try {
+            ITwtCallback.Stub binderCallback = new TwtCallbackProxy(executor, callback);
+            Bundle extras = new Bundle();
+            extras.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE,
+                    mContext.getAttributionSource());
+            mService.setupTwtSession(twtRequest, binderCallback, extras);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Get stats of the target wake time session.
+     *
+     * Note: For Internal use only. Expected to be called through
+     * {@link TwtSession#getStats(Executor, Consumer)}. If the command fails, -1 will be returned
+     * for all stats values.
+     *
+     * @param sessionId TWT session id
+     * @param executor The executor on which callback will be invoked.
+     * @param resultCallback The asynchronous callback that will return bundle with key string
+     *                       {@link TwtSession.TwtStats}.
+     *
+     * @throws SecurityException if the caller does not have permission.
+     * @throws NullPointerException if the caller provided null inputs.
+     * @throws UnsupportedOperationException if the API is not supported or primary station is
+     * not connected.
+     * @hide
+     */
+    public void getStatsTwtSession(@NonNull int sessionId, @NonNull Executor executor,
+            @NonNull Consumer<Bundle> resultCallback) {
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultCallback, "resultsCallback cannot be null");
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        try {
+            Bundle extras = new Bundle();
+            if (SdkLevel.isAtLeastS()) {
+                extras.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE,
+                        mContext.getAttributionSource());
+            }
+            mService.getStatsTwtSession(sessionId,
+                    new ITwtStatsListener.Stub() {
+                        @Override
+                        public void onResult(Bundle value) {
+                            Binder.clearCallingIdentity();
+                            executor.execute(() -> {
+                                resultCallback.accept(value);
+                            });
+                        }
+                    }, extras);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Teardown the target wake time session. Only owner can teardown the session.
+     *
+     * Note: For internal use only. Expected to be called through
+     * {@link TwtCallback#onTeardown(int)}.
+     *
+     * @param sessionId TWT session id
+     * @throws SecurityException if the caller does not have permission.
+     * @throws UnsupportedOperationException if the API is not supported or primary station is not
+     * connected.
+     * @hide
+     */
+    public void teardownTwtSession(int sessionId) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        try {
+            Bundle extras = new Bundle();
+            if (SdkLevel.isAtLeastS()) {
+                extras.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE,
+                        mContext.getAttributionSource());
+            }
+            mService.teardownTwtSession(sessionId, extras);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

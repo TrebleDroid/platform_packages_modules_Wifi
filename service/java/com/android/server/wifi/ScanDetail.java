@@ -60,6 +60,7 @@ public class ScanDetail {
         int centerFreq1 = ScanResult.UNSPECIFIED;
         boolean isPasspoint = false;
         boolean is80211McResponder = false;
+        boolean isTwtResponder = false;
         if (networkDetail != null) {
             hessid = networkDetail.getHESSID();
             anqpDomainId = networkDetail.getAnqpDomainID();
@@ -73,6 +74,7 @@ public class ScanDetail {
                             && networkDetail.isInterworking()
                             && networkDetail.getHSRelease() != null;
             is80211McResponder = networkDetail.is80211McResponderSupport();
+            isTwtResponder = networkDetail.isIndividualTwtSupported();
         }
         sBuilder.clear();
         mScanResult = sBuilder
@@ -85,6 +87,7 @@ public class ScanDetail {
                 .setRssi(level)
                 .setFrequency(frequency)
                 .setTsf(tsf)
+                .setIsTwtResponder(isTwtResponder)
                 .build();
         mSeen = System.currentTimeMillis();
         mScanResult.seen = mSeen;

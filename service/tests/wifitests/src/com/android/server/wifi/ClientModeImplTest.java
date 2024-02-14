@@ -174,6 +174,7 @@ import com.android.server.wifi.ClientModeManagerBroadcastQueue.QueuedBroadcast;
 import com.android.server.wifi.WifiNative.ConnectionCapabilities;
 import com.android.server.wifi.WifiScoreCard.PerBssid;
 import com.android.server.wifi.WifiScoreCard.PerNetwork;
+import com.android.server.wifi.b2b.WifiRoamingModeManager;
 import com.android.server.wifi.hotspot2.NetworkDetail;
 import com.android.server.wifi.hotspot2.PasspointManager;
 import com.android.server.wifi.hotspot2.PasspointProvisioningTestUtil;
@@ -514,6 +515,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     WifiConfiguration mConnectedNetwork;
     WifiConfiguration mTestConfig;
     ExtendedWifiInfo mWifiInfo;
+    WifiRoamingModeManager mWifiRoamingModeManager;
     ConnectionCapabilities mConnectionCapabilities = new ConnectionCapabilities();
 
     @Mock ActivityManager mActivityManager;
@@ -590,6 +592,7 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Mock LocalLog mLocalLog;
     @Mock WifiDeviceStateChangeManager mWifiDeviceStateChangeManager;
     @Mock WifiCountryCode mWifiCountryCode;
+    @Mock WifiRoamingConfigStore mWifiRoamingConfigStore;
 
     @Mock DeviceWiphyCapabilities mDeviceWiphyCapabilities;
 
@@ -683,6 +686,8 @@ public class ClientModeImplTest extends WifiBaseTest {
         mFrameworkFacade = getFrameworkFacade();
         mContext = getContext();
         mWifiInfo = new ExtendedWifiInfo(mWifiGlobals, WIFI_IFACE_NAME);
+        mWifiRoamingModeManager = new WifiRoamingModeManager(mWifiNative,
+                mActiveModeWarden, mWifiRoamingConfigStore);
 
         when(mWifiGlobals.isConnectedMacRandomizationEnabled()).thenReturn(true);
         mResources = getMockResources();
@@ -784,6 +789,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiScoreCard.lookupBssid(any(), any())).thenReturn(mPerBssid);
         when(mThroughputPredictor.predictMaxTxThroughput(any())).thenReturn(90);
         when(mThroughputPredictor.predictMaxRxThroughput(any())).thenReturn(80);
+        when(mWifiInjector.getWifiRoamingModeManager()).thenReturn(mWifiRoamingModeManager);
 
         doAnswer(new AnswerWithArguments() {
             public void answer(boolean shouldReduceNetworkScore) {
@@ -2291,9 +2297,11 @@ public class ClientModeImplTest extends WifiBaseTest {
                 eq(WifiNative.DISABLE_FIRMWARE_ROAMING));
 
         // Verify firmware roaming is enabled when idle mode exited
+        when(mWifiRoamingConfigStore.getRoamingMode(anyString())).thenReturn(
+                WifiManager.ROAMING_MODE_NORMAL);
         mCmi.onIdleModeChanged(false);
-        verify(mWifiNative).enableFirmwareRoaming(anyString(),
-                eq(WifiNative.ENABLE_FIRMWARE_ROAMING));
+        verify(mWifiNative).setRoamingMode(anyString(),
+                eq(WifiManager.ROAMING_MODE_NORMAL));
     }
 
     @Test

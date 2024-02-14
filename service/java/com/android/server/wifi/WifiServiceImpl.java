@@ -107,6 +107,7 @@ import android.net.wifi.ILastCallerListener;
 import android.net.wifi.IListListener;
 import android.net.wifi.ILocalOnlyConnectionStatusListener;
 import android.net.wifi.ILocalOnlyHotspotCallback;
+import android.net.wifi.IMapListener;
 import android.net.wifi.INetworkRequestMatchCallback;
 import android.net.wifi.IOnWifiActivityEnergyInfoListener;
 import android.net.wifi.IOnWifiDriverCountryCodeChangedListener;
@@ -119,6 +120,9 @@ import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.ISuggestionConnectionStatusListener;
 import android.net.wifi.ISuggestionUserApprovalStatusListener;
 import android.net.wifi.ITrafficStateCallback;
+import android.net.wifi.ITwtCallback;
+import android.net.wifi.ITwtCapabilitiesListener;
+import android.net.wifi.ITwtStatsListener;
 import android.net.wifi.IWifiBandsListener;
 import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.IWifiLowLatencyLockListener;
@@ -143,6 +147,7 @@ import android.net.wifi.WifiManager.AddNetworkResult;
 import android.net.wifi.WifiManager.CoexRestriction;
 import android.net.wifi.WifiManager.DeviceMobilityState;
 import android.net.wifi.WifiManager.LocalOnlyHotspotCallback;
+import android.net.wifi.WifiManager.RoamingMode;
 import android.net.wifi.WifiManager.SapClientBlockedReason;
 import android.net.wifi.WifiManager.SapStartFailure;
 import android.net.wifi.WifiManager.SuggestionConnectionStatusListener;
@@ -154,6 +159,9 @@ import android.net.wifi.WifiSsid;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.hotspot2.PasspointConfiguration;
+import android.net.wifi.twt.TwtCallback;
+import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSession;
 import android.net.wifi.util.ScanResultUtil;
 import android.os.AsyncTask;
 import android.os.Binder;
@@ -5389,6 +5397,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 mWifiInjector.getLinkProbeManager().dump(fd, pw, args);
                 pw.println();
                 mWifiNative.dump(pw);
+                pw.println();
+                mWifiInjector.getWifiRoamingModeManager().dump(fd, pw, args);
             }
         });
     }
@@ -7328,6 +7338,11 @@ public class WifiServiceImpl extends BaseWifiService {
                 || (getSupportedFeatures() & WifiManager.WIFI_FEATURE_PNO) != 0;
     }
 
+    private boolean isAggressiveRoamingModeSupported() {
+        return (getSupportedFeatures() & WifiManager.WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT)
+                != 0;
+    }
+
     /**
      * @return true if this device supports Trust On First Use
      */
@@ -8184,5 +8199,163 @@ public class WifiServiceImpl extends BaseWifiService {
                     + " Missing NETWORK_SETTINGS permission");
         }
         return mWifiGlobals.forceOverlayConfigValue(configString, value, isEnabled);
+    }
+
+    /**
+     * See {@link WifiManager#setPerSsidRoamingMode(WifiSsid, int)}
+     */
+    @Override
+    public void setPerSsidRoamingMode(WifiSsid ssid, @RoamingMode int roamingMode,
+            @NonNull String packageName) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        if (!isAggressiveRoamingModeSupported()) {
+            throw new UnsupportedOperationException("Aggressive roaming mode not supported");
+        }
+        Objects.requireNonNull(ssid, "ssid cannot be null");
+        Objects.requireNonNull(packageName, "packageName cannot be null");
+
+        if (roamingMode < WifiManager.ROAMING_MODE_NONE
+                || roamingMode > WifiManager.ROAMING_MODE_AGGRESSIVE) {
+            throw new IllegalArgumentException("invalid roaming mode: " + roamingMode);
+        }
+
+        int uid = Binder.getCallingUid();
+        mWifiPermissionsUtil.checkPackage(uid, packageName);
+        boolean isDeviceOwner = mWifiPermissionsUtil.isOrganizationOwnedDeviceAdmin(
+                uid, packageName);
+        if (!isDeviceOwner && !mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)
+                && !mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(uid)) {
+            throw new SecurityException("Uid=" + uid + " is not allowed to add roaming policies");
+        }
+
+        //Store Roaming Mode per ssid
+        mWifiThreadRunner.post(() -> {
+            mWifiInjector.getWifiRoamingModeManager().setPerSsidRoamingMode(ssid,
+                    roamingMode, isDeviceOwner);
+        });
+    }
+
+    /**
+     * See {@link WifiManager#removePerSsidRoamingMode(WifiSsid)}
+     */
+    @Override
+    public void removePerSsidRoamingMode(WifiSsid ssid, @NonNull String packageName) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        if (!isAggressiveRoamingModeSupported()) {
+            throw new UnsupportedOperationException("Aggressive roaming mode not supported");
+        }
+        Objects.requireNonNull(ssid, "ssid cannot be null");
+        Objects.requireNonNull(packageName, "packageName cannot be null");
+
+        int uid = Binder.getCallingUid();
+        mWifiPermissionsUtil.checkPackage(uid, packageName);
+        boolean isDeviceOwner = mWifiPermissionsUtil.isOrganizationOwnedDeviceAdmin(
+                uid, packageName);
+        if (!isDeviceOwner && !mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)
+                && !mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(uid)) {
+            throw new SecurityException("Uid=" + uid + " is not allowed "
+                    + "to remove roaming policies");
+        }
+
+        // Remove Roaming Mode per ssid
+        mWifiThreadRunner.post(() -> {
+            mWifiInjector.getWifiRoamingModeManager().removePerSsidRoamingMode(
+                    ssid, isDeviceOwner);
+        });
+    }
+
+    /**
+     * See {@link WifiManager#getPerSsidRoamingModes(Executor, Consumer)}
+     */
+    @Override
+    public void getPerSsidRoamingModes(@NonNull String packageName,
+            @NonNull IMapListener listener) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        if (!isAggressiveRoamingModeSupported()) {
+            throw new UnsupportedOperationException("Aggressive roaming mode not supported");
+        }
+        Objects.requireNonNull(packageName, "packageName cannot be null");
+        Objects.requireNonNull(listener, "listener cannot be null");
+
+        int uid = Binder.getCallingUid();
+        boolean isDeviceOwner = mWifiPermissionsUtil.isOrganizationOwnedDeviceAdmin(
+                uid, packageName);
+        mWifiPermissionsUtil.checkPackage(uid, packageName);
+        if (!isDeviceOwner && !mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)
+                && !mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(uid)) {
+            throw new SecurityException("Uid=" + uid + " is not allowed to get roaming policies");
+        }
+
+        // Get Roaming Modes per ssid
+        mWifiThreadRunner.post(() -> {
+            try {
+                Map<String, Integer> roamingPolicies =
+                        mWifiInjector.getWifiRoamingModeManager().getPerSsidRoamingModes(
+                                isDeviceOwner);
+                listener.onResult(roamingPolicies);
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * See {@link WifiManager#getTwtCapabilities(Executor, Consumer)}
+     */
+    @Override
+    public void getTwtCapabilities(ITwtCapabilitiesListener listener, Bundle extras) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        enforceAnyPermissionOf(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        if (mVerboseLoggingEnabled) {
+            mLog.info("getTwtCapabilities:  Uid=% Package Name=%").c(Binder.getCallingUid()).c(
+                    getPackageName(extras)).flush();
+        }
+        if (listener == null) {
+            throw new IllegalArgumentException("listener should not be null");
+        }
+        mWifiThreadRunner.post(() -> {
+            try {
+                // TODO: Implementation. Returning not supported.
+                Bundle twtCapabilities = new Bundle();
+                twtCapabilities.putBoolean(WifiManager.TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER,
+                        false);
+                listener.onResult(twtCapabilities);
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage(), e);
+            }
+        });
+    }
+
+    /**
+     * See {@link WifiManager#setupTwtSession(TwtRequest, Executor, TwtCallback)}
+     */
+    @Override
+    public void setupTwtSession(TwtRequest twtRequest, ITwtCallback iTwtCallback, Bundle extras) {
+        // TODO: Implementation
+    }
+
+    /**
+     * See {@link TwtSession#getStats(Executor, Consumer)}}
+     */
+    @Override
+    public void getStatsTwtSession(int sessionId, ITwtStatsListener iTwtStatsListener,
+            Bundle extras) {
+        // TODO: Implementation
+    }
+
+    /**
+     * See {@link TwtSession#teardown()}
+     */
+    @Override
+    public void teardownTwtSession(int sessionId, Bundle extras) {
+        // TODO: Implementation
     }
 }

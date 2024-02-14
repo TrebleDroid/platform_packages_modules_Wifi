@@ -342,6 +342,14 @@ public class WifiStaIfaceHidlImpl implements IWifiStaIface {
         return false;
     }
 
+    /**
+     * See comments for {@link IWifiStaIface#setRoamingMode(int)}
+     */
+    public int setRoamingMode(int roamingMode) {
+        Log.d(TAG, "setRoamingMode is not implemented by HIDL");
+        return 0;
+    }
+
     // Internal Implementations
 
     private boolean registerFrameworkCallbackInternal(String methodStr,
