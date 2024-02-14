@@ -620,6 +620,16 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
+    public void retrieveWifiBackupData(@NonNull IByteArrayListener  listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void restoreWifiBackupData(byte[] data) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public byte[] retrieveBackupData() {
         throw new UnsupportedOperationException();
     }
