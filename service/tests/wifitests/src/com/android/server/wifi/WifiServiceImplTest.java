@@ -11502,6 +11502,11 @@ public class WifiServiceImplTest extends WifiBaseTest {
         assumeTrue(SdkLevel.isAtLeastU());
         enableQosPolicyFeature();
 
+        ConcreteClientModeManager primaryCmm = mock(ConcreteClientModeManager.class);
+        when(primaryCmm.isWifiStandardSupported(anyInt())).thenReturn(true);
+        when(mActiveModeWarden.getPrimaryClientModeManager()).thenReturn(primaryCmm);
+        mLooper.startAutoDispatch(); // handles call to isWifiStandardSupported
+
         List<QosPolicyParams> paramsList = createDownlinkQosPolicyParamsList(5, true);
         IBinder binder = mock(IBinder.class);
         IListListener listener = mock(IListListener.class);
@@ -11518,6 +11523,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mApplicationQosPolicyRequestHandler, times(expectedNumCalls)).queueAddRequest(
                 anyList(), any(), any(), anyInt());
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
     }
 
     /**
