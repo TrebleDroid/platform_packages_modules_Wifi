@@ -18,6 +18,8 @@ package com.android.server.wifi;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -276,6 +278,10 @@ public class SelfRecoveryTest extends WifiBaseTest {
     @Test
     public void testUnsolicitedSystemRestart() {
         mRestartListenerCaptor.getValue().onSubsystemRestart();
+        ExtendedMockito.verify(() -> WifiStatsLog.write(eq(WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED),
+                eq(WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__REASON__REASON_SUBSYSTEM_RESTART),
+                eq(WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__RESULT__RES_RESTART_STARTED_INTERNAL_RECOVERY_BY_NATIVE_CALLBACK),
+                anyLong()));
         verify(mActiveModeWarden).recoveryRestartWifi(SelfRecovery.REASON_SUBSYSTEM_RESTART,
                 true);
         assertTrue(mSelfRecovery.isRecoveryInProgress());
@@ -369,15 +375,20 @@ public class SelfRecoveryTest extends WifiBaseTest {
                 10000L));
 
         when(mClock.getWallClockMillis()).thenReturn(100000L);
-        when(mWifiNative.startSubsystemRestart()).thenReturn(false);
+        doAnswer((invocation) -> {
+            return false;
+        }).when(mWifiNative).startSubsystemRestart();
         mSelfRecovery.trigger(SelfRecovery.REASON_API_CALL);
         ExtendedMockito.verify(() -> WifiStatsLog.write(WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED,
                 WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__REASON__REASON_API_CALL,
-                WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__RESULT__RES_RESTART_FAILURE,
+                WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__RESULT__RES_RESTART_STARTED_INTERNAL_RECOVERY,
                 20000L));
 
         when(mClock.getWallClockMillis()).thenReturn(160000L);
-        when(mWifiNative.startSubsystemRestart()).thenReturn(true);
+        doAnswer((invocation) -> {
+            mRestartListenerCaptor.getValue().onSubsystemRestart();
+            return true;
+        }).when(mWifiNative).startSubsystemRestart();
         mSelfRecovery.trigger(SelfRecovery.REASON_LAST_RESORT_WATCHDOG);
         ExtendedMockito.verify(() -> WifiStatsLog.write(WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED,
                 WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__REASON__REASON_LAST_RESORT_WDOG,
