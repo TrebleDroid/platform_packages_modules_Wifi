@@ -48,6 +48,7 @@ import android.app.test.MockAnswerUtil.AnswerWithArguments;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.hardware.wifi.WifiStatusCode;
 import android.net.InetAddresses;
 import android.net.KeepalivePacketData;
 import android.net.MacAddress;
@@ -1812,5 +1813,22 @@ public class WifiVendorHalTest extends WifiBaseTest {
 
         mWifiVendorHal.setAfcChannelAllowance(mAfcChannelAllowance);
         verify(mWifiChip).setAfcChannelAllowance(mAfcChannelAllowance);
+    }
+
+    /**
+     * Test setRoamingMode
+     *
+     * A call before the vendor HAL is started should return invalid interface.
+     *
+     * A call after the HAL is started should return success value.
+     */
+    @Test
+    public void testSetRoamingMode() throws Exception {
+        assertTrue(mWifiVendorHal.setRoamingMode(TEST_IFACE_NAME, WifiManager.ROAMING_MODE_NORMAL)
+                == WifiStatusCode.ERROR_WIFI_IFACE_INVALID);
+        // Start the vendor hal
+        assertTrue(mWifiVendorHal.startVendorHalSta(mConcreteClientModeManager));
+        assertTrue(mWifiVendorHal.setRoamingMode(TEST_IFACE_NAME, WifiManager.ROAMING_MODE_NORMAL)
+                == WifiStatusCode.SUCCESS);
     }
 }

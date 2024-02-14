@@ -51,6 +51,7 @@ import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiContext;
+import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiScanner.ScanData;
 import android.net.wifi.WifiSsid;
@@ -1807,5 +1808,14 @@ public class WifiNativeTest extends WifiBaseTest {
         assertEquals(2, wifiNativeInstance.mUnknownAkmMap.size());
         assertEquals(ScanResult.KEY_MGMT_EAP, wifiNativeInstance.mUnknownAkmMap.get(9846784));
         assertEquals(ScanResult.KEY_MGMT_SAE_EXT_KEY, wifiNativeInstance.mUnknownAkmMap.get(1234));
+    }
+
+    @Test
+    public void testSetRoamingMode() throws Exception {
+        int status = 0;
+        when(mWifiVendorHal.setRoamingMode(eq(WIFI_IFACE_NAME), anyInt())).thenReturn(status);
+        assertEquals(status, mWifiNative.setRoamingMode(WIFI_IFACE_NAME,
+                WifiManager.ROAMING_MODE_NORMAL));
+        verify(mWifiVendorHal).setRoamingMode(WIFI_IFACE_NAME, WifiManager.ROAMING_MODE_NORMAL);
     }
 }

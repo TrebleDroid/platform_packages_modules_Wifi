@@ -2324,6 +2324,31 @@ public class ClientModeImplTest extends WifiBaseTest {
     }
 
     /**
+     * Verify that when the primary connects, roaming mode is set
+     * based on the connected network ssid.
+     */
+    @Test
+    public void testPerSsidRoamingModePrimary() throws Exception {
+        when(mWifiRoamingConfigStore.getRoamingMode(TEST_SSID)).thenReturn(
+                WifiManager.ROAMING_MODE_NORMAL);
+        connect();
+        verify(mWifiRoamingConfigStore).getRoamingMode(TEST_SSID);
+        verify(mWifiNative).setRoamingMode(anyString(),
+                eq(WifiManager.ROAMING_MODE_NORMAL));
+    }
+
+    /**
+     * Verify that when the secondary connects, roaming mode is not set.
+     */
+    @Test
+    public void testPerSsidRoamingModeSecondary() throws Exception {
+        when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_SECONDARY_TRANSIENT);
+        connect();
+        verify(mWifiRoamingConfigStore, never()).getRoamingMode(anyString());
+        verify(mWifiNative, never()).setRoamingMode(anyString(), anyInt());
+    }
+
+    /**
      * Tests the network connection initiation sequence with no network request pending from
      * from WifiNetworkFactory when we're already connected to a different network.
      * This simulates the connect sequence using the public
