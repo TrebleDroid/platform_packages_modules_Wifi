@@ -171,3 +171,11 @@ flag {
     bug: "295792510"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "d2d_when_infra_sta_off"
+    namespace: "wifi"
+    description: "Add new API to configure d2d when infra sta is off"
+    bug: "295792510"
+    is_fixed_read_only: true
+}

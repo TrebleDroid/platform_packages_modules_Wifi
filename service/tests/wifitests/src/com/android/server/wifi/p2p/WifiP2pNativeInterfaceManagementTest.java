@@ -108,7 +108,7 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
                 .thenReturn(TEST_P2P_IFACE_NAME);
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
         when(mDeviceConfigFacade.getFeatureFlags()).thenReturn(mFeatureFlags);
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(true);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(true);
         mWifiP2pNative = new WifiP2pNative(mWifiNl80211Manager, mWifiNative, mWifiMetrics,
                 mWifiVendorHal, mSupplicantP2pIfaceHal, mHalDeviceManager, mPropertyService,
                 mWifiInjector);
@@ -119,7 +119,7 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
      */
     @Test
     public void testSetUpInterfaceByHDM() throws Exception {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testSetUpInterface(false);
     }
 
@@ -170,7 +170,7 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
      */
     @Test
     public void testTeardownInterfaceWhenD2dWithoutSTADisabled() throws Exception {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testTeardownInterface(false);
     }
 
@@ -207,7 +207,7 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
      */
     @Test
     public void testTeardownInterfaceWithNoVendorHalD2dAloneFeatureDisabled() throws Exception {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testTeardownInterfaceWithNoVendorHal(false);
     }
 
