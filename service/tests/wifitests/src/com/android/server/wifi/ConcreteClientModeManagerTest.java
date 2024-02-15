@@ -780,6 +780,33 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
     }
 
     /**
+     * Secondary CMM will stop without deferring.
+     */
+    @Test
+    public void clientModeStopWithWifiOffDeferringTimeWithWifiCallingOnSecondaryTransient()
+            throws Exception {
+        setUpVoWifiTest(true,
+                TEST_WIFI_OFF_DEFERRING_TIME_MS);
+        startClientInConnectModeAndVerifyEnabled();
+        reset(mContext, mListener);
+        setUpSystemServiceForContext();
+
+        // Make sure CMM is not primary
+        mClientModeManager.setRole(ROLE_CLIENT_SECONDARY_TRANSIENT, TEST_WORKSOURCE);
+        mLooper.dispatchAll();
+
+        // Stop CMM and verify the Defer stop code is skipped
+        mClientModeManager.stop();
+        mLooper.dispatchAll();
+        when(mClientModeImpl.hasQuit()).thenReturn(true);
+        mClientModeManager.onClientModeImplQuit();
+        verify(mListener).onStopped(mClientModeManager);
+        verify(mImsMmTelManager, never()).registerImsRegistrationCallback(any(), any());
+        verify(mImsMmTelManager, never()).unregisterImsRegistrationCallback(any());
+        verify(mWifiMetrics).noteWifiOff(eq(false), eq(false), anyInt());
+    }
+
+    /**
      * ClientMode stop properly with IMS deferring time without WifiCalling.
      */
     @Test

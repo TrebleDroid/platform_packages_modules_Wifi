@@ -1845,6 +1845,10 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                     case WifiScanner.CMD_GET_SCAN_RESULTS:
                         ScanParams scanParams = (ScanParams) msg.obj;
                         ClientInfo ci = mClients.get(scanParams.listener);
+                        if (ci == null) {
+                            loge("ClientInfo is null");
+                            break;
+                        }
                         ci.replyFailed(WifiScanner.REASON_UNSPECIFIED, "not available");
                         break;
 
@@ -1896,6 +1900,10 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                         ScanParams scanParams = (ScanParams) msg.obj;
                         mWifiMetrics.incrementBackgroundScanCount();
                         ClientInfo ci = mClients.get(scanParams.listener);
+                        if (ci == null) {
+                            loge("ClientInfo is null");
+                            return HANDLED;
+                        }
                         if (scanParams.settings == null) {
                             loge("params null");
                             return HANDLED;

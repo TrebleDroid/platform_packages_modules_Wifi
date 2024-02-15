@@ -47,8 +47,6 @@ import static android.net.wifi.WifiManager.LocalOnlyHotspotCallback.REQUEST_REGI
 import static android.net.wifi.WifiManager.NOT_OVERRIDE_EXISTING_NETWORKS_ON_RESTORE;
 import static android.net.wifi.WifiManager.SAP_START_FAILURE_GENERAL;
 import static android.net.wifi.WifiManager.SAP_START_FAILURE_NO_CHANNEL;
-import static android.net.wifi.WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_ALL;
-import static android.net.wifi.WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_NONE;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_ENABLED;
@@ -69,6 +67,7 @@ import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_TR
 import static com.android.server.wifi.LocalOnlyHotspotRequestInfo.HOTSPOT_NO_ERROR;
 import static com.android.server.wifi.SelfRecovery.REASON_API_CALL;
 import static com.android.server.wifi.WifiConfigurationTestUtil.SECURITY_NONE;
+import static com.android.server.wifi.WifiSettingsConfigStore.D2D_ALLOWED_WHEN_INFRA_STA_DISABLED;
 import static com.android.server.wifi.WifiSettingsConfigStore.SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI;
 import static com.android.server.wifi.WifiSettingsConfigStore.SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_STA_FACTORY_MAC_ADDRESS;
@@ -159,6 +158,7 @@ import android.net.wifi.ILastCallerListener;
 import android.net.wifi.IListListener;
 import android.net.wifi.ILocalOnlyConnectionStatusListener;
 import android.net.wifi.ILocalOnlyHotspotCallback;
+import android.net.wifi.IMapListener;
 import android.net.wifi.INetworkRequestMatchCallback;
 import android.net.wifi.IOnWifiActivityEnergyInfoListener;
 import android.net.wifi.IOnWifiDriverCountryCodeChangedListener;
@@ -226,6 +226,7 @@ import android.telephony.CarrierConfigManager;
 import android.telephony.PhoneStateListener;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.util.ArrayMap;
 import android.util.Pair;
 
 import androidx.test.filters.SmallTest;
@@ -667,6 +668,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mLocationManager.getProviders(anyBoolean())).thenReturn(List.of(
                 LocationManager.FUSED_PROVIDER, LocationManager.PASSIVE_PROVIDER,
                 LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER));
+        when(mWifiInjector.getWifiRoamingModeManager()).thenReturn(mWifiRoamingModeManager);
 
         doAnswer(new AnswerWithArguments() {
             public void answer(Runnable onStoppedListener) throws Throwable {
@@ -11926,7 +11928,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiSettingsConfigStore).get(eq(WIFI_WEP_ALLOWED));
         verify(mWifiGlobals).setWepAllowed(eq(false));
-        // verify setWepAllowed with MANAGE_WIFI_NETWORK_SELECTION
+        // verify setWepAllowed with MANAGE_WIFI_NETWORK_SETTING
         when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
         mWifiServiceImpl.setWepAllowed(true);
         mLooper.dispatchAll();
@@ -12029,7 +12031,15 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testSetSendDhcpHostnameRestrictionWithoutPermission() {
         // by default no permissions are given so the call should fail.
         mWifiServiceImpl.setSendDhcpHostnameRestriction(
-                TEST_PACKAGE_NAME, SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+                TEST_PACKAGE_NAME, WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetSendDhcpHostnameRestrictionInvalidFlags() {
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        mWifiServiceImpl.setSendDhcpHostnameRestriction(
+                TEST_PACKAGE_NAME, -1);
     }
 
     @Test
@@ -12038,9 +12048,10 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
         mWifiServiceImpl.setSendDhcpHostnameRestriction(
-                TEST_PACKAGE_NAME, SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+                TEST_PACKAGE_NAME, WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN);
         mLooper.dispatchAll();
-        verify(mWifiGlobals).setSendDhcpHostnameRestriction(eq(SEND_DHCP_HOSTNAME_RESTRICTION_ALL));
+        verify(mWifiGlobals).setSendDhcpHostnameRestriction(
+                eq(WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN));
     }
 
     @Test
@@ -12062,18 +12073,155 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         InOrder inOrder = inOrder(listener);
         when(mWifiGlobals.getSendDhcpHostnameRestriction())
-                .thenReturn(SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
+                .thenReturn(0);
         mWifiServiceImpl.querySendDhcpHostnameRestriction(TEST_PACKAGE_NAME, listener);
         mLooper.dispatchAll();
         verify(mWifiGlobals).getSendDhcpHostnameRestriction();
-        inOrder.verify(listener).onResult(SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
+        inOrder.verify(listener).onResult(0);
 
         when(mWifiGlobals.getSendDhcpHostnameRestriction())
-                .thenReturn(SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+                .thenReturn(WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN);
         mWifiServiceImpl.querySendDhcpHostnameRestriction(TEST_PACKAGE_NAME, listener);
         mLooper.dispatchAll();
         verify(mWifiGlobals, times(2)).getSendDhcpHostnameRestriction();
-        inOrder.verify(listener).onResult(SEND_DHCP_HOSTNAME_RESTRICTION_ALL);
+        inOrder.verify(listener).onResult(WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN);
+    }
+
+    @Test
+    public void testSetPerSsidRoamingModeByDeviceAdmin() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mActiveModeWarden.getSupportedFeatureSet())
+                .thenReturn(WifiManager.WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.setPerSsidRoamingMode(
+                        WifiSsid.fromString(TEST_SSID_WITH_QUOTES),
+                        WifiManager.ROAMING_MODE_NORMAL, TEST_PACKAGE_NAME));
+        when(mWifiPermissionsUtil.isOrganizationOwnedDeviceAdmin(anyInt(),
+                eq(TEST_PACKAGE_NAME))).thenReturn(true);
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.setPerSsidRoamingMode(
+                        WifiSsid.fromString(TEST_SSID_WITH_QUOTES), -1, TEST_PACKAGE_NAME));
+
+        mWifiServiceImpl.setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID_WITH_QUOTES),
+                WifiManager.ROAMING_MODE_NORMAL, TEST_PACKAGE_NAME);
+        mLooper.dispatchAll();
+        verify(mWifiRoamingModeManager).setPerSsidRoamingMode(
+                WifiSsid.fromString(TEST_SSID_WITH_QUOTES),
+                WifiManager.ROAMING_MODE_NORMAL, true);
+    }
+
+    @Test
+    public void testSetPerSsidRoamingModeByNonAdmin() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mActiveModeWarden.getSupportedFeatureSet())
+                .thenReturn(WifiManager.WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.setPerSsidRoamingMode(
+                        WifiSsid.fromString(TEST_SSID_WITH_QUOTES),
+                        WifiManager.ROAMING_MODE_NORMAL, TEST_PACKAGE_NAME));
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(
+                anyInt())).thenReturn(true);
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.setPerSsidRoamingMode(
+                        WifiSsid.fromString(TEST_SSID_WITH_QUOTES), -1, TEST_PACKAGE_NAME));
+
+        mWifiServiceImpl.setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID_WITH_QUOTES),
+                WifiManager.ROAMING_MODE_NORMAL, TEST_PACKAGE_NAME);
+        mLooper.dispatchAll();
+        verify(mWifiRoamingModeManager).setPerSsidRoamingMode(
+                WifiSsid.fromString(TEST_SSID_WITH_QUOTES),
+                WifiManager.ROAMING_MODE_NORMAL, false);
+    }
+
+    @Test
+    public void testRemovePerSsidRoamingModeByDeviceAdmin() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mActiveModeWarden.getSupportedFeatureSet())
+                .thenReturn(WifiManager.WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.removePerSsidRoamingMode(
+                        WifiSsid.fromString(TEST_SSID_WITH_QUOTES), TEST_PACKAGE_NAME));
+        when(mWifiPermissionsUtil.isOrganizationOwnedDeviceAdmin(anyInt(),
+                eq(TEST_PACKAGE_NAME))).thenReturn(true);
+
+        mWifiServiceImpl.removePerSsidRoamingMode(WifiSsid.fromString(TEST_SSID_WITH_QUOTES),
+                TEST_PACKAGE_NAME);
+        mLooper.dispatchAll();
+        verify(mWifiRoamingModeManager).removePerSsidRoamingMode(
+                WifiSsid.fromString(TEST_SSID_WITH_QUOTES), true);
+    }
+
+    @Test
+    public void testRemovePerSsidRoamingModeByNonAdmin() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mActiveModeWarden.getSupportedFeatureSet())
+                .thenReturn(WifiManager.WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.removePerSsidRoamingMode(
+                        WifiSsid.fromString(TEST_SSID_WITH_QUOTES), TEST_PACKAGE_NAME));
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
+
+        mWifiServiceImpl.removePerSsidRoamingMode(
+                WifiSsid.fromString(TEST_SSID_WITH_QUOTES), TEST_PACKAGE_NAME);
+        mLooper.dispatchAll();
+        verify(mWifiRoamingModeManager).removePerSsidRoamingMode(
+                WifiSsid.fromString(TEST_SSID_WITH_QUOTES), false);
+    }
+
+    @Test
+    public void testGetPerSsidRoamingModesByDeviceAdmin() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mActiveModeWarden.getSupportedFeatureSet())
+                .thenReturn(WifiManager.WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT);
+        IMapListener listener = mock(IMapListener.class);
+        InOrder inOrder = inOrder(listener);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.getPerSsidRoamingModes(TEST_PACKAGE_NAME, listener));
+        when(mWifiPermissionsUtil.isOrganizationOwnedDeviceAdmin(anyInt(),
+                eq(TEST_PACKAGE_NAME))).thenReturn(true);
+
+        Map<String, Integer> deviceAdminRoamingPolicies = new ArrayMap<>();
+        deviceAdminRoamingPolicies.put(TEST_SSID_WITH_QUOTES, WifiManager.ROAMING_MODE_NORMAL);
+        when(mWifiRoamingModeManager.getPerSsidRoamingModes(eq(true))).thenReturn(
+                deviceAdminRoamingPolicies);
+
+        mWifiServiceImpl.getPerSsidRoamingModes(TEST_PACKAGE_NAME, listener);
+        mLooper.dispatchAll();
+        ArgumentCaptor<Map<String, Integer>> resultCaptor = ArgumentCaptor.forClass(Map.class);
+        inOrder.verify(listener).onResult(resultCaptor.capture());
+
+        assertTrue(resultCaptor.getValue().get(TEST_SSID_WITH_QUOTES)
+                == deviceAdminRoamingPolicies.get(TEST_SSID_WITH_QUOTES));
+        assertTrue(resultCaptor.getValue().size()
+                == deviceAdminRoamingPolicies.size());
+    }
+
+    @Test
+    public void testGetPerSsidRoamingModesByNonAdmin() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mActiveModeWarden.getSupportedFeatureSet())
+                .thenReturn(WifiManager.WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT);
+        IMapListener listener = mock(IMapListener.class);
+        InOrder inOrder = inOrder(listener);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.getPerSsidRoamingModes(TEST_PACKAGE_NAME, listener));
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(
+                anyInt())).thenReturn(true);
+
+        Map<String, Integer> nonAdminRoamingPolicies = new ArrayMap<>();
+        nonAdminRoamingPolicies.put(TEST_SSID_WITH_QUOTES, WifiManager.ROAMING_MODE_NONE);
+        when(mWifiRoamingModeManager.getPerSsidRoamingModes(false)).thenReturn(
+                nonAdminRoamingPolicies);
+
+        mWifiServiceImpl.getPerSsidRoamingModes(TEST_PACKAGE_NAME, listener);
+        mLooper.dispatchAll();
+        ArgumentCaptor<Map<String, Integer>> resultCaptor = ArgumentCaptor.forClass(Map.class);
+        inOrder.verify(listener).onResult(resultCaptor.capture());
+
+        assertTrue(resultCaptor.getValue().get(TEST_SSID_WITH_QUOTES)
+                == nonAdminRoamingPolicies.get(TEST_SSID_WITH_QUOTES));
+        assertTrue(resultCaptor.getValue().size()
+                == nonAdminRoamingPolicies.size());
     }
 
     /*
@@ -12090,5 +12238,50 @@ public class WifiServiceImplTest extends WifiBaseTest {
         assertTrue(mWifiServiceImpl.isPnoSupported());
         when(mWifiGlobals.isBackgroundScanSupported()).thenReturn(true);
         assertTrue(mWifiServiceImpl.isPnoSupported());
+    }
+
+    @Test
+    public void testSetD2dAllowedWhenInfraStaDisabled() throws Exception {
+        // by default no permissions are given so the call should fail.
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.setD2dAllowedWhenInfraStaDisabled(true));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        // verify setD2DAllowedWhenInfraStaDisabled with MANAGE_WIFI_NETWORK_SETTING
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        mWifiServiceImpl.setD2dAllowedWhenInfraStaDisabled(true);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).put(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED), eq(true));
+
+        mWifiServiceImpl.setD2dAllowedWhenInfraStaDisabled(false);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).put(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED), eq(false));
+    }
+
+    @Test
+    public void testQueryD2dAllowedWhenInfraStaDisabled() throws Exception {
+        // null listener ==> IllegalArgumentException
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.queryD2dAllowedWhenInfraStaDisabled(null));
+
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        IBooleanListener listener = mock(IBooleanListener.class);
+
+        InOrder inOrder = inOrder(listener);
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(true);
+        mWifiServiceImpl.queryD2dAllowedWhenInfraStaDisabled(listener);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED));
+        inOrder.verify(listener).onResult(true);
+
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(false);
+        mWifiServiceImpl.queryD2dAllowedWhenInfraStaDisabled(listener);
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore, times(2)).get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED));
+        inOrder.verify(listener).onResult(false);
     }
 }

@@ -37,6 +37,7 @@ import android.hardware.wifi.StaLinkLayerStats;
 import android.hardware.wifi.StaPeerInfo;
 import android.hardware.wifi.StaRateStat;
 import android.hardware.wifi.StaRoamingCapabilities;
+import android.hardware.wifi.StaRoamingState;
 import android.hardware.wifi.WifiChannelInfo;
 import android.hardware.wifi.WifiChannelStats;
 import android.hardware.wifi.WifiChannelWidthInMhz;
@@ -48,6 +49,7 @@ import android.hardware.wifi.WifiDebugTxPacketFate;
 import android.hardware.wifi.WifiDebugTxPacketFateReport;
 import android.hardware.wifi.WifiRateInfo;
 import android.hardware.wifi.WifiRatePreamble;
+import android.hardware.wifi.WifiStatusCode;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner.ScanData;
@@ -357,6 +359,17 @@ public class WifiStaIfaceAidlImplTest extends WifiBaseTest {
         assertEquals("61:52:43:34:25:16", scanResults[0].BSSID);
     }
 
+    /**
+     * Tests setRoamingMode.
+     */
+    @Test
+    public void testSetRoamingMode() throws Exception {
+        final int invalidRoamingMode = -1;
+        assertEquals(WifiStatusCode.ERROR_INVALID_ARGS, mDut.setRoamingMode(invalidRoamingMode));
+
+        assertEquals(WifiStatusCode.SUCCESS, mDut.setRoamingMode(WifiManager.ROAMING_MODE_NORMAL));
+        verify(mIWifiStaIfaceMock).setRoamingState(StaRoamingState.ENABLED);
+    }
 
     // Utilities
 

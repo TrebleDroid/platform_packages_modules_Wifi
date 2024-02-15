@@ -45,6 +45,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_ADDITIONAL_STA_MBB;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_ADDITIONAL_STA_MULTI_INTERNET;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_ADDITIONAL_STA_RESTRICTED;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_AP_STA;
+import static android.net.wifi.WifiManager.WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_DECORATED_IDENTITY;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_DPP;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_DPP_AKM;
@@ -4161,6 +4162,62 @@ public class WifiManagerTest {
                 any(IBooleanListener.Stub.class));
     }
 
+    /**
+     * Verify {@link WifiManager#setPerSsidRoamingMode(WifiSsid, int)}.
+     */
+    @Test
+    public void testSetPerSsidRoamingMode() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        // Invalid input throws exception.
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiManager.setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID), -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiManager.setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID), 3));
+        assertThrows(NullPointerException.class,
+                () -> mWifiManager.setPerSsidRoamingMode(null, WifiManager.ROAMING_MODE_NORMAL));
+        // Set and verify.
+        mWifiManager.setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID),
+                WifiManager.ROAMING_MODE_NORMAL);
+        verify(mWifiService).setPerSsidRoamingMode(WifiSsid.fromString(TEST_SSID),
+                WifiManager.ROAMING_MODE_NORMAL, TEST_PACKAGE_NAME);
+    }
+
+    /**
+     * Verify {@link WifiManager#removePerSsidRoamingMode(WifiSsid)}.
+     */
+    @Test
+    public void testRemovePerSsidRoamingMode() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        // Invalid input throws exception.
+        assertThrows(NullPointerException.class,
+                () -> mWifiManager.removePerSsidRoamingMode(null));
+        // Remove and verify.
+        mWifiManager.removePerSsidRoamingMode(WifiSsid.fromString(TEST_SSID));
+        verify(mWifiService).removePerSsidRoamingMode(WifiSsid.fromString(TEST_SSID),
+                TEST_PACKAGE_NAME);
+    }
+
+    /**
+     * Verify {@link WifiManager#getPerSsidRoamingModes()}.
+     */
+    @Test
+    public void testGetPerSsidRoamingModes() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        Consumer<Map<String, Integer>> resultsSetCallback = mock(Consumer.class);
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        // Null executor/callback exception.
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.getPerSsidRoamingModes(null,
+                        resultsSetCallback));
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.getPerSsidRoamingModes(executor,
+                        null));
+        // Get and verify.
+        mWifiManager.getPerSsidRoamingModes(executor, resultsSetCallback);
+        verify(mWifiService).getPerSsidRoamingModes(eq(TEST_PACKAGE_NAME),
+                any(IMapListener.Stub.class));
+    }
+
     @Test
     public void testGetTwtCapabilities() throws Exception {
         assumeTrue(SdkLevel.isAtLeastV());
@@ -4230,5 +4287,41 @@ public class WifiManagerTest {
         verify(mWifiService).teardownTwtSession(eq(10), bundleCaptor.capture());
         verify(mContext.getAttributionSource()).equals(
                 bundleCaptor.getValue().getParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE));
+    }
+
+    /**
+     * Test behavior of isD2dSupportedWhenInfraStaDisabled.
+     */
+    @Test
+    public void testIsD2dSupportedWhenInfraStaDisabled() throws Exception {
+        when(mWifiService.getSupportedFeatures())
+                .thenReturn(new Long(WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED));
+        assertTrue(mWifiManager.isD2dSupportedWhenInfraStaDisabled());
+        when(mWifiService.getSupportedFeatures())
+                .thenReturn(new Long(~WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED));
+        assertFalse(mWifiManager.isD2dSupportedWhenInfraStaDisabled());
+    }
+
+    @Test
+    public void testSetD2dAllowedInfraStaDisabled() throws Exception {
+        mWifiManager.setD2dAllowedWhenInfraStaDisabled(true);
+        verify(mWifiService).setD2dAllowedWhenInfraStaDisabled(true);
+        mWifiManager.setD2dAllowedWhenInfraStaDisabled(false);
+        verify(mWifiService).setD2dAllowedWhenInfraStaDisabled(false);
+    }
+
+    @Test
+    public void testQueryD2dAllowedInfraStaDisabled() throws Exception {
+        Consumer<Boolean> resultsSetCallback = mock(Consumer.class);
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        // Null executor/callback exception.
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.queryD2dAllowedWhenInfraStaDisabled(null, resultsSetCallback));
+        assertThrows("null listener should trigger exception", NullPointerException.class,
+                () -> mWifiManager.queryD2dAllowedWhenInfraStaDisabled(executor, null));
+        // Set and verify.
+        mWifiManager.queryD2dAllowedWhenInfraStaDisabled(executor, resultsSetCallback);
+        verify(mWifiService).queryD2dAllowedWhenInfraStaDisabled(
+                any(IBooleanListener.Stub.class));
     }
 }

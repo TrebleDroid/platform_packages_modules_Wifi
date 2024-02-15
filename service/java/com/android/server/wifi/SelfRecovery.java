@@ -138,21 +138,30 @@ public class SelfRecovery {
 
     private class SubsystemRestartListenerInternal
             implements HalDeviceManager.SubsystemRestartListener{
-        public void onSubsystemRestart(@RecoveryReason int reason) {
+        private void onSubsystemRestart(@RecoveryReason int reason, long timeElapsedFromLastTrigger,
+                int resultForLogging) {
             Log.e(TAG, "Restarting wifi for reason: " + getRecoveryReasonAsString(reason));
+            WifiStatsLog.write(WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED,
+                    convertSelfRecoveryReason(reason),
+                    resultForLogging,
+                    timeElapsedFromLastTrigger);
             mActiveModeWarden.recoveryRestartWifi(reason,
                     reason != REASON_LAST_RESORT_WATCHDOG && reason != REASON_API_CALL);
         }
 
         @Override
         public void onSubsystemRestart() {
+            long timeElapsedFromLastTrigger = getTimeElapsedFromLastTrigger();
+            mLastSelfRecoveryTimeStampMillis = mClock.getWallClockMillis();
             if (mRecoveryState == STATE_RESTART_WIFI) {
                 // If the wifi restart recovery is triggered then proceed
-                onSubsystemRestart(mSelfRecoveryReason);
+                onSubsystemRestart(mSelfRecoveryReason, timeElapsedFromLastTrigger,
+                        WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__RESULT__RES_RESTART_STARTED_INTERNAL_RECOVERY_BY_NATIVE_CALLBACK);
             } else {
                 // We did not trigger recovery, but looks like the firmware crashed?
                 mRecoveryState = STATE_RESTART_WIFI;
-                onSubsystemRestart(REASON_SUBSYSTEM_RESTART);
+                onSubsystemRestart(REASON_SUBSYSTEM_RESTART, timeElapsedFromLastTrigger,
+                        WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__RESULT__RES_RESTART_STARTED_INTERNAL_RECOVERY_BY_NATIVE_CALLBACK);
             }
         }
     }
@@ -248,11 +257,8 @@ public class SelfRecovery {
         mRecoveryState = STATE_RESTART_WIFI;
         if (!mWifiNative.startSubsystemRestart()) {
             // HAL call failed, fallback to internal flow.
-            mSubsystemRestartListener.onSubsystemRestart(reason);
-            WifiStatsLog.write(WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED,
-                    convertSelfRecoveryReason(reason),
-                    WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__RESULT__RES_RESTART_FAILURE,
-                    timeElapsedFromLastTrigger);
+            mSubsystemRestartListener.onSubsystemRestart(reason, timeElapsedFromLastTrigger,
+                    WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED__RESULT__RES_RESTART_STARTED_INTERNAL_RECOVERY);
             return;
         }
         WifiStatsLog.write(WifiStatsLog.WIFI_SELF_RECOVERY_TRIGGERED,

@@ -716,6 +716,7 @@ public class ActiveModeWarden {
                 }
             }, new IntentFilter(TelephonyManager.ACTION_EMERGENCY_CALL_STATE_CHANGED));
         }
+        mWifiGlobals.setD2dStaConcurrencySupported(mWifiNative.isP2pStaConcurrencySupported());
         // Initialize the supported feature set.
         setSupportedFeatureSet(mWifiNative.getSupportedFeatureSet(null),
                 mWifiNative.isStaApConcurrencySupported(),
@@ -2767,6 +2768,9 @@ public class ActiveModeWarden {
         if (!mWifiGlobals.isWpaPersonalDeprecated()) {
             // The WPA didn't be deprecated, set it.
             additionalFeatureSet |= WifiManager.WIFI_FEATURE_WPA_PERSONAL;
+        }
+        if (mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()) {
+            additionalFeatureSet |= WifiManager.WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED;
         }
         mSupportedFeatureSet.set(
                 (supportedFeatureSet | concurrencyFeatureSet | additionalFeatureSet)

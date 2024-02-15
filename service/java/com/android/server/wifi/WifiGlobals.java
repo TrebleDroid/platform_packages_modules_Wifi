@@ -55,8 +55,8 @@ public class WifiGlobals {
     private final AtomicBoolean mIsBluetoothConnected = new AtomicBoolean(false);
     // Set default to false to check if the value will be overridden by WifiSettingConfigStore.
     private final AtomicBoolean mIsWepAllowed = new AtomicBoolean(false);
-    private final AtomicInteger mSendDhcpHostnameRestriction =
-            new AtomicInteger(WifiManager.SEND_DHCP_HOSTNAME_RESTRICTION_NONE);
+    private final AtomicBoolean mIsD2dStaConcurrencySupported = new AtomicBoolean(false);
+    private final AtomicInteger mSendDhcpHostnameRestriction = new AtomicInteger();
 
     // These are read from the overlay, cache them after boot up.
     private final boolean mIsWpa3SaeUpgradeEnabled;
@@ -94,6 +94,7 @@ public class WifiGlobals {
     private boolean mDisableUnwantedNetworkOnLowRssi = false;
     private final boolean mIsAfcSupportedOnDevice;
     private boolean mDisableNudDisconnectsForWapiInSpecificCc = false;
+    private boolean mD2dAllowedControlSupportedWhenInfraStaDisabled = false;
     private Set<String> mMacRandomizationUnsupportedSsidPrefixes = new ArraySet<>();
     private Map<String, BiFunction<String, Boolean, Boolean>> mOverrideMethods = new HashMap<>();
 
@@ -169,6 +170,8 @@ public class WifiGlobals {
                 && mContext.getResources().getBoolean(R.bool.config_wifi6ghzSupport);
         mWifiConfigMaxDisableDurationMs = mContext.getResources()
                 .getInteger(R.integer.config_wifiDisableTemporaryMaximumDurationMs);
+        mD2dAllowedControlSupportedWhenInfraStaDisabled = mContext.getResources()
+                .getBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled);
         Set<String> unsupportedSsidPrefixes = new ArraySet<>(mContext.getResources().getStringArray(
                 R.array.config_wifiForceDisableMacRandomizationSsidPrefixList));
         mCountryCodeToAfcServers = getCountryCodeToAfcServersMap();
@@ -640,6 +643,21 @@ public class WifiGlobals {
     }
 
     /**
+     * Set whether the device supports device-to-device + STA concurrency.
+     */
+    public void setD2dStaConcurrencySupported(boolean isSupported) {
+        mIsD2dStaConcurrencySupported.set(isSupported);
+    }
+
+    /**
+     * Returns whether the device supports device-to-device when infra STA is disabled.
+     */
+    public boolean isD2dSupportedWhenInfraStaDisabled() {
+        return mD2dAllowedControlSupportedWhenInfraStaDisabled
+                && !mIsD2dStaConcurrencySupported.get();
+    }
+
+    /**
      * Set the global dhcp hostname restriction.
      */
     public void setSendDhcpHostnameRestriction(
@@ -710,6 +728,10 @@ public class WifiGlobals {
         pw.println("mRepeatedNudFailuresWindowMs=" + mRepeatedNudFailuresWindowMs);
         pw.println("mCarrierSpecificEapFailureConfigMapPerCarrierId mapping below:");
         pw.println("mWifiConfigMaxDisableDurationMs=" + mWifiConfigMaxDisableDurationMs);
+        pw.println("mD2dAllowedControlSupportedWhenInfraStaDisabled="
+                + mD2dAllowedControlSupportedWhenInfraStaDisabled);
+        pw.println("IsD2dSupportedWhenInfraStaDisabled="
+                + isD2dSupportedWhenInfraStaDisabled());
         for (int i = 0; i < mCarrierSpecificEapFailureConfigMapPerCarrierId.size(); i++) {
             int carrierId = mCarrierSpecificEapFailureConfigMapPerCarrierId.keyAt(i);
             SparseArray<CarrierSpecificEapFailureConfig> perFailureMap =
