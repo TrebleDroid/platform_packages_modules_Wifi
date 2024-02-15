@@ -1163,4 +1163,14 @@ public class BaseWifiService extends IWifiManager.Stub {
     public void teardownTwtSession(int sessionId, Bundle extras) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void setD2dAllowedWhenInfraStaDisabled(boolean isAllowed) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void queryD2dAllowedWhenInfraStaDisabled(@NonNull IBooleanListener listener) {
+        throw new UnsupportedOperationException();
+    }
 }

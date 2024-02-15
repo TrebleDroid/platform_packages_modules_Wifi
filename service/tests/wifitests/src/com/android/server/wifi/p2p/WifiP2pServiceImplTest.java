@@ -24,6 +24,7 @@ import static android.net.wifi.WifiManager.EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE;
 
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession;
 import static com.android.net.module.util.Inet4AddressUtils.inet4AddressToIntHTL;
+import static com.android.server.wifi.WifiSettingsConfigStore.D2D_ALLOWED_WHEN_INFRA_STA_DISABLED;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_DEVICE_ADDRESS;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_DEVICE_NAME;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_PENDING_FACTORY_RESET;
@@ -157,6 +158,7 @@ import com.android.server.wifi.util.StringUtil;
 import com.android.server.wifi.util.WaitingState;
 import com.android.server.wifi.util.WifiPermissionsUtil;
 import com.android.server.wifi.util.WifiPermissionsWrapper;
+import com.android.wifi.flags.FeatureFlags;
 import com.android.wifi.resources.R;
 
 import org.junit.After;
@@ -292,6 +294,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Mock TetheredClient.AddressInfo mAddressInfo;
     @Mock List<TetheredClient.AddressInfo> mAddresses;
     @Mock LocalLog mLocalLog;
+    @Mock FeatureFlags mFeatureFlags;
 
     private void generatorTestData() {
         mTestWifiP2pGroup = new WifiP2pGroup();
@@ -1389,6 +1392,8 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mWifiSettingsConfigStore.get(eq(WIFI_P2P_DEVICE_ADDRESS))).thenReturn(thisDeviceMac);
         when(mWifiSettingsConfigStore.get(eq(WIFI_P2P_DEVICE_NAME))).thenReturn(thisDeviceName);
         when(mWifiSettingsConfigStore.get(eq(WIFI_P2P_PENDING_FACTORY_RESET))).thenReturn(false);
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(false);
         when(mHandlerThread.getLooper()).thenReturn(mLooper.getLooper());
         if (supported) {
             when(mPackageManager.hasSystemFeature(eq(PackageManager.FEATURE_WIFI_DIRECT)))
@@ -1494,6 +1499,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mCoexManager.getCoexRestrictions()).thenReturn(0);
         when(mCoexManager.getCoexUnsafeChannels()).thenReturn(Collections.emptyList());
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
+        when(mDeviceConfigFacade.getFeatureFlags()).thenReturn(mFeatureFlags);
         when(mWifiInjector.getWifiDiagnostics()).thenReturn(mWifiDiagnostics);
         when(mWifiInjector.getWifiHandlerLocalLog()).thenReturn(mLocalLog);
         when(mDeviceConfigFacade.isP2pFailureBugreportEnabled()).thenReturn(false);
@@ -8007,5 +8013,21 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
             receiverPermissions = new String[]{android.Manifest.permission.TETHER_PRIVILEGED};
         }
         assertEquals(receiverPermissions, permissionArrayList.get(2));
+    }
+
+    /**
+     * Verify that p2p doesn't disable when wifi disabled and D2d is allowed when
+     * infra sta is disabled.
+     */
+    @Test
+    public void testP2pDoesInitWhenClientConnectWithWifiDisabledAndD2DAllowed()
+            throws Exception {
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(true);
+        when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
+        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(true);
+        simulateWifiStateChange(false);
+        checkIsP2pInitWhenClientConnected(true, mClient1,
+                new WorkSource(mClient1.getCallingUid(), TEST_PACKAGE_NAME));
     }
 }

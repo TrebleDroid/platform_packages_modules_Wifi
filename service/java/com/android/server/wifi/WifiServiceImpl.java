@@ -55,6 +55,7 @@ import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_P2P;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
 import static com.android.server.wifi.ScanRequestProxy.createBroadcastOptionsForScanResultsAvailable;
 import static com.android.server.wifi.SelfRecovery.REASON_API_CALL;
+import static com.android.server.wifi.WifiSettingsConfigStore.D2D_ALLOWED_WHEN_INFRA_STA_DISABLED;
 import static com.android.server.wifi.WifiSettingsConfigStore.SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI;
 import static com.android.server.wifi.WifiSettingsConfigStore.SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_AWARE_VERBOSE_LOGGING_ENABLED;
@@ -248,6 +249,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 /**
  * WifiService handles remote WiFi operation requests by implementing
@@ -8152,6 +8154,12 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("setSendDhcpHostnameRestriction:% uid=% package=%").c(restriction)
                     .c(callingUid).c(packageName).flush();
         }
+        if ((restriction
+                & ~WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN
+                & ~WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_SECURE) != 0) {
+            throw new IllegalArgumentException("Unknown dhcp hostname restriction flags: "
+                    + restriction);
+        }
         if (!isSettingsOrSuw(callingPid, callingUid)
                 && !mWifiPermissionsUtil.isDeviceOwner(callingUid, packageName)) {
             throw new SecurityException("Uid " + callingUid
@@ -8161,7 +8169,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     /**
-     * See {@link WifiManager#querySendDhcpHostnameRestriction(Executor, Consumer)}
+     * See {@link WifiManager#querySendDhcpHostnameRestriction(Executor, IntConsumer)}
      */
     @Override
     public void querySendDhcpHostnameRestriction(@NonNull String packageName,
@@ -8357,5 +8365,37 @@ public class WifiServiceImpl extends BaseWifiService {
     @Override
     public void teardownTwtSession(int sessionId, Bundle extras) {
         // TODO: Implementation
+    }
+
+    /**
+     * See {@link WifiManager#setD2dAllowedWhenInfraStaDisabled(boolean)}.
+     */
+    @Override
+    public void setD2dAllowedWhenInfraStaDisabled(boolean isAllowed) {
+        int callingUid = Binder.getCallingUid();
+        if (!isSettingsOrSuw(Binder.getCallingPid(), callingUid)) {
+            throw new SecurityException("Uid " + callingUid
+                    + " is not allowed to set d2d allowed when infra Sta is disabled");
+        }
+        mLog.info("setD2dAllowedWhenInfraStaDisabled=% uid=%").c(isAllowed).c(callingUid).flush();
+        mWifiThreadRunner.post(
+                () -> mSettingsConfigStore.put(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED, isAllowed));
+    }
+
+    /**
+     * See {@link WifiManager#queryD2dAllowedWhenInfraStaDisabled(Executor, Consumer)}
+     */
+    @Override
+    public void queryD2dAllowedWhenInfraStaDisabled(@NonNull IBooleanListener listener) {
+        if (listener == null) {
+            throw new IllegalArgumentException("listener should not be null");
+        }
+        mWifiThreadRunner.post(() -> {
+            try {
+                listener.onResult(mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED));
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage(), e);
+            }
+        });
     }
 }

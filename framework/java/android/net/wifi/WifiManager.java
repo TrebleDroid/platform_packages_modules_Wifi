@@ -113,6 +113,7 @@ import java.util.StringTokenizer;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 /**
  * This class provides the primary API for managing all aspects of Wi-Fi
@@ -4023,6 +4024,12 @@ public class WifiManager {
      */
     public static final long WIFI_FEATURE_AGGRESSIVE_ROAMING_MODE_SUPPORT = 1L << 61;
 
+    /**
+     * Supports device-to-device connections when infra STA is disabled.
+     * @hide
+     */
+    public static final long WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED = 1L << 62;
+
     private long getSupportedFeatures() {
         try {
             return mService.getSupportedFeatures();
@@ -4301,6 +4308,15 @@ public class WifiManager {
      */
     public boolean isBridgedApConcurrencySupported() {
         return isFeatureSupported(WIFI_FEATURE_BRIDGED_AP);
+    }
+
+    /**
+     * @return true if this devices supports device-to-device (D2d) Wi-Fi use-cases
+     * such as Wi-Fi Direct when infra station (STA) is disabled.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public boolean isD2dSupportedWhenInfraStaDisabled() {
+        return isFeatureSupported(WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED);
     }
 
     /**
@@ -12180,39 +12196,31 @@ public class WifiManager {
     }
 
     /**
-     * No restriction for sending the DHCP hostname.
-     */
-    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_NONE = 0;
-
-    /**
      * Do not send the DHCP hostname to open networks.
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_OPEN = 1;
+    public static final int FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN = 1 << 0;
 
     /**
-     * Do not send the DHCP hostname to any network.
+     * Do not send the DHCP hostname to secure network.
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    public static final int SEND_DHCP_HOSTNAME_RESTRICTION_ALL = 2;
+    public static final int FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_SECURE = 1 << 1;
 
     /** @hide */
-    @IntDef(prefix = { "SEND_DHCP_HOSTNAME_RESTRICTION_" }, value = {
-            SEND_DHCP_HOSTNAME_RESTRICTION_NONE,
-            SEND_DHCP_HOSTNAME_RESTRICTION_OPEN,
-            SEND_DHCP_HOSTNAME_RESTRICTION_ALL,
+    @IntDef(flag = true, prefix = { "FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_" }, value = {
+            FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN,
+            FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_SECURE,
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface SendDhcpHostnameRestriction {}
 
     /**
-     * Set a global restriction on which networks to send the device hostname to during DHCP.
+     * Sets the global restrictions on which networks to send the device hostname to during DHCP.
      *
-     * @param restriction One of {@link #SEND_DHCP_HOSTNAME_RESTRICTION_NONE},
-     *                    {@link #SEND_DHCP_HOSTNAME_RESTRICTION_OPEN} or
-     *                    {@link #SEND_DHCP_HOSTNAME_RESTRICTION_ALL}.
-     *
+     * @param restriction Bitmask of {@link SendDhcpHostnameRestriction}, or none to indicate no
+     *                    restriction.
+     * @throws IllegalArgumentException if input is invalid
      * @throws SecurityException if the calling app is not a Device Owner (DO), or a privileged app
      *                           that has one of the permissions required by this API.
      */
@@ -12231,13 +12239,11 @@ public class WifiManager {
 
     /**
      * Query the global restriction on which networks to send the device hostname to during DHCP.
-     * @see #setDhcpHostnameRestriction(int)
+     * @see #setSendDhcpHostnameRestriction(int)
      *
      * @param executor The executor on which callback will be invoked.
-     * @param resultsCallback An asynchronous callback that will return one of
-     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_NONE},
-     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_OPEN} or
-     *                        {@link #SEND_DHCP_HOSTNAME_RESTRICTION_ALL}.
+     * @param resultsCallback An asynchronous callback that will return a bitmask of
+     *                        {@link SendDhcpHostnameRestriction}.
      *
      * @throws SecurityException if the calling app is not a Device Owner (DO), or a privileged app
      *                           that has one of the permissions required by this API.
@@ -12248,7 +12254,7 @@ public class WifiManager {
             android.Manifest.permission.NETWORK_SETUP_WIZARD
     })
     public void querySendDhcpHostnameRestriction(@NonNull @CallbackExecutor Executor executor,
-            @NonNull Consumer<Integer> resultsCallback) {
+            @NonNull IntConsumer resultsCallback) {
         Objects.requireNonNull(executor, "executor cannot be null");
         Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
         try {
@@ -12626,6 +12632,70 @@ public class WifiManager {
                         mContext.getAttributionSource());
             }
             mService.teardownTwtSession(sessionId, extras);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Allows a privileged application to set whether or not this device allows
+     * device-to-device connections when infra STA is disabled. Callers can use
+     * {@link #queryD2dAllowedWhenInfraStaDisabled(Executor, Consumer)} to check the currently
+     * set value.
+     *
+     * Note: This functionality is supported only when the device support device-to-device
+     * when infra STA is disabled. Use {@link #isD2dSupportedWhenInfraStaDisabled()} to
+     * know if device supported device-to-device when infra STA is disabled.
+     *
+     * @param isAllowed whether or not the device allows to device-to-device connectivity when
+     *                  infra STA is disabled.
+     * @throws SecurityException if the caller does not have permission.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD
+    })
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void setD2dAllowedWhenInfraStaDisabled(boolean isAllowed) {
+        try {
+            mService.setD2dAllowedWhenInfraStaDisabled(isAllowed);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Query whether or not this device is configured to allow D2d connection when
+     * infra STA is disabled.
+     * see: {@link #setD2dAllowedWhenInfraStaDisabled(boolean)}.
+     *
+     *
+     * @param executor The executor on which callback will be invoked.
+     * @param resultsCallback An asynchronous callback that will return {@code Boolean} indicating
+     *                        whether device-to-device connection is allowed or disallowed
+     *                        when infra STA is disabled.
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public void queryD2dAllowedWhenInfraStaDisabled(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<Boolean> resultsCallback) {
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
+        try {
+            mService.queryD2dAllowedWhenInfraStaDisabled(
+                    new IBooleanListener.Stub() {
+                        @Override
+                        public void onResult(boolean value) {
+                            Binder.clearCallingIdentity();
+                            executor.execute(() -> {
+                                resultsCallback.accept(value);
+                            });
+                        }
+                    });
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
