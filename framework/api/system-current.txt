@@ -767,8 +767,10 @@ package android.net.wifi {
     method @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void restoreBackupData(@NonNull byte[]);
     method @Nullable @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public android.net.wifi.SoftApConfiguration restoreSoftApBackupData(@NonNull byte[]);
     method @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void restoreSupplicantBackupData(@NonNull byte[], @NonNull byte[]);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void restoreWifiBackupData(@NonNull byte[]);
     method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public byte[] retrieveBackupData();
     method @NonNull @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public byte[] retrieveSoftApBackupData();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void retrieveWifiBackupData(@NonNull java.util.concurrent.Executor, @NonNull java.util.function.Consumer<byte[]>);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD, android.Manifest.permission.NETWORK_STACK}) public void save(@NonNull android.net.wifi.WifiConfiguration, @Nullable android.net.wifi.WifiManager.ActionListener);
     method @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public void setAutoWakeupEnabled(boolean);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void setCarrierNetworkOffloadEnabled(int, boolean, boolean);
@@ -1641,6 +1643,10 @@ package android.net.wifi.p2p {
 
   public static interface WifiP2pManager.PersistentGroupInfoListener {
     method public void onPersistentGroupInfoAvailable(@NonNull android.net.wifi.p2p.WifiP2pGroupList);
+  }
+
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static interface WifiP2pManager.WifiP2pListener {
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onPersistentGroupsChanged(@NonNull android.net.wifi.p2p.WifiP2pGroupList);
   }
 
 }

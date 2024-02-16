@@ -412,6 +412,9 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
                 handleRemoteException(e, methodStr);
             } catch (ServiceSpecificException e) {
                 handleServiceSpecificException(e, methodStr);
+            } catch (IllegalArgumentException e) {
+                // May indicate a malformed return value in the HAL.
+                Log.wtf(TAG, methodStr + " encountered IllegalArgumentException: " + e);
             }
             return null;
         }

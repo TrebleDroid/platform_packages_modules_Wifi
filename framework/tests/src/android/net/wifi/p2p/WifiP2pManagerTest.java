@@ -34,6 +34,7 @@ import static org.mockito.Mockito.when;
 import android.content.AttributionSource;
 import android.content.Context;
 import android.net.wifi.ScanResult;
+import android.net.wifi.SynchronousExecutor;
 import android.os.Bundle;
 import android.os.test.TestLooper;
 import android.view.Display;
@@ -266,5 +267,18 @@ public class WifiP2pManagerTest {
         when(mP2pServiceMock.getSupportedFeatures()).thenReturn(
                 WifiP2pManager.FEATURE_GROUP_OWNER_IPV6_LINK_LOCAL_ADDRESS_PROVIDED);
         assertTrue(mDut.isGroupOwnerIPv6LinkLocalAddressProvided());
+    }
+
+    @Test
+    public void testWifiP2pListener() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastT());
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        WifiP2pManager.WifiP2pListener listener = mock(WifiP2pManager.WifiP2pListener.class);
+        mDut.initialize(mContextMock, mTestLooper.getLooper(), null);
+        mDut.registerWifiP2pListener(executor, listener);
+        verify(mP2pServiceMock).registerWifiP2pListener(any(IWifiP2pListener.Stub.class),
+                eq(PACKAGE_NAME), any(Bundle.class));
+        mDut.unregisterWifiP2pListener(listener);
+        verify(mP2pServiceMock).unregisterWifiP2pListener(any(IWifiP2pListener.Stub.class));
     }
 }
