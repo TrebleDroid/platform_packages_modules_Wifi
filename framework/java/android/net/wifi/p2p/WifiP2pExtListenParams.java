@@ -38,7 +38,7 @@ import java.util.List;
  * @hide
  */
 @SystemApi
-@FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
 public final class WifiP2pExtListenParams implements Parcelable {
     /** List of {@link OuiKeyedData} providing vendor-specific configuration data. */
     private @NonNull List<OuiKeyedData> mVendorData;
@@ -54,7 +54,7 @@ public final class WifiP2pExtListenParams implements Parcelable {
      * @return Vendor configuration data, or empty list if it does not exist.
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @NonNull
     public List<OuiKeyedData> getVendorData() {
         if (!SdkLevel.isAtLeastV()) {
@@ -63,7 +63,7 @@ public final class WifiP2pExtListenParams implements Parcelable {
         return mVendorData;
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public String toString() {
         StringBuffer sbuf = new StringBuffer();
@@ -71,13 +71,13 @@ public final class WifiP2pExtListenParams implements Parcelable {
         return sbuf.toString();
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public int describeContents() {
         return 0;
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeList(mVendorData);
@@ -88,7 +88,7 @@ public final class WifiP2pExtListenParams implements Parcelable {
         this.mVendorData = ParcelUtil.readOuiKeyedDataList(in);
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @NonNull
     public static final Creator<WifiP2pExtListenParams> CREATOR =
             new Creator<WifiP2pExtListenParams>() {
@@ -104,14 +104,14 @@ public final class WifiP2pExtListenParams implements Parcelable {
     /**
      * Builder for {@link WifiP2pExtListenParams}.
      */
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final class Builder {
         private @NonNull List<OuiKeyedData> mVendorData = Collections.emptyList();
 
         /**
          * Constructor for {@link Builder}.
          */
-        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public Builder() {
         }
 
@@ -124,7 +124,7 @@ public final class WifiP2pExtListenParams implements Parcelable {
          * @return Builder for chaining.
          */
         @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @NonNull
         public Builder setVendorData(@NonNull List<OuiKeyedData> vendorData) {
             if (!SdkLevel.isAtLeastV()) {
@@ -140,7 +140,7 @@ public final class WifiP2pExtListenParams implements Parcelable {
         /**
          * Construct a WifiP2pExtListenParams object with the specified parameters.
          */
-        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @NonNull
         public WifiP2pExtListenParams build() {
             return new WifiP2pExtListenParams(mVendorData);

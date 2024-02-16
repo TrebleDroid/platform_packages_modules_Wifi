@@ -22,6 +22,8 @@ import android.text.TextUtils;
 
 import androidx.annotation.VisibleForTesting;
 
+import com.android.wifi.flags.Flags;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -46,7 +48,7 @@ import java.util.regex.Pattern;
  * SSID is hidden.
  * @hide
  */
-@FlaggedApi("com.android.wifi.flags.uri_parser")
+@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
 @SystemApi
 public class WifiUriParser {
     static final String TAG = "WifiUriParser";
@@ -79,7 +81,7 @@ public class WifiUriParser {
      * @param uri URI of the configuration that was obtained out of band(QR code scanning, BLE).
      * @throws IllegalArgumentException when parse failed.
      */
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @NonNull
     public static UriParserResults parseUri(@NonNull String uri) {
         if (TextUtils.isEmpty(uri)) {

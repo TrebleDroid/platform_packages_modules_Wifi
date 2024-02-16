@@ -772,7 +772,7 @@ public final class ScanResult implements Parcelable {
     /**
      * @return whether AP is a IEEE802.11az Non-Trigger based Ranging Responder.
      */
-    @FlaggedApi("com.android.wifi.flags.rtt_11az_ntb_ranging_support")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public boolean is80211azNtbResponder() {
         return (flags & FLAG_80211az_NTB_RESPONDER) != 0;
     }

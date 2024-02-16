@@ -398,7 +398,7 @@ public final class SubscribeConfig implements Parcelable {
      * @hide
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @NonNull
     @SystemApi
     public List<OuiKeyedData> getVendorData() {
@@ -709,7 +709,7 @@ public final class SubscribeConfig implements Parcelable {
          * @hide
          */
         @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @NonNull
         @SystemApi
         public Builder setVendorData(@NonNull List<OuiKeyedData> vendorData) {

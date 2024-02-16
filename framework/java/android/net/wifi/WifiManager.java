@@ -397,7 +397,7 @@ public class WifiManager {
      * Disable PNO scan until device reboot.
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_RUNTIME_DISABLE_PNO_SCAN)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public static final int PNO_SCAN_STATE_DISABLED_UNTIL_REBOOT = 0;
 
@@ -405,7 +405,7 @@ public class WifiManager {
      * Disable PNO scan until device reboot or Wi-Fi is toggled.
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_RUNTIME_DISABLE_PNO_SCAN)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public static final int PNO_SCAN_STATE_DISABLED_UNTIL_WIFI_TOGGLE = 1;
 
@@ -413,7 +413,7 @@ public class WifiManager {
      * Enable PNO scan.
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_RUNTIME_DISABLE_PNO_SCAN)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public static final int PNO_SCAN_STATE_ENABLED = 2;
 
@@ -896,7 +896,7 @@ public class WifiManager {
      *
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_RUNTIME_DISABLE_PNO_SCAN)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public static final int API_SET_PNO_SCAN_ENABLED = 36;
 
@@ -907,7 +907,7 @@ public class WifiManager {
      *
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public static final int API_P2P_DISCOVER_PEERS_WITH_CONFIG_PARAMS = 37;
 
@@ -4218,7 +4218,7 @@ public class WifiManager {
      * @return true if this device supports Low latency mode.
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_LOW_LATENCY_LOCK_LISTENER)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public boolean isLowLatencyModeSupported() {
         return isFeatureSupported(WIFI_FEATURE_LOW_LATENCY);
@@ -7954,7 +7954,7 @@ public class WifiManager {
      *
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_LOW_LATENCY_LOCK_LISTENER)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public interface WifiLowLatencyLockListener {
         /**
@@ -7963,7 +7963,7 @@ public class WifiManager {
          *
          * <p>Note: Always called with current state when a new listener gets registered.
          */
-        @FlaggedApi(Flags.FLAG_LOW_LATENCY_LOCK_LISTENER)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         void onActivatedStateChanged(boolean activated);
 
         /**
@@ -7975,7 +7975,7 @@ public class WifiManager {
          *
          * @param ownerUids An array of UIDs.
          */
-        @FlaggedApi(Flags.FLAG_LOW_LATENCY_LOCK_LISTENER)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         default void onOwnershipChanged(@NonNull int[] ownerUids) {}
 
         /**
@@ -7991,7 +7991,7 @@ public class WifiManager {
          *
          * @param activeUids An array of UIDs.
          */
-        @FlaggedApi(Flags.FLAG_LOW_LATENCY_LOCK_LISTENER)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         default void onActiveUsersChanged(@NonNull int[] activeUids) {}
     }
 
@@ -8048,7 +8048,7 @@ public class WifiManager {
      * @throws SecurityException if the caller is not allowed to call this API
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_LOW_LATENCY_LOCK_LISTENER)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @RequiresPermission(
@@ -8086,7 +8086,7 @@ public class WifiManager {
      * @throws IllegalArgumentException if incorrect input arguments are provided.
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_LOW_LATENCY_LOCK_LISTENER)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void removeWifiLowLatencyLockListener(@NonNull WifiLowLatencyLockListener listener) {
@@ -8960,7 +8960,7 @@ public class WifiManager {
     /**
     * @return true if this device supports connections to Wi-Fi WEP networks.
     */
-    @FlaggedApi(Flags.FLAG_WEP_USAGE)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public boolean isWepSupported() {
         return isFeatureSupported(WIFI_FEATURE_WEP);
     }
@@ -8971,7 +8971,7 @@ public class WifiManager {
     * Note that this is the older and less secure WPA-Personal protocol, not WPA2-Personal
     * or later protocols.
     */
-    @FlaggedApi(Flags.FLAG_WPA_PERSONAL_USAGE)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public boolean isWpaPersonalSupported() {
         return isFeatureSupported(WIFI_FEATURE_WPA_PERSONAL);
     }
@@ -9186,7 +9186,7 @@ public class WifiManager {
      *
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_VERBOSE_LOGGING_FOR_AWARE_ONLY)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public static final int VERBOSE_LOGGING_LEVEL_WIFI_AWARE_ENABLED_ONLY = 3;
 
@@ -10533,7 +10533,7 @@ public class WifiManager {
      * @throws SecurityException if the caller does not have permission.
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_RUNTIME_DISABLE_PNO_SCAN)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     @RequiresPermission(
             anyOf = {MANAGE_WIFI_NETWORK_SELECTION, NETWORK_SETTINGS, NETWORK_SETUP_WIZARD})
@@ -12015,7 +12015,7 @@ public class WifiManager {
      * @hide
      */
     @SystemApi
-    @FlaggedApi(Flags.FLAG_MLO_LINK_CAPABILITIES_INFO)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
     public void getMaxMloAssociationLinkCount(@NonNull @CallbackExecutor Executor executor,
@@ -12062,7 +12062,7 @@ public class WifiManager {
      * @hide
      */
     @SystemApi
-    @FlaggedApi(Flags.FLAG_MLO_LINK_CAPABILITIES_INFO)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
     public void getMaxMloStrLinkCount(@NonNull @CallbackExecutor Executor executor,
@@ -12105,7 +12105,7 @@ public class WifiManager {
      * @hide
      */
     @SystemApi
-    @FlaggedApi(Flags.FLAG_MLO_LINK_CAPABILITIES_INFO)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
     public void getSupportedSimultaneousBandCombinations(
@@ -12149,7 +12149,7 @@ public class WifiManager {
      * @throws SecurityException if the caller does not have permission.
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_WEP_USAGE)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     @RequiresPermission(anyOf = {
             android.Manifest.permission.NETWORK_SETTINGS,
@@ -12178,7 +12178,7 @@ public class WifiManager {
      * @throws SecurityException if the caller does not have permission.
      * @hide
      */
-    @FlaggedApi(Flags.FLAG_WEP_USAGE)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     @RequiresPermission(anyOf = {
             android.Manifest.permission.NETWORK_SETTINGS,
@@ -12218,7 +12218,7 @@ public class WifiManager {
      */
     @SystemApi
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresPermission(anyOf = {MANAGE_WIFI_NETWORK_SELECTION})
     public void enableMscs(@NonNull MscsParams mscsParams) {
         Objects.requireNonNull(mscsParams);
@@ -12239,7 +12239,7 @@ public class WifiManager {
      */
     @SystemApi
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_MSCS_CONFIGURATION)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresPermission(anyOf = {MANAGE_WIFI_NETWORK_SELECTION})
     public void disableMscs() {
         try {

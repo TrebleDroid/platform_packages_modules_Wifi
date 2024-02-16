@@ -1182,7 +1182,7 @@ public final class WifiUsabilityStatsEntry implements Parcelable {
      * @return total time CCA is on busy status for the link in ms.
      * @throws NoSuchElementException if linkId is invalid.
      */
-    @FlaggedApi(Flags.FLAG_ADD_CHANNEL_STATS_PER_LINK)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public long getTotalCcaBusyFreqTimeMillis(int linkId) {
         if (mLinkStats.contains(linkId)) return mLinkStats.get(linkId).mTotalCcaBusyFreqTimeMillis;
         throw new NoSuchElementException("linkId is invalid - " + linkId);
@@ -1204,7 +1204,7 @@ public final class WifiUsabilityStatsEntry implements Parcelable {
      * @return The total radio on time for the link in ms.
      * @throws NoSuchElementException if linkId is invalid.
      */
-    @FlaggedApi(Flags.FLAG_ADD_CHANNEL_STATS_PER_LINK)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public long getTotalRadioOnFreqTimeMillis(int linkId) {
         if (mLinkStats.contains(linkId)) return mLinkStats.get(linkId).mTotalRadioOnFreqTimeMillis;
         throw new NoSuchElementException("linkId is invalid - " + linkId);

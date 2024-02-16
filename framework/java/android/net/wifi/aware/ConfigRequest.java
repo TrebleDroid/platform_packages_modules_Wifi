@@ -44,7 +44,7 @@ import java.util.Objects;
  *
  * @hide
  */
-@FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
 @SystemApi
 public final class ConfigRequest implements Parcelable {
     /**
@@ -135,7 +135,7 @@ public final class ConfigRequest implements Parcelable {
         mVendorData = vendorData;
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public String toString() {
         return "ConfigRequest [mSupport5gBand=" + mSupport5gBand
@@ -148,13 +148,13 @@ public final class ConfigRequest implements Parcelable {
                 + "]";
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public int describeContents() {
         return 0;
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mSupport5gBand ? 1 : 0);
@@ -166,7 +166,7 @@ public final class ConfigRequest implements Parcelable {
         dest.writeList(mVendorData);
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final @android.annotation.NonNull Creator<ConfigRequest> CREATOR = new Creator<ConfigRequest>() {
         @Override
         public ConfigRequest[] newArray(int size) {
@@ -188,7 +188,7 @@ public final class ConfigRequest implements Parcelable {
         }
     };
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -209,7 +209,7 @@ public final class ConfigRequest implements Parcelable {
                 && Objects.equals(mVendorData, lhs.mVendorData);
     }
 
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public int hashCode() {
         int result = 17;
@@ -290,7 +290,7 @@ public final class ConfigRequest implements Parcelable {
      * @hide
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     @NonNull
     public List<OuiKeyedData> getVendorData() {
@@ -303,7 +303,7 @@ public final class ConfigRequest implements Parcelable {
     /**
      * Builder used to build {@link ConfigRequest} objects.
      */
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final class Builder {
         private boolean mSupport5gBand = true;
         private boolean mSupport6gBand = false;
@@ -458,7 +458,7 @@ public final class ConfigRequest implements Parcelable {
          * @hide
          */
         @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @SystemApi
         @NonNull
         public Builder setVendorData(@NonNull List<OuiKeyedData> vendorData) {
@@ -476,7 +476,7 @@ public final class ConfigRequest implements Parcelable {
          * Build {@link ConfigRequest} given the current requests made on the
          * builder.
          */
-        @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @NonNull
         public ConfigRequest build() {
             if (mClusterLow > mClusterHigh) {
