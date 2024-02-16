@@ -100,6 +100,7 @@ import android.net.wifi.BaseWifiService;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.IActionListener;
 import android.net.wifi.IBooleanListener;
+import android.net.wifi.IByteArrayListener;
 import android.net.wifi.ICoexCallback;
 import android.net.wifi.IDppCallback;
 import android.net.wifi.IIntegerListener;
@@ -5705,6 +5706,53 @@ public class WifiServiceImpl extends BaseWifiService {
     /**
      * Retrieve the data to be backed to save the current state.
      *
+     * The data includes:
+     * 1. Wifi Settings (WifiSettingsConfigStore)
+     * 2. WifiConfiguration/IpConfiguration (original backup by retrieveBackupData)
+     * 3. SoftApConfiguration (original backup by retrieveSoftApBackupData)
+     *
+     * @param listener the listener to be used to receive backup data.
+     */
+    @Override
+    public void retrieveWifiBackupData(IByteArrayListener listener) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        enforceNetworkSettingsPermission();
+        mLog.info("retrieveWifiBackupData uid=%").c(Binder.getCallingUid()).flush();
+        if (listener == null) {
+            throw new IllegalArgumentException("listener should not be null");
+        }
+        mWifiThreadRunner.post(() -> {
+            try {
+                 // TODO: b/302250336 - implement it.
+                listener.onResult(new byte[0]);
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage(), e);
+            }
+        });
+    }
+
+    /**
+     * Restore state from the backed up data.
+     *
+     * The api will guarantee the device would not damage when adding new XML tag.
+     *
+     * @param data Raw byte stream of the backed up data.
+     */
+    @Override
+    public void restoreWifiBackupData(byte[] data) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        enforceNetworkSettingsPermission();
+        mLog.info("restoreWifiBackupData uid=%").c(Binder.getCallingUid()).flush();
+        // TODO: b/302250336 - implement it.
+    }
+
+    /**
+     * Retrieve the data to be backed to save the current state.
+     *
      * @return  Raw byte stream of the data to be backed up.
      */
     @Override
@@ -7336,8 +7384,9 @@ public class WifiServiceImpl extends BaseWifiService {
 
     @VisibleForTesting
     public boolean isPnoSupported() {
-        return mWifiGlobals.isBackgroundScanSupported()
-                || (getSupportedFeatures() & WifiManager.WIFI_FEATURE_PNO) != 0;
+        return mWifiGlobals.isSwPnoEnabled()
+                || (mWifiGlobals.isBackgroundScanSupported()
+                        && (getSupportedFeatures() & WifiManager.WIFI_FEATURE_PNO) != 0);
     }
 
     private boolean isAggressiveRoamingModeSupported() {

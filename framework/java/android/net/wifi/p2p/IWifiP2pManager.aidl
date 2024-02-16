@@ -16,6 +16,8 @@
 
 package android.net.wifi.p2p;
 
+import android.net.wifi.p2p.IWifiP2pListener;
+
 import android.os.Bundle;
 import android.os.Messenger;
 
@@ -32,5 +34,7 @@ interface IWifiP2pManager
     void setMiracastMode(int mode);
     void checkConfigureWifiDisplayPermission();
     long getSupportedFeatures();
+    void registerWifiP2pListener(in IWifiP2pListener listener, in String packageName, in Bundle extras);
+    void unregisterWifiP2pListener(in IWifiP2pListener listener);
 }
 

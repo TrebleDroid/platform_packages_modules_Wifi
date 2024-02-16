@@ -94,6 +94,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WpsInfo;
+import android.net.wifi.p2p.IWifiP2pListener;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
@@ -111,10 +112,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.PersistableBundle;
 import android.os.Process;
+import android.os.RemoteException;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.os.WorkSource;
@@ -199,6 +202,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     private static final String thisDeviceName = "thisDeviceName";
     private static final String ANONYMIZED_DEVICE_ADDRESS = "02:00:00:00:00:00";
     private static final String TEST_PACKAGE_NAME = "com.p2p.test";
+    private static final String TEST_NETWORK_NAME = "DIRECT-xy-NEW";
     private static final String TEST_ANDROID_ID = "314Deadbeef";
     private static final String[] TEST_REQUIRED_PERMISSIONS_T =
             new String[] {
@@ -246,6 +250,11 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     private ArgumentCaptor<TetheringManager.TetheringEventCallback> mTetheringEventCallbackCaptor =
             ArgumentCaptor.forClass(TetheringManager.TetheringEventCallback.class);
     private TetheringManager.TetheringEventCallback mTetheringEventCallback;
+    private Bundle mExtras = new Bundle();
+    private IWifiP2pListener mP2pListener = mock(IWifiP2pListener.class);
+    private ArgumentCaptor<WifiSettingsConfigStore.OnSettingsChangedListener>
+            mD2DAllowedSettingsCallbackCaptor =
+            ArgumentCaptor.forClass(WifiSettingsConfigStore.OnSettingsChangedListener.class);
 
     @Mock Bundle mBundle;
     @Mock Context mContext;
@@ -324,7 +333,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         // for general group started event
         mTestWifiP2pNewPersistentGoGroup = new WifiP2pGroup();
         mTestWifiP2pNewPersistentGoGroup.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
-        mTestWifiP2pNewPersistentGoGroup.setNetworkName("DIRECT-xy-NEW");
+        mTestWifiP2pNewPersistentGoGroup.setNetworkName(TEST_NETWORK_NAME);
         mTestWifiP2pNewPersistentGoGroup.setOwner(new WifiP2pDevice(thisDeviceMac));
         mTestWifiP2pNewPersistentGoGroup.setIsGroupOwner(true);
         mTestWifiP2pNewPersistentGoGroup.setInterface(IFACE_NAME_P2P);
@@ -1269,7 +1278,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     /**
      * Check the broadcast of WIFI_P2P_THIS_DEVICE_CHANGED_ACTION is sent as expected.
      */
-    private void checkSendThisDeviceChangedBroadcast() {
+    private void checkSendThisDeviceChangedBroadcast() throws RemoteException {
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         String[] permission_gold;
         if (mWifiPermissionsUtil.isLocationModeEnabled()) {
@@ -1310,6 +1319,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                         .setRequireNoneOfPermissions(TEST_EXCLUDED_PERMISSIONS_T);
             }
             verifyDeviceChangedBroadcastIntent(intentCaptor.getValue());
+        }
+        if (SdkLevel.isAtLeastT()) {
+            verify(mP2pListener, atLeastOnce()).onDeviceConfigurationChanged(any());
         }
     }
 
@@ -1504,6 +1516,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mWifiInjector.getWifiHandlerLocalLog()).thenReturn(mLocalLog);
         when(mDeviceConfigFacade.isP2pFailureBugreportEnabled()).thenReturn(false);
         when(mContext.getSystemService(TetheringManager.class)).thenReturn(mTetheringManager);
+        when(mP2pListener.asBinder()).thenReturn(mock(IBinder.class));
 
         mWifiP2pServiceImpl = new WifiP2pServiceImpl(mContext, mWifiInjector);
         if (supported) {
@@ -1526,6 +1539,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
             }
             mWifiStateChangedReceiver = mBcastRxCaptor.getAllValues().get(0);
             mLocationModeReceiver = mBcastRxCaptor.getAllValues().get(1);
+            verify(mWifiSettingsConfigStore).registerChangeListener(
+                    eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED),
+                    mD2DAllowedSettingsCallbackCaptor.capture(), any());
         }
 
         verify(mWifiPermissionsUtil, never()).isLocationModeEnabled();
@@ -1561,6 +1577,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         mClient2 = new Binder();
         when(mContext.createContextAsUser(any(), anyInt())).thenReturn(mContext);
         mWifiP2pServiceImpl.handleBootCompleted();
+        if (SdkLevel.isAtLeastT()) {
+            mWifiP2pServiceImpl.registerWifiP2pListener(mP2pListener, TEST_PACKAGE_NAME, mExtras);
+        }
     }
 
     @After
@@ -1613,7 +1632,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         forceP2pEnabled(mClient1);
         WifiP2pGroup group = new WifiP2pGroup();
         group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
-        group.setNetworkName("DIRECT-xy-NEW");
+        group.setNetworkName(TEST_NETWORK_NAME);
         group.setOwner(new WifiP2pDevice("thisDeviceMac"));
         group.setIsGroupOwner(true);
         group.setInterface(IFACE_NAME_P2P);
@@ -1767,6 +1786,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         inOrder.verify(mContext).sendStickyBroadcastAsUser(argThat(
                 new WifiP2pServiceImplTest.P2pStateChangedIntentMatcher(
                         WifiP2pManager.WIFI_P2P_STATE_ENABLED)), any());
+        if (SdkLevel.isAtLeastT()) {
+            verify(mP2pListener).onStateChanged(eq(true));
+        }
 
         // disabled broadcast sent when user restriction is set
         simulateUserRestrictionChange(true);
@@ -1774,6 +1796,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         inOrder.verify(mContext).sendStickyBroadcastAsUser(argThat(
                 new WifiP2pServiceImplTest.P2pStateChangedIntentMatcher(
                         WifiP2pManager.WIFI_P2P_STATE_DISABLED)), any());
+        if (SdkLevel.isAtLeastT()) {
+            verify(mP2pListener).onStateChanged(eq(false));
+        }
 
         // no disabled broadcast sent when Wi-Fi is disabled since broadcast already sent
         simulateWifiStateChange(false);
@@ -2242,6 +2267,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         assertTrue(mClientHandler.hasMessages(WifiP2pManager.DISCOVER_PEERS_SUCCEEDED));
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_P2P_DISCOVER_PEERS), anyInt(),
                 anyInt(), anyInt(), anyString(), eq(true));
+        if (SdkLevel.isAtLeastT()) {
+            verify(mP2pListener).onDiscoveryStateChanged(eq(true));
+        }
     }
 
     /**
@@ -2806,6 +2834,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         } else {
             verify(mWifiPermissionsUtil).checkCanAccessWifiDirect(eq(TEST_PACKAGE_NAME),
                     eq("testFeature"), anyInt(), eq(true));
+        }
+        if (SdkLevel.isAtLeastT()) {
+            verify(mP2pListener).onListenStateChanged(eq(true));
         }
     }
 
@@ -3410,7 +3441,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
 
         WifiP2pGroup group = new WifiP2pGroup();
         group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
-        group.setNetworkName("DIRECT-xy-NEW");
+        group.setNetworkName(TEST_NETWORK_NAME);
         group.setOwner(new WifiP2pDevice("thisDeviceMac"));
         group.setIsGroupOwner(true);
         group.setInterface(IFACE_NAME_P2P);
@@ -3716,7 +3747,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 WifiP2pServiceImpl.P2pStatus.NO_COMMON_CHANNEL);
         WifiP2pGroup group = new WifiP2pGroup();
         group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
-        group.setNetworkName("DIRECT-xy-NEW");
+        group.setNetworkName(TEST_NETWORK_NAME);
         group.setOwner(new WifiP2pDevice("thisDeviceMac"));
         group.setIsGroupOwner(true);
         group.setInterface(IFACE_NAME_P2P);
@@ -5317,6 +5348,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mWifiNative.p2pListNetworks(any())).thenReturn(true);
         sendSimpleMsg(mClientMessenger, WifiP2pManager.FACTORY_RESET);
         checkSendP2pPersistentGroupsChangedBroadcast();
+        if (SdkLevel.isAtLeastT()) {
+            verify(mP2pListener, atLeastOnce()).onPersistentGroupsChanged(any());
+        }
         verify(mWifiInjector).getUserManager();
         verify(mPackageManager).getNameForUid(anyInt());
         verify(mWifiPermissionsUtil).checkNetworkSettingsPermission(anyInt());
@@ -6470,7 +6504,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
 
         WifiP2pGroup group = new WifiP2pGroup();
         group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
-        group.setNetworkName("DIRECT-xy-NEW");
+        group.setNetworkName(TEST_NETWORK_NAME);
         group.setOwner(new WifiP2pDevice("thisDeviceMac"));
         group.setIsGroupOwner(true);
         group.setInterface(IFACE_NAME_P2P);
@@ -6653,7 +6687,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         forceP2pEnabled(mClient1);
         WifiP2pGroup group = new WifiP2pGroup();
         group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
-        group.setNetworkName("DIRECT-xy-NEW");
+        group.setNetworkName(TEST_NETWORK_NAME);
         group.setOwner(new WifiP2pDevice("thisDeviceMac"));
         group.setIsGroupOwner(true);
         group.setInterface(IFACE_NAME_P2P);
@@ -7431,7 +7465,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 WifiP2pMonitor.PROV_DISC_STATUS_REJECTED,
                 pdEvent);
         verify(mWifiNative).p2pCancelConnect();
-
+        if (SdkLevel.isAtLeastT()) {
+            verify(mP2pListener).onGroupCreationFailed();
+        }
     }
 
     /**
@@ -7462,6 +7498,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
 
         sendSimpleMsg(null, WifiP2pServiceImpl.PEER_CONNECTION_USER_REJECT);
         verify(mWifiNative).p2pReject(eq(mTestWifiP2pDevice.deviceAddress));
+        if (SdkLevel.isAtLeastT()) {
+            verify(mP2pListener).onGroupNegotiationRejectedByUser();
+        }
     }
 
     /**
@@ -7689,7 +7728,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         forceP2pEnabled(mClient1);
         WifiP2pGroup group = new WifiP2pGroup();
         group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
-        group.setNetworkName("DIRECT-xy-NEW");
+        group.setNetworkName(TEST_NETWORK_NAME);
         group.setOwner(new WifiP2pDevice("thisDeviceMac"));
         group.setIsGroupOwner(true);
         group.setInterface(IFACE_NAME_P2P);
@@ -8029,5 +8068,86 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         simulateWifiStateChange(false);
         checkIsP2pInitWhenClientConnected(true, mClient1,
                 new WorkSource(mClient1.getCallingUid(), TEST_PACKAGE_NAME));
+    }
+
+    @Test
+    public void testWifiP2pListener() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastT());
+        forceP2pEnabled(mClient1);
+        when(mWifiNative.p2pGroupAdd(any(), eq(false))).thenReturn(true);
+        WifiP2pGroup p2pGroup = new WifiP2pGroup();
+        p2pGroup.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
+        p2pGroup.setNetworkName(TEST_NETWORK_NAME);
+        p2pGroup.setOwner(new WifiP2pDevice("thisDeviceMac"));
+        p2pGroup.setIsGroupOwner(true);
+        p2pGroup.setInterface(IFACE_NAME_P2P);
+
+        sendCreateGroupMsgWithConfigValidAsGroup(mClientMessenger);
+        sendGroupStartedMsg(p2pGroup);
+        simulateTetherReady();
+        verify(mP2pListener).onGroupCreating();
+        ArgumentCaptor<WifiP2pInfo> p2pInfoCaptor = ArgumentCaptor.forClass(WifiP2pInfo.class);
+        ArgumentCaptor<WifiP2pGroup> p2pGroupCaptor = ArgumentCaptor.forClass(WifiP2pGroup.class);
+        verify(mP2pListener).onGroupCreated(p2pInfoCaptor.capture(), p2pGroupCaptor.capture());
+        assertEquals(TEST_NETWORK_NAME, p2pGroupCaptor.getValue().getNetworkName());
+        assertTrue(p2pGroupCaptor.getValue().isClientListEmpty());
+        assertTrue(p2pInfoCaptor.getValue().groupFormed);
+
+        WifiP2pDevice peerClientDevice = new WifiP2pDevice();
+        peerClientDevice.deviceName = "peerClientDeviceName";
+        peerClientDevice.deviceAddress = "11:22:33:aa:bb:cc";
+        peerClientDevice.setInterfaceMacAddress(MacAddress.fromString(PEER_INTERFACE_ADDRESS));
+        sendSimpleMsg(null, WifiP2pMonitor.AP_STA_CONNECTED_EVENT, peerClientDevice);
+        verify(mP2pListener).onPeerClientJoined(p2pInfoCaptor.capture(),
+                p2pGroupCaptor.capture());
+        assertFalse(p2pGroupCaptor.getValue().isClientListEmpty());
+        assertTrue(p2pInfoCaptor.getValue().groupFormed);
+
+        sendSimpleMsg(null, WifiP2pMonitor.AP_STA_DISCONNECTED_EVENT, peerClientDevice);
+        verify(mP2pListener).onPeerClientDisconnected(p2pInfoCaptor.capture(),
+                p2pGroupCaptor.capture());
+        assertTrue(p2pGroupCaptor.getValue().isClientListEmpty());
+        assertTrue(p2pInfoCaptor.getValue().groupFormed);
+        verify(mP2pListener, atLeastOnce()).onPeerListChanged(any());
+
+        sendSimpleMsg(null, WifiP2pMonitor.P2P_FREQUENCY_CHANGED_EVENT, TEST_GROUP_FREQUENCY);
+        verify(mP2pListener).onFrequencyChanged(p2pInfoCaptor.capture(),
+                p2pGroupCaptor.capture());
+        assertEquals(TEST_GROUP_FREQUENCY, p2pGroupCaptor.getValue().getFrequency());
+
+        sendGroupRemovedMsg();
+        mockEnterDisabledState();
+        mLooper.dispatchAll();
+        verify(mP2pListener).onGroupRemoved();
+
+        mWifiP2pServiceImpl.unregisterWifiP2pListener(mP2pListener);
+        doThrow(new SecurityException()).when(mWifiPermissionsUtil).enforceNearbyDevicesPermission(
+                any(), anyBoolean(), any());
+        assertThrows(SecurityException.class,
+                () -> mWifiP2pServiceImpl.registerWifiP2pListener(mP2pListener, TEST_PACKAGE_NAME,
+                        mExtras));
+    }
+
+    /**
+     * Verify that p2p disable when the D2d allowed value changes to false
+     */
+    @Test
+    public void testP2pChangeToDisableWhenD2DAllowedToFalse()
+            throws Exception {
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(true);
+        when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
+        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(true);
+        simulateWifiStateChange(false);
+        checkIsP2pInitWhenClientConnected(true, mClient1,
+                new WorkSource(mClient1.getCallingUid(), TEST_PACKAGE_NAME));
+        when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
+                .thenReturn(false);
+        mD2DAllowedSettingsCallbackCaptor.getValue().onSettingsChanged(
+                D2D_ALLOWED_WHEN_INFRA_STA_DISABLED, false);
+        mLooper.dispatchAll();
+        // P2P is really disabled when wifi is off.
+        verify(mWifiNative).teardownInterface();
+        verify(mWifiMonitor).stopMonitoring(anyString());
     }
 }

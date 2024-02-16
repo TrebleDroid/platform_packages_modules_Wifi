@@ -65,6 +65,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.ClientModeImpl;
 import com.android.server.wifi.Clock;
 import com.android.server.wifi.DeviceConfigFacade;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.WifiLocalServices;
 import com.android.server.wifi.WifiLog;
@@ -688,6 +689,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
     private final WifiManager mWifiManager;
     private final LastCallerInfoManager mLastCallerInfoManager;
     private final DeviceConfigFacade mDeviceConfigFacade;
+    private final WifiGlobals mWifiGlobals;
 
     private AtomicBoolean mVerboseLoggingEnabled = new AtomicBoolean(false);
 
@@ -708,6 +710,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
         mWifiPermissionsUtil = wifiInjector.getWifiPermissionsUtil();
         mWifiNative = wifiInjector.getWifiNative();
         mDeviceConfigFacade = wifiInjector.getDeviceConfigFacade();
+        mWifiGlobals = wifiInjector.getWifiGlobals();
         // Wifi service is always started before other wifi services. So, there is no problem
         // obtaining WifiManager in the constructor here.
         mWifiManager = mContext.getSystemService(WifiManager.class);
@@ -2453,8 +2456,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                                 scanParams.pnoSettings.isConnected)) {
                             deferMessage(msg);
                             transitionTo(mHwPnoScanState);
-                        } else if (mContext.getResources().getBoolean(
-                                R.bool.config_wifiSwPnoEnabled)
+                        } else if (mWifiGlobals.isSwPnoEnabled()
                                 && mDeviceConfigFacade.isSoftwarePnoEnabled()) {
                             deferMessage(msg);
                             transitionTo(mSwPnoScanState);
