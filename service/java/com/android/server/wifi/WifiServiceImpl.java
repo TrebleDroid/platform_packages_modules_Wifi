@@ -7754,9 +7754,10 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new IllegalArgumentException("policyParamsList is invalid");
         }
 
-        if (!SdkLevel.isAtLeastV()
+        if (!(SdkLevel.isAtLeastV() && isWifiStandardSupported(ScanResult.WIFI_STANDARD_11AX))
                 && policyParamsList.get(0).getDirection() == QosPolicyParams.DIRECTION_UPLINK) {
-            Log.e(TAG, "Uplink QoS policies are only supported on SDK >= V");
+            Log.e(TAG, "Uplink QoS policies are only supported on devices with SDK >= V"
+                    + " and 11ax support");
             rejectAllQosPolicies(policyParamsList, listener);
             return;
         }
