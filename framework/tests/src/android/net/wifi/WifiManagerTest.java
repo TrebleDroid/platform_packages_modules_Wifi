@@ -4324,4 +4324,24 @@ public class WifiManagerTest {
         verify(mWifiService).queryD2dAllowedWhenInfraStaDisabled(
                 any(IBooleanListener.Stub.class));
     }
+
+    @Test
+    public void testRetrieveRestoreWifiBackupData() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        Consumer<byte[]> resultsSetCallback = mock(Consumer.class);
+        SynchronousExecutor executor = mock(SynchronousExecutor.class);
+        byte[] testByteArray = new byte[0];
+        // Null executor/callback exception.
+        assertThrows("null executor should trigger exception", NullPointerException.class,
+                () -> mWifiManager.retrieveWifiBackupData(null, resultsSetCallback));
+        assertThrows("null listener should trigger exception", NullPointerException.class,
+                () -> mWifiManager.retrieveWifiBackupData(executor, null));
+        // Call and verify.
+        mWifiManager.retrieveWifiBackupData(executor, resultsSetCallback);
+        verify(mWifiService).retrieveWifiBackupData(
+                any(IByteArrayListener.Stub.class));
+        mWifiManager.restoreWifiBackupData(testByteArray);
+        verify(mWifiService).restoreWifiBackupData(eq(testByteArray));
+    }
+
 }
