@@ -97,6 +97,7 @@ import com.android.server.wifi.FrameworkFacade;
 import com.android.server.wifi.MockResources;
 import com.android.server.wifi.ScanResults;
 import com.android.server.wifi.WifiBaseTest;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.WifiLocalServices;
 import com.android.server.wifi.WifiMetrics;
@@ -163,6 +164,7 @@ public class WifiScanningServiceTest extends WifiBaseTest {
     @Mock WifiManager mWifiManager;
     @Mock LastCallerInfoManager mLastCallerInfoManager;
     @Mock DeviceConfigFacade mDeviceConfigFacade;
+    @Mock WifiGlobals mWifiGlobals;
     PresetKnownBandsChannelHelper mChannelHelper0;
     PresetKnownBandsChannelHelper mChannelHelper1;
     TestLooper mLooper;
@@ -193,7 +195,8 @@ public class WifiScanningServiceTest extends WifiBaseTest {
                 mSwPnoMobilityIterations);
         mResources.setInteger(R.integer.config_wifiSwPnoFastTimerIterations, mSwPnoFastIterations);
         mResources.setInteger(R.integer.config_wifiSwPnoSlowTimerIterations, mSwPnoSlowIterations);
-        mResources.setBoolean(R.bool.config_wifiSwPnoEnabled, true);
+        when(mWifiInjector.getWifiGlobals()).thenReturn(mWifiGlobals);
+        when(mWifiGlobals.isSwPnoEnabled()).thenReturn(true);
 
         when(mContext.getResources()).thenReturn(mResources);
         when(mWifiInjector.getWifiPermissionsUtil())

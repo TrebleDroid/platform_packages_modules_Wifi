@@ -84,6 +84,7 @@ public class WifiGlobals {
     private final boolean mWifiInterfaceAddedSelfRecoveryEnabled;
     private final int mNetworkNotFoundEventThreshold;
     private boolean mIsBackgroundScanSupported;
+    private boolean mIsSwPnoEnabled;
     private final boolean mIsWepDeprecated;
     private final boolean mIsWpaPersonalDeprecated;
     private final Map<String, List<String>> mCountryCodeToAfcServers;
@@ -161,6 +162,8 @@ public class WifiGlobals {
                 R.integer.config_wifiNetworkNotFoundEventThreshold);
         mIsBackgroundScanSupported = mContext.getResources()
                 .getBoolean(R.bool.config_wifi_background_scan_support);
+        mIsSwPnoEnabled = mContext.getResources()
+                .getBoolean(R.bool.config_wifiSwPnoEnabled);
         mIsWepDeprecated = mContext.getResources()
                 .getBoolean(R.bool.config_wifiWepDeprecated);
         mIsWpaPersonalDeprecated = mContext.getResources()
@@ -608,6 +611,13 @@ public class WifiGlobals {
     };
 
     /**
+     * Get whether software pno is enabled.
+     */
+    public boolean isSwPnoEnabled() {
+        return mIsSwPnoEnabled;
+    };
+
+    /**
      * Get whether to temporarily disable a unwanted network that has low RSSI.
      */
     public boolean disableUnwantedNetworkOnLowRssi() {
@@ -720,6 +730,7 @@ public class WifiGlobals {
         pw.println("mDisableUnwantedNetworkOnLowRssi=" + mDisableUnwantedNetworkOnLowRssi);
         pw.println("mNetworkNotFoundEventThreshold=" + mNetworkNotFoundEventThreshold);
         pw.println("mIsBackgroundScanSupported=" + mIsBackgroundScanSupported);
+        pw.println("mIsSwPnoEnabled=" + mIsSwPnoEnabled);
         pw.println("mIsWepDeprecated=" + mIsWepDeprecated);
         pw.println("mIsWpaPersonalDeprecated=" + mIsWpaPersonalDeprecated);
         pw.println("mIsWepAllowed=" + mIsWepAllowed.get());
