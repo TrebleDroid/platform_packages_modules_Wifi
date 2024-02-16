@@ -8486,6 +8486,60 @@ public class WifiManager {
     /**
      * Returns a byte stream representing the data that needs to be backed up to save the
      * current Wifi state.
+     * This Wifi state can be restored by calling {@link #restoreWifiBackupData(byte[])}.
+     * @hide
+     */
+    @SystemApi
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public void retrieveWifiBackupData(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<byte[]> resultsCallback) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
+        try {
+            mService.retrieveWifiBackupData(
+                    new IByteArrayListener.Stub() {
+                        @Override
+                        public void onResult(byte[] value) {
+                            Binder.clearCallingIdentity();
+                            executor.execute(() -> {
+                                resultsCallback.accept(value);
+                            });
+                        }
+                    });
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Restore state from the backed up data.
+     * @param data byte stream in the same format produced by {@link #retrieveWifiBackupData()}
+     * @hide
+     */
+    @SystemApi
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public void restoreWifiBackupData(@NonNull byte[] data) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        try {
+            mService.restoreWifiBackupData(data);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Returns a byte stream representing the data that needs to be backed up to save the
+     * current Wifi state.
      * This Wifi state can be restored by calling {@link #restoreBackupData(byte[])}.
      * @hide
      */

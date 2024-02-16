@@ -26,6 +26,7 @@ import android.net.Network;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.IActionListener;
 import android.net.wifi.IBooleanListener;
+import android.net.wifi.IByteArrayListener;
 import android.net.wifi.ICoexCallback;
 import android.net.wifi.IDppCallback;
 import android.net.wifi.IIntegerListener;
@@ -505,4 +506,8 @@ interface IWifiManager
     void setD2dAllowedWhenInfraStaDisabled(boolean isAllowed);
 
     void queryD2dAllowedWhenInfraStaDisabled(in IBooleanListener listener);
+
+    void retrieveWifiBackupData(in IByteArrayListener listener);
+
+    void restoreWifiBackupData(in byte[] data);
 }
