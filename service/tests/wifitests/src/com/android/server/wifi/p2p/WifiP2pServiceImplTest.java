@@ -8064,7 +8064,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
                 .thenReturn(true);
         when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(true);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(true);
         simulateWifiStateChange(false);
         checkIsP2pInitWhenClientConnected(true, mClient1,
                 new WorkSource(mClient1.getCallingUid(), TEST_PACKAGE_NAME));
@@ -8137,7 +8137,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mWifiSettingsConfigStore.get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)))
                 .thenReturn(true);
         when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(true);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(true);
         simulateWifiStateChange(false);
         checkIsP2pInitWhenClientConnected(true, mClient1,
                 new WorkSource(mClient1.getCallingUid(), TEST_PACKAGE_NAME));
