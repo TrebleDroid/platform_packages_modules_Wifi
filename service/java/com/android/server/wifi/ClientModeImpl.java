@@ -6967,7 +6967,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     Log.e(getTag(), "Fail to create an IpClient instance within "
                             + IPCLIENT_STARTUP_TIMEOUT_MS + "ms");
                     handleNetworkDisconnect(false,
-                            WifiStatsLog.WIFI_DISCONNECT_REPORTED__FAILURE_CODE__TIMEOUT);
+                            WifiStatsLog.WIFI_DISCONNECT_REPORTED__FAILURE_CODE__DISCONNECT_CREATE_IP_CLIENT_TIMEOUT);
                     transitionTo(mDisconnectedState);
                     break;
                 }
@@ -7359,6 +7359,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                                     config.networkId,
                                     DISABLED_UNWANTED_LOW_RSSI);
                         }
+                        mFrameworkDisconnectReasonOverride = WifiStatsLog.WIFI_DISCONNECT_REPORTED__FAILURE_CODE__DISCONNECT_UNWANTED_BY_CONNECTIVITY;
                         mWifiNative.disconnect(mInterfaceName);
                     } else if (message.arg1 == NETWORK_STATUS_UNWANTED_DISABLE_AUTOJOIN
                             || message.arg1 == NETWORK_STATUS_UNWANTED_VALIDATION_FAILED) {

@@ -5632,7 +5632,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
 
         public boolean isWifiP2pAvailable() {
             if (mIsP2pDisallowedByAdmin) return false;
-            if (mFeatureFlags.d2dUsageWhenWifiOff()) {
+            if (mFeatureFlags.d2dWhenInfraStaOff()) {
                 return mIsWifiEnabled
                         || (mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)
                                 && mWifiGlobals.isD2dSupportedWhenInfraStaDisabled());

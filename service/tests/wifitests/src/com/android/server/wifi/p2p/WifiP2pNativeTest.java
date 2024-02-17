@@ -140,7 +140,7 @@ public class WifiP2pNativeTest extends WifiBaseTest {
         mWifiClientInterfaceNames.add("wlan1");
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
         when(mDeviceConfigFacade.getFeatureFlags()).thenReturn(mFeatureFlags);
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(true);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(true);
         mWifiP2pNative = new WifiP2pNative(mWifiCondManager, mWifiNative, mWifiMetrics,
                 mWifiVendorHalMock, mSupplicantP2pIfaceHalMock, mHalDeviceManagerMock,
                 mPropertyServiceMock, mWifiInjector);
@@ -194,7 +194,7 @@ public class WifiP2pNativeTest extends WifiBaseTest {
      */
     @Test
     public void testSetupInterfaceByHDMSuccessInCreatingP2pIface() {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testSetupInterfaceSuccessInCreatingP2pIface(false);
     }
 
@@ -248,7 +248,7 @@ public class WifiP2pNativeTest extends WifiBaseTest {
      */
     @Test
     public void testSetupInterfaceFailureInCreatingP2pIfaceByHDM() {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testSetupInterfaceFailureInCreatingP2pIface(false);
     }
 
@@ -288,7 +288,7 @@ public class WifiP2pNativeTest extends WifiBaseTest {
      */
     @Test
     public void testSetupInterfaceFailureInHDMCreatingP2pIfaceWhenHalDevMgrNotPossiblyCreate() {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testSetupInterfaceFailureInCreatingP2pIfaceAndHalDevMgrNotPossiblyCreate(false);
     }
 
@@ -325,7 +325,7 @@ public class WifiP2pNativeTest extends WifiBaseTest {
      */
     @Test
     public void testSetupInterfaceByHDMAndFailureInSupplicantConnectionInitialization() {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testSetupInterfaceFailureInSupplicantConnectionInitialization(false);
     }
 
@@ -360,7 +360,7 @@ public class WifiP2pNativeTest extends WifiBaseTest {
      */
     @Test
     public void testSetupInterfaceByHDMAndFailureInSupplicantConnectionInitNotCompleted() {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testSetupInterfaceFailureInSupplicantConnectionInitNotCompleted(false);
     }
 
@@ -397,7 +397,7 @@ public class WifiP2pNativeTest extends WifiBaseTest {
      */
     @Test
     public void testSetupInterfaceByHDMAndFailureInSettingUpP2pIfaceInSupplicant() {
-        when(mFeatureFlags.d2dUsageWhenWifiOff()).thenReturn(false);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
         testSetupInterfaceFailureInSettingUpP2pIfaceInSupplicant(false);
     }
 
