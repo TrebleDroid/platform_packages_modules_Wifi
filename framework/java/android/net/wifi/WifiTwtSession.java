@@ -31,7 +31,7 @@ import java.util.function.Consumer;
  *
  * @hide
  */
-public class WifiTwtSession implements TwtSession, AutoCloseable {
+public class WifiTwtSession implements TwtSession {
     private static final String TAG = "WifiTwtSession";
     public static final int MAX_TWT_SESSIONS = 8;
     private final int mWakeDurationMicros;
@@ -76,19 +76,6 @@ public class WifiTwtSession implements TwtSession, AutoCloseable {
             throw new SecurityException("TWT session is not owned by the caller");
         }
         mgr.getStatsTwtSession(mSessionId, executor, resultCallback);
-    }
-
-    @Override
-    public void teardown() {
-        WifiManager mgr = mMgr.get();
-        if (mgr == null) {
-            Log.e(TAG, "getStats: called post garbage collection");
-            return;
-        }
-        if (Binder.getCallingUid() != mOwner) {
-            throw new SecurityException("TWT session is not owned by the caller");
-        }
-        close();
     }
 
     public WifiTwtSession(WifiManager wifiManager, int wakeDurationMicros, long wakeIntervalMicros,

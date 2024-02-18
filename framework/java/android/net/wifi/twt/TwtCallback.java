@@ -119,9 +119,8 @@ public interface TwtCallback {
     void onFailure(@TwtCallback.TwtErrorCode int errorCode);
 
     /**
-     * Called when a TWT session is torn down. Can be called as a response to
-     * {@link TwtSession#teardown()} or unsolicited. Check the {@link TwtReasonCode} for more
-     * details.
+     * Called when a TWT session is torn down or closed. Check the
+     * {@link TwtReasonCode} for more details.
      *
      * @param reasonCode reason for TWT session teardown
      */
