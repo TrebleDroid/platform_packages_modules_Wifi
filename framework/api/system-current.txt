@@ -1747,7 +1747,7 @@ package android.net.wifi.twt {
   @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final class TwtRequest.Builder {
     ctor @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public TwtRequest.Builder(int, int, long, long);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @NonNull public android.net.wifi.twt.TwtRequest build();
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @IntRange(from=0x0, to=0xf) @NonNull public android.net.wifi.twt.TwtRequest.Builder setLinkId(int);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @NonNull public android.net.wifi.twt.TwtRequest.Builder setLinkId(@IntRange(from=0x0, to=0xf) int);
   }
 
   @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public interface TwtSession {
