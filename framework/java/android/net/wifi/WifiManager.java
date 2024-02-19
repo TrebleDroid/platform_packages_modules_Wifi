@@ -65,9 +65,9 @@ import android.net.wifi.hotspot2.ProvisioningCallback;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.net.wifi.twt.TwtCallback;
 import android.net.wifi.twt.TwtRequest;
 import android.net.wifi.twt.TwtSession;
+import android.net.wifi.twt.TwtSessionCallback;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -12573,15 +12573,16 @@ public class WifiManager {
 
     private class TwtCallbackProxy extends ITwtCallback.Stub {
         private final Executor mExecutor;
-        private final TwtCallback mCallback;
+        private final TwtSessionCallback mCallback;
 
-        private TwtCallbackProxy(Executor executor, TwtCallback callback) {
+        private TwtCallbackProxy(Executor executor, TwtSessionCallback callback) {
             mExecutor = executor;
             mCallback = callback;
         }
 
         @Override
-        public void onFailure(@TwtCallback.TwtErrorCode int errorCode) throws RemoteException {
+        public void onFailure(@TwtSessionCallback.TwtErrorCode int errorCode)
+                throws RemoteException {
             if (mVerboseLoggingEnabled) {
                 Log.v(TAG, "TwtCallbackProxy: onFailure(errorCode = " + errorCode + " )");
             }
@@ -12590,7 +12591,7 @@ public class WifiManager {
         }
 
         @Override
-        public void onTeardown(@TwtCallback.TwtReasonCode int reasonCode)
+        public void onTeardown(@TwtSessionCallback.TwtReasonCode int reasonCode)
                 throws RemoteException {
             if (mVerboseLoggingEnabled) {
                 Log.v(TAG, "TwtCallbackProxy: onTeardown(errorCode = " + reasonCode + " )");
@@ -12619,9 +12620,9 @@ public class WifiManager {
      * {@link ScanResult#isTwtResponder()} to check station and AP support.
      *
      * Following callbacks are invoked,
-     *  - {@link TwtCallback#onFailure(int)} upon error with error code.
-     *  - {@link TwtCallback#onCreate(TwtSession)} upon TWT session creation.
-     *  - {@link TwtCallback#onTeardown(int)} upon TWT session teardown.
+     *  - {@link TwtSessionCallback#onFailure(int)} upon error with error code.
+     *  - {@link TwtSessionCallback#onCreate(TwtSession)} upon TWT session creation.
+     *  - {@link TwtSessionCallback#onTeardown(int)} upon TWT session teardown.
      *
      * Note: {@link #getTwtCapabilities(Executor, Consumer)} gives {@link TwtCapabilities} which can
      * be used to fill in the valid TWT wake interval and duration ranges for {@link TwtRequest}.
@@ -12639,7 +12640,7 @@ public class WifiManager {
     @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public void setupTwtSession(@NonNull TwtRequest twtRequest,
-            @NonNull @CallbackExecutor Executor executor, @NonNull TwtCallback callback) {
+            @NonNull @CallbackExecutor Executor executor, @NonNull TwtSessionCallback callback) {
         Objects.requireNonNull(executor, "executor cannot be null");
         Objects.requireNonNull(callback, "callback cannot be null");
         Objects.requireNonNull(twtRequest, "twtRequest cannot be null");
@@ -12707,7 +12708,7 @@ public class WifiManager {
      * Teardown the target wake time session. Only owner can teardown the session.
      *
      * Note: For internal use only. Expected to be called through
-     * {@link TwtCallback#onTeardown(int)}.
+     * {@link TwtSessionCallback#onTeardown(int)}.
      *
      * @param sessionId TWT session id
      * @throws SecurityException if the caller does not have permission.

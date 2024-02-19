@@ -811,7 +811,7 @@ package android.net.wifi {
     method @RequiresPermission(android.Manifest.permission.WIFI_UPDATE_USABILITY_STATS_SCORE) public boolean setWifiConnectedNetworkScorer(@NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.WifiManager.WifiConnectedNetworkScorer);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void setWifiPasspointEnabled(boolean);
     method @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS) public boolean setWifiScoringEnabled(boolean);
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public void setupTwtSession(@NonNull android.net.wifi.twt.TwtRequest, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.twt.TwtCallback);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION) public void setupTwtSession(@NonNull android.net.wifi.twt.TwtRequest, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.twt.TwtSessionCallback);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void startEasyConnectAsConfiguratorInitiator(@NonNull String, int, int, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.EasyConnectStatusCallback);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void startEasyConnectAsEnrolleeInitiator(@NonNull String, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.EasyConnectStatusCallback);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void startEasyConnectAsEnrolleeResponder(@Nullable String, int, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.EasyConnectStatusCallback);
@@ -1726,25 +1726,6 @@ package android.net.wifi.rtt {
 
 package android.net.wifi.twt {
 
-  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public interface TwtCallback {
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onCreate(@NonNull android.net.wifi.twt.TwtSession);
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onFailure(int);
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onTeardown(int);
-    field public static final int TWT_ERROR_CODE_AP_NOT_SUPPORTED = 1; // 0x1
-    field public static final int TWT_ERROR_CODE_AP_OUI_BLOCKLISTED = 2; // 0x2
-    field public static final int TWT_ERROR_CODE_AP_REJECTED = 3; // 0x3
-    field public static final int TWT_ERROR_CODE_FAIL = 0; // 0x0
-    field public static final int TWT_ERROR_CODE_INVALID_PARAMS = 4; // 0x4
-    field public static final int TWT_ERROR_CODE_MAX_SESSIONS_REACHED = 5; // 0x5
-    field public static final int TWT_ERROR_CODE_NOT_AVAILABLE = 6; // 0x6
-    field public static final int TWT_ERROR_CODE_NOT_SUPPORTED = 7; // 0x7
-    field public static final int TWT_ERROR_CODE_TIMEOUT = 8; // 0x8
-    field public static final int TWT_REASON_CODE_INTERNALLY_INITIATED = 2; // 0x2
-    field public static final int TWT_REASON_CODE_LOCALLY_REQUESTED = 1; // 0x1
-    field public static final int TWT_REASON_CODE_PEER_INITIATED = 3; // 0x3
-    field public static final int TWT_REASON_CODE_UNKNOWN = 0; // 0x0
-  }
-
   @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public final class TwtRequest implements android.os.Parcelable {
     method public int describeContents();
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @IntRange(from=android.net.wifi.MloLink.INVALID_MLO_LINK_ID, to=0xf) public int getLinkId();
@@ -1773,6 +1754,25 @@ package android.net.wifi.twt {
     field public static final String TWT_STATS_KEY_INT_AVERAGE_TX_PACKET_COUNT = "key_avg_tx_pkt_count";
     field public static final String TWT_STATS_KEY_INT_AVERAGE_TX_PACKET_SIZE = "key_avg_tx_pkt_size";
     field public static final String TWT_STATS_KEY_INT_EOSP_COUNT = "key_eosp_count";
+  }
+
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public interface TwtSessionCallback {
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onCreate(@NonNull android.net.wifi.twt.TwtSession);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onFailure(int);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void onTeardown(int);
+    field public static final int TWT_ERROR_CODE_AP_NOT_SUPPORTED = 1; // 0x1
+    field public static final int TWT_ERROR_CODE_AP_OUI_BLOCKLISTED = 2; // 0x2
+    field public static final int TWT_ERROR_CODE_AP_REJECTED = 3; // 0x3
+    field public static final int TWT_ERROR_CODE_FAIL = 0; // 0x0
+    field public static final int TWT_ERROR_CODE_INVALID_PARAMS = 4; // 0x4
+    field public static final int TWT_ERROR_CODE_MAX_SESSIONS_REACHED = 5; // 0x5
+    field public static final int TWT_ERROR_CODE_NOT_AVAILABLE = 6; // 0x6
+    field public static final int TWT_ERROR_CODE_NOT_SUPPORTED = 7; // 0x7
+    field public static final int TWT_ERROR_CODE_TIMEOUT = 8; // 0x8
+    field public static final int TWT_REASON_CODE_INTERNALLY_INITIATED = 2; // 0x2
+    field public static final int TWT_REASON_CODE_LOCALLY_REQUESTED = 1; // 0x1
+    field public static final int TWT_REASON_CODE_PEER_INITIATED = 3; // 0x3
+    field public static final int TWT_REASON_CODE_UNKNOWN = 0; // 0x0
   }
 
 }
