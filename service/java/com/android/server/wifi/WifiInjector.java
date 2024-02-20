@@ -185,9 +185,11 @@ public class WifiInjector {
     private final PropertyService mPropertyService = new SystemPropertyService();
     private final BuildProperties mBuildProperties = new SystemBuildProperties();
     private final WifiBackupRestore mWifiBackupRestore;
+    private final BackupRestoreController mBackupRestoreController;
     // This will only be null if SdkLevel is not at least S
     @Nullable private final CoexManager mCoexManager;
     private final SoftApBackupRestore mSoftApBackupRestore;
+    private final WifiSettingsBackupRestore mWifiSettingsBackupRestore;
     private final WifiMulticastLockManager mWifiMulticastLockManager;
     private final WifiConfigStore mWifiConfigStore;
     private final WifiKeyStore mWifiKeyStore;
@@ -444,6 +446,7 @@ public class WifiInjector {
                         wifiHandler);
         mSettingsConfigStore = new WifiSettingsConfigStore(context, wifiHandler,
                 mSettingsMigrationDataHolder, mWifiConfigManager, mWifiConfigStore);
+        mWifiSettingsBackupRestore = new WifiSettingsBackupRestore(mSettingsConfigStore);
         mSettingsStore = new WifiSettingsStore(mContext, mSettingsConfigStore, mWifiThreadRunner,
                 mFrameworkFacade, mWifiNotificationManager, mDeviceConfigFacade,
                 mWifiMetrics, mClock);
@@ -625,6 +628,7 @@ public class WifiInjector {
 
         mTwtManager = new TwtManager(this, mCmiMonitor, mWifiNative, wifiHandler, mClock,
                 WifiTwtSession.MAX_TWT_SESSIONS, 1);
+        mBackupRestoreController = new BackupRestoreController(mWifiSettingsBackupRestore, mClock);
     }
 
     /**
@@ -1140,6 +1144,11 @@ public class WifiInjector {
         return mSettingsConfigStore;
     }
 
+    @NonNull
+    public WifiSettingsBackupRestore getWifiSettingsBackupRestore() {
+        return mWifiSettingsBackupRestore;
+    }
+
     public WifiScanAlwaysAvailableSettingsCompatibility
             getWifiScanAlwaysAvailableSettingsCompatibility() {
         return mWifiScanAlwaysAvailableSettingsCompatibility;
@@ -1326,5 +1335,10 @@ public class WifiInjector {
 
     public TwtManager getTwtManager() {
         return mTwtManager;
+    }
+
+    @NonNull
+    public BackupRestoreController getBackupRestoreController() {
+        return mBackupRestoreController;
     }
 }
