@@ -533,7 +533,7 @@ public final class QosPolicyParams implements Parcelable {
      * @return QoS characteristics object, or null if not assigned.
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public @Nullable QosCharacteristics getQosCharacteristics() {
         if (!SdkLevel.isAtLeastV()) {
             throw new UnsupportedOperationException();
@@ -784,7 +784,7 @@ public final class QosPolicyParams implements Parcelable {
          * Specifies traffic flow parameters to use for this policy request.
          * This argument is mandatory for uplink requests, but optional for downlink requests.
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
         public @NonNull Builder setQosCharacteristics(
                 @Nullable QosCharacteristics qosCharacteristics) {

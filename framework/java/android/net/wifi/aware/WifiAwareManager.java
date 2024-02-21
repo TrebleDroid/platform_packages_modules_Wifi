@@ -543,7 +543,7 @@ public class WifiAwareManager {
             NEARBY_WIFI_DEVICES,
             MANAGE_WIFI_NETWORK_SELECTION}, conditional = true)
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public void attach(@NonNull ConfigRequest configRequest,
             @NonNull @CallbackExecutor Executor executor, @NonNull AttachCallback attachCallback,

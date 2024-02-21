@@ -38,7 +38,7 @@ import java.util.Objects;
  * @hide
  */
 @SystemApi
-@FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
 public final class QosCharacteristics implements Parcelable {
     private static final String TAG = "QosCharacteristics";
 
@@ -94,55 +94,55 @@ public final class QosCharacteristics implements Parcelable {
     /**
      * Indicates that 95% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_95 = 0;
 
     /**
      * Indicates that 96% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_96 = 1;
 
     /**
      * Indicates that 97% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_97 = 2;
 
     /**
      * Indicates that 98% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_98 = 3;
 
     /**
      * Indicates that 99% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_99 = 5;
 
     /**
      * Indicates that 99.9% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_99_9 = 6;
 
     /**
      * Indicates that 99.99% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_99_99 = 7;
 
     /**
      * Indicates that 99.999% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_99_999 = 8;
 
     /**
      * Indicates that 99.9999% of MSDUs are expected to be delivered.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int DELIVERY_RATIO_99_9999 = 9;
 
     /** @hide */
@@ -279,7 +279,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * See {@link Builder#Builder(int, int, int, int)} for more information.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 1, to = Integer.MAX_VALUE)
     public int getMinServiceIntervalMicros() {
         return mMinServiceIntervalMicros;
@@ -290,7 +290,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * See {@link Builder#Builder(int, int, int, int)} for more information.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 1, to = Integer.MAX_VALUE)
     public int getMaxServiceIntervalMicros() {
         return mMaxServiceIntervalMicros;
@@ -301,7 +301,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * See {@link Builder#Builder(int, int, int, int)} for more information.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 1, to = Integer.MAX_VALUE)
     public int getMinDataRateKbps() {
         return mMinDataRateKbps;
@@ -312,7 +312,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * See {@link Builder#Builder(int, int, int, int)} for more information.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 1, to = Integer.MAX_VALUE)
     public int getDelayBoundMicros() {
         return mDelayBoundMicros;
@@ -324,7 +324,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * @throws IllegalStateException if this field was not set in the Builder.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 1, to = Short.MAX_VALUE)
     public int getMaxMsduSizeOctets() {
         if (!containsOptionalField(MAX_MSDU_SIZE)) {
@@ -339,7 +339,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * @throws IllegalStateException if this field was not set in the Builder.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 0, to = Integer.MAX_VALUE)
     public int getServiceStartTimeMicros() {
         if (!containsOptionalField(SERVICE_START_TIME)) {
@@ -354,7 +354,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * @throws IllegalStateException if this field was not set in the Builder.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public int getServiceStartTimeLinkId() {
         if (!containsOptionalField(SERVICE_START_TIME)) {
             throw new IllegalStateException("serviceStartTime was not provided in the builder");
@@ -368,7 +368,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * @throws IllegalStateException if this field was not set in the Builder.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 1, to = Integer.MAX_VALUE)
     public int getMeanDataRateKbps() {
         if (!containsOptionalField(MEAN_DATA_RATE)) {
@@ -383,7 +383,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * @throws IllegalStateException if this field was not set in the Builder.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 1, to = Integer.MAX_VALUE)
     public int getBurstSizeOctets() {
         if (!containsOptionalField(BURST_SIZE)) {
@@ -398,7 +398,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * @throws IllegalStateException if this field was not set in the Builder.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 1, to = Short.MAX_VALUE)
     public int getMsduLifetimeMillis() {
         if (!containsOptionalField(MSDU_LIFETIME)) {
@@ -413,7 +413,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * @throws IllegalStateException if this field was not set in the Builder.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public @DeliveryRatio int getDeliveryRatio() {
         if (!containsOptionalField(MSDU_DELIVERY_INFO)) {
             throw new IllegalStateException("msduDeliveryInfo was not provided in the builder");
@@ -427,7 +427,7 @@ public final class QosCharacteristics implements Parcelable {
      *
      * @throws IllegalStateException if this field was not set in the Builder.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @IntRange(from = 0, to = 15)
     public int getCountExponent() {
         if (!containsOptionalField(MSDU_DELIVERY_INFO)) {
@@ -437,7 +437,7 @@ public final class QosCharacteristics implements Parcelable {
     }
 
     @Override
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -458,7 +458,7 @@ public final class QosCharacteristics implements Parcelable {
     }
 
     @Override
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public int hashCode() {
         return Objects.hash(mMinServiceIntervalMicros, mMaxServiceIntervalMicros, mMinDataRateKbps,
                 mDelayBoundMicros, mOptionalFieldBitmap, mMaxMsduSizeOctets,
@@ -467,7 +467,7 @@ public final class QosCharacteristics implements Parcelable {
     }
 
     @Override
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public String toString() {
         StringBuilder sb = new StringBuilder("{");
         sb.append("mMinServiceIntervalMicros=").append(mMinServiceIntervalMicros);
@@ -500,14 +500,14 @@ public final class QosCharacteristics implements Parcelable {
     }
 
     @Override
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public int describeContents() {
         return 0;
     }
 
     /** @hide */
     @Override
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mMinServiceIntervalMicros);
         dest.writeInt(mMaxServiceIntervalMicros);
@@ -541,7 +541,7 @@ public final class QosCharacteristics implements Parcelable {
         this.mCountExponent = in.readInt();
     }
 
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final @NonNull Parcelable.Creator<QosCharacteristics> CREATOR =
             new Parcelable.Creator<QosCharacteristics>() {
                 @Override
@@ -558,7 +558,7 @@ public final class QosCharacteristics implements Parcelable {
     /**
      * Builder for {@link QosCharacteristics}.
      */
-    @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final class Builder {
         // Mandatory fields
         private final int mMinServiceIntervalMicros;
@@ -593,7 +593,7 @@ public final class QosCharacteristics implements Parcelable {
          *                     microseconds) targeted to transport an MSDU or A-MSDU belonging to
          *                     the traffic flow.
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public Builder(@IntRange(from = 1, to = Integer.MAX_VALUE) int minServiceIntervalMicros,
                 @IntRange(from = 1, to = Integer.MAX_VALUE) int maxServiceIntervalMicros,
                 @IntRange(from = 1, to = Integer.MAX_VALUE) int minDataRateKbps,
@@ -610,7 +610,7 @@ public final class QosCharacteristics implements Parcelable {
          * @param maxMsduSizeOctets Positive integer specifying the maximum size (in octets)
          *                          of an MSDU belonging to the traffic flow.
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public @NonNull Builder setMaxMsduSizeOctets(
                 @IntRange(from = 1, to = Short.MAX_VALUE) int maxMsduSizeOctets) {
             mOptionalFieldBitmap |= MAX_MSDU_SIZE;
@@ -628,7 +628,7 @@ public final class QosCharacteristics implements Parcelable {
          *                               used to indicate the Service Start Time. No other bits
          *                               should be used.
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public @NonNull Builder setServiceStartTimeInfo(
                 @IntRange(from = 0, to = Integer.MAX_VALUE) int serviceStartTimeMicros,
                 int serviceStartTimeLinkId) {
@@ -645,7 +645,7 @@ public final class QosCharacteristics implements Parcelable {
          *                         kilobits/sec) for transport of MSDUs or A-MSDUs belonging to the
          *                         traffic flow.
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public @NonNull Builder setMeanDataRateKbps(
                 @IntRange(from = 1, to = Integer.MAX_VALUE) int meanDataRateKbps) {
             mOptionalFieldBitmap |= MEAN_DATA_RATE;
@@ -661,7 +661,7 @@ public final class QosCharacteristics implements Parcelable {
          *                        the MAC SAP within any time duration equal to the value specified
          *                        in the |delayBound| field.
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public @NonNull Builder setBurstSizeOctets(
                 @IntRange(from = 1, to = Integer.MAX_VALUE) int burstSizeOctets) {
             mOptionalFieldBitmap |= BURST_SIZE;
@@ -679,7 +679,7 @@ public final class QosCharacteristics implements Parcelable {
          *                       than or equal to the amount of time specified in the |delayBound|
          *                       field, if present.
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public @NonNull Builder setMsduLifetimeMillis(
                 @IntRange(from = 1, to = Short.MAX_VALUE) int msduLifetimeMillis) {
             mOptionalFieldBitmap |= MSDU_LIFETIME;
@@ -697,7 +697,7 @@ public final class QosCharacteristics implements Parcelable {
          *                      determine the MSDU delivery ratio. Must be a number between
          *                      0 and 15 (inclusive).
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public @NonNull Builder setMsduDeliveryInfo(
                 @DeliveryRatio int deliveryRatio, @IntRange(from = 0, to = 15) int countExponent) {
             mOptionalFieldBitmap |= MSDU_DELIVERY_INFO;
@@ -709,7 +709,7 @@ public final class QosCharacteristics implements Parcelable {
         /**
          * Construct a QosCharacteristics object with the specified parameters.
          */
-        @FlaggedApi(Flags.FLAG_QOS_R3_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public @NonNull QosCharacteristics build() {
             QosCharacteristics qosCharacteristics = new QosCharacteristics(
                     mMinServiceIntervalMicros, mMaxServiceIntervalMicros,

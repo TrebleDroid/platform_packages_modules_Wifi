@@ -221,7 +221,7 @@ public final class ResponderConfig implements Parcelable {
      * @hide
      */
     @SystemApi
-    @FlaggedApi(Flags.FLAG_RTT_11AZ_NTB_RANGING_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public final boolean supports80211azNtb;
 
     /**
@@ -589,7 +589,7 @@ public final class ResponderConfig implements Parcelable {
      * @return true if the Responder supports the 802.11az non-trigger based ranging protocol,
      * false otherwise.
      */
-    @FlaggedApi(Flags.FLAG_RTT_11AZ_NTB_RANGING_SUPPORT)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public boolean is80211azNtbSupported() {
         return supports80211azNtb;
     }
@@ -757,7 +757,7 @@ public final class ResponderConfig implements Parcelable {
          * @return the builder to facilitate chaining
          *         {@code builder.setXXX(..).setXXX(..)}.
          */
-        @FlaggedApi(Flags.FLAG_RTT_11AZ_NTB_RANGING_SUPPORT)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @NonNull
         public Builder set80211azNtbSupported(boolean supports80211azNtb) {
             this.mSupports80211azNtb = supports80211azNtb;
