@@ -2010,7 +2010,7 @@ public class WifiServiceImpl extends BaseWifiService {
          */
         private final Object mLock = new Object();
         @NonNull
-        private SoftApState mSoftApsoftApState =
+        private SoftApState mSoftApState =
                 new SoftApState(WIFI_AP_STATE_DISABLED, 0, null, null);
         private Map<String, List<WifiClient>> mSoftApConnectedClientsMap = new HashMap();
         private Map<String, SoftApInfo> mSoftApInfoMap = new HashMap();
@@ -2022,24 +2022,24 @@ public class WifiServiceImpl extends BaseWifiService {
 
         public SoftApState getState() {
             synchronized (mLock) {
-                return mSoftApsoftApState;
+                return mSoftApState;
             }
         }
 
         public void setState(SoftApState softApState) {
             synchronized (mLock) {
-                mSoftApsoftApState = softApState;
+                mSoftApState = softApState;
             }
         }
 
         public boolean setEnablingIfAllowed() {
             synchronized (mLock) {
-                int state = mSoftApsoftApState.getState();
+                int state = mSoftApState.getState();
                 if (state != WIFI_AP_STATE_DISABLED
                         && state != WIFI_AP_STATE_FAILED) {
                     return false;
                 }
-                mSoftApsoftApState = new SoftApState(
+                mSoftApState = new SoftApState(
                         WIFI_AP_STATE_ENABLING, 0, null, null);
                 return true;
             }
@@ -2047,9 +2047,9 @@ public class WifiServiceImpl extends BaseWifiService {
 
         public void setFailedWhileEnabling() {
             synchronized (mLock) {
-                int state = mSoftApsoftApState.getState();
+                int state = mSoftApState.getState();
                 if (state == WIFI_AP_STATE_ENABLING) {
-                    mSoftApsoftApState = new SoftApState(
+                    mSoftApState = new SoftApState(
                             WIFI_AP_STATE_FAILED, 0, null, null);
                 }
             }
