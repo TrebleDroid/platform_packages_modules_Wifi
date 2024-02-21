@@ -31,6 +31,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.SoftApState;
 import android.net.wifi.WifiAnnotations;
 import android.net.wifi.WifiClient;
 import android.net.wifi.WifiContext;
@@ -477,7 +478,8 @@ public class SoftApManager implements ActiveModeManager {
                         apConfig.getTargetMode(),
                         mCurrentSoftApConfiguration,
                         mCurrentSoftApCapability,
-                        mCountryCode);
+                        mCountryCode,
+                        apConfig.getTetheringRequest());
         if (mCurrentSoftApConfiguration != null) {
             mIsUnsetBssid = mCurrentSoftApConfiguration.getBssid() == null;
             if (mCurrentSoftApCapability.areFeaturesSupported(
@@ -636,7 +638,8 @@ public class SoftApManager implements ActiveModeManager {
                 mSpecifiedModeConfiguration.getTargetMode(),
                 mSpecifiedModeConfiguration.getSoftApConfiguration(),
                 mCurrentSoftApCapability,
-                mCountryCode);
+                mCountryCode,
+                mSpecifiedModeConfiguration.getTetheringRequest());
     }
 
     /**
@@ -728,7 +731,11 @@ public class SoftApManager implements ActiveModeManager {
      */
     private void updateApState(int newState, int currentState, int reason) {
         mCurrentApState = newState;
-        mSoftApCallback.onStateChanged(newState, reason);
+        mSoftApCallback.onStateChanged(new SoftApState(
+                newState,
+                reason,
+                mSpecifiedModeConfiguration.getTetheringRequest(),
+                mApInterfaceName));
 
         //send the AP state change broadcast
         final Intent intent = new Intent(WifiManager.WIFI_AP_STATE_CHANGED_ACTION);
@@ -743,6 +750,7 @@ public class SoftApManager implements ActiveModeManager {
         intent.putExtra(WifiManager.EXTRA_WIFI_AP_INTERFACE_NAME, mApInterfaceName);
         intent.putExtra(
                 WifiManager.EXTRA_WIFI_AP_MODE, mSpecifiedModeConfiguration.getTargetMode());
+
         if (SdkLevel.isAtLeastSv2()) {
             mContext.sendBroadcastAsUser(intent, UserHandle.ALL,
                     android.Manifest.permission.ACCESS_WIFI_STATE);
@@ -1354,7 +1362,8 @@ public class SoftApManager implements ActiveModeManager {
                                         mSpecifiedModeConfiguration.getTargetMode(),
                                         newConfig,
                                         mCurrentSoftApCapability,
-                                        mCountryCode);
+                                        mCountryCode,
+                                        mSpecifiedModeConfiguration.getTetheringRequest());
                         Log.d(getTag(), "Configuration changed to " + newConfig);
                         // Idle mode, update all configurations.
                         mCurrentSoftApConfiguration = newConfig;
@@ -2074,7 +2083,8 @@ public class SoftApManager implements ActiveModeManager {
                                             mSpecifiedModeConfiguration.getTargetMode(),
                                             newConfig,
                                             mCurrentSoftApCapability,
-                                            mCountryCode);
+                                            mCountryCode,
+                                            mSpecifiedModeConfiguration.getTetheringRequest());
                             Log.d(getTag(), "Configuration changed to " + newConfig);
                             if (mCurrentSoftApConfiguration.getMaxNumberOfClients()
                                     != newConfig.getMaxNumberOfClients()) {

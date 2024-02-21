@@ -16,6 +16,8 @@
 
 package com.android.server.wifi;
 
+import static android.net.wifi.WifiManager.SAP_START_FAILURE_GENERAL;
+import static android.net.wifi.WifiManager.WIFI_AP_STATE_FAILED;
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
 
@@ -75,6 +77,7 @@ import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.SoftApState;
 import android.net.wifi.WifiClient;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
@@ -452,7 +455,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
     private void enterSoftApActiveMode() throws Exception {
         enterSoftApActiveMode(
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
-                mSoftApCapability, TEST_COUNTRYCODE));
+                mSoftApCapability, TEST_COUNTRYCODE, null));
     }
 
     private int mTimesCreatedSoftApManager = 1;
@@ -1005,10 +1008,12 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         enterSoftApActiveMode();
 
         mSoftApListener.onStarted(mSoftApManager);
-        mSoftApManagerCallback.onStateChanged(WifiManager.WIFI_AP_STATE_ENABLED, 0);
+        SoftApState softApState = new SoftApState(
+                WifiManager.WIFI_AP_STATE_ENABLED, 0, null, null);
+        mSoftApManagerCallback.onStateChanged(softApState);
         mLooper.dispatchAll();
 
-        verify(mSoftApStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_ENABLED, 0);
+        verify(mSoftApStateMachineCallback).onStateChanged(softApState);
     }
 
     /**
@@ -1018,13 +1023,16 @@ public class ActiveModeWardenTest extends WifiBaseTest {
     @Test
     public void doesntCallWifiServiceCallbackOnLOHSStateChanged() throws Exception {
         enterSoftApActiveMode(new SoftApModeConfiguration(
-                WifiManager.IFACE_IP_MODE_LOCAL_ONLY, null, mSoftApCapability, TEST_COUNTRYCODE));
+                WifiManager.IFACE_IP_MODE_LOCAL_ONLY, null, mSoftApCapability, TEST_COUNTRYCODE,
+                null));
 
         mSoftApListener.onStarted(mSoftApManager);
-        mSoftApManagerCallback.onStateChanged(WifiManager.WIFI_AP_STATE_ENABLED, 0);
+        SoftApState softApState = new SoftApState(
+                WifiManager.WIFI_AP_STATE_ENABLED, 0, null, null);
+        mSoftApManagerCallback.onStateChanged(softApState);
         mLooper.dispatchAll();
 
-        verify(mSoftApStateMachineCallback, never()).onStateChanged(anyInt(), anyInt());
+        verify(mSoftApStateMachineCallback, never()).onStateChanged(softApState);
         verify(mSoftApStateMachineCallback, never()).onConnectedClientsOrInfoChanged(any(),
                 any(), anyBoolean());
     }
@@ -1069,7 +1077,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         configBuilder.setSsid("ThisIsAConfig");
         SoftApModeConfiguration softApConfig = new SoftApModeConfiguration(
                 WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(), mSoftApCapability,
-                TEST_COUNTRYCODE);
+                TEST_COUNTRYCODE, null);
         enterSoftApActiveMode(softApConfig);
     }
 
@@ -1096,12 +1104,12 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         configBuilder1.setSsid("ThisIsAConfig");
         SoftApModeConfiguration softApConfig1 = new SoftApModeConfiguration(
                 WifiManager.IFACE_IP_MODE_TETHERED, configBuilder1.build(),
-                mSoftApCapability, TEST_COUNTRYCODE);
+                mSoftApCapability, TEST_COUNTRYCODE, null);
         Builder configBuilder2 = new SoftApConfiguration.Builder();
         configBuilder2.setSsid("ThisIsASecondConfig");
         SoftApModeConfiguration softApConfig2 = new SoftApModeConfiguration(
                 WifiManager.IFACE_IP_MODE_TETHERED, configBuilder2.build(),
-                mSoftApCapability, TEST_COUNTRYCODE);
+                mSoftApCapability, TEST_COUNTRYCODE, null);
 
         doAnswer(new Answer<SoftApManager>() {
             public SoftApManager answer(InvocationOnMock invocation) {
@@ -1228,12 +1236,14 @@ public class ActiveModeWardenTest extends WifiBaseTest {
 
         mSoftApListener.onStopped(mSoftApManager);
         mLooper.dispatchAll();
-        mSoftApManagerCallback.onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        SoftApState softApState = new SoftApState(
+                WifiManager.WIFI_AP_STATE_DISABLED, 0, null, null);
+        mSoftApManagerCallback.onStateChanged(softApState);
         mLooper.dispatchAll();
 
         shutdownWifi();
 
-        verify(mSoftApStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        verify(mSoftApStateMachineCallback).onStateChanged(softApState);
     }
 
     /**
@@ -1246,10 +1256,12 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         shutdownWifi();
 
         mSoftApListener.onStopped(mSoftApManager);
-        mSoftApManagerCallback.onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        SoftApState softApState = new SoftApState(
+                WifiManager.WIFI_AP_STATE_DISABLED, 0, null, null);
+        mSoftApManagerCallback.onStateChanged(softApState);
         mLooper.dispatchAll();
 
-        verify(mSoftApStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_DISABLED, 0);
+        verify(mSoftApStateMachineCallback).onStateChanged(softApState);
         verify(mModeChangeCallback).onActiveModeManagerRemoved(mSoftApManager);
     }
 
@@ -1288,12 +1300,12 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         when(mWifiInjector.getWifiApConfigStore()).thenReturn(mWifiApConfigStore);
         SoftApModeConfiguration tetherConfig =
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
-                mSoftApCapability, TEST_COUNTRYCODE);
+                mSoftApCapability, TEST_COUNTRYCODE, null);
         SoftApConfiguration lohsConfigWC = mWifiApConfigStore.generateLocalOnlyHotspotConfig(
                 mContext, null, mSoftApCapability);
         SoftApModeConfiguration lohsConfig =
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_LOCAL_ONLY, lohsConfigWC,
-                mSoftApCapability, TEST_COUNTRYCODE);
+                mSoftApCapability, TEST_COUNTRYCODE, null);
 
         // mock SoftAPManagers
         when(mSoftApManager.getRole()).thenReturn(ROLE_SOFTAP_TETHERED);
@@ -1593,7 +1605,8 @@ public class ActiveModeWardenTest extends WifiBaseTest {
                         WifiManager.IFACE_IP_MODE_LOCAL_ONLY,
                         null,
                         mSoftApCapability,
-                        TEST_COUNTRYCODE),
+                        TEST_COUNTRYCODE,
+                        null),
                 TEST_WORKSOURCE);
         mLooper.dispatchAll();
 
@@ -2244,7 +2257,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         // try to start Soft AP
         mActiveModeWarden.startSoftAp(
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
-                mSoftApCapability, TEST_COUNTRYCODE), TEST_WORKSOURCE);
+                mSoftApCapability, TEST_COUNTRYCODE, null), TEST_WORKSOURCE);
         mLooper.dispatchAll();
 
         verify(mWifiInjector, never())
@@ -2252,13 +2265,17 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         assertInDisabledState();
 
         // verify triggered Soft AP failure callback
-        verify(mSoftApStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        ArgumentCaptor<SoftApState> softApStateCaptor =
+                ArgumentCaptor.forClass(SoftApState.class);
+        verify(mSoftApStateMachineCallback).onStateChanged(softApStateCaptor.capture());
+        assertThat(softApStateCaptor.getValue().getState()).isEqualTo(WIFI_AP_STATE_FAILED);
+        assertThat(softApStateCaptor.getValue().getFailureReason())
+                .isEqualTo(SAP_START_FAILURE_GENERAL);
 
         // try to start LOHS
         mActiveModeWarden.startSoftAp(
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_LOCAL_ONLY, null,
-                mSoftApCapability, TEST_COUNTRYCODE), TEST_WORKSOURCE);
+                mSoftApCapability, TEST_COUNTRYCODE, null), TEST_WORKSOURCE);
         mLooper.dispatchAll();
 
         verify(mWifiInjector, never())
@@ -2266,8 +2283,10 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         assertInDisabledState();
 
         // verify triggered LOHS failure callback
-        verify(mLohsStateMachineCallback).onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                WifiManager.SAP_START_FAILURE_GENERAL);
+        verify(mLohsStateMachineCallback).onStateChanged(softApStateCaptor.capture());
+        assertThat(softApStateCaptor.getValue().getState()).isEqualTo(WIFI_AP_STATE_FAILED);
+        assertThat(softApStateCaptor.getValue().getFailureReason())
+                .isEqualTo(SAP_START_FAILURE_GENERAL);
     }
 
     /**
@@ -2303,7 +2322,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         // Turn on SoftAp.
         mActiveModeWarden.startSoftAp(
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
-                mSoftApCapability, TEST_COUNTRYCODE), TEST_WORKSOURCE);
+                mSoftApCapability, TEST_COUNTRYCODE, null), TEST_WORKSOURCE);
         mLooper.dispatchAll();
         verify(mWifiInjector)
                 .makeSoftApManager(any(), any(), any(), eq(TEST_WORKSOURCE), any(), anyBoolean());
@@ -2381,7 +2400,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
 
         mActiveModeWarden.startSoftAp(
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
-                mSoftApCapability, TEST_COUNTRYCODE), TEST_WORKSOURCE);
+                mSoftApCapability, TEST_COUNTRYCODE, null), TEST_WORKSOURCE);
         // add an "unexpected" sta mode stop to simulate a single interface device
         mClientListener.onStopped(mClientModeManager);
         mLooper.dispatchAll();
@@ -2417,7 +2436,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
 
         mActiveModeWarden.startSoftAp(
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
-                mSoftApCapability, TEST_COUNTRYCODE), TEST_WORKSOURCE);
+                mSoftApCapability, TEST_COUNTRYCODE, null), TEST_WORKSOURCE);
         mLooper.dispatchAll();
 
         when(mSettingsStore.isWifiToggleEnabled()).thenReturn(true);
