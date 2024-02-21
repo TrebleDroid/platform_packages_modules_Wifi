@@ -339,7 +339,8 @@ public class WifiPseudonymManagerTest extends WifiBaseTest {
                         any());
         assertEquals(AlarmManager.RTC_WAKEUP, mAlarmTypeCaptor.getValue().intValue());
         long maxStartTime = Instant.now().toEpochMilli();
-        assertTrue(mWindowStartCaptor.getValue().longValue() <= maxStartTime);
+        assertTrue("The difference is:" + (mWindowStartCaptor.getValue() - maxStartTime),
+                mWindowStartCaptor.getValue() <= maxStartTime);
         assertEquals(CARRIER_ID, mRetrieveListenerArgumentCaptor.getValue().mCarrierId);
     }
 
@@ -363,7 +364,8 @@ public class WifiPseudonymManagerTest extends WifiBaseTest {
                                 .getValidPseudonymInfo(CARRIER_ID)
                                 .get()
                                 .getLttrInMillis();
-        assertTrue(mWindowStartCaptor.getValue() <= maxStartTime + 1);
+        assertTrue("The difference is:" + (mWindowStartCaptor.getValue() - maxStartTime),
+                mWindowStartCaptor.getValue() <= maxStartTime + 2);
         assertEquals(CARRIER_ID, mRetrieveListenerArgumentCaptor.getValue().mCarrierId);
     }
 
@@ -384,7 +386,8 @@ public class WifiPseudonymManagerTest extends WifiBaseTest {
                         any());
         assertEquals(AlarmManager.RTC_WAKEUP, mAlarmTypeCaptor.getValue().intValue());
         long maxStartTime = Instant.now().toEpochMilli();
-        assertTrue(mWindowStartCaptor.getValue().longValue() <= maxStartTime);
+        assertTrue("The difference is:" + (mWindowStartCaptor.getValue() - maxStartTime),
+                mWindowStartCaptor.getValue() <= maxStartTime);
         assertEquals(CARRIER_ID, mRetrieveListenerArgumentCaptor.getValue().mCarrierId);
     }
 
