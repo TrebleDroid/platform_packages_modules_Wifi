@@ -344,6 +344,8 @@ public class WifiGlobals {
      * @return boolean true if auto-upgrade is enabled, false otherwise.
      */
     public boolean isWpa3SaeUpgradeEnabled() {
+        var prop = android.os.SystemProperties.get("persist.sys.phh.wifi_disable_sae", null);
+        if (prop != null && "true".equals(prop)) return false;
         return mWifiResourceCache
                 .getBoolean(R.bool.config_wifiSaeUpgradeEnabled);
     }
