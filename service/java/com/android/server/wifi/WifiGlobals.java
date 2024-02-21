@@ -59,7 +59,7 @@ public class WifiGlobals {
     private final AtomicInteger mSendDhcpHostnameRestriction = new AtomicInteger();
 
     // These are read from the overlay, cache them after boot up.
-    private final boolean mIsWpa3SaeUpgradeEnabled;
+    private boolean mIsWpa3SaeUpgradeEnabled;
     private boolean mIsWpa3SaeUpgradeOffloadEnabled;
     private final boolean mIsOweUpgradeEnabled;
     private final boolean mFlushAnqpCacheOnWifiToggleOffEvent;
@@ -108,6 +108,9 @@ public class WifiGlobals {
 
         mIsWpa3SaeUpgradeEnabled = mContext.getResources()
                 .getBoolean(R.bool.config_wifiSaeUpgradeEnabled);
+        var prop = android.os.SystemProperties.get("persist.sys.phh.wifi_disable_sae", null);
+        if (prop != null && "true".equals(prop))
+            mIsWpa3SaeUpgradeEnabled = false;
         mIsWpa3SaeUpgradeOffloadEnabled = mContext.getResources()
                 .getBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled);
         mIsOweUpgradeEnabled = mContext.getResources()
