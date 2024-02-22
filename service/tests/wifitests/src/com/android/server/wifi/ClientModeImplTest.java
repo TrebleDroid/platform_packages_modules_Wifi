@@ -30,6 +30,9 @@ import static android.net.wifi.WifiConfiguration.NetworkSelectionStatus.DISABLED
 import static android.net.wifi.WifiConfiguration.NetworkSelectionStatus.DISABLED_UNWANTED_LOW_RSSI;
 import static android.net.wifi.WifiConfiguration.NetworkSelectionStatus.NETWORK_SELECTION_PERMANENTLY_DISABLED;
 import static android.net.wifi.WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE;
+import static android.net.wifi.WifiConfiguration.SECURITY_TYPE_OPEN;
+import static android.net.wifi.WifiInfo.SECURITY_TYPE_OWE;
+import static android.net.wifi.WifiInfo.SECURITY_TYPE_PSK;
 import static android.net.wifi.WifiManager.AddNetworkResult.STATUS_SUCCESS;
 
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_PRIMARY;
@@ -9844,7 +9847,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 anyInt(), anyInt());
     }
 
-   /**
+    /**
      * Verify Trust On First Use support.
      * - this network is automatically connected.
      * - Tap the notification.
@@ -11010,4 +11013,50 @@ public class ClientModeImplTest extends WifiBaseTest {
                 eq(StaEvent.DISCONNECT_NETWORK_WIFI7_TOGGLED));
     }
 
+    private void testDhcpHostnameSetting(
+            boolean configEnabled,
+            @WifiManager.SendDhcpHostnameRestriction int restriction,
+            int security,
+            int expectedHostnameSetting) throws Exception {
+        if (!SdkLevel.isAtLeastV()) {
+            expectedHostnameSetting = IIpClient.HOSTNAME_SETTING_UNSET;
+        }
+        when(mWifiGlobals.getSendDhcpHostnameRestriction()).thenReturn(restriction);
+        mConnectedNetwork.setSecurityParams(security);
+        mConnectedNetwork.setSendDhcpHostnameEnabled(configEnabled);
+        connect();
+
+        verify(mIpClient).startProvisioning(mProvisioningConfigurationCaptor.capture());
+        assertEquals(expectedHostnameSetting,
+                mProvisioningConfigurationCaptor.getValue().hostnameSetting);
+    }
+
+    @Test
+    public void testSendDhcpHostnameEnabled() throws Exception {
+        testDhcpHostnameSetting(true, 0, SECURITY_TYPE_OPEN, IIpClient.HOSTNAME_SETTING_SEND);
+    }
+
+    @Test
+    public void testSendDhcpHostnameDisabled() throws Exception {
+        testDhcpHostnameSetting(false, 0,
+                SECURITY_TYPE_OPEN, IIpClient.HOSTNAME_SETTING_DO_NOT_SEND);
+    }
+
+    @Test
+    public void testSendDhcpHostnameEnabledWithOpenRestriction() throws Exception {
+        testDhcpHostnameSetting(true, WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN,
+                SECURITY_TYPE_OPEN, IIpClient.HOSTNAME_SETTING_DO_NOT_SEND);
+    }
+
+    @Test
+    public void testSendDhcpHostnameEnabledWithOpenRestrictionOwe() throws Exception {
+        testDhcpHostnameSetting(true, WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_OPEN,
+                SECURITY_TYPE_OWE, IIpClient.HOSTNAME_SETTING_DO_NOT_SEND);
+    }
+
+    @Test
+    public void testSendDhcpHostnameEnabledWithSecureRestriction() throws Exception {
+        testDhcpHostnameSetting(true, WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_SECURE,
+                SECURITY_TYPE_PSK, IIpClient.HOSTNAME_SETTING_DO_NOT_SEND);
+    }
 }

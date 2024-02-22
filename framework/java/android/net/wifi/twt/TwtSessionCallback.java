@@ -27,13 +27,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * API interface for target wake time (TWT) Callback.
+ * API interface for target wake time (TWT) session Callback.
  *
  * @hide
  */
 @SystemApi
 @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-public interface TwtCallback {
+public interface TwtSessionCallback {
     /**
      * Generic error
      */
@@ -116,17 +116,16 @@ public interface TwtCallback {
      * @param errorCode error code
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    void onFailure(@TwtCallback.TwtErrorCode int errorCode);
+    void onFailure(@TwtSessionCallback.TwtErrorCode int errorCode);
 
     /**
-     * Called when a TWT session is torn down. Can be called as a response to
-     * {@link TwtSession#teardown()} or unsolicited. Check the {@link TwtReasonCode} for more
-     * details.
+     * Called when a TWT session is torn down or closed. Check the
+     * {@link TwtReasonCode} for more details.
      *
      * @param reasonCode reason for TWT session teardown
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    void onTeardown(@TwtCallback.TwtReasonCode int reasonCode);
+    void onTeardown(@TwtSessionCallback.TwtReasonCode int reasonCode);
 
     /**
      * Called when the TWT session is created.
