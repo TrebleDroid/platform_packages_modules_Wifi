@@ -4378,4 +4378,10 @@ public class WifiManagerTest {
         verify(mWifiService).restoreWifiBackupData(eq(testByteArray));
     }
 
+
+    @Test
+    public void testIsPreferredNetworkOffloadSupported() throws Exception {
+        mWifiManager.isPreferredNetworkOffloadSupported();
+        verify(mWifiService).isPnoSupported();
+    }
 }

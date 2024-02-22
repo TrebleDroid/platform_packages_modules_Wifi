@@ -513,4 +513,6 @@ interface IWifiManager
     void retrieveWifiBackupData(in IByteArrayListener listener);
 
     void restoreWifiBackupData(in byte[] data);
+
+    boolean isPnoSupported();
 }
