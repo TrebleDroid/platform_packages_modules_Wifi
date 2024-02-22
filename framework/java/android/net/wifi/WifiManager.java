@@ -4172,7 +4172,11 @@ public class WifiManager {
      * @return true if this adapter supports offloaded connectivity scan
      */
     public boolean isPreferredNetworkOffloadSupported() {
-        return isFeatureSupported(WIFI_FEATURE_PNO);
+        try {
+            return mService.isPnoSupported();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
     }
 
     /**

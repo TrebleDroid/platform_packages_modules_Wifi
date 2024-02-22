@@ -1201,4 +1201,9 @@ public class BaseWifiService extends IWifiManager.Stub {
     public void queryD2dAllowedWhenInfraStaDisabled(@NonNull IBooleanListener listener) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public boolean isPnoSupported() {
+        throw new UnsupportedOperationException();
+    }
 }

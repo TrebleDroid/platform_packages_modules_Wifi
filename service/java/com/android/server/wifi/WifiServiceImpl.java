@@ -7455,7 +7455,10 @@ public class WifiServiceImpl extends BaseWifiService {
         );
     }
 
-    @VisibleForTesting
+    /**
+     * See {@link android.net.wifi.WifiManager#isPreferredNetworkOffloadSupported()}.
+     */
+    @Override
     public boolean isPnoSupported() {
         return mWifiGlobals.isSwPnoEnabled()
                 || (mWifiGlobals.isBackgroundScanSupported()
