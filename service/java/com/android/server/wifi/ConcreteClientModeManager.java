@@ -1380,8 +1380,8 @@ public class ConcreteClientModeManager implements ClientModeManager {
 
     @Override
     public void connectNetwork(NetworkUpdateResult result, ActionListenerWrapper wrapper,
-            int callingUid, @NonNull String packageName) {
-        getClientMode().connectNetwork(result, wrapper, callingUid, packageName);
+            int callingUid, @NonNull String packageName, @Nullable String attributionTag) {
+        getClientMode().connectNetwork(result, wrapper, callingUid, packageName, attributionTag);
     }
 
     @Override
