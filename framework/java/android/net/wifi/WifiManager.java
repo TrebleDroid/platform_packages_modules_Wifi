@@ -7348,7 +7348,12 @@ public class WifiManager {
             listenerProxy = new ActionListenerProxy("connect", mLooper, listener);
         }
         try {
-            mService.connect(config, networkId, listenerProxy, mContext.getOpPackageName());
+            Bundle extras = new Bundle();
+            if (SdkLevel.isAtLeastS()) {
+                extras.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE,
+                        mContext.getAttributionSource());
+            }
+            mService.connect(config, networkId, listenerProxy, mContext.getOpPackageName(), extras);
         } catch (RemoteException e) {
             if (listenerProxy != null) {
                 listenerProxy.onFailure(ActionListener.FAILURE_INTERNAL_ERROR);

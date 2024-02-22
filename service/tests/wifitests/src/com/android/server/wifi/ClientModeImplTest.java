@@ -273,6 +273,7 @@ public class ClientModeImplTest extends WifiBaseTest {
 
     private static final long TEST_BSSID = 0x112233445566L;
     private static final int TEST_DELAY_IN_SECONDS = 300;
+    private static final String TEST_ATTRIBUTION_TAG = "TEST_ATTRIBUTION_TAG";
 
     private static final int DEFINED_ERROR_CODE = 32764;
     private static final String TEST_TERMS_AND_CONDITIONS_URL =
@@ -305,6 +306,9 @@ public class ClientModeImplTest extends WifiBaseTest {
     private long mBinderToken;
     private MockitoSession mSession;
     private TestNetworkParams mTestNetworkParams = new TestNetworkParams();
+
+    // Attribution tag to be used in the mocked connect sequence
+    private String mAttributionTagForConnect = TEST_ATTRIBUTION_TAG;
 
     /**
      * Helper class for setting the default parameters of the WifiConfiguration that gets used
@@ -1018,7 +1022,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(config.networkId),
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, mAttributionTagForConnect);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
     }
@@ -2425,7 +2429,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(FRAMEWORK_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, TEST_ATTRIBUTION_TAG);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
 
@@ -2450,7 +2454,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(FRAMEWORK_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                callingUid, OP_PACKAGE_NAME);
+                callingUid, OP_PACKAGE_NAME, TEST_ATTRIBUTION_TAG);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
 
@@ -2475,7 +2479,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(FRAMEWORK_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
 
@@ -2508,7 +2512,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 networkUpdateResult,
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
 
@@ -2538,7 +2542,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(FRAMEWORK_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
 
@@ -2568,7 +2572,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(FRAMEWORK_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
 
@@ -2588,7 +2592,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(FRAMEWORK_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
 
@@ -2711,7 +2715,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(TEST_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                Process.SYSTEM_UID, OP_PACKAGE_NAME);
+                Process.SYSTEM_UID, OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
 
@@ -2728,7 +2732,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(networkId),
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
     }
@@ -5654,19 +5658,29 @@ public class ClientModeImplTest extends WifiBaseTest {
                 anyInt());
     }
 
+    private void verifyUserConnectChoice(boolean shouldSetUcc) throws Exception {
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
+        mTestNetworkParams.hasEverConnected = true;
+        connect();
+        verify(mWifiBlocklistMonitor).handleBssidConnectionSuccess(TEST_BSSID_STR, TEST_SSID);
+        verify(mWifiConfigManager).updateNetworkAfterConnect(eq(FRAMEWORK_NETWORK_ID),
+                eq(shouldSetUcc), eq(shouldSetUcc),
+                anyInt());
+    }
+
     /**
      * Verify that on the second successful connection to a saved network we set the user connect
      * choice.
      */
     @Test
     public void testConnectionSetUserConnectChoiceOnSecondConnection() throws Exception {
-        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
-        mTestNetworkParams.hasEverConnected = true;
-        connect();
-        verify(mWifiBlocklistMonitor).handleBssidConnectionSuccess(TEST_BSSID_STR, TEST_SSID);
-        verify(mWifiConfigManager).updateNetworkAfterConnect(eq(FRAMEWORK_NETWORK_ID),
-                eq(true), eq(true),
-                anyInt());
+        verifyUserConnectChoice(true);
+    }
+
+    @Test
+    public void testDisallowUserConnectChoice() throws Exception {
+        mAttributionTagForConnect = ClientModeImpl.ATTRIBUTION_TAG_DISALLOW_CONNECT_CHOICE;
+        verifyUserConnectChoice(false);
     }
 
     /**
@@ -9126,7 +9140,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(config.networkId),
                 new ActionListenerWrapper(connectActionListener),
-                Binder.getCallingUid(), OP_PACKAGE_NAME);
+                Binder.getCallingUid(), OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onFailure(WifiManager.ActionListener.FAILURE_INTERNAL_ERROR);
         verify(mWifiConfigManager, never())
@@ -9630,7 +9644,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(TEST_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                Process.SYSTEM_UID, OP_PACKAGE_NAME);
+                Process.SYSTEM_UID, OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
         if (shouldBeUpdated) {
@@ -10394,7 +10408,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         mCmi.connectNetwork(
                 new NetworkUpdateResult(TEST_NETWORK_ID),
                 new ActionListenerWrapper(connectActionListener),
-                Process.SYSTEM_UID, OP_PACKAGE_NAME);
+                Process.SYSTEM_UID, OP_PACKAGE_NAME, null);
         mLooper.dispatchAll();
         verify(connectActionListener).onSuccess();
         if (shouldDropRequest) {

@@ -1007,7 +1007,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         }
                     };
                     WifiConfiguration config = buildWifiConfiguration(pw);
-                    mWifiService.connect(config, -1, actionListener, SHELL_PACKAGE_NAME);
+                    mWifiService.connect(config, -1, actionListener, SHELL_PACKAGE_NAME,
+                            new Bundle());
                     // wait for status.
                     countDownLatch.await(500, TimeUnit.MILLISECONDS);
                     setAutoJoin(pw, config.SSID, config.allowAutojoin);

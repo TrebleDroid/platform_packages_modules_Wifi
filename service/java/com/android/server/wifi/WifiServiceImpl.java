@@ -3972,7 +3972,7 @@ public class WifiServiceImpl extends BaseWifiService {
                         mConnectHelper.connectToNetwork(
                                 new NetworkUpdateResult(netId),
                                 new ActionListenerWrapper(connectListener),
-                                callingUid, packageName)
+                                callingUid, packageName, null)
                 )
         );
         // now wait for response.
@@ -6524,21 +6524,61 @@ public class WifiServiceImpl extends BaseWifiService {
      * @param netId Network ID of existing config to connect to if the supplied config is null
      * @param callback Listener to notify action result
      * @param packageName Package name of the requesting App
+     * @param extras Bundle of extras
      *
      * see: {@link WifiManager#connect(WifiConfiguration, WifiManager.ActionListener)}
      *      {@link WifiManager#connect(int, WifiManager.ActionListener)}
      */
     @Override
     public void connect(WifiConfiguration config, int netId, @Nullable IActionListener callback,
-            @NonNull String packageName) {
-        int uid = Binder.getCallingUid();
+            @NonNull String packageName, Bundle extras) {
+        int uid = getMockableCallingUid();
         if (!isPrivileged(Binder.getCallingPid(), uid)) {
             throw new SecurityException(TAG + ": Permission denied");
         }
         if (packageName == null) {
             throw new IllegalArgumentException("packageName must not be null");
         }
-        mLog.info("connect uid=%").c(uid).flush();
+        final String attributionTagToUse;
+        final int uidToUse;
+        final String packageNameToUse;
+        if (SdkLevel.isAtLeastS() && UserHandle.getAppId(uid) == Process.SYSTEM_UID) {
+            AttributionSource as = extras.getParcelable(
+                    WifiManager.EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE);
+            if (as == null) {
+                throw new SecurityException("connect attributionSource is null");
+            }
+            if (!as.checkCallingUid()) {
+                throw new SecurityException(
+                        "connect invalid (checkCallingUid fails) attribution source="
+                                + as);
+            }
+            // an attribution chain is either of size 1: unregistered (valid by definition) or
+            // size >1: in which case all are validated.
+            AttributionSource asIt = as;
+            AttributionSource asLast = as;
+            if (as.getNext() != null) {
+                do {
+                    if (!asIt.isTrusted(mContext)) {
+                        throw new SecurityException(
+                                "connect invalid (isTrusted fails) attribution source="
+                                        + asIt);
+                    }
+                    asIt = asIt.getNext();
+                    if (asIt != null) asLast = asIt;
+                } while (asIt != null);
+            }
+            // use the last AttributionSource in the chain - i.e. the original caller
+            attributionTagToUse = asLast.getAttributionTag();
+            uidToUse = asLast.getUid();
+            packageNameToUse = asLast.getPackageName();
+        } else {
+            attributionTagToUse = mContext.getAttributionTag();
+            uidToUse = uid;
+            packageNameToUse = packageName;
+        }
+        mLog.info("connect uid=% uidToUse=% packageNameToUse=% attributionTagToUse=%")
+                .c(uid).c(uidToUse).c(packageNameToUse).c(attributionTagToUse).flush();
         mLastCallerInfoManager.put(config != null
                         ? WifiManager.API_CONNECT_CONFIG : WifiManager.API_CONNECT_NETWORK_ID,
                 Process.myTid(), uid, Binder.getCallingPid(), packageName, true);
@@ -6664,7 +6704,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(
                             () ->
                                     mConnectHelper.connectToNetwork(
-                                            result, wrapper, uid, packageName));
+                                            result, wrapper, uidToUse, packageNameToUse,
+                                            attributionTagToUse));
                 });
     }
 
