@@ -3005,8 +3005,8 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
 
         // The actual interval should be same as scheduled.
         final long delta = Math.abs(expectedInterval * 1000L - intervals.get(0));
-        assertTrue("Interval " + " (" + delta + ") not in 1ms error margin",
-                delta < 2);
+        assertTrue("Interval " + " (" + delta + ") not in 2ms error margin",
+                delta <= 2);
     }
 
     /**

@@ -353,9 +353,16 @@ public class ApplicationQosPolicyRequestHandler {
      * Request to send all tracked policies to the specified interface.
      *
      * @param ifaceName Interface name to send the policies to.
+     * @param includeUplink Whether stored uplink policies should be queued on this interface.
      */
-    public void queueAllPoliciesOnIface(String ifaceName) {
-        List<QosPolicyParams> policyList = mPolicyTrackingTable.getAllPolicies();
+    public void queueAllPoliciesOnIface(String ifaceName, boolean includeUplink) {
+        List<QosPolicyParams> policyList = new ArrayList<>(mPolicyTrackingTable
+                .getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK));
+        if (includeUplink) {
+            Log.i(TAG, "Including uplink policies");
+            policyList.addAll(
+                    mPolicyTrackingTable.getAllPolicies(QosPolicyParams.DIRECTION_UPLINK));
+        }
         Log.i(TAG, "Queueing all policies on iface=" + ifaceName + ". numPolicies="
                 + policyList.size());
         if (policyList.isEmpty()) return;

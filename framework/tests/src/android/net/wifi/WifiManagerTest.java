@@ -59,9 +59,9 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_SCANNER;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_T2LM_NEGOTIATION;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_TRUST_ON_FIRST_USE;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WEP;
-import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA_PERSONAL;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SAE;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
+import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA_PERSONAL;
 import static android.net.wifi.WifiManager.WpsCallback;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -101,6 +101,7 @@ import android.content.pm.ApplicationInfo;
 import android.net.DhcpInfo;
 import android.net.DhcpOption;
 import android.net.MacAddress;
+import android.net.TetheringManager;
 import android.net.wifi.WifiManager.ActiveCountryCodeChangedCallback;
 import android.net.wifi.WifiManager.CoexCallback;
 import android.net.wifi.WifiManager.LocalOnlyHotspotCallback;
@@ -121,8 +122,8 @@ import android.net.wifi.WifiUsabilityStatsEntry.ContentionTimeStats;
 import android.net.wifi.WifiUsabilityStatsEntry.LinkStats;
 import android.net.wifi.WifiUsabilityStatsEntry.RadioStats;
 import android.net.wifi.WifiUsabilityStatsEntry.RateStats;
-import android.net.wifi.twt.TwtCallback;
 import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSessionCallback;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -187,6 +188,10 @@ public class WifiManagerTest {
     private static final String TEST_SSID = "\"Test WiFi Networks\"";
     private static final byte[] TEST_OUI = new byte[]{0x01, 0x02, 0x03};
     private static final int TEST_LINK_LAYER_STATS_POLLING_INTERVAL_MS = 1000;
+
+    private static final TetheringManager.TetheringRequest TEST_TETHERING_REQUEST =
+            new TetheringManager.TetheringRequest.Builder(TetheringManager.TETHERING_WIFI).build();
+    private static final String TEST_INTERFACE_NAME = "test-wlan0";
 
     @Mock Context mContext;
     @Mock android.net.wifi.IWifiManager mWifiService;
@@ -1291,9 +1296,14 @@ public class WifiManagerTest {
         mWifiManager.registerSoftApCallback(new HandlerExecutor(mHandler), mSoftApCallback);
         verify(mWifiService).registerSoftApCallback(callbackCaptor.capture());
 
-        callbackCaptor.getValue().onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        SoftApState state = new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME);
+        callbackCaptor.getValue().onStateChanged(state);
         mLooper.dispatchAll();
         verify(mSoftApCallback).onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        ArgumentCaptor<SoftApState> softApStateCaptor = ArgumentCaptor.forClass(SoftApState.class);
+        verify(mSoftApCallback).onStateChanged(softApStateCaptor.capture());
+        assertEquals(state, softApStateCaptor.getValue());
     }
 
     /*
@@ -1813,9 +1823,12 @@ public class WifiManagerTest {
         mWifiManager.registerSoftApCallback(new HandlerExecutor(mHandler), mSoftApCallback);
         verify(mWifiService).registerSoftApCallback(callbackCaptor.capture());
 
-        final List<WifiClient> testClients = new ArrayList();
-        callbackCaptor.getValue().onStateChanged(WIFI_AP_STATE_ENABLING, 0);
-        callbackCaptor.getValue().onStateChanged(WIFI_AP_STATE_FAILED, SAP_START_FAILURE_GENERAL);
+        SoftApState state0 = new SoftApState(WIFI_AP_STATE_ENABLING, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME);
+        callbackCaptor.getValue().onStateChanged(state0);
+        SoftApState state1 = new SoftApState(WIFI_AP_STATE_FAILED, SAP_START_FAILURE_GENERAL,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME);
+        callbackCaptor.getValue().onStateChanged(state1);
         callbackCaptor.getValue().onCapabilityChanged(testSoftApCapability);
 
 
@@ -1823,6 +1836,11 @@ public class WifiManagerTest {
         verify(mSoftApCallback).onStateChanged(WIFI_AP_STATE_ENABLING, 0);
         verify(mSoftApCallback).onStateChanged(WIFI_AP_STATE_FAILED, SAP_START_FAILURE_GENERAL);
         verify(mSoftApCallback).onCapabilityChanged(testSoftApCapability);
+        ArgumentCaptor<SoftApState> softApStateCaptor =
+                ArgumentCaptor.forClass(SoftApState.class);
+        verify(mSoftApCallback, times(2)).onStateChanged(softApStateCaptor.capture());
+        assertEquals(state0, softApStateCaptor.getAllValues().get(0));
+        assertEquals(state1, softApStateCaptor.getAllValues().get(1));
     }
 
     /*
@@ -1837,9 +1855,19 @@ public class WifiManagerTest {
         mWifiManager.registerSoftApCallback(new HandlerExecutor(altHandler), mSoftApCallback);
         verify(mWifiService).registerSoftApCallback(callbackCaptor.capture());
 
-        callbackCaptor.getValue().onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        SoftApState state = new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME);
+        callbackCaptor.getValue().onStateChanged(state);
         altLooper.dispatchAll();
         verify(mSoftApCallback).onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        ArgumentCaptor<SoftApState> softApStateCaptor =
+                ArgumentCaptor.forClass(SoftApState.class);
+        verify(mSoftApCallback).onStateChanged(softApStateCaptor.capture());
+        SoftApState softApState = softApStateCaptor.getValue();
+        assertEquals(WIFI_AP_STATE_ENABLED, softApState.getState());
+        assertEquals(0, softApState.getFailureReason());
+        assertEquals(TEST_INTERFACE_NAME, softApState.getIface());
+        assertEquals(TEST_TETHERING_REQUEST, softApState.getTetheringRequest());
     }
 
     /**
@@ -3864,7 +3892,9 @@ public class WifiManagerTest {
         verify(mWifiService).registerLocalOnlyHotspotSoftApCallback(callbackCaptor.capture(),
                 any(Bundle.class));
 
-        callbackCaptor.getValue().onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        SoftApState state = new SoftApState(WIFI_AP_STATE_ENABLED, 0,
+                TEST_TETHERING_REQUEST, TEST_INTERFACE_NAME);
+        callbackCaptor.getValue().onStateChanged(state);
         callbackCaptor.getValue().onConnectedClientsOrInfoChanged(
                 (Map<String, SoftApInfo>) mTestSoftApInfoMap.clone(),
                 (Map<String, List<WifiClient>>) mTestWifiClientsMap.clone(), false, true);
@@ -3874,6 +3904,10 @@ public class WifiManagerTest {
 
         mLooper.dispatchAll();
         verify(mSoftApCallback).onStateChanged(WIFI_AP_STATE_ENABLED, 0);
+        ArgumentCaptor<SoftApState> softApStateCaptor =
+                ArgumentCaptor.forClass(SoftApState.class);
+        verify(mSoftApCallback).onStateChanged(softApStateCaptor.capture());
+        assertEquals(state, softApStateCaptor.getValue());
 
         verify(mSoftApCallback).onConnectedClientsChanged(clientList);
         verify(mSoftApCallback).onConnectedClientsChanged(mTestApInfo1, clientList);
@@ -4240,7 +4274,7 @@ public class WifiManagerTest {
     @Test
     public void testSetupTwtSession() throws Exception {
         assumeTrue(SdkLevel.isAtLeastV());
-        TwtCallback resultCallback = mock(TwtCallback.class);
+        TwtSessionCallback resultCallback = mock(TwtSessionCallback.class);
         SynchronousExecutor executor = mock(SynchronousExecutor.class);
         ArgumentCaptor<Bundle> bundleCaptor = ArgumentCaptor.forClass(Bundle.class);
         TwtRequest twtRequest = mock(TwtRequest.class);

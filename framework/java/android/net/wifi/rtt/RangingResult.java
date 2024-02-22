@@ -16,6 +16,7 @@
 
 package android.net.wifi.rtt;
 
+import android.annotation.ElapsedRealtimeLong;
 import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
@@ -124,7 +125,7 @@ public final class RangingResult implements Parcelable {
         private PeerHandle mPeerHandle = null;
         private int mDistanceMm = 0;
         private int mDistanceStdDevMm = 0;
-        private int mRssi = UNSPECIFIED;
+        private int mRssi = -127;
         private int mNumAttemptedMeasurements = 0;
         private int mNumSuccessfulMeasurements = 0;
         private byte[] mLci = null;
@@ -144,10 +145,10 @@ public final class RangingResult implements Parcelable {
         private List<OuiKeyedData> mVendorData = Collections.emptyList();
 
         /**
-         * Sets the Range result status from {@link RangeResultStatus}.
+         * Sets the Range result status.
          *
          * @param status Ranging result status, if not set defaults to
-         *               {@link RangeResultStatus#STATUS_FAIL}.
+         *               {@link #STATUS_FAIL}.
          * @return The builder to facilitate chaining.
          */
         @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
@@ -215,7 +216,7 @@ public final class RangingResult implements Parcelable {
         /**
          * Sets the average RSSI.
          *
-         * @param rssi Average RSSI. If not set, defaults to 0.
+         * @param rssi Average RSSI. If not set, defaults to -127.
          * @return The builder to facilitate chaining.
          */
         @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
@@ -314,12 +315,12 @@ public final class RangingResult implements Parcelable {
          * The timestamp is in milliseconds since boot, including time spent in sleep,
          * corresponding to values provided by {@link android.os.SystemClock#elapsedRealtime()}.
          *
-         * @param timestamp time stamp in milliseconds
+         * @param timestamp time stamp in milliseconds. If not set, default to 0.
          * @return The builder to facilitate chaining.
          */
         @FlaggedApi("com.android.wifi.flags.ranging_result_builder")
         @NonNull
-        public Builder setRangingTimestampMillis(long timestamp) {
+        public Builder setRangingTimestampMillis(@ElapsedRealtimeLong long timestamp) {
             mTimestamp = timestamp;
             return this;
         }

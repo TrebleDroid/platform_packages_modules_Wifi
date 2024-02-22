@@ -18,6 +18,8 @@ package com.android.server.wifi;
 
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_LOCAL_ONLY;
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_TETHERED;
+import static android.net.wifi.WifiManager.SAP_START_FAILURE_GENERAL;
+import static android.net.wifi.WifiManager.WIFI_AP_STATE_FAILED;
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
@@ -47,6 +49,7 @@ import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.IWifiNetworkStateChangedListener;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
+import android.net.wifi.SoftApState;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -2049,8 +2052,9 @@ public class ActiveModeWarden {
                                     softApConfig.getTargetMode() == IFACE_IP_MODE_LOCAL_ONLY
                                             ? mLohsCallback : mSoftApCallback;
                             // need to notify SoftApCallback that start/stop AP failed
-                            callback.onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                                    WifiManager.SAP_START_FAILURE_GENERAL);
+                            callback.onStateChanged(new SoftApState(
+                                    WIFI_AP_STATE_FAILED, SAP_START_FAILURE_GENERAL,
+                                    softApConfig.getTetheringRequest(), null /* iface */));
                         }
                         break;
                     default:

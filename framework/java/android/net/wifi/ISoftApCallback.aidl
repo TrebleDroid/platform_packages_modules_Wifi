@@ -15,10 +15,11 @@
  */
 
 package android.net.wifi;
+
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApInfo;
-
 import android.net.wifi.WifiClient;
+import android.net.wifi.SoftApState;
 
 /**
  * Interface for Soft AP callback.
@@ -31,13 +32,9 @@ oneway interface ISoftApCallback
      * Service to manager callback providing current soft AP state. The possible
      * parameter values listed are defined in WifiManager.java
      *
-     * @param state new AP state. One of WIFI_AP_STATE_DISABLED,
-     *        WIFI_AP_STATE_DISABLING, WIFI_AP_STATE_ENABLED,
-     *        WIFI_AP_STATE_ENABLING, WIFI_AP_STATE_FAILED
-     * @param failureReason reason when in failed state. One of
-     *        SAP_START_FAILURE_GENERAL, SAP_START_FAILURE_NO_CHANNEL
+     * @param new SoftApState
      */
-    void onStateChanged(int state, int failureReason);
+    void onStateChanged(in SoftApState state);
 
     /**
      * Service to manager callback providing informations of softap.

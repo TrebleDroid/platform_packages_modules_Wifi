@@ -61,6 +61,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.SoftApState;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiClient;
@@ -232,17 +233,17 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         }
 
         @Override
-        public void onStateChanged(int state, int failureReason) {
-            mPrintWriter.println("onStateChanged with state: " + state
-                    + " failure reason: " + failureReason);
-            mSapState = state;
-            if (state == WifiManager.WIFI_AP_STATE_ENABLED) {
+        public void onStateChanged(SoftApState state) {
+            mPrintWriter.println("onStateChanged with state: " + state);
+
+            mSapState = state.getState();
+            if (mSapState == WifiManager.WIFI_AP_STATE_ENABLED) {
                 mPrintWriter.println(" SAP is enabled successfully");
                 // Skip countDown() and wait for onInfoChanged() which has
                 // the confirmed softAp channel information
-            } else if (state == WifiManager.WIFI_AP_STATE_DISABLED) {
+            } else if (mSapState == WifiManager.WIFI_AP_STATE_DISABLED) {
                 mPrintWriter.println(" SAP is disabled");
-            } else if (state == WifiManager.WIFI_AP_STATE_FAILED) {
+            } else if (mSapState == WifiManager.WIFI_AP_STATE_FAILED) {
                 mPrintWriter.println(" SAP failed to start");
                 mCountDownLatch.countDown();
             }

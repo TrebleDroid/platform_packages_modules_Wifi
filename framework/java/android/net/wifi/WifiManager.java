@@ -56,6 +56,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.NetworkStack;
+import android.net.TetheringManager;
 import android.net.Uri;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
@@ -64,9 +65,9 @@ import android.net.wifi.hotspot2.ProvisioningCallback;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.net.wifi.twt.TwtCallback;
 import android.net.wifi.twt.TwtRequest;
 import android.net.wifi.twt.TwtSession;
+import android.net.wifi.twt.TwtSessionCallback;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -5683,6 +5684,8 @@ public class WifiManager {
      *                     using {@link WifiManager#setSoftApConfiguration(SoftApConfiguration)}.
      * @return {@code true} if the operation succeeded, {@code false} otherwise
      *
+     * @deprecated Use {@link #startTetheredHotspotRequest(TetheringManager.TetheringRequest)}
+     *             instead.
      * @hide
      */
     @SystemApi
@@ -5690,6 +5693,7 @@ public class WifiManager {
             android.Manifest.permission.NETWORK_STACK,
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
     })
+    @Deprecated
     public boolean startTetheredHotspot(@Nullable SoftApConfiguration softApConfig) {
         try {
             return mService.startTetheredHotspot(softApConfig, mContext.getOpPackageName());
@@ -5698,6 +5702,32 @@ public class WifiManager {
         }
     }
 
+    /**
+     * Start Soft AP (hotspot) mode for tethering purposes with the specified TetheringRequest.
+     * Note that starting Soft AP mode may disable station mode operation if the device does not
+     * support concurrency.
+     *
+     * @param request A valid TetheringRequest specifying the configuration of the SAP.
+     *
+     * @return {@code true} if the start operation was successfully posted, {@code false} otherwise.
+     *         If {@code true} was returned, then the success/failure of the request will be
+     *         conveyed afterwards via SoftApCallback.
+     *
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public boolean startTetheredHotspotRequest(@NonNull TetheringManager.TetheringRequest request) {
+        try {
+            return mService.startTetheredHotspotRequest(request, mContext.getOpPackageName());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
 
     /**
      * Stop SoftAp mode.
@@ -6586,8 +6616,17 @@ public class WifiManager {
          *                      {@link #SAP_START_FAILURE_NO_CHANNEL},
          *                      {@link #SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION},
          *                      {@link #SAP_START_FAILURE_USER_REJECTED}
+         * @deprecated Use {@link #onStateChanged(StateInfo)}.
          */
         default void onStateChanged(@WifiApState int state, @SapStartFailure int failureReason) {}
+
+        /**
+         * Called when soft AP state changes.
+         *
+         * @param state the new state.
+         */
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+        default void onStateChanged(@NonNull SoftApState state) {}
 
         /**
          * Called when the connected clients to soft AP changes.
@@ -6723,15 +6762,16 @@ public class WifiManager {
         }
 
         @Override
-        public void onStateChanged(int state, int failureReason) {
+        public void onStateChanged(SoftApState state) {
             if (mVerboseLoggingEnabled) {
-                Log.v(TAG, "SoftApCallbackProxy on mode " + mIpMode + ", onStateChanged: state="
-                        + state + ", failureReason=" + failureReason);
+                Log.v(TAG, "SoftApCallbackProxy on mode " + mIpMode
+                        + ", onStateChanged: " + state);
             }
 
             Binder.clearCallingIdentity();
             mExecutor.execute(() -> {
-                mCallback.onStateChanged(state, failureReason);
+                mCallback.onStateChanged(state);
+                mCallback.onStateChanged(state.getState(), state.getFailureReason());
             });
         }
 
@@ -12533,15 +12573,16 @@ public class WifiManager {
 
     private class TwtCallbackProxy extends ITwtCallback.Stub {
         private final Executor mExecutor;
-        private final TwtCallback mCallback;
+        private final TwtSessionCallback mCallback;
 
-        private TwtCallbackProxy(Executor executor, TwtCallback callback) {
+        private TwtCallbackProxy(Executor executor, TwtSessionCallback callback) {
             mExecutor = executor;
             mCallback = callback;
         }
 
         @Override
-        public void onFailure(@TwtCallback.TwtErrorCode int errorCode) throws RemoteException {
+        public void onFailure(@TwtSessionCallback.TwtErrorCode int errorCode)
+                throws RemoteException {
             if (mVerboseLoggingEnabled) {
                 Log.v(TAG, "TwtCallbackProxy: onFailure(errorCode = " + errorCode + " )");
             }
@@ -12550,7 +12591,7 @@ public class WifiManager {
         }
 
         @Override
-        public void onTeardown(@TwtCallback.TwtReasonCode int reasonCode)
+        public void onTeardown(@TwtSessionCallback.TwtReasonCode int reasonCode)
                 throws RemoteException {
             if (mVerboseLoggingEnabled) {
                 Log.v(TAG, "TwtCallbackProxy: onTeardown(errorCode = " + reasonCode + " )");
@@ -12579,9 +12620,9 @@ public class WifiManager {
      * {@link ScanResult#isTwtResponder()} to check station and AP support.
      *
      * Following callbacks are invoked,
-     *  - {@link TwtCallback#onFailure(int)} upon error with error code.
-     *  - {@link TwtCallback#onCreate(TwtSession)} upon TWT session creation.
-     *  - {@link TwtCallback#onTeardown(int)} upon TWT session teardown.
+     *  - {@link TwtSessionCallback#onFailure(int)} upon error with error code.
+     *  - {@link TwtSessionCallback#onCreate(TwtSession)} upon TWT session creation.
+     *  - {@link TwtSessionCallback#onTeardown(int)} upon TWT session teardown.
      *
      * Note: {@link #getTwtCapabilities(Executor, Consumer)} gives {@link TwtCapabilities} which can
      * be used to fill in the valid TWT wake interval and duration ranges for {@link TwtRequest}.
@@ -12599,7 +12640,7 @@ public class WifiManager {
     @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public void setupTwtSession(@NonNull TwtRequest twtRequest,
-            @NonNull @CallbackExecutor Executor executor, @NonNull TwtCallback callback) {
+            @NonNull @CallbackExecutor Executor executor, @NonNull TwtSessionCallback callback) {
         Objects.requireNonNull(executor, "executor cannot be null");
         Objects.requireNonNull(callback, "callback cannot be null");
         Objects.requireNonNull(twtRequest, "twtRequest cannot be null");
@@ -12667,7 +12708,7 @@ public class WifiManager {
      * Teardown the target wake time session. Only owner can teardown the session.
      *
      * Note: For internal use only. Expected to be called through
-     * {@link TwtCallback#onTeardown(int)}.
+     * {@link TwtSessionCallback#onTeardown(int)}.
      *
      * @param sessionId TWT session id
      * @throws SecurityException if the caller does not have permission.
