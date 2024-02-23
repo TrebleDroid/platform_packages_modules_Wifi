@@ -5527,7 +5527,9 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         break;
                     case PEER_CONNECTION_USER_ACCEPT:
                         // Stop discovery to avoid failure due to channel switch
-                        mWifiNative.p2pStopFind();
+                        if (mDiscoveryStarted) {
+                            mWifiNative.p2pStopFind();
+                        }
                         if (mSavedPeerConfig.wps.setup == WpsInfo.PBC) {
                             mWifiNative.startWpsPbc(mGroup.getInterface(), null);
                         } else {
