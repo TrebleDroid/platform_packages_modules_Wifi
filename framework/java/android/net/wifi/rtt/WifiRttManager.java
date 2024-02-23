@@ -41,6 +41,7 @@ import android.os.WorkSource;
 import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -112,7 +113,7 @@ public class WifiRttManager {
     /**
      * Bundle key to access if device supports to be a IEEE 802.11az non-trigger based initiator
      */
-    @FlaggedApi("com.android.wifi.flags.rtt_11az_ntb_ranging_support")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final String CHARACTERISTICS_KEY_BOOLEAN_NTB_INITIATOR = "key_ntb_initiator";
 
     /** @hide */

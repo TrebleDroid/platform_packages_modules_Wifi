@@ -2242,7 +2242,7 @@ public class WifiConfiguration implements Parcelable {
         /**
          * This network is temporarily disabled because of unwanted network under sufficient rssi.
          */
-        @FlaggedApi(Flags.FLAG_DISABLE_REASON_UNWANTED_LOW_RSSI)
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public static final int DISABLED_UNWANTED_LOW_RSSI = 14;
         /**
          * This network is temporarily disabled due to repeated IP reachability failures.
@@ -4713,7 +4713,7 @@ public class WifiConfiguration implements Parcelable {
      * @hide
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @NonNull
     @SystemApi
     public List<OuiKeyedData> getVendorData() {
@@ -4734,7 +4734,7 @@ public class WifiConfiguration implements Parcelable {
      * @hide
      */
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    @FlaggedApi(Flags.FLAG_VENDOR_PARCELABLE_PARAMETERS)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @SystemApi
     public void setVendorData(@NonNull List<OuiKeyedData> vendorData) {
         if (!SdkLevel.isAtLeastV()) {

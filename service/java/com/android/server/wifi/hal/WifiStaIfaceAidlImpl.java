@@ -16,6 +16,8 @@
 
 package com.android.server.wifi.hal;
 
+import static com.android.server.wifi.hal.WifiHalAidlImpl.isServiceVersionAtLeast;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -60,6 +62,9 @@ import android.net.wifi.WifiManager.RoamingMode;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
 import android.net.wifi.WifiUsabilityStatsEntry;
+import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSessionCallback;
+import android.os.Bundle;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
 import android.util.Log;
@@ -760,6 +765,131 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
         }
     }
 
+    /**
+     * Get target wake time (TWT) capabilities.
+     *
+     * @return TWT capabilities as Bundle
+     */
+    @Override
+    public Bundle getTwtCapabilities() {
+        final String methodStr = "getTwtCapabilities";
+        synchronized (mLock) {
+            try {
+                if (!isServiceVersionAtLeast(2) || !checkIfaceAndLogFailure(methodStr)) {
+                    return null;
+                }
+                android.hardware.wifi.TwtCapabilities halTwtCapabilities =
+                        mWifiStaIface.twtGetCapabilities();
+                if (halTwtCapabilities == null) return null;
+                Bundle twtCapabilities = new Bundle();
+                twtCapabilities.putBoolean(WifiManager.TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER,
+                        halTwtCapabilities.isTwtRequesterSupported);
+                twtCapabilities.putInt(
+                        WifiManager.TWT_CAPABILITIES_KEY_INT_MIN_WAKE_DURATION_MICROS,
+                        halTwtCapabilities.minWakeDurationUs);
+                twtCapabilities.putInt(
+                        WifiManager.TWT_CAPABILITIES_KEY_INT_MAX_WAKE_DURATION_MICROS,
+                        halTwtCapabilities.maxWakeDurationUs);
+                twtCapabilities.putLong(
+                        WifiManager.TWT_CAPABILITIES_KEY_LONG_MIN_WAKE_INTERVAL_MICROS,
+                        halTwtCapabilities.minWakeIntervalUs);
+                twtCapabilities.putLong(
+                        WifiManager.TWT_CAPABILITIES_KEY_LONG_MAX_WAKE_INTERVAL_MICROS,
+                        halTwtCapabilities.maxWakeIntervalUs);
+                return twtCapabilities;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Set up a TWT session
+     *
+     * @param cmdId      Command ID to use for this invocation.
+     * @param twtRequest TWT request configuration to setup TWT session
+     * @return true if successful, false otherwise.
+     */
+    @Override
+    public boolean setupTwtSession(int cmdId, TwtRequest twtRequest) {
+        final String methodStr = "setupTwtSession";
+        synchronized (mLock) {
+            try {
+                if (!isServiceVersionAtLeast(2) || !checkIfaceAndLogFailure(methodStr)) {
+                    return false;
+                }
+                android.hardware.wifi.TwtRequest halTwtRequest =
+                        new android.hardware.wifi.TwtRequest();
+                halTwtRequest.maxWakeDurationUs = twtRequest.getMaxWakeDurationMicros();
+                halTwtRequest.minWakeDurationUs = twtRequest.getMinWakeDurationMicros();
+                halTwtRequest.maxWakeIntervalUs = twtRequest.getMaxWakeIntervalMicros();
+                halTwtRequest.minWakeIntervalUs = twtRequest.getMinWakeIntervalMicros();
+                mWifiStaIface.twtSessionSetup(cmdId, halTwtRequest);
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Teardown a TWT session.
+     *
+     * @param cmdId     Command ID to use for this invocation.
+     * @param sessionId TWT session identifier
+     * @return true if successful, false otherwise.
+     */
+    @Override
+    public boolean tearDownTwtSession(int cmdId, int sessionId) {
+        final String methodStr = "tearDownTwtSession";
+        synchronized (mLock) {
+            try {
+                if (!isServiceVersionAtLeast(2) || !checkIfaceAndLogFailure(methodStr)) {
+                    return false;
+                }
+                mWifiStaIface.twtSessionTeardown(cmdId, sessionId);
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Get stats for the TWT session.
+     *
+     * @param cmdId     Command ID to use for this invocation.
+     * @param sessionId TWT session identifier
+     * @return true if successful, false otherwise.
+     */
+    @Override
+    public boolean getStatsTwtSession(int cmdId, int sessionId) {
+        final String methodStr = "getStatsTwtSession";
+        synchronized (mLock) {
+            try {
+                if (!isServiceVersionAtLeast(2) || !checkIfaceAndLogFailure(methodStr)) {
+                    return false;
+                }
+                mWifiStaIface.twtSessionGetStats(cmdId, sessionId);
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
     private class StaIfaceEventCallback extends IWifiStaIfaceEventCallback.Stub {
         @Override
         public void onBackgroundScanFailure(int cmdId) {
@@ -805,12 +935,44 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
 
         @Override
         public void onTwtFailure(int cmdId, byte twtErrorCode) {
-            //TODO: Implementation
+            if (mFrameworkCallback == null) return;
+            @TwtErrorCode int errorCode;
+            switch (twtErrorCode) {
+                case TwtErrorCode.INVALID_PARAMS:
+                    errorCode = TwtSessionCallback.TWT_ERROR_CODE_INVALID_PARAMS;
+                    break;
+                case TwtErrorCode.MAX_SESSION_REACHED:
+                    errorCode = TwtSessionCallback.TWT_ERROR_CODE_MAX_SESSIONS_REACHED;
+                    break;
+                case TwtErrorCode.NOT_AVAILABLE:
+                    errorCode = TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE;
+                    break;
+                case TwtErrorCode.NOT_SUPPORTED:
+                    errorCode = TwtSessionCallback.TWT_ERROR_CODE_NOT_SUPPORTED;
+                    break;
+                case TwtErrorCode.PEER_NOT_SUPPORTED:
+                    errorCode = TwtSessionCallback.TWT_ERROR_CODE_AP_NOT_SUPPORTED;
+                    break;
+                case TwtErrorCode.PEER_REJECTED:
+                    errorCode = TwtSessionCallback.TWT_ERROR_CODE_AP_REJECTED;
+                    break;
+                case TwtErrorCode.TIMEOUT:
+                    errorCode = TwtSessionCallback.TWT_ERROR_CODE_TIMEOUT;
+                    break;
+                case TwtErrorCode.ALREADY_RESUMED:
+                case TwtErrorCode.ALREADY_SUSPENDED:
+                case TwtErrorCode.FAILURE_UNKNOWN:
+                default:
+                    errorCode = TwtSessionCallback.TWT_REASON_CODE_UNKNOWN;
+            }
+            mFrameworkCallback.onTwtFailure(cmdId, errorCode);
         }
 
         @Override
         public void onTwtSessionCreate(int cmdId, TwtSession twtSession) {
-            //TODO: Implementation
+            if (mFrameworkCallback == null || twtSession == null) return;
+            mFrameworkCallback.onTwtSessionCreate(cmdId, twtSession.wakeDurationUs,
+                    twtSession.wakeDurationUs, twtSession.mloLinkId, twtSession.sessionId);
         }
 
         @Override
@@ -830,16 +992,51 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
 
         @Override
         public void onTwtSessionTeardown(int cmdId, int twtSessionId, byte twtReasonCode) {
-            //TODO: Implementation
+            if (mFrameworkCallback == null) return;
+            @TwtTeardownReasonCode int reasonCode;
+            switch (twtReasonCode) {
+                case TwtTeardownReasonCode.INTERNALLY_INITIATED:
+                    reasonCode = TwtSessionCallback.TWT_REASON_CODE_INTERNALLY_INITIATED;
+                    break;
+                case TwtTeardownReasonCode.LOCALLY_REQUESTED:
+                    reasonCode = TwtSessionCallback.TWT_REASON_CODE_LOCALLY_REQUESTED;
+                    break;
+                case TwtTeardownReasonCode.PEER_INITIATED:
+                    reasonCode = TwtSessionCallback.TWT_REASON_CODE_PEER_INITIATED;
+                    break;
+                case TwtTeardownReasonCode.UNKNOWN:
+                default:
+                    reasonCode = TwtSessionCallback.TWT_REASON_CODE_UNKNOWN;
+            }
+            mFrameworkCallback.onTwtSessionTeardown(cmdId, twtSessionId, reasonCode);
         }
 
         @Override
         public void onTwtSessionStats(int cmdId, int twtSessionId,
                 TwtSessionStats twtSessionStats) {
-            //TODO: Implementation
+            if (mFrameworkCallback == null) return;
+            Bundle twtStats = new Bundle();
+            twtStats.putInt(
+                    android.net.wifi.twt.TwtSession.TWT_STATS_KEY_INT_AVERAGE_TX_PACKET_COUNT,
+                    twtSessionStats.avgTxPktCount);
+            twtStats.putInt(
+                    android.net.wifi.twt.TwtSession.TWT_STATS_KEY_INT_AVERAGE_TX_PACKET_SIZE,
+                    twtSessionStats.avgTxPktSize);
+            twtStats.putInt(
+                    android.net.wifi.twt.TwtSession.TWT_STATS_KEY_INT_AVERAGE_RX_PACKET_COUNT,
+                    twtSessionStats.avgRxPktCount);
+            twtStats.putInt(
+                    android.net.wifi.twt.TwtSession.TWT_STATS_KEY_INT_AVERAGE_RX_PACKET_SIZE,
+                    twtSessionStats.avgRxPktSize);
+            twtStats.putInt(
+                    android.net.wifi.twt.TwtSession.TWT_STATS_KEY_INT_AVERAGE_EOSP_DURATION_MICROS,
+                    twtSessionStats.avgEospDurationUs);
+            twtStats.putInt(
+                    android.net.wifi.twt.TwtSession.TWT_STATS_KEY_INT_AVERAGE_EOSP_DURATION_MICROS,
+                    twtSessionStats.eospCount);
+            mFrameworkCallback.onTwtSessionStats(cmdId, twtSessionId, twtStats);
         }
     }
-
 
     // Utilities
 

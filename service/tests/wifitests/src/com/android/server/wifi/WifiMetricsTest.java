@@ -6707,12 +6707,12 @@ public class WifiMetricsTest extends WifiBaseTest {
         mWifiMetrics.reportNetworkDisconnect(TEST_IFACE_NAME, reason, TEST_CANDIDATE_LEVEL,
                 linkSpeed, 0);
 
-        // But we still expect FALSE to be emitted
+        // FALSE should not be emitted since wifi was never connected
         ExtendedMockito.verify(() -> WifiStatsLog.write(
-                WifiStatsLog.WIFI_CONNECTION_STATE_CHANGED,
-                false,
-                0,
-                0));
+                eq(WifiStatsLog.WIFI_CONNECTION_STATE_CHANGED),
+                eq(false),
+                anyInt(),
+                anyInt()), times(0));
     }
 
     @Test

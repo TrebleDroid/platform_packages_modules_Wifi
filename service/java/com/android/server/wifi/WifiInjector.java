@@ -33,6 +33,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkProvider;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.WifiTwtSession;
 import android.net.wifi.nl80211.WifiNl80211Manager;
 import android.os.BatteryManager;
 import android.os.BatteryStatsManager;
@@ -268,6 +269,7 @@ public class WifiInjector {
     @NonNull private final SsidTranslator mSsidTranslator;
     @NonNull private final ApplicationQosPolicyRequestHandler mApplicationQosPolicyRequestHandler;
     private final WifiRoamingModeManager mWifiRoamingModeManager;
+    private final TwtManager mTwtManager;
 
     public WifiInjector(WifiContext context) {
         if (context == null) {
@@ -620,6 +622,9 @@ public class WifiInjector {
         mWifiRoamingModeManager = new WifiRoamingModeManager(mWifiNative,
                 mActiveModeWarden, new WifiRoamingConfigStore(mWifiConfigManager,
                 mWifiConfigStore));
+
+        mTwtManager = new TwtManager(this, mCmiMonitor, mWifiNative, wifiHandler, mClock,
+                WifiTwtSession.MAX_TWT_SESSIONS, 1);
     }
 
     /**
@@ -1317,5 +1322,9 @@ public class WifiInjector {
 
     public WifiRoamingModeManager getWifiRoamingModeManager() {
         return mWifiRoamingModeManager;
+    }
+
+    public TwtManager getTwtManager() {
+        return mTwtManager;
     }
 }

@@ -554,7 +554,7 @@ public class OpenNetworkNotifierTest extends WifiBaseTest {
     @Test
     public void actionConnectToNetwork_notificationNotShowing_doesNothing() {
         mBroadcastReceiver.onReceive(mContext, createIntent(ACTION_CONNECT_TO_NETWORK));
-        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any());
+        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any(), any());
     }
 
     /**
@@ -575,7 +575,7 @@ public class OpenNetworkNotifierTest extends WifiBaseTest {
         mBroadcastReceiver.onReceive(mContext, createIntent(ACTION_CONNECT_TO_NETWORK));
 
         verify(mConnectHelper).connectToNetwork(eq(new NetworkUpdateResult(TEST_NETWORK_ID)),
-                any(ActionListenerWrapper.class), eq(Process.SYSTEM_UID), any());
+                any(ActionListenerWrapper.class), eq(Process.SYSTEM_UID), any(), any());
         // Connecting Notification
         verify(mNotificationBuilder).createNetworkConnectingNotification(OPEN_NET_NOTIFIER_TAG,
                 mTestNetwork);
@@ -759,7 +759,7 @@ public class OpenNetworkNotifierTest extends WifiBaseTest {
         ArgumentCaptor<ActionListenerWrapper> connectListenerCaptor =
                 ArgumentCaptor.forClass(ActionListenerWrapper.class);
         verify(mConnectHelper).connectToNetwork(eq(new NetworkUpdateResult(TEST_NETWORK_ID)),
-                connectListenerCaptor.capture(), eq(Process.SYSTEM_UID), any());
+                connectListenerCaptor.capture(), eq(Process.SYSTEM_UID), any(), any());
         ActionListenerWrapper connectListener = connectListenerCaptor.getValue();
 
         // Connecting Notification

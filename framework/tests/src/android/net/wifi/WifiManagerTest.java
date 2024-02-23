@@ -3007,7 +3007,7 @@ public class WifiManagerTest {
         ArgumentCaptor<IActionListener> binderListenerCaptor =
                 ArgumentCaptor.forClass(IActionListener.class);
         verify(mWifiService).connect(eq(null), eq(TEST_NETWORK_ID), binderListenerCaptor.capture(),
-                anyString());
+                anyString(), any());
         assertNotNull(binderListenerCaptor.getValue());
 
         // Trigger on success.
@@ -3027,7 +3027,7 @@ public class WifiManagerTest {
     @Test
     public void testConnectWithListenerHandleSecurityException() throws Exception {
         doThrow(new SecurityException()).when(mWifiService)
-                .connect(eq(null), anyInt(), any(IActionListener.class), anyString());
+                .connect(eq(null), anyInt(), any(IActionListener.class), anyString(), any());
         ActionListener externalListener = mock(ActionListener.class);
         mWifiManager.connect(TEST_NETWORK_ID, externalListener);
 
@@ -3041,7 +3041,7 @@ public class WifiManagerTest {
     @Test
     public void testConnectWithListenerHandleRemoteException() throws Exception {
         doThrow(new RemoteException()).when(mWifiService)
-                .connect(eq(null), anyInt(), any(IActionListener.class), anyString());
+                .connect(eq(null), anyInt(), any(IActionListener.class), anyString(), any());
         ActionListener externalListener = mock(ActionListener.class);
         mWifiManager.connect(TEST_NETWORK_ID, externalListener);
 
@@ -3058,7 +3058,7 @@ public class WifiManagerTest {
         mWifiManager.connect(configuration, null);
 
         verify(mWifiService).connect(eq(configuration), eq(WifiConfiguration.INVALID_NETWORK_ID),
-                eq(null), anyString());
+                eq(null), anyString(), any());
     }
 
     /**
@@ -4378,4 +4378,10 @@ public class WifiManagerTest {
         verify(mWifiService).restoreWifiBackupData(eq(testByteArray));
     }
 
+
+    @Test
+    public void testIsPreferredNetworkOffloadSupported() throws Exception {
+        mWifiManager.isPreferredNetworkOffloadSupported();
+        verify(mWifiService).isPnoSupported();
+    }
 }

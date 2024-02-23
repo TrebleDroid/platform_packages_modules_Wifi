@@ -17,6 +17,7 @@
 package com.android.server.wifi;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 
@@ -46,10 +47,10 @@ public class ConnectHelper {
     public void connectToNetwork(
             @NonNull NetworkUpdateResult result,
             @NonNull ActionListenerWrapper wrapper,
-            int callingUid, @NonNull String packageName) {
+            int callingUid, @NonNull String packageName, @Nullable String attributionTag) {
         connectToNetwork(
                 mActiveModeWarden.getPrimaryClientModeManager(), result, wrapper, callingUid,
-                packageName);
+                packageName, attributionTag);
     }
 
     /**
@@ -60,14 +61,15 @@ public class ConnectHelper {
             @NonNull ClientModeManager clientModeManager,
             @NonNull NetworkUpdateResult result,
             @NonNull ActionListenerWrapper wrapper,
-            int callingUid, @NonNull String packageName) {
+            int callingUid, @NonNull String packageName, @Nullable String attributionTag) {
         int netId = result.getNetworkId();
         if (mWifiConfigManager.getConfiguredNetwork(netId) == null) {
             Log.e(TAG, "connectToNetwork Invalid network Id=" + netId);
             wrapper.sendFailure(WifiManager.ActionListener.FAILURE_INTERNAL_ERROR);
             return;
         }
-        mWifiConfigManager.updateBeforeConnect(netId, callingUid, packageName);
-        clientModeManager.connectNetwork(result, wrapper, callingUid, packageName);
+        mWifiConfigManager.updateBeforeConnect(netId, callingUid, packageName,
+                !ClientModeImpl.ATTRIBUTION_TAG_DISALLOW_CONNECT_CHOICE.equals(attributionTag));
+        clientModeManager.connectNetwork(result, wrapper, callingUid, packageName, attributionTag);
     }
 }

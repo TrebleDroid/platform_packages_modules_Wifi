@@ -27,6 +27,9 @@ import android.net.apf.ApfCapabilities;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager.RoamingMode;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSessionCallback;
+import android.os.Bundle;
 import android.util.Log;
 
 import com.android.server.wifi.SsidTranslator;
@@ -114,6 +117,47 @@ public class WifiStaIface implements WifiHal.WifiInterface {
          * @param currRssi RSSI of the currently connected access point.
          */
         void onRssiThresholdBreached(int cmdId, byte[] currBssid, int currRssi);
+
+        /**
+         * Called when TWT operation fails.
+         *
+         * @param cmdId Unique command id which is failed
+         * @param twtErrorCode Error code
+         */
+        void onTwtFailure(int cmdId, @TwtSessionCallback.TwtErrorCode int twtErrorCode);
+
+        /**
+         * Called when {@link WifiStaIface#setupTwtSession(int, TwtRequest)} succeeds.
+         *
+         * @param cmdId Unique command id used in
+         *              {@link WifiStaIface#setupTwtSession(int, TwtRequest)}
+         * @param wakeDurationUs TWT wake duration for the session in microseconds
+         * @param wakeIntervalUs TWT wake interval for the session in microseconds
+         * @param linkId Multi link operation link id
+         * @param sessionId TWT session id
+         */
+        void onTwtSessionCreate(int cmdId, int wakeDurationUs, long wakeIntervalUs, int linkId,
+                int sessionId);
+
+        /**
+         * Called when TWT session is torndown by {@link WifiStaIface#tearDownTwtSession(int, int)}.
+         * Can also be called unsolicitedly by the vendor software with proper reason code.
+         *
+         * @param cmdId Unique command id used in {@link WifiStaIface#tearDownTwtSession(int, int)}
+         * @param twtSessionId TWT session Id
+         * @param twtReasonCode Reason code for teardown
+         */
+        void onTwtSessionTeardown(int cmdId, int twtSessionId,
+                @TwtSessionCallback.TwtReasonCode int twtReasonCode);
+
+        /**
+         * Called as a response to {@link WifiStaIface#getStatsTwtSession(int, int)}
+         *
+         * @param cmdId Unique command id used in {@link WifiStaIface#getStatsTwtSession(int, int)}
+         * @param twtSessionId TWT session Id
+         * @param twtStats TWT stats bundle
+         */
+        void onTwtSessionStats(int cmdId, int twtSessionId, Bundle twtStats);
     }
 
     public WifiStaIface(@NonNull android.hardware.wifi.V1_0.IWifiStaIface staIface,
@@ -383,4 +427,37 @@ public class WifiStaIface implements WifiHal.WifiInterface {
         return validateAndCall("setRoamingMode", ROAMING_MODE_NORMAL,
                 () -> mWifiStaIface.setRoamingMode(roamingMode));
     }
+
+    /**
+     * See {@link IWifiStaIface#getTwtCapabilities()}
+     */
+    public Bundle getTwtCapabilities() {
+        return validateAndCall("getTwtCapabilities", null,
+                () -> mWifiStaIface.getTwtCapabilities());
+    }
+
+    /**
+     * See {@link IWifiStaIface#setupTwtSession(int, TwtRequest)}
+     */
+    public boolean setupTwtSession(int cmdId, TwtRequest twtRequest) {
+        return validateAndCall("setupTwtSession", false,
+                () -> mWifiStaIface.setupTwtSession(cmdId, twtRequest));
+    }
+
+    /**
+     * See {@link IWifiStaIface#tearDownTwtSession(int, int)}
+     */
+    public boolean tearDownTwtSession(int commandId, int sessionId) {
+        return validateAndCall("tearDownTwtSession", false,
+                () -> mWifiStaIface.tearDownTwtSession(commandId, sessionId));
+    }
+
+    /**
+     * See {@link IWifiStaIface#getStatsTwtSession(int, int)}
+     */
+    public boolean getStatsTwtSession(int commandId, int sessionId) {
+        return validateAndCall("getStatsTwtSession", false,
+                () -> mWifiStaIface.getStatsTwtSession(commandId, sessionId));
+    }
 }
+
