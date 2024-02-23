@@ -195,6 +195,11 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     @VisibleForTesting public static final short NUM_LOG_RECS_VERBOSE = 3000;
 
     private static final String TAG = "WifiClientModeImpl";
+    // Hardcoded constant used for caller to avoid triggering connect choice that force framework
+    // to stick to the selected network. Do not change this value to maintain backward
+    // compatibility.
+    public static final String ATTRIBUTION_TAG_DISALLOW_CONNECT_CHOICE =
+            "ATTRIBUTION_TAG_DISALLOW_CONNECT_CHOICE";
 
     private static final int IPCLIENT_STARTUP_TIMEOUT_MS = 2_000;
     private static final int IPCLIENT_SHUTDOWN_TIMEOUT_MS = 60_000; // 60 seconds
@@ -1457,14 +1462,14 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      * @param packageName package name of the app requesting the connection.
      */
     private void connectToUserSelectNetwork(int netId, int uid, boolean forceReconnect,
-            @NonNull String packageName) {
+            @NonNull String packageName, @Nullable String attributionTag) {
         if (mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)
                 || mWifiPermissionsUtil.checkNetworkSetupWizardPermission(uid)) {
             mIsUserSelected = true;
         }
         logd("connectToUserSelectNetwork netId " + netId + ", uid " + uid + ", package "
                 + packageName + ", forceReconnect = " + forceReconnect + ", isUserSelected = "
-                + mIsUserSelected);
+                + mIsUserSelected + ", attributionTag = " + attributionTag);
         updateSaeAutoUpgradeFlagForUserSelectNetwork(netId);
         if (!forceReconnect && (mLastNetworkId == netId || mTargetNetworkId == netId)) {
             // We're already connecting/connected to the user specified network, don't trigger a
@@ -1501,6 +1506,10 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                         }
                     }, mWifiThreadRunner).launchDialog();
         } else {
+            if (mIsUserSelected && ATTRIBUTION_TAG_DISALLOW_CONNECT_CHOICE.equals(attributionTag)) {
+                mIsUserSelected = false;
+                logd("connectToUserSelectNetwork attributionTag override to disable user selected");
+            }
             mWifiConnectivityManager.prepareForForcedConnection(netId);
             if (UserHandle.getAppId(uid) == Process.SYSTEM_UID) {
                 mWifiMetrics.setNominatorForNetwork(netId,
@@ -4437,10 +4446,10 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         if (mLastNetworkId != WifiConfiguration.INVALID_NETWORK_ID) {
             WifiConfiguration config = getConnectedWifiConfigurationInternal();
             boolean shouldSetUserConnectChoice = config != null
+                    && mIsUserSelected
                     && isRecentlySelectedByTheUser(config)
                     && (config.getNetworkSelectionStatus().hasEverConnected()
-                    || config.isEphemeral())
-                    && mWifiPermissionsUtil.checkNetworkSettingsPermission(config.lastConnectUid);
+                    || config.isEphemeral());
             mWifiConfigManager.updateNetworkAfterConnect(mLastNetworkId,
                     mIsUserSelected, shouldSetUserConnectChoice, mWifiInfo.getRssi());
             // Notify PasspointManager of Passpoint network connected event.
@@ -4848,7 +4857,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     int netId = result.getNetworkId();
                     connectToUserSelectNetwork(
                             netId, message.sendingUid, result.hasCredentialChanged(),
-                            cnm.packageName);
+                            cnm.packageName, cnm.attributionTag);
                     mWifiMetrics.logStaEvent(mInterfaceName, StaEvent.TYPE_CONNECT_NETWORK,
                             mWifiConfigManager.getConfiguredNetwork(netId));
                     cnm.listener.sendSuccess();
@@ -7906,21 +7915,23 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         public final NetworkUpdateResult result;
         public final ActionListenerWrapper listener;
         public final String packageName;
+        public final String attributionTag;
 
         ConnectNetworkMessage(NetworkUpdateResult result, ActionListenerWrapper listener,
-                String packageName) {
+                String packageName, @Nullable String attributionTag) {
             this.result = result;
             this.listener = listener;
             this.packageName = packageName;
+            this.attributionTag = attributionTag;
         }
     }
 
     /** Trigger network connection and provide status via the provided callback. */
     public void connectNetwork(NetworkUpdateResult result, ActionListenerWrapper wrapper,
-            int callingUid, @NonNull String packageName) {
+            int callingUid, @NonNull String packageName, @Nullable String attributionTag) {
         Message message =
                 obtainMessage(CMD_CONNECT_NETWORK,
-                new ConnectNetworkMessage(result, wrapper, packageName));
+                        new ConnectNetworkMessage(result, wrapper, packageName, attributionTag));
         message.sendingUid = callingUid;
         sendMessage(message);
     }
@@ -7930,7 +7941,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             int callingUid, @NonNull String packageName) {
         Message message =
                 obtainMessage(CMD_SAVE_NETWORK,
-                new ConnectNetworkMessage(result, wrapper, packageName));
+                        new ConnectNetworkMessage(result, wrapper, packageName, null));
         message.sendingUid = callingUid;
         sendMessage(message);
     }

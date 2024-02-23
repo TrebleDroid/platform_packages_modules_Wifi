@@ -172,6 +172,9 @@ import android.net.wifi.ISubsystemRestartCallback;
 import android.net.wifi.ISuggestionConnectionStatusListener;
 import android.net.wifi.ISuggestionUserApprovalStatusListener;
 import android.net.wifi.ITrafficStateCallback;
+import android.net.wifi.ITwtCallback;
+import android.net.wifi.ITwtCapabilitiesListener;
+import android.net.wifi.ITwtStatsListener;
 import android.net.wifi.IWifiBandsListener;
 import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.IWifiLowLatencyLockListener;
@@ -206,6 +209,8 @@ import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.hotspot2.PasspointConfiguration;
 import android.net.wifi.hotspot2.pps.Credential;
 import android.net.wifi.hotspot2.pps.HomeSp;
+import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSessionCallback;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -296,6 +301,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     private static final String TEST_PACKAGE_NAME = "TestPackage";
     private static final String TEST_PACKAGE_NAME_OTHER = "TestPackageOther";
     private static final String TEST_FEATURE_ID = "TestFeature";
+    private static final String TEST_FEATURE_ID_OTHER = "TestFeatureOther";
     private static final String SYSUI_PACKAGE_NAME = "com.android.systemui";
     private static final String CERT_INSTALLER_PACKAGE_NAME = "com.android.certinstaller";
     private static final int TEST_PID = 6789;
@@ -489,7 +495,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Mock WifiRoamingModeManager mWifiRoamingModeManager;
     @Captor ArgumentCaptor<Intent> mIntentCaptor;
     @Captor ArgumentCaptor<List> mListCaptor;
-
+    @Mock TwtManager mTwtManager;
     @Rule
     // For frameworks
     public TestRule compatChangeRule = new PlatformCompatChangeRule();
@@ -674,6 +680,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 LocationManager.FUSED_PROVIDER, LocationManager.PASSIVE_PROVIDER,
                 LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER));
         when(mWifiInjector.getWifiRoamingModeManager()).thenReturn(mWifiRoamingModeManager);
+        when(mWifiInjector.getTwtManager()).thenReturn(mTwtManager);
 
         doAnswer(new AnswerWithArguments() {
             public void answer(Runnable onStoppedListener) throws Throwable {
@@ -5262,11 +5269,11 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testConnectNetworkWithoutPrivilegedPermission() throws Exception {
         try {
             mWifiServiceImpl.connect(mock(WifiConfiguration.class), TEST_NETWORK_ID,
-                    mock(IActionListener.class), TEST_PACKAGE_NAME);
+                    mock(IActionListener.class), TEST_PACKAGE_NAME, mExtras);
             fail();
         } catch (SecurityException e) {
             mLooper.dispatchAll();
-            verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any());
+            verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any(), any());
         }
     }
 
@@ -5316,11 +5323,11 @@ public class WifiServiceImplTest extends WifiBaseTest {
         config.SSID = TEST_SSID;
         when(mWifiConfigManager.getConfiguredNetwork(TEST_NETWORK_ID)).thenReturn(config);
         mWifiServiceImpl.connect(config, TEST_NETWORK_ID, mock(IActionListener.class),
-                TEST_PACKAGE_NAME);
+                TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
         verify(mWifiConfigManager).addOrUpdateNetwork(eq(config), anyInt());
         verify(mConnectHelper).connectToNetwork(any(NetworkUpdateResult.class),
-                any(ActionListenerWrapper.class), anyInt(), any());
+                any(ActionListenerWrapper.class), anyInt(), any(), any());
         verify(mWifiMetrics).logUserActionEvent(eq(UserActionEvent.EVENT_ADD_OR_UPDATE_NETWORK),
                 anyInt());
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_CONNECT_CONFIG), anyInt(),
@@ -5361,7 +5368,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         // Verify that the secondary internet CMM is stopped when manual connection is started
         mWifiServiceImpl.connect(
-                config, TEST_NETWORK_ID, mock(IActionListener.class), TEST_PACKAGE_NAME);
+                config, TEST_NETWORK_ID, mock(IActionListener.class), TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
         verify(primaryCmm, never()).stop();
         verify(secondaryInternetCmm).stop();
@@ -5400,13 +5407,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         // Verify that the localOnlyCmm is not stopped since security type is different
         mWifiServiceImpl.connect(config, TEST_NETWORK_ID, mock(IActionListener.class),
-                TEST_PACKAGE_NAME);
+                TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
         verify(primaryCmm, never()).stop();
         verify(localOnlyCmm, never()).stop();
         verify(mWifiConfigManager).addOrUpdateNetwork(eq(config), anyInt());
         verify(mConnectHelper).connectToNetwork(any(NetworkUpdateResult.class),
-                any(ActionListenerWrapper.class), anyInt(), any());
+                any(ActionListenerWrapper.class), anyInt(), any(), any());
         verify(mWifiMetrics).logUserActionEvent(eq(UserActionEvent.EVENT_ADD_OR_UPDATE_NETWORK),
                 anyInt());
 
@@ -5416,13 +5423,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         // Verify that the localOnlyCmm is stopped this time
         mWifiServiceImpl.connect(config, TEST_NETWORK_ID, mock(IActionListener.class),
-                TEST_PACKAGE_NAME);
+                TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
         verify(primaryCmm, never()).stop();
         verify(localOnlyCmm).stop();
         verify(mWifiConfigManager, times(2)).addOrUpdateNetwork(eq(config), anyInt());
         verify(mConnectHelper, times(2)).connectToNetwork(any(NetworkUpdateResult.class),
-                any(ActionListenerWrapper.class), anyInt(), any());
+                any(ActionListenerWrapper.class), anyInt(), any(), any());
         verify(mWifiMetrics, times(2)).logUserActionEvent(
                 eq(UserActionEvent.EVENT_ADD_OR_UPDATE_NETWORK), anyInt());
     }
@@ -5438,7 +5445,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiConfigManager.getConfiguredNetwork(TEST_NETWORK_ID)).thenReturn(mWifiConfig);
 
         mWifiServiceImpl.connect(mWifiConfig, WifiConfiguration.INVALID_NETWORK_ID,
-                mActionListener, TEST_PACKAGE_NAME);
+                mActionListener, TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
 
         ArgumentCaptor<WifiConfiguration> configCaptor =
@@ -5446,7 +5453,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mWifiConfigManager).addOrUpdateNetwork(configCaptor.capture(), anyInt());
         assertThat(configCaptor.getValue().networkId).isEqualTo(TEST_NETWORK_ID);
 
-        verify(mConnectHelper).connectToNetwork(eq(result), any(), anyInt(), any());
+        verify(mConnectHelper).connectToNetwork(eq(result), any(), anyInt(), any(), any());
         verify(mContextAsUser).sendBroadcastWithMultiplePermissions(
                 mIntentCaptor.capture(),
                 aryEq(new String[]{
@@ -5471,12 +5478,12 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiPermissionsUtil.isLocationModeEnabled()).thenReturn(true);
 
         mWifiServiceImpl.connect(mWifiConfig, WifiConfiguration.INVALID_NETWORK_ID,
-                mActionListener, TEST_PACKAGE_NAME);
+                mActionListener, TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager).addOrUpdateNetwork(eq(mWifiConfig), anyInt());
 
-        verify(mClientModeManager, never()).connectNetwork(any(), any(), anyInt(), any());
+        verify(mClientModeManager, never()).connectNetwork(any(), any(), anyInt(), any(), any());
         verify(mContextAsUser, never()).sendBroadcastWithMultiplePermissions(any(), any());
         verify(mActionListener).onFailure(WifiManager.ActionListener.FAILURE_INTERNAL_ERROR);
         verify(mActionListener, never()).onSuccess();
@@ -5490,13 +5497,14 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiPermissionsUtil.isLocationModeEnabled()).thenReturn(true);
         when(mWifiConfigManager.getConfiguredNetwork(TEST_NETWORK_ID)).thenReturn(mWifiConfig);
 
-        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME);
+        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME,
+                mExtras);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager, never()).addOrUpdateNetwork(any(), anyInt());
 
         verify(mConnectHelper).connectToNetwork(
-                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any());
+                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any(), any());
         verify(mContextAsUser, never()).sendBroadcastWithMultiplePermissions(any(), any());
         verify(mWifiMetrics).logUserActionEvent(eq(UserActionEvent.EVENT_MANUAL_CONNECT), anyInt());
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_CONNECT_NETWORK_ID), anyInt(),
@@ -5515,13 +5523,14 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any())).thenReturn(TEST_SUB_ID);
         when(mWifiCarrierInfoManager.isSimReady(TEST_SUB_ID)).thenReturn(true);
 
-        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME);
+        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME,
+                mExtras);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager, never()).addOrUpdateNetwork(any(), anyInt());
 
         verify(mConnectHelper).connectToNetwork(
-                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any());
+                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any(), any());
         verify(mContextAsUser, never()).sendBroadcastWithMultiplePermissions(any(), any());
         verify(mWifiMetrics).logUserActionEvent(eq(UserActionEvent.EVENT_MANUAL_CONNECT), anyInt());
     }
@@ -5538,12 +5547,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiCarrierInfoManager.getBestMatchSubscriptionId(any())).thenReturn(TEST_SUB_ID);
         when(mWifiCarrierInfoManager.isSimReady(TEST_SUB_ID)).thenReturn(false);
 
-        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME);
+        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME,
+                mExtras);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager, never()).addOrUpdateNetwork(any(), anyInt());
 
-        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any());
+        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any(), any());
         verify(mContextAsUser, never()).sendBroadcastWithMultiplePermissions(any(), any());
         verify(mWifiMetrics).logUserActionEvent(eq(UserActionEvent.EVENT_MANUAL_CONNECT), anyInt());
     }
@@ -5562,12 +5572,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiCarrierInfoManager.requiresImsiEncryption(TEST_SUB_ID)).thenReturn(true);
         when(mWifiCarrierInfoManager.isImsiEncryptionInfoAvailable(TEST_SUB_ID)).thenReturn(false);
 
-        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME);
+        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME,
+                mExtras);
         mLooper.dispatchAll();
 
         verify(mWifiConfigManager, never()).addOrUpdateNetwork(any(), anyInt());
 
-        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any());
+        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any(), any());
         verify(mContextAsUser, never()).sendBroadcastWithMultiplePermissions(any(), any());
         verify(mWifiMetrics).logUserActionEvent(eq(UserActionEvent.EVENT_MANUAL_CONNECT), anyInt());
     }
@@ -5586,13 +5597,14 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiCarrierInfoManager.isOobPseudonymFeatureEnabled(anyInt())).thenReturn(true);
         when(mWifiPseudonymManager.getValidPseudonymInfo(anyInt())).thenReturn(Optional.empty());
 
-        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME);
+        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME,
+                mExtras);
         mLooper.dispatchAll();
 
         verify(mWifiPseudonymManager).retrievePseudonymOnFailureTimeoutExpired(any());
         verify(mWifiConfigManager, never()).addOrUpdateNetwork(any(), anyInt());
 
-        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any());
+        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any(), any());
         verify(mContextAsUser, never()).sendBroadcastWithMultiplePermissions(any(), any());
         verify(mWifiMetrics).logUserActionEvent(eq(UserActionEvent.EVENT_MANUAL_CONNECT), anyInt());
     }
@@ -5612,12 +5624,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiPseudonymManager.getValidPseudonymInfo(anyInt()))
                 .thenReturn(Optional.of(mock(PseudonymInfo.class)));
 
-        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME);
+        mWifiServiceImpl.connect(null, TEST_NETWORK_ID, mActionListener, TEST_PACKAGE_NAME,
+                mExtras);
         mLooper.dispatchAll();
 
         verify(mWifiPseudonymManager).updateWifiConfiguration(any());
         verify(mConnectHelper).connectToNetwork(
-                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any());
+                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any(), any());
         verify(mContextAsUser, never()).sendBroadcastWithMultiplePermissions(any(), any());
         verify(mWifiMetrics).logUserActionEvent(eq(UserActionEvent.EVENT_MANUAL_CONNECT), anyInt());
     }
@@ -5638,7 +5651,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiPermissionsUtil.isAdminRestrictedNetwork(mWifiConfig)).thenReturn(true);
 
         mWifiServiceImpl.connect(mWifiConfig, WifiConfiguration.INVALID_NETWORK_ID,
-                mActionListener, TEST_PACKAGE_NAME);
+                mActionListener, TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
 
         ArgumentCaptor<WifiConfiguration> configCaptor =
@@ -5647,7 +5660,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         assertThat(configCaptor.getValue().networkId).isEqualTo(TEST_NETWORK_ID);
 
         verify(mWifiConfigManager).addOrUpdateNetwork(eq(mWifiConfig), anyInt());
-        verify(mClientModeManager, never()).connectNetwork(any(), any(), anyInt(), any());
+        verify(mClientModeManager, never()).connectNetwork(any(), any(), anyInt(), any(), any());
         verify(mActionListener).onFailure(WifiManager.ActionListener.FAILURE_INTERNAL_ERROR);
         verify(mActionListener, never()).onSuccess();
     }
@@ -5843,7 +5856,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiGlobals.isDeprecatedSecurityTypeNetwork(mWifiConfig)).thenReturn(false);
 
         mWifiServiceImpl.connect(mWifiConfig, WifiConfiguration.INVALID_NETWORK_ID,
-                mActionListener, TEST_PACKAGE_NAME);
+                mActionListener, TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
 
         ArgumentCaptor<WifiConfiguration> configCaptor =
@@ -5851,7 +5864,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mWifiConfigManager).addOrUpdateNetwork(configCaptor.capture(), anyInt());
         assertThat(configCaptor.getValue().networkId).isEqualTo(TEST_NETWORK_ID);
 
-        verify(mConnectHelper).connectToNetwork(eq(result), any(), anyInt(), any());
+        verify(mConnectHelper).connectToNetwork(eq(result), any(), anyInt(), any(), any());
     }
 
     /**
@@ -5870,7 +5883,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiGlobals.isDeprecatedSecurityTypeNetwork(mWifiConfig)).thenReturn(true);
 
         mWifiServiceImpl.connect(mWifiConfig, WifiConfiguration.INVALID_NETWORK_ID,
-                mActionListener, TEST_PACKAGE_NAME);
+                mActionListener, TEST_PACKAGE_NAME, mExtras);
         mLooper.dispatchAll();
 
         ArgumentCaptor<WifiConfiguration> configCaptor =
@@ -5879,7 +5892,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         assertThat(configCaptor.getValue().networkId).isEqualTo(TEST_NETWORK_ID);
 
         verify(mWifiConfigManager).addOrUpdateNetwork(eq(mWifiConfig), anyInt());
-        verify(mClientModeManager, never()).connectNetwork(any(), any(), anyInt(), any());
+        verify(mClientModeManager, never()).connectNetwork(any(), any(), anyInt(), any(), any());
         verify(mActionListener).onFailure(WifiManager.ActionListener.FAILURE_INTERNAL_ERROR);
         verify(mActionListener, never()).onSuccess();
     }
@@ -7008,18 +7021,18 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         doAnswer(new AnswerWithArguments() {
             public void answer(NetworkUpdateResult result, ActionListenerWrapper callback,
-                    int callingUid, String packageName) {
+                    int callingUid, String packageName, String attributionTag) {
                 callback.sendSuccess(); // return success
             }
         }).when(mConnectHelper).connectToNetwork(
-                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any());
+                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any(), any());
 
         mLooper.startAutoDispatch();
         assertTrue(mWifiServiceImpl.enableNetwork(TEST_NETWORK_ID, true, TEST_PACKAGE_NAME));
         mLooper.stopAutoDispatch();
 
         verify(mConnectHelper).connectToNetwork(
-                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any());
+                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any(), any());
         verify(mWifiMetrics).incrementNumEnableNetworkCalls();
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_ENABLE_NETWORK), anyInt(),
                 anyInt(), anyInt(), anyString(), eq(true));
@@ -7040,18 +7053,18 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         doAnswer(new AnswerWithArguments() {
             public void answer(NetworkUpdateResult result, ActionListenerWrapper callback,
-                    int callingUid, String packageName) {
+                    int callingUid, String packageName, String attributionTag) {
                 callback.sendSuccess(); // return success
             }
         }).when(mConnectHelper).connectToNetwork(
-                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any());
+                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any(), any());
 
         mLooper.startAutoDispatch();
         assertTrue(mWifiServiceImpl.enableNetwork(TEST_NETWORK_ID, true, TEST_PACKAGE_NAME));
         mLooper.stopAutoDispatch();
 
         verify(mConnectHelper).connectToNetwork(
-                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any());
+                eq(new NetworkUpdateResult(TEST_NETWORK_ID)), any(), anyInt(), any(), any());
         verify(mWifiMetrics).incrementNumEnableNetworkCalls();
     }
 
@@ -7090,7 +7103,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mWifiServiceImpl.enableNetwork(TEST_NETWORK_ID, true, TEST_PACKAGE_NAME);
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
-        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any());
+        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any(), any());
         verify(mWifiMetrics, never()).incrementNumEnableNetworkCalls();
     }
 
@@ -7111,7 +7124,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mWifiServiceImpl.enableNetwork(TEST_NETWORK_ID, true, TEST_PACKAGE_NAME);
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
-        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any());
+        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any(), any());
         verify(mWifiMetrics, never()).incrementNumEnableNetworkCalls();
     }
 
@@ -7131,7 +7144,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mWifiServiceImpl.enableNetwork(TEST_NETWORK_ID, true, TEST_PACKAGE_NAME);
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
-        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any());
+        verify(mConnectHelper, never()).connectToNetwork(any(), any(), anyInt(), any(), any());
         verify(mWifiMetrics, never()).incrementNumEnableNetworkCalls();
     }
 
@@ -11043,6 +11056,86 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     /**
+     * Verify attribution passed to WifiManager#connect is parsed when there's a chain.
+     */
+    @Test
+    public void testConnectAttribution_CorrectParsingWithChain() {
+        assumeTrue(SdkLevel.isAtLeastS());
+        AttributionSource attributionSource = mock(AttributionSource.class);
+        when(attributionSource.checkCallingUid()).thenReturn(true);
+        when(attributionSource.isTrusted(any(Context.class))).thenReturn(true);
+        mAttribution.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE, attributionSource);
+        mWifiServiceImpl = spy(mWifiServiceImpl);
+        lenient().when(mWifiServiceImpl.getMockableCallingUid()).thenReturn(Process.SYSTEM_UID);
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        when(mWifiConfigManager.addOrUpdateNetwork(any(), anyInt()))
+                .thenReturn(new NetworkUpdateResult(TEST_NETWORK_ID));
+
+        when(attributionSource.getUid()).thenReturn(TEST_UID);
+        when(attributionSource.getPackageName()).thenReturn(TEST_PACKAGE_NAME);
+        when(attributionSource.getAttributionTag()).thenReturn(TEST_FEATURE_ID);
+        AttributionSource originalCaller = mock(AttributionSource.class);
+        when(originalCaller.getUid()).thenReturn(OTHER_TEST_UID);
+        when(originalCaller.getPackageName()).thenReturn(TEST_PACKAGE_NAME_OTHER);
+        when(originalCaller.getAttributionTag()).thenReturn(TEST_FEATURE_ID_OTHER);
+        when(originalCaller.isTrusted(any(Context.class))).thenReturn(true);
+        when(attributionSource.getNext()).thenReturn(originalCaller);
+
+        WifiConfiguration config = new WifiConfiguration();
+        config.SSID = TEST_SSID;
+        when(mWifiConfigManager.getConfiguredNetwork(TEST_NETWORK_ID)).thenReturn(config);
+        mWifiServiceImpl.connect(config, TEST_NETWORK_ID, mock(IActionListener.class),
+                TEST_PACKAGE_NAME, mAttribution);
+        mLooper.dispatchAll();
+        verify(mWifiConfigManager).addOrUpdateNetwork(eq(config), anyInt());
+        verify(mConnectHelper).connectToNetwork(any(NetworkUpdateResult.class),
+                any(ActionListenerWrapper.class), eq(OTHER_TEST_UID), eq(TEST_PACKAGE_NAME_OTHER),
+                eq(TEST_FEATURE_ID_OTHER));
+    }
+
+    /**
+     * Verify attribution passed to WifiManager#connect is parsed when there's a chain.
+     * However, if the call is not made from the system server then the attribution is ignored and
+     * the attribution is simply to the calling app as before.
+     */
+    @Test
+    public void testConnectAttribution_CorrectParsingWithChainButNotFromSystemServer() {
+        assumeTrue(SdkLevel.isAtLeastS());
+        AttributionSource attributionSource = mock(AttributionSource.class);
+        when(attributionSource.checkCallingUid()).thenReturn(true);
+        when(attributionSource.isTrusted(any(Context.class))).thenReturn(true);
+        mAttribution.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE, attributionSource);
+        mWifiServiceImpl = spy(mWifiServiceImpl);
+        lenient().when(mWifiServiceImpl.getMockableCallingUid()).thenReturn(TEST_UID);
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        when(mWifiConfigManager.addOrUpdateNetwork(any(), anyInt()))
+                .thenReturn(new NetworkUpdateResult(TEST_NETWORK_ID));
+
+        when(attributionSource.getUid()).thenReturn(TEST_UID);
+        when(attributionSource.getPackageName()).thenReturn(TEST_PACKAGE_NAME);
+        when(attributionSource.getAttributionTag()).thenReturn(TEST_FEATURE_ID);
+        AttributionSource originalCaller = mock(AttributionSource.class);
+        when(originalCaller.getUid()).thenReturn(OTHER_TEST_UID);
+        when(originalCaller.getPackageName()).thenReturn(TEST_PACKAGE_NAME_OTHER);
+        when(originalCaller.getAttributionTag()).thenReturn(TEST_FEATURE_ID_OTHER);
+        when(originalCaller.isTrusted(any(Context.class))).thenReturn(true);
+        when(attributionSource.getNext()).thenReturn(originalCaller);
+
+        WifiConfiguration config = new WifiConfiguration();
+        config.SSID = TEST_SSID;
+        when(mWifiConfigManager.getConfiguredNetwork(TEST_NETWORK_ID)).thenReturn(config);
+        mWifiServiceImpl.connect(config, TEST_NETWORK_ID, mock(IActionListener.class),
+                TEST_PACKAGE_NAME, mAttribution);
+        mLooper.dispatchAll();
+        verify(mWifiConfigManager).addOrUpdateNetwork(eq(config), anyInt());
+        verify(mConnectHelper).connectToNetwork(any(NetworkUpdateResult.class),
+                any(ActionListenerWrapper.class), eq(TEST_UID), eq(TEST_PACKAGE_NAME),
+                eq(TEST_FEATURE_ID));
+    }
+
+    /**
      * Test that notifyWifiSsidPolicyChanged disconnects the current network
      * due to SSID allowlist restriction
      */
@@ -12422,5 +12515,110 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiSettingsConfigStore, times(2)).get(eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED));
         inOrder.verify(listener).onResult(false);
+    }
+
+    @Test
+    public void testGetTwtCapabilities() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        ITwtCapabilitiesListener iTwtCapabilitiesListener = mock(ITwtCapabilitiesListener.class);
+        // Test permission check
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_DENIED);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.getTwtCapabilities(iTwtCapabilitiesListener, mExtras));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_GRANTED);
+        // Test with null parameters
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.getTwtCapabilities(null, mExtras));
+        // Test getTwtCapabilities call
+        mWifiServiceImpl.getTwtCapabilities(iTwtCapabilitiesListener, mExtras);
+        mLooper.dispatchAll();
+        verify(mTwtManager).getTwtCapabilities(eq(WIFI_IFACE_NAME), eq(iTwtCapabilitiesListener));
+    }
+
+    @Test
+    public void testSetupTwtSession() throws RemoteException {
+        assumeTrue(SdkLevel.isAtLeastV());
+        ITwtCallback iTwtCallback = mock(ITwtCallback.class);
+        TwtRequest twtRequest = mock(TwtRequest.class);
+        // Test permission check
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_DENIED);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.setupTwtSession(twtRequest, iTwtCallback, mExtras));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_GRANTED);
+        // Test with null parameters
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.setupTwtSession(null, iTwtCallback, mExtras));
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.setupTwtSession(twtRequest, null, mExtras));
+        // Test with station not connected
+        when(mClientModeManager.isConnected()).thenReturn(false);
+        mWifiServiceImpl.setupTwtSession(twtRequest, iTwtCallback, mExtras);
+        mLooper.dispatchAll();
+        verify(iTwtCallback).onFailure(eq(TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE));
+        // Test setupTwtSession with station connected
+        when(mClientModeManager.isConnected()).thenReturn(true);
+        mWifiServiceImpl.setupTwtSession(twtRequest, iTwtCallback, mExtras);
+        mLooper.dispatchAll();
+        verify(mTwtManager).setupTwtSession(eq(WIFI_IFACE_NAME), eq(twtRequest), eq(iTwtCallback),
+                eq(Binder.getCallingUid()));
+    }
+
+    @Test
+    public void testGetStatsTwtSession() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        int sessionId = 10;
+        ITwtStatsListener iTwtStatsListener = mock(ITwtStatsListener.class);
+        // Test permission check
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_DENIED);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.getStatsTwtSession(sessionId, iTwtStatsListener, mExtras));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_GRANTED);
+        // Test with null parameters
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.getStatsTwtSession(sessionId, null, mExtras));
+        // Test getStatsTwtSession call
+        mWifiServiceImpl.getStatsTwtSession(sessionId, iTwtStatsListener, mExtras);
+        mLooper.dispatchAll();
+        verify(mTwtManager).getStatsTwtSession(eq(WIFI_IFACE_NAME), eq(iTwtStatsListener),
+                eq(sessionId));
+    }
+
+    @Test
+    public void testTeardownTwtSession() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        int sessionId = 10;
+        // Test permission check
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_DENIED);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.teardownTwtSession(sessionId, mExtras));
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        when(mContext.checkCallingOrSelfPermission(
+                android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION)).thenReturn(
+                PackageManager.PERMISSION_GRANTED);
+        // Test teardownTwtSession call
+        mWifiServiceImpl.teardownTwtSession(sessionId, mExtras);
+        mLooper.dispatchAll();
+        verify(mTwtManager).tearDownTwtSession(eq(WIFI_IFACE_NAME), eq(sessionId));
     }
 }

@@ -394,6 +394,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private WifiNetworkSelectionConfig mNetworkSelectionConfig;
     private ApplicationQosPolicyRequestHandler mApplicationQosPolicyRequestHandler;
     private final AfcManager mAfcManager;
+    private final TwtManager mTwtManager;
 
     /**
      * The wrapper of SoftApCallback is used in WifiService internally.
@@ -572,6 +573,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mApplicationQosPolicyRequestHandler = mWifiInjector.getApplicationQosPolicyRequestHandler();
         mWifiPulledAtomLogger = mWifiInjector.getWifiPulledAtomLogger();
         mAfcManager = mWifiInjector.getAfcManager();
+        mTwtManager = mWifiInjector.getTwtManager();
     }
 
     /**
@@ -869,6 +871,7 @@ public class WifiServiceImpl extends BaseWifiService {
             updateVerboseLoggingEnabled();
             mWifiInjector.getWifiDeviceStateChangeManager().handleBootCompleted();
             setPulledAtomCallbacks();
+            mTwtManager.registerWifiNativeTwtEvents();
         });
     }
 
@@ -3972,7 +3975,7 @@ public class WifiServiceImpl extends BaseWifiService {
                         mConnectHelper.connectToNetwork(
                                 new NetworkUpdateResult(netId),
                                 new ActionListenerWrapper(connectListener),
-                                callingUid, packageName)
+                                callingUid, packageName, null)
                 )
         );
         // now wait for response.
@@ -6524,21 +6527,61 @@ public class WifiServiceImpl extends BaseWifiService {
      * @param netId Network ID of existing config to connect to if the supplied config is null
      * @param callback Listener to notify action result
      * @param packageName Package name of the requesting App
+     * @param extras Bundle of extras
      *
      * see: {@link WifiManager#connect(WifiConfiguration, WifiManager.ActionListener)}
      *      {@link WifiManager#connect(int, WifiManager.ActionListener)}
      */
     @Override
     public void connect(WifiConfiguration config, int netId, @Nullable IActionListener callback,
-            @NonNull String packageName) {
-        int uid = Binder.getCallingUid();
+            @NonNull String packageName, Bundle extras) {
+        int uid = getMockableCallingUid();
         if (!isPrivileged(Binder.getCallingPid(), uid)) {
             throw new SecurityException(TAG + ": Permission denied");
         }
         if (packageName == null) {
             throw new IllegalArgumentException("packageName must not be null");
         }
-        mLog.info("connect uid=%").c(uid).flush();
+        final String attributionTagToUse;
+        final int uidToUse;
+        final String packageNameToUse;
+        if (SdkLevel.isAtLeastS() && UserHandle.getAppId(uid) == Process.SYSTEM_UID) {
+            AttributionSource as = extras.getParcelable(
+                    WifiManager.EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE);
+            if (as == null) {
+                throw new SecurityException("connect attributionSource is null");
+            }
+            if (!as.checkCallingUid()) {
+                throw new SecurityException(
+                        "connect invalid (checkCallingUid fails) attribution source="
+                                + as);
+            }
+            // an attribution chain is either of size 1: unregistered (valid by definition) or
+            // size >1: in which case all are validated.
+            AttributionSource asIt = as;
+            AttributionSource asLast = as;
+            if (as.getNext() != null) {
+                do {
+                    if (!asIt.isTrusted(mContext)) {
+                        throw new SecurityException(
+                                "connect invalid (isTrusted fails) attribution source="
+                                        + asIt);
+                    }
+                    asIt = asIt.getNext();
+                    if (asIt != null) asLast = asIt;
+                } while (asIt != null);
+            }
+            // use the last AttributionSource in the chain - i.e. the original caller
+            attributionTagToUse = asLast.getAttributionTag();
+            uidToUse = asLast.getUid();
+            packageNameToUse = asLast.getPackageName();
+        } else {
+            attributionTagToUse = mContext.getAttributionTag();
+            uidToUse = uid;
+            packageNameToUse = packageName;
+        }
+        mLog.info("connect uid=% uidToUse=% packageNameToUse=% attributionTagToUse=%")
+                .c(uid).c(uidToUse).c(packageNameToUse).c(attributionTagToUse).flush();
         mLastCallerInfoManager.put(config != null
                         ? WifiManager.API_CONNECT_CONFIG : WifiManager.API_CONNECT_NETWORK_ID,
                 Process.myTid(), uid, Binder.getCallingPid(), packageName, true);
@@ -6664,7 +6707,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(
                             () ->
                                     mConnectHelper.connectToNetwork(
-                                            result, wrapper, uid, packageName));
+                                            result, wrapper, uidToUse, packageNameToUse,
+                                            attributionTagToUse));
                 });
     }
 
@@ -7414,7 +7458,10 @@ public class WifiServiceImpl extends BaseWifiService {
         );
     }
 
-    @VisibleForTesting
+    /**
+     * See {@link android.net.wifi.WifiManager#isPreferredNetworkOffloadSupported()}.
+     */
+    @Override
     public boolean isPnoSupported() {
         return mWifiGlobals.isSwPnoEnabled()
                 || (mWifiGlobals.isBackgroundScanSupported()
@@ -8412,15 +8459,8 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new IllegalArgumentException("listener should not be null");
         }
         mWifiThreadRunner.post(() -> {
-            try {
-                // TODO: Implementation. Returning not supported.
-                Bundle twtCapabilities = new Bundle();
-                twtCapabilities.putBoolean(WifiManager.TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER,
-                        false);
-                listener.onResult(twtCapabilities);
-            } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage(), e);
-            }
+            mTwtManager.getTwtCapabilities(
+                    mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(), listener);
         });
     }
 
@@ -8429,16 +8469,59 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public void setupTwtSession(TwtRequest twtRequest, ITwtCallback iTwtCallback, Bundle extras) {
-        // TODO: Implementation
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        if (iTwtCallback == null) {
+            throw new IllegalArgumentException("Callback should not be null");
+        }
+        if (twtRequest == null) {
+            throw new IllegalArgumentException("twtRequest should not be null");
+        }
+        enforceAnyPermissionOf(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        int callingUid = Binder.getCallingUid();
+        if (mVerboseLoggingEnabled) {
+            mLog.info("setupTwtSession:  Uid=% Package Name=%").c(callingUid).c(
+                    getPackageName(extras)).flush();
+        }
+        mWifiThreadRunner.post(() -> {
+            try {
+                if (!mActiveModeWarden.getPrimaryClientModeManager().isConnected()) {
+                    iTwtCallback.onFailure(TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE);
+                    return;
+                }
+                mTwtManager.setupTwtSession(
+                        mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
+                        twtRequest, iTwtCallback, callingUid);
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage(), e);
+            }
+        });
     }
 
+    /**
     /**
      * See {@link TwtSession#getStats(Executor, Consumer)}}
      */
     @Override
     public void getStatsTwtSession(int sessionId, ITwtStatsListener iTwtStatsListener,
             Bundle extras) {
-        // TODO: Implementation
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        if (iTwtStatsListener == null) {
+            throw new IllegalArgumentException("Callback should not be null");
+        }
+        enforceAnyPermissionOf(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        if (mVerboseLoggingEnabled) {
+            mLog.info("getStatsTwtSession:  Uid=% Package Name=%").c(Binder.getCallingUid()).c(
+                    getPackageName(extras)).flush();
+        }
+        mWifiThreadRunner.post(() -> {
+            mTwtManager.getStatsTwtSession(
+                    mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
+                    iTwtStatsListener, sessionId);
+        });
     }
 
     /**
@@ -8446,7 +8529,18 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public void teardownTwtSession(int sessionId, Bundle extras) {
-        // TODO: Implementation
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException("SDK level too old");
+        }
+        enforceAnyPermissionOf(android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        if (mVerboseLoggingEnabled) {
+            mLog.info("teardownTwtSession:  Uid=% Package Name=%").c(Binder.getCallingUid()).c(
+                    getPackageName(extras)).flush();
+        }
+        mWifiThreadRunner.post(() -> {
+            mTwtManager.tearDownTwtSession(
+                    mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(), sessionId);
+        });
     }
 
     /**

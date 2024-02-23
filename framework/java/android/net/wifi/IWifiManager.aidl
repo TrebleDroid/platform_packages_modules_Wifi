@@ -353,7 +353,7 @@ interface IWifiManager
 
     void updateWifiUsabilityScore(int seqNum, int score, int predictionHorizonSec);
 
-    oneway void connect(in WifiConfiguration config, int netId, in IActionListener listener, in String packageName);
+    oneway void connect(in WifiConfiguration config, int netId, in IActionListener listener, in String packageName, in Bundle extras);
 
     oneway void save(in WifiConfiguration config, in IActionListener listener, in String packageName);
 
@@ -513,4 +513,6 @@ interface IWifiManager
     void retrieveWifiBackupData(in IByteArrayListener listener);
 
     void restoreWifiBackupData(in byte[] data);
+
+    boolean isPnoSupported();
 }

@@ -47,6 +47,7 @@ import androidx.annotation.RequiresApi;
 
 import com.android.internal.util.Protocol;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -1575,7 +1576,7 @@ public class WifiScanner {
      * @throws SecurityException if the caller does not have permission.
      * @throws NullPointerException if the caller provided invalid inputs.
      */
-    @FlaggedApi("com.android.wifi.flags.cached_scan_data")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     @RequiresPermission(allOf = {ACCESS_FINE_LOCATION, LOCATION_HARDWARE})
     public void getCachedScanData(@NonNull @CallbackExecutor Executor executor,

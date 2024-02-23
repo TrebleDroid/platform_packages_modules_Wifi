@@ -4640,10 +4640,15 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                                 mSavedPeerConfig.getGroupClientIpProvisioningMode(),
                                 mGroup.p2pClientEapolIpInfo);
                         WifiP2pDevice groupOwner = mGroup.getOwner();
-                        WifiP2pDevice peer = mPeers.get(groupOwner.deviceAddress);
-                        if (peer != null) {
-                            // update group owner details with peer details found at discovery
-                            groupOwner.updateSupplicantDetails(peer);
+                        if (!EMPTY_DEVICE_ADDRESS.equals(groupOwner.deviceAddress)) {
+                            WifiP2pDevice peer = mPeers.get(groupOwner.deviceAddress);
+                            if (peer != null) {
+                                // update group owner details with peer details found at discovery
+                                groupOwner.updateSupplicantDetails(peer);
+                            } else {
+                                logd("Add group owner into mPeers: " + groupOwner);
+                                mPeers.updateSupplicantDetails(groupOwner);
+                            }
                             mPeers.updateStatus(groupOwner.deviceAddress,
                                     WifiP2pDevice.CONNECTED);
                             sendPeersChangedBroadcast();

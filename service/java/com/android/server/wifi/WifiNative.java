@@ -55,6 +55,8 @@ import android.net.wifi.nl80211.NativeScanResult;
 import android.net.wifi.nl80211.NativeWifiClient;
 import android.net.wifi.nl80211.RadioChainInfo;
 import android.net.wifi.nl80211.WifiNl80211Manager;
+import android.net.wifi.twt.TwtRequest;
+import android.net.wifi.twt.TwtSessionCallback;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -143,6 +145,7 @@ public class WifiNative {
     private @WifiManager.MloMode int mCachedMloMode = WifiManager.MLO_MODE_DEFAULT;
     private boolean mIsLocationModeEnabled = false;
     private long mLastLocationModeEnabledTimeMs = 0;
+    private Map<String, Bundle> mCachedTwtCapabilities = new ArrayMap<>();
     /**
      * Mapping of unknown AKMs configured in overlay config item
      * config_wifiUnknownAkmToKnownAkmMapping to ScanResult security key management scheme
@@ -245,6 +248,13 @@ public class WifiNative {
         mHostapdHal.enableVerboseLogging(verboseEnabled, halVerboseEnabled);
         mWifiVendorHal.enableVerboseLogging(verboseEnabled, halVerboseEnabled);
         mIfaceMgr.enableVerboseLogging(verboseEnabled);
+    }
+
+    /**
+     * Get TWT capabilities for the interface
+     */
+    public Bundle getTwtCapabilities(String interfaceName) {
+        return mCachedTwtCapabilities.get(interfaceName);
     }
 
     /**
@@ -3918,6 +3928,8 @@ public class WifiNative {
                 Log.v(TAG, ": DPP AKM supported");
             }
         }
+        Bundle twtCapabilities = mWifiVendorHal.getTwtCapabilities(ifaceName);
+        if (twtCapabilities != null) mCachedTwtCapabilities.put(ifaceName, twtCapabilities);
         return featureSet;
     }
 
@@ -5341,5 +5353,95 @@ public class WifiNative {
     public @WifiStatusCode int setRoamingMode(@NonNull String ifaceName,
                                               @RoamingMode int roamingMode) {
         return mWifiVendorHal.setRoamingMode(ifaceName, roamingMode);
+    }
+
+    /*
+     * TWT callback events
+     */
+    public interface WifiTwtEvents {
+        /**
+         * Called when a TWT operation fails
+         *
+         * @param cmdId Unique command id.
+         * @param twtErrorCode Error code
+         */
+        void onTwtFailure(int cmdId, @TwtSessionCallback.TwtErrorCode int twtErrorCode);
+
+        /**
+         * Called when {@link #setupTwtSession(int, String, TwtRequest)}  succeeds.
+         *
+         * @param cmdId Unique command id used in {@link #setupTwtSession(int, String, TwtRequest)}
+         * @param wakeDurationUs TWT wake duration for the session in microseconds
+         * @param wakeIntervalUs TWT wake interval for the session in microseconds
+         * @param linkId Multi link operation link id
+         * @param sessionId TWT session id
+         */
+        void onTwtSessionCreate(int cmdId, int wakeDurationUs, long wakeIntervalUs, int linkId,
+                int sessionId);
+        /**
+         * Called when TWT session is torn down by {@link #tearDownTwtSession(int, String, int)}.
+         * Can also be called unsolicitedly by the vendor software with proper reason code.
+         *
+         * @param cmdId Unique command id used in {@link #tearDownTwtSession(int, String, int)}
+         * @param twtSessionId TWT session Id
+         * @param twtReasonCode Reason code for teardown
+         */
+        void onTwtSessionTeardown(int cmdId, int twtSessionId,
+                @TwtSessionCallback.TwtReasonCode int twtReasonCode);
+
+        /**
+         * Called as a response to {@link #getStatsTwtSession(int, String, int)}
+         *
+         * @param cmdId Unique command id used in {@link #getStatsTwtSession(int, String, int)}
+         * @param twtSessionId TWT session Id
+         * @param twtStats TWT stats object
+         */
+        void onTwtSessionStats(int cmdId, int twtSessionId, Bundle twtStats);
+    }
+
+
+    /**
+     * Sets up a TWT session for the interface
+     *
+     * @param commandId A unique command id to identify this command
+     * @param interfaceName Interface name
+     * @param twtRequest TWT request parameters
+     * @return true if successful, otherwise false
+     */
+    public boolean setupTwtSession(int commandId, String interfaceName, TwtRequest twtRequest) {
+        return mWifiVendorHal.setupTwtSession(commandId, interfaceName, twtRequest);
+    }
+
+    /**
+     * Registers TWT callbacks
+     *
+     * @param wifiTwtCallback TWT callbacks
+     */
+    public void registerTwtCallbacks(WifiTwtEvents wifiTwtCallback) {
+        mWifiVendorHal.registerTwtCallbacks(wifiTwtCallback);
+    }
+
+    /**
+     * Teardown the TWT session
+     *
+     * @param commandId A unique command id to identify this command
+     * @param interfaceName Interface name
+     * @param sessionId TWT session id
+     * @return true if successful, otherwise false
+     */
+    public boolean tearDownTwtSession(int commandId, String interfaceName, int sessionId) {
+        return mWifiVendorHal.tearDownTwtSession(commandId, interfaceName, sessionId);
+    }
+
+    /**
+     * Gets stats of the TWT session
+     *
+     * @param commandId A unique command id to identify this command
+     * @param interfaceName Interface name
+     * @param sessionId TWT session id
+     * @return true if successful, otherwise false
+     */
+    public boolean getStatsTwtSession(int commandId, String interfaceName, int sessionId) {
+        return mWifiVendorHal.getStatsTwtSession(commandId, interfaceName, sessionId);
     }
 }
