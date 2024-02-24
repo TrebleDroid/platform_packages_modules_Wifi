@@ -577,10 +577,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     /**
-     * Check if we are ready to start wifi.
-     *
-     * First check if we will be restarting system services to decrypt the device. If the device is
-     * not encrypted, check if Wi-Fi needs to be enabled and start if needed
+     * Check if Wi-Fi needs to be enabled and start it if needed.
      *
      * This function is used only at boot time.
      */
