@@ -4741,7 +4741,7 @@ public class WifiConfiguration implements Parcelable {
             throw new UnsupportedOperationException();
         }
         Objects.requireNonNull(vendorData);
-        mVendorData = vendorData;
+        mVendorData = new ArrayList<>(vendorData);
     }
 
     /**

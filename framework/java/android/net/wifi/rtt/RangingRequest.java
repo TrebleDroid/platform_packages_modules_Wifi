@@ -116,7 +116,7 @@ public final class RangingRequest implements Parcelable {
             @NonNull List<OuiKeyedData> vendorData) {
         mRttPeers = rttPeers;
         mRttBurstSize = rttBurstSize;
-        mVendorData = vendorData;
+        mVendorData = new ArrayList<>(vendorData);
     }
 
     /**
