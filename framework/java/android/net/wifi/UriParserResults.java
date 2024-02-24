@@ -23,6 +23,8 @@ import android.annotation.SystemApi;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.android.wifi.flags.Flags;
+
 import java.util.Objects;
 
 /**
@@ -30,7 +32,7 @@ import java.util.Objects;
  *
  * @hide
  */
-@FlaggedApi("com.android.wifi.flags.uri_parser")
+@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
 @SystemApi
 public final class UriParserResults implements Parcelable {
 
@@ -38,14 +40,14 @@ public final class UriParserResults implements Parcelable {
      * Return value for {@link #getUriScheme()} indicating that the URI contains
      * a ZXing WiFi configuration.
      */
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG = 1;
 
     /**
      * Return value for {@link #getUriScheme()} indicating that the URI contains
      * a DPP (Easy Connect) configuration.
      */
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final int URI_SCHEME_DPP = 2;
 
     /**
@@ -70,7 +72,7 @@ public final class UriParserResults implements Parcelable {
     @Nullable private WifiConfiguration mWifiConfig;
 
     /** @hide */
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public UriParserResults(
             int scheme,
             @Nullable String publicKey,
@@ -90,7 +92,7 @@ public final class UriParserResults implements Parcelable {
      * <p>URI_SCHEME_DPP for standard Wi-Fi device provision protocol.
      * URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG for ZXing reader library's Wi-Fi Network config format.
      */
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @WifiAnnotations.UriScheme
     public int getUriScheme() {
         return mScheme;
@@ -102,7 +104,7 @@ public final class UriParserResults implements Parcelable {
      * If {@code getUriScheme()} returns URI_SCHEME_DPP, this field contains the public key
      * of the DPP (Wi-Fi Easy Connect). Otherwise, it is null.
      */
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Nullable
     public String getPublicKey() {
         return mPublicKey;
@@ -114,7 +116,7 @@ public final class UriParserResults implements Parcelable {
      * If {@code getUriScheme()} returns URI_SCHEME_DPP, this field contains the information
      * of the DPP (Wi-Fi Easy Connect). Otherwise, it is null.
      */
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Nullable
     public String getInformation() {
         return mInformation;
@@ -126,13 +128,13 @@ public final class UriParserResults implements Parcelable {
      * If {@code getUriScheme()} returns URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG, this field contains
      * the WifiConfiguration of the zxing wifi network. Otherwise, it is null.
      */
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Nullable
     public WifiConfiguration getWifiConfiguration() {
         return mWifiConfig;
     }
 
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     /**
      * Implement the Parcelable interface.
@@ -141,7 +143,7 @@ public final class UriParserResults implements Parcelable {
         return 0;
     }
 
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     /**
      * Implement the Parcelable interface.
@@ -153,7 +155,7 @@ public final class UriParserResults implements Parcelable {
         dest.writeParcelable(mWifiConfig, flags);
     }
 
-    @FlaggedApi("com.android.wifi.flags.uri_parser")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @NonNull
     /**
      * Implement the Parcelable interface.

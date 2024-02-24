@@ -515,16 +515,16 @@ package android.net.wifi {
     field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.SoftApState> CREATOR;
   }
 
-  @FlaggedApi("com.android.wifi.flags.uri_parser") public final class UriParserResults implements android.os.Parcelable {
-    method @FlaggedApi("com.android.wifi.flags.uri_parser") public int describeContents();
-    method @FlaggedApi("com.android.wifi.flags.uri_parser") @Nullable public String getInformation();
-    method @FlaggedApi("com.android.wifi.flags.uri_parser") @Nullable public String getPublicKey();
-    method @FlaggedApi("com.android.wifi.flags.uri_parser") public int getUriScheme();
-    method @FlaggedApi("com.android.wifi.flags.uri_parser") @Nullable public android.net.wifi.WifiConfiguration getWifiConfiguration();
-    method @FlaggedApi("com.android.wifi.flags.uri_parser") public void writeToParcel(@NonNull android.os.Parcel, int);
-    field @FlaggedApi("com.android.wifi.flags.uri_parser") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.UriParserResults> CREATOR;
-    field @FlaggedApi("com.android.wifi.flags.uri_parser") public static final int URI_SCHEME_DPP = 2; // 0x2
-    field @FlaggedApi("com.android.wifi.flags.uri_parser") public static final int URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG = 1; // 0x1
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public final class UriParserResults implements android.os.Parcelable {
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @Nullable public String getInformation();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @Nullable public String getPublicKey();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getUriScheme();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @Nullable public android.net.wifi.WifiConfiguration getWifiConfiguration();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.UriParserResults> CREATOR;
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int URI_SCHEME_DPP = 2; // 0x2
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int URI_SCHEME_ZXING_WIFI_NETWORK_CONFIG = 1; // 0x1
   }
 
   public final class WifiClient implements android.os.Parcelable {
