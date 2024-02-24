@@ -517,7 +517,7 @@ public class XmlUtil {
             EncryptedData encryptedData = null;
             if (encryptionUtil != null) {
                 encryptedData = encryptionUtil.encrypt(data);
-                if (encryptedData == null) {
+                if (encryptedData == null && data != null && data.length != 0) {
                     // We silently fail encryption failures!
                     Log.wtf(TAG, "Encryption of " + tag + " failed");
                 }

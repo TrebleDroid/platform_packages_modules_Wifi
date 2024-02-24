@@ -1744,6 +1744,7 @@ package android.net.wifi.twt {
   }
 
   @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public interface TwtSession extends java.lang.AutoCloseable {
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void close();
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getMloLinkId();
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void getStats(@NonNull java.util.concurrent.Executor, @NonNull java.util.function.Consumer<android.os.Bundle>);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getWakeDurationMicros();

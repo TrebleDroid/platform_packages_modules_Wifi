@@ -74,13 +74,10 @@ public class WifiConfigStoreEncryptionUtil {
         mSecretKeyReference = getOrCreateSecretKey(getKeyAlias());
         try {
             mEncryptCipher = Cipher.getInstance(CIPHER_ALGORITHM);
-            mEncryptCipher.init(Cipher.ENCRYPT_MODE, mSecretKeyReference);
         } catch (NoSuchAlgorithmException e) {
             reportException(e, "encrypt could not find the algorithm: " + CIPHER_ALGORITHM);
         } catch (NoSuchPaddingException e) {
             reportException(e, "encrypt had a padding exception");
-        } catch (InvalidKeyException e) {
-            reportException(e, "encrypt received an invalid key");
         } catch (Exception e) {
             reportException(e, "exception caught");
         }
@@ -103,6 +100,7 @@ public class WifiConfigStoreEncryptionUtil {
         EncryptedData encryptedData = null;
         try {
             if (mSecretKeyReference != null) {
+                mEncryptCipher.init(Cipher.ENCRYPT_MODE, mSecretKeyReference);
                 encryptedData = new EncryptedData(mEncryptCipher.doFinal(data),
                         mEncryptCipher.getIV());
             } else {
@@ -113,6 +111,8 @@ public class WifiConfigStoreEncryptionUtil {
             reportException(e, "encrypt had a padding problem");
         } catch (IllegalBlockSizeException e) {
             reportException(e, "encrypt had an illegal block size");
+        } catch (InvalidKeyException e) {
+            reportException(e, "encrypt received an invalid key");
         } catch (Exception e) {
             reportException(e, "exception caught");
         }

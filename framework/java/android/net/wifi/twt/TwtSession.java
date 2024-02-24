@@ -114,4 +114,14 @@ public interface TwtSession extends AutoCloseable {
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     void getStats(@NonNull @CallbackExecutor Executor executor,
             @NonNull Consumer<Bundle> resultCallback);
+
+    /**
+     * Close the session relinquishing any underlying resources. See
+     * {@link TwtSessionCallback#onTeardown(int)} and {@link TwtSessionCallback#onFailure(int)}.
+     *
+     * Note: Only the owner of the session can close it.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @Override
+    void close();
 }

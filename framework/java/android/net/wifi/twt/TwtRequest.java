@@ -45,10 +45,10 @@ public final class TwtRequest implements Parcelable {
     private final int mLinkId;
 
     private TwtRequest(TwtRequest.Builder builder) {
-        mMinWakeDurationMicros = builder.mMaxWakeDurationMicros;
-        mMaxWakeDurationMicros = builder.mMinWakeDurationMicros;
-        mMinWakeIntervalMicros = builder.mMaxWakeIntervalMicros;
-        mMaxWakeIntervalMicros = builder.mMinWakeIntervalMicros;
+        mMinWakeDurationMicros = builder.mMinWakeDurationMicros;
+        mMaxWakeDurationMicros = builder.mMaxWakeDurationMicros;
+        mMinWakeIntervalMicros = builder.mMinWakeIntervalMicros;
+        mMaxWakeIntervalMicros = builder.mMaxWakeIntervalMicros;
         mLinkId = builder.mLinkId;
     }
 
