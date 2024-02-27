@@ -222,7 +222,7 @@ public class WifiP2pConfig implements Parcelable {
         if (vendorData == null) {
             throw new IllegalArgumentException("setVendorData received a null value");
         }
-        mVendorData = vendorData;
+        mVendorData = new ArrayList<>(vendorData);
     }
 
     /**

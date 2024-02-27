@@ -6450,6 +6450,9 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public void removeOnWifiUsabilityStatsListener(IOnWifiUsabilityStatsListener listener) {
+        if (listener == null) {
+            throw new IllegalArgumentException("Listener must not be null");
+        }
         mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.WIFI_UPDATE_USABILITY_STATS_SCORE, "WifiService");
         if (mVerboseLoggingEnabled) {
