@@ -151,6 +151,7 @@ import android.net.Uri;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.IActionListener;
 import android.net.wifi.IBooleanListener;
+import android.net.wifi.IByteArrayListener;
 import android.net.wifi.ICoexCallback;
 import android.net.wifi.IDppCallback;
 import android.net.wifi.IIntegerListener;
@@ -493,6 +494,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Mock WifiDeviceStateChangeManager mWifiDeviceStateChangeManager;
     @Mock PasspointNetworkNominateHelper mPasspointNetworkNominateHelper;
     @Mock WifiRoamingModeManager mWifiRoamingModeManager;
+    @Mock BackupRestoreController mBackupRestoreController;
+    @Mock WifiSettingsBackupRestore mWifiSettingsBackupRestore;
     @Captor ArgumentCaptor<Intent> mIntentCaptor;
     @Captor ArgumentCaptor<List> mListCaptor;
     @Mock TwtManager mTwtManager;
@@ -551,6 +554,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .thenReturn(mock(HandlerThread.class));
         when(mWifiInjector.getWifiDeviceStateChangeManager())
                 .thenReturn(mWifiDeviceStateChangeManager);
+        when(mWifiInjector.getWifiSettingsBackupRestore()).thenReturn(mWifiSettingsBackupRestore);
+        when(mWifiInjector.getBackupRestoreController()).thenReturn(mBackupRestoreController);
         when(mHandlerThread.getThreadHandler()).thenReturn(new Handler(mLooper.getLooper()));
         when(mHandlerThread.getLooper()).thenReturn(mLooper.getLooper());
         when(mContext.getResources()).thenReturn(mResources);
@@ -12620,5 +12625,49 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mWifiServiceImpl.teardownTwtSession(sessionId, mExtras);
         mLooper.dispatchAll();
         verify(mTwtManager).tearDownTwtSession(eq(WIFI_IFACE_NAME), eq(sessionId));
+    }
+
+    @SuppressWarnings("BoxedPrimitiveEquality")
+    @Test
+    public void testRetrieveWifiBackupData() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        // Expect exception when caller has no permission
+        doThrow(new SecurityException()).when(mContext)
+                .enforceCallingOrSelfPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                        eq("WifiService"));
+        IByteArrayListener mockTestListener = mock(IByteArrayListener.class);
+        // by default no permissions are given so the call should fail.
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.retrieveWifiBackupData(mockTestListener));
+        doNothing().when(mContext)
+                .enforceCallingOrSelfPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                        eq("WifiService"));
+        // null listener ==> IllegalArgumentException
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.retrieveWifiBackupData(null));
+        mWifiServiceImpl.retrieveWifiBackupData(mockTestListener);
+        mLooper.dispatchAll();
+        verify(mBackupRestoreController).retrieveBackupData();
+        verify(mockTestListener).onResult(any());
+    }
+
+    @SuppressWarnings("BoxedPrimitiveEquality")
+    @Test
+    public void testRestoreWifiBackupData() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        byte[] mockTestRestoredData = new byte[0];
+        // Expect exception when caller has no permission
+        doThrow(new SecurityException()).when(mContext)
+                .enforceCallingOrSelfPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                        eq("WifiService"));
+        // by default no permissions are given so the call should fail.
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.restoreWifiBackupData(mockTestRestoredData));
+        doNothing().when(mContext)
+                .enforceCallingOrSelfPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                        eq("WifiService"));
+        mWifiServiceImpl.restoreWifiBackupData(mockTestRestoredData);
+        mLooper.dispatchAll();
+        verify(mBackupRestoreController).parserBackupDataAndDispatch(mockTestRestoredData);
     }
 }

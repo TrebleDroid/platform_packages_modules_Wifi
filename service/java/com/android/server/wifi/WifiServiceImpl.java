@@ -289,6 +289,8 @@ public class WifiServiceImpl extends BaseWifiService {
     /** Backup/Restore Module */
     private final WifiBackupRestore mWifiBackupRestore;
     private final SoftApBackupRestore mSoftApBackupRestore;
+    private final WifiSettingsBackupRestore mWifiSettingsBackupRestore;
+    private final BackupRestoreController mBackupRestoreController;
     private final CoexManager mCoexManager;
     private final WifiNetworkSuggestionsManager mWifiNetworkSuggestionsManager;
     private final WifiConfigManager mWifiConfigManager;
@@ -531,6 +533,8 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiMulticastLockManager = mWifiInjector.getWifiMulticastLockManager();
         mWifiBackupRestore = mWifiInjector.getWifiBackupRestore();
         mSoftApBackupRestore = mWifiInjector.getSoftApBackupRestore();
+        mWifiSettingsBackupRestore = mWifiInjector.getWifiSettingsBackupRestore();
+        mBackupRestoreController = mWifiInjector.getBackupRestoreController();
         mWifiApConfigStore = mWifiInjector.getWifiApConfigStore();
         mWifiPermissionsUtil = mWifiInjector.getWifiPermissionsUtil();
         mLog = mWifiInjector.makeLog(TAG);
@@ -5395,6 +5399,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 pw.println();
                 mWifiBackupRestore.dump(fd, pw, args);
                 pw.println();
+                mBackupRestoreController.dump(fd, pw, args);
+                pw.println();
                 pw.println("ScoringParams: " + mWifiInjector.getScoringParams());
                 pw.println();
                 mSettingsConfigStore.dump(fd, pw, args);
@@ -5605,6 +5611,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         ApConfigUtil.enableVerboseLogging(mVerboseLoggingEnabled);
         mApplicationQosPolicyRequestHandler.enableVerboseLogging(mVerboseLoggingEnabled);
+        mWifiSettingsBackupRestore.enableVerboseLogging(mVerboseLoggingEnabled);
+        mBackupRestoreController.enableVerboseLogging(mVerboseLoggingEnabled);
     }
 
     @Override
@@ -5757,8 +5765,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() -> {
             try {
-                 // TODO: b/302250336 - implement it.
-                listener.onResult(new byte[0]);
+                listener.onResult(mBackupRestoreController.retrieveBackupData());
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
@@ -5778,8 +5785,10 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new UnsupportedOperationException("SDK level too old");
         }
         enforceNetworkSettingsPermission();
-        mLog.info("restoreWifiBackupData uid=%").c(Binder.getCallingUid()).flush();
-        // TODO: b/302250336 - implement it.
+        mWifiThreadRunner.post(() -> {
+            mLog.info("restoreWifiBackupData uid=%").c(Binder.getCallingUid()).flush();
+            mBackupRestoreController.parserBackupDataAndDispatch(data);
+        });
     }
 
     /**
