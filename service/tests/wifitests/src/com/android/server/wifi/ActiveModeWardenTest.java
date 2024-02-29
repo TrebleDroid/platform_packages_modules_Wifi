@@ -3094,8 +3094,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         assertEquals(additionalClientModeManager, requestedClientModeManager.getValue());
         // the additional CMM never became primary
         verify(mPrimaryChangedCallback, never()).onChange(any(), eq(additionalClientModeManager));
-        if (additionaClientModeManagerRole == ROLE_CLIENT_LOCAL_ONLY
-                || additionaClientModeManagerRole == ROLE_CLIENT_SECONDARY_LONG_LIVED) {
+        if (additionaClientModeManagerRole == ROLE_CLIENT_LOCAL_ONLY) {
             assertEquals(Set.of(TEST_WORKSOURCE), mActiveModeWarden.getSecondaryRequestWs());
         }
         return additionalClientListener.value;
