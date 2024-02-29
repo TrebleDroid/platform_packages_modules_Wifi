@@ -2383,6 +2383,18 @@ public class SupplicantStaIfaceHal {
     }
 
     /**
+     * See comments for {@link ISupplicantStaIfaceHal#resendMscs(String)}
+     */
+    public void resendMscs(String ifaceName) {
+        String methodStr = "resendMscs";
+        if (mStaIfaceHal == null) {
+            handleNullHal(methodStr);
+            return;
+        }
+        mStaIfaceHal.resendMscs(ifaceName);
+    }
+
+    /**
      * See comments for {@link ISupplicantStaIfaceHal#disableMscs(String)}
      */
     public void disableMscs(String ifaceName) {
