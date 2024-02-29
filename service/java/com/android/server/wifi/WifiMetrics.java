@@ -1175,6 +1175,7 @@ public class WifiMetrics {
         private boolean mIsCarrierWifi;
         private boolean mIsOobPseudonymEnabled;
         private int mRole;
+        private int mUid;
         private int mCarrierId;
         private int mEapType;
         private int mPhase2Method;
@@ -1428,6 +1429,7 @@ public class WifiMetrics {
                         + mConnectionEvent.isFirstConnectionAfterBoot);
                 sb.append(", isCarrierWifi=" + mIsCarrierWifi);
                 sb.append(", isOobPseudonymEnabled=" + mIsOobPseudonymEnabled);
+                sb.append(", uid=" + mUid);
                 return sb.toString();
             }
         }
@@ -1922,7 +1924,7 @@ public class WifiMetrics {
      */
     public int startConnectionEvent(
             String ifaceName, WifiConfiguration config, String targetBSSID, int roamType,
-            boolean isOobPseudonymEnabled, int role) {
+            boolean isOobPseudonymEnabled, int role, int uid) {
         synchronized (mLock) {
             int overlapWithLastConnectionMs = 0;
             ConnectionEvent currentConnectionEvent = mCurrentConnectionEventPerIface.get(ifaceName);
@@ -1974,6 +1976,7 @@ public class WifiMetrics {
             currentConnectionEvent.mConnectionEvent.isFirstConnectionAfterBoot =
                     mFirstConnectionAfterBoot;
             currentConnectionEvent.mRole = role;
+            currentConnectionEvent.mUid = uid;
             mFirstConnectionAfterBoot = false;
             mConnectionEventList.add(currentConnectionEvent);
             mScanResultRssiTimestampMillis = -1;
@@ -2247,7 +2250,8 @@ public class WifiMetrics {
                         toMetricPhase2Method(currentConnectionEvent.mPhase2Method),
                         currentConnectionEvent.mPasspointRoamingType,
                         currentConnectionEvent.mCarrierId,
-                        currentConnectionEvent.mTofuConnectionState);
+                        currentConnectionEvent.mTofuConnectionState,
+                        currentConnectionEvent.mUid);
 
                 if (connectionSucceeded) {
                     reportRouterCapabilities(currentConnectionEvent.mRouterFingerPrint);

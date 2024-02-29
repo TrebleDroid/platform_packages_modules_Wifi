@@ -3743,7 +3743,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
      * Inform other components that a new connection attempt is starting.
      */
     private void reportConnectionAttemptStart(
-            WifiConfiguration config, String targetBSSID, int roamType) {
+            WifiConfiguration config, String targetBSSID, int roamType, int uid) {
         boolean isOobPseudonymEnabled = false;
         if (config.enterpriseConfig != null && config.enterpriseConfig.isAuthenticationSimBased()
                 && mWifiCarrierInfoManager.isOobPseudonymFeatureEnabled(config.carrierId)) {
@@ -3752,7 +3752,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         int overlapWithLastConnectionMs =
                 mWifiMetrics.startConnectionEvent(
                         mInterfaceName, config, targetBSSID, roamType, isOobPseudonymEnabled,
-                        getClientRoleForMetrics(config));
+                        getClientRoleForMetrics(config), uid);
         if (mDeviceConfigFacade.isOverlappingConnectionBugreportEnabled()
                 && overlapWithLastConnectionMs
                 > mDeviceConfigFacade.getOverlappingConnectionDurationThresholdMs()) {
@@ -4797,7 +4797,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
                     updateWifiConfigOnStartConnection(config, bssid);
                     reportConnectionAttemptStart(config, mTargetBssid,
-                            WifiMetricsProto.ConnectionEvent.ROAM_UNRELATED);
+                            WifiMetricsProto.ConnectionEvent.ROAM_UNRELATED, uid);
 
                     String currentMacAddress = mWifiNative.getMacAddress(mInterfaceName);
                     mWifiInfo.setMacAddress(currentMacAddress);
@@ -7551,7 +7551,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                             + " targetRoamBSSID " + mTargetBssid);
 
                     reportConnectionAttemptStart(config, mTargetBssid,
-                            WifiMetricsProto.ConnectionEvent.ROAM_ENTERPRISE);
+                            WifiMetricsProto.ConnectionEvent.ROAM_ENTERPRISE, Process.WIFI_UID);
                     if (mWifiNative.roamToNetwork(mInterfaceName, config)) {
                         mTargetWifiConfiguration = config;
                         mIsAutoRoaming = true;
