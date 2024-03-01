@@ -39,15 +39,28 @@ import java.util.Objects;
 @SystemApi
 public final class SoftApState implements Parcelable {
 
+    @WifiManager.WifiApState
     final int mState;
+    @WifiManager.SapStartFailure
     final int mFailureReason;
+    @Nullable
     final TetheringManager.TetheringRequest mTetheringRequest;
+    @Nullable
     final String mIface;
 
     /**
+     * SoftApState constructor.
+     *
+     * @param state Current state of the Soft AP.
+     * @param failureReason Failure reason if the current state is
+     *                      {@link WifiManager#WIFI_AP_STATE_FAILED}.
+     * @param tetheringRequest TetheringRequest if one was specified when Soft AP was requested,
+     *                         else {@code null}.
+     * @param iface Interface name if an interface was created, else {@code null}.
      * @hide
      */
-    public SoftApState(int state, int failureReason,
+    public SoftApState(@WifiManager.WifiApState int state,
+            @WifiManager.SapStartFailure int failureReason,
             @Nullable TetheringManager.TetheringRequest tetheringRequest,
             @Nullable String iface) {
         mState = state;
@@ -109,7 +122,8 @@ public final class SoftApState implements Parcelable {
      *                {@link WifiManager#WIFI_AP_STATE_ENABLING},
      *                {@link WifiManager#WIFI_AP_STATE_FAILED}
      */
-    public @WifiManager.WifiApState int getState() {
+    @WifiManager.WifiApState
+    public int getState() {
         return mState;
     }
 
@@ -121,12 +135,15 @@ public final class SoftApState implements Parcelable {
      *                {@link WifiManager#SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION},
      *                {@link WifiManager#SAP_START_FAILURE_USER_REJECTED}
      */
-    public @WifiManager.SapStartFailure int getFailureReason() {
+    @WifiManager.SapStartFailure
+    public int getFailureReason() {
         return mFailureReason;
     }
 
     /**
-     * Gets the TetheringRequest of the Soft AP.
+     * Gets the TetheringRequest of the Soft AP, if one was specified via
+     * {@link WifiManager#startTetheredHotspotRequest(TetheringManager.TetheringRequest)}.
+     * Otherwise, returns {@code null}.
      */
     @Nullable
     public TetheringManager.TetheringRequest getTetheringRequest() {
@@ -134,7 +151,10 @@ public final class SoftApState implements Parcelable {
     }
 
     /**
-     * Gets the iface of the Soft AP.
+     * Gets the interface name of the Soft AP (e.g. "wlan0") once the Soft AP starts enabling, i.e.
+     * {@link #getState()} returns {@link WifiManager#WIFI_AP_STATE_ENABLING}). Returns {@code null}
+     * if the Soft AP hasn't started enabling yet, or if it failed with
+     * {@link WifiManager#WIFI_AP_STATE_FAILED} without starting enabling.
      */
     @Nullable
     public String getIface() {
