@@ -2166,11 +2166,17 @@ public class WifiP2pManager {
 
     /**
      * Initiate peer discovery. A discovery process involves scanning for available Wi-Fi peers
-     * for the purpose of establishing a connection. See {@link #discoverPeers} for more details.
+     * for the purpose of establishing a connection. See {@link #discoverPeers(
+     * Channel, ActionListener)} for more details.
      *
      * This method accepts a {@link WifiP2pDiscoveryConfig} object specifying the desired
      * parameters for the peer discovery. The configuration object allows the specification of the
      * scan type (ex. FULL, SOCIAL) and the inclusion of vendor-specific configuration data.
+     *
+     * The application must have {@link android.Manifest.permission#NEARBY_WIFI_DEVICES} with
+     * android:usesPermissionFlags="neverForLocation". If the application does not declare
+     * android:usesPermissionFlags="neverForLocation", then it must also have
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      *
      * @param channel is the channel created at {@link #initialize}
      * @param config is the configuration for this peer discovery
@@ -2181,14 +2187,15 @@ public class WifiP2pManager {
             android.Manifest.permission.ACCESS_FINE_LOCATION
             }, conditional = true)
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-    public void discoverPeers(
+    public void startPeerDiscovery(
             @NonNull Channel channel,
-            @Nullable WifiP2pDiscoveryConfig config,
+            @NonNull WifiP2pDiscoveryConfig config,
             @Nullable ActionListener listener) {
         if (!isChannelConstrainedDiscoverySupported()) {
             throw new UnsupportedOperationException();
         }
         checkChannel(channel);
+        Objects.requireNonNull(config);
         Bundle extras = prepareExtrasBundle(channel);
         extras.putParcelable(EXTRA_PARAM_KEY_DISCOVERY_CONFIG, config);
         channel.mAsyncChannel.sendMessage(prepareMessage(DISCOVER_PEERS,
