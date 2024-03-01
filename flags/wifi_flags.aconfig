@@ -24,6 +24,7 @@ flag {
 
 flag {
     name: "network_provider_battery_charging_status"
+    is_exported: true
     namespace: "wifi"
     description: "Control the API that allows setting / reading the NetworkProviderInfo's battery charging status"
     bug: "305067231"
@@ -31,6 +32,7 @@ flag {
 
 flag {
     name: "shared_connectivity_broadcast_receiver_test_api"
+    is_exported: true
     namespace: "wifi"
     description: "Control the test API for SharedConnectivityManager's getBroadcastReceiver() method"
     bug: "305067231"
@@ -45,6 +47,7 @@ flag {
 
 flag {
     name: "android_v_wifi_api"
+    is_exported: true
     namespace: "wifi"
     description: "For new API added to Android V"
     bug: "319927407"
