@@ -1535,6 +1535,39 @@ public class SupplicantStaIfaceHalHidlImplTest extends WifiBaseTest {
     }
 
     /**
+     * Tests the handling of authentication failure for WPA3-Personal networks with
+     * status code = 15 (CHALLENGE_FAIL)
+     */
+    @Test
+    public void testWpa3AuthRejectionDueToChallengeFail() throws Exception {
+        executeAndValidateInitializationSequence();
+        assertNotNull(mISupplicantStaIfaceCallback);
+
+        executeAndValidateConnectSequenceWithKeyMgmt(
+                SUPPLICANT_NETWORK_ID, false, TRANSLATED_SUPPLICANT_SSID.toString(),
+                WifiConfiguration.SECURITY_TYPE_SAE, null, true);
+        mISupplicantStaIfaceCallback.onStateChanged(
+                ISupplicantStaIfaceCallback.State.ASSOCIATING,
+                NativeUtil.macAddressToByteArray(BSSID),
+                SUPPLICANT_NETWORK_ID,
+                NativeUtil.decodeSsid(SUPPLICANT_SSID));
+        int statusCode = ISupplicantStaIfaceCallback.StatusCode.CHALLENGE_FAIL;
+        mISupplicantStaIfaceCallback.onAssociationRejected(
+                NativeUtil.macAddressToByteArray(BSSID), statusCode, false);
+        verify(mWifiMonitor).broadcastAuthenticationFailureEvent(eq(WLAN0_IFACE_NAME),
+                eq(WifiManager.ERROR_AUTH_FAILURE_WRONG_PSWD), eq(-1),
+                eq(TRANSLATED_SUPPLICANT_SSID.toString()), eq(MacAddress.fromString(BSSID)));
+        ArgumentCaptor<AssocRejectEventInfo> assocRejectEventInfoCaptor =
+                ArgumentCaptor.forClass(AssocRejectEventInfo.class);
+        verify(mWifiMonitor).broadcastAssociationRejectionEvent(
+                eq(WLAN0_IFACE_NAME), assocRejectEventInfoCaptor.capture());
+        AssocRejectEventInfo assocRejectEventInfo =
+                (AssocRejectEventInfo) assocRejectEventInfoCaptor.getValue();
+        assertNotNull(assocRejectEventInfo);
+        assertEquals(statusCode, assocRejectEventInfo.statusCode);
+    }
+
+    /**
      * Tests the handling of incorrect network passwords for WEP networks.
      */
     @Test
