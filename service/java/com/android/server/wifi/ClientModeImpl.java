@@ -5254,7 +5254,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     public boolean isAffiliatedLinkBssid(@NonNull MacAddress bssid) {
         List<MloLink> links = mWifiInfo.getAffiliatedMloLinks();
         for (MloLink link: links) {
-            if (link.getApMacAddress().equals(bssid)) {
+            if (bssid.equals(link.getApMacAddress())) {
                 return true;
             }
         }
