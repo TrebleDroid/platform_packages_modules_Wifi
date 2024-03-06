@@ -1787,7 +1787,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 new WifiP2pServiceImplTest.P2pStateChangedIntentMatcher(
                         WifiP2pManager.WIFI_P2P_STATE_ENABLED)), any());
         if (SdkLevel.isAtLeastT()) {
-            verify(mP2pListener).onStateChanged(eq(true));
+            verify(mP2pListener).onP2pStateChanged(eq(WifiP2pManager.WIFI_P2P_STATE_ENABLED));
         }
 
         // disabled broadcast sent when user restriction is set
@@ -1797,7 +1797,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 new WifiP2pServiceImplTest.P2pStateChangedIntentMatcher(
                         WifiP2pManager.WIFI_P2P_STATE_DISABLED)), any());
         if (SdkLevel.isAtLeastT()) {
-            verify(mP2pListener).onStateChanged(eq(false));
+            verify(mP2pListener).onP2pStateChanged(eq(WifiP2pManager.WIFI_P2P_STATE_DISABLED));
         }
 
         // no disabled broadcast sent when Wi-Fi is disabled since broadcast already sent
@@ -2268,7 +2268,8 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         verify(mLastCallerInfoManager).put(eq(WifiManager.API_P2P_DISCOVER_PEERS), anyInt(),
                 anyInt(), anyInt(), anyString(), eq(true));
         if (SdkLevel.isAtLeastT()) {
-            verify(mP2pListener).onDiscoveryStateChanged(eq(true));
+            verify(mP2pListener).onDiscoveryStateChanged(
+                    eq(WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED));
         }
     }
 
@@ -2836,7 +2837,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                     eq("testFeature"), anyInt(), eq(true));
         }
         if (SdkLevel.isAtLeastT()) {
-            verify(mP2pListener).onListenStateChanged(eq(true));
+            verify(mP2pListener).onListenStateChanged(eq(WifiP2pManager.WIFI_P2P_LISTEN_STARTED));
         }
     }
 
@@ -7466,7 +7467,8 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 pdEvent);
         verify(mWifiNative).p2pCancelConnect();
         if (SdkLevel.isAtLeastT()) {
-            verify(mP2pListener).onGroupCreationFailed();
+            verify(mP2pListener).onGroupCreationFailed(
+                    eq(WifiP2pManager.GROUP_CREATION_FAILURE_REASON_PROVISION_DISCOVERY_FAILED));
         }
     }
 
