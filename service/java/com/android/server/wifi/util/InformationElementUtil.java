@@ -33,6 +33,8 @@ import com.android.server.wifi.MboOceConstants;
 import com.android.server.wifi.hotspot2.NetworkDetail;
 import com.android.server.wifi.hotspot2.anqp.Constants;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -45,6 +47,81 @@ import java.util.Locale;
 public class InformationElementUtil {
     private static final String TAG = "InformationElementUtil";
     private static final boolean DBG = false;
+
+    /**
+     * 6 GHz Access Point type as encoded in the Regulatory Info subfield in the Control field of
+     * the 6 GHz Operation Information field of the HE Operation element.
+     * Reference E.2.7 6 GHz band (IEEE Std 802.11ax-2021).
+     */
+    public enum ApType6GHz {
+        AP_TYPE_6GHZ_UNKNOWN,
+        AP_TYPE_6GHZ_INDOOR,
+        AP_TYPE_6GHZ_STANDARD_POWER,
+    }
+
+    /**
+     * Defragment Element class
+     *
+     * IEEE Std 802.11™‐2020, Section: 10.28.11 Element fragmentation describes a fragmented sub
+     * element as,
+     *    | SubEID | Len | Data | FragId | Len | Data | FragId | Len| Data ...
+     * Octets: 1     1     255     1        1     255     1       1     m
+     * Values: eid   255         fid       255           fid      m
+     *
+     */
+    private static class DefragmentElement {
+        /** Defagmented element bytes */
+        public byte[] bytes;
+        /** Bytes read to defragment the fragmented element */
+        public int bytesRead = 0;
+
+        public static final int FRAG_MAX_LEN = 255;
+        public static final int FRAGMENT_ELEMENT_EID = 242;
+
+        DefragmentElement(byte[] bytes, int start, int eid, int fid) {
+            if (bytes == null) return;
+            ByteArrayOutputStream defrag = new ByteArrayOutputStream();
+            ByteBuffer element = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+            element.position(start);
+            try {
+                if ((element.get() & Constants.BYTE_MASK) != eid) return;
+                // Add EID, 255 as the parser expects the element header.
+                defrag.write(eid);
+                defrag.write(255);
+                int fragLen, fragId;
+                do {
+                    fragLen = element.get() & Constants.BYTE_MASK;
+                    byte[] b = new byte[fragLen];
+                    element.get(b);
+                    defrag.write(b);
+                    // Mark the position to undo the extra read.
+                    element.mark();
+                    if (element.remaining() <= 0) break;
+                    fragId = element.get() & Constants.BYTE_MASK;
+                } while (fragLen == FRAG_MAX_LEN && fragId == fid);
+                // Reset the extra get.
+                element.reset();
+            } catch (IOException e) {
+                if (DBG) {
+                    Log.w(TAG, "Failed to defragment sub element: " + e.getMessage());
+                }
+                return;
+            } catch (IndexOutOfBoundsException e) {
+                if (DBG) {
+                    Log.e(TAG, "Failed to defragment sub element: " + e.getMessage());
+                }
+                return;
+            } catch (BufferUnderflowException e) {
+                if (DBG) {
+                    Log.w(TAG, "Failed to defragment sub element: " + e.getMessage());
+                }
+                return;
+            }
+
+            this.bytes = defrag.toByteArray();
+            bytesRead = element.position() - start;
+        }
+    }
 
     /** Converts InformationElement to hex string */
     public static String toHexString(InformationElement e) {
@@ -66,6 +143,12 @@ public class InformationElementUtil {
         return parseInformationElements(HexEncoding.decode(data));
     }
 
+    private static boolean isFragmentable(int eid, int eidExt) {
+        // Refer IEE802.11BE D2.3, Section 9.4.2 Elements
+        return ((eid == InformationElement.EID_EXTENSION_PRESENT)
+                && (eidExt == InformationElement.EID_EXT_MULTI_LINK));
+    }
+
     public static InformationElement[] parseInformationElements(byte[] bytes) {
         if (bytes == null) {
             return new InformationElement[0];
@@ -75,9 +158,12 @@ public class InformationElementUtil {
         ArrayList<InformationElement> infoElements = new ArrayList<>();
         boolean found_ssid = false;
         while (data.remaining() > 1) {
+            // Mark the start of the data
+            data.mark();
             int eid = data.get() & Constants.BYTE_MASK;
             int eidExt = 0;
             int elementLength = data.get() & Constants.BYTE_MASK;
+            DefragmentElement defrag = null;
 
             if (elementLength > data.remaining() || (eid == InformationElement.EID_SSID
                     && found_ssid)) {
@@ -94,14 +180,36 @@ public class InformationElementUtil {
                     break;
                 }
                 eidExt = data.get() & Constants.BYTE_MASK;
+                if (isFragmentable(eid, eidExt)
+                        && elementLength == DefragmentElement.FRAG_MAX_LEN) {
+                    // Fragmented IE. Reset the position to head to defragment.
+                    data.reset();
+                    defrag =
+                            new DefragmentElement(
+                                    bytes,
+                                    data.position(),
+                                    eid,
+                                    DefragmentElement.FRAGMENT_ELEMENT_EID);
+                }
                 elementLength--;
             }
 
             InformationElement ie = new InformationElement();
             ie.id = eid;
             ie.idExt = eidExt;
-            ie.bytes = new byte[elementLength];
-            data.get(ie.bytes);
+            if (defrag != null) {
+                if (defrag.bytesRead == 0) {
+                    // Malformed IE skipping
+                    break;
+                }
+                // Skip first three bytes: eid, len, eidExt as it is already processed.
+                ie.bytes = Arrays.copyOfRange(defrag.bytes, 3, defrag.bytes.length);
+                int newPosition = data.position() + defrag.bytesRead;
+                data.position(newPosition);
+            } else {
+                ie.bytes = new byte[elementLength];
+                data.get(ie.bytes);
+            }
             infoElements.add(ie);
         }
         return infoElements.toArray(new InformationElement[infoElements.size()]);
@@ -526,17 +634,22 @@ public class InformationElementUtil {
     public static class HeOperation {
 
         private static final int HE_OPERATION_BASIC_LENGTH = 6;
+        private static final int TWT_REQUIRED_MASK = 0x08;
         private static final int VHT_OPERATION_INFO_PRESENT_MASK = 0x40;
         private static final int HE_6GHZ_INFO_PRESENT_MASK = 0x02;
         private static final int HE_6GHZ_CH_WIDTH_MASK = 0x03;
+        private static final int HE_6GHZ_REG_INFO_MASK = 0x38;
+        private static final int HE_6GHZ_REG_INFO_SHIFT = 3;
         private static final int CO_HOSTED_BSS_PRESENT_MASK = 0x80;
         private static final int VHT_OPERATION_INFO_START_INDEX = 6;
         private static final int HE_BW_80_80_160 = 3;
 
         private boolean mPresent = false;
+        private boolean mTwtRequired = false;
         private boolean mVhtInfoPresent = false;
         private boolean m6GhzInfoPresent = false;
         private int mChannelWidth;
+        private ApType6GHz mApType6GHz = ApType6GHz.AP_TYPE_6GHZ_UNKNOWN;
         private int mPrimaryChannel;
         private int mCenterFreqSeg0;
         private int mCenterFreqSeg1;
@@ -549,6 +662,21 @@ public class InformationElementUtil {
             return mPresent;
         }
 
+        /**
+         * Return whether the AP requires HE stations to participate either in individual TWT
+         * agreements or Broadcast TWT operation. Reference 9.4.2.249 HE Operation element (IEEE
+         * Std 802.11ax™-2021).
+         **/
+        public boolean isTwtRequired() {
+            return mTwtRequired;
+        }
+
+        /**
+         * Return 6Ghz AP type as defined in {@link ApType6GHz}
+         **/
+        public ApType6GHz getApType6GHz() {
+            return mApType6GHz;
+        }
         /**
          * Returns whether VHT Information field is present.
          */
@@ -650,6 +778,7 @@ public class InformationElementUtil {
                 return;
             }
 
+            mTwtRequired = (ie.bytes[0] & TWT_REQUIRED_MASK) != 0;
             mVhtInfoPresent = (ie.bytes[1] & VHT_OPERATION_INFO_PRESENT_MASK) != 0;
             m6GhzInfoPresent = (ie.bytes[2] & HE_6GHZ_INFO_PRESENT_MASK) != 0;
             boolean coHostedBssPresent = (ie.bytes[1] & CO_HOSTED_BSS_PRESENT_MASK) != 0;
@@ -680,6 +809,13 @@ public class InformationElementUtil {
                         + (coHostedBssPresent ? 1 : 0);
 
                 mChannelWidth = ie.bytes[startIndx + 1] & HE_6GHZ_CH_WIDTH_MASK;
+                int regInfo = (ie.bytes[startIndx + 1] & HE_6GHZ_REG_INFO_MASK)
+                        >> HE_6GHZ_REG_INFO_SHIFT;
+                if (regInfo == 0) {
+                    mApType6GHz = ApType6GHz.AP_TYPE_6GHZ_INDOOR;
+                } else if (regInfo == 1) {
+                    mApType6GHz = ApType6GHz.AP_TYPE_6GHZ_STANDARD_POWER;
+                }
                 mPrimaryChannel = ie.bytes[startIndx] & Constants.BYTE_MASK;
                 mCenterFreqSeg0 = ie.bytes[startIndx + 2] & Constants.BYTE_MASK;
                 mCenterFreqSeg1 = ie.bytes[startIndx + 3] & Constants.BYTE_MASK;
@@ -691,7 +827,16 @@ public class InformationElementUtil {
      * EhtOperation: represents the EHT Operation IE
      */
     public static class EhtOperation {
+        private static final int EHT_OPERATION_BASIC_LENGTH = 5;
+        private static final int EHT_OPERATION_INFO_PRESENT_MASK = 0x01;
+        private static final int DISABLED_SUBCHANNEL_BITMAP_PRESENT_MASK = 0x02;
+        private static final int EHT_OPERATION_INFO_START_INDEX = EHT_OPERATION_BASIC_LENGTH;
+        private static final int DISABLED_SUBCHANNEL_BITMAP_START_INDEX =
+                EHT_OPERATION_INFO_START_INDEX + 3;
         private boolean mPresent = false;
+        private boolean mEhtOperationInfoPresent = false;
+        private boolean mDisabledSubchannelBitmapPresent = false;
+        private byte[] mDisabledSubchannelBitmap;
 
         /**
          * Returns whether the EHT Information Element is present.
@@ -700,14 +845,65 @@ public class InformationElementUtil {
             return mPresent;
         }
 
-        /** Parse EHT Operation IE */
+        /**
+         * Returns whether EHT Operation Information field is present.
+         * Reference 9.4.2.311 EHT Operation element (IEEEStd 802.11be™ Draft2.0).
+         */
+        public boolean isEhtOperationInfoPresent() {
+            return mEhtOperationInfoPresent;
+        }
+
+        /**
+         * Returns whether the Disabled Subchannel Bitmap field is present.
+         */
+        public boolean isDisabledSubchannelBitmapPresent() {
+            return mDisabledSubchannelBitmapPresent;
+        }
+
+        /**
+         * Returns the Disabled Subchannel Bitmap field if it exists. Otherwise, returns null.
+         */
+        public byte[] getDisabledSubchannelBitmap() {
+            return mDisabledSubchannelBitmap;
+        }
+
+        /**
+         * Parse EHT Operation IE
+         */
         public void from(InformationElement ie) {
             if (ie.id != InformationElement.EID_EXTENSION_PRESENT
                     || ie.idExt != InformationElement.EID_EXT_EHT_OPERATION) {
                 throw new IllegalArgumentException("Element id is not EHT_OPERATION");
             }
+            // Make sure the byte array length is at least the fixed size
+            if (ie.bytes.length < EHT_OPERATION_BASIC_LENGTH) {
+                if (DBG) {
+                    Log.w(TAG, "Invalid EHT_OPERATION IE len: " + ie.bytes.length);
+                }
+                // Skipping parsing of the IE
+                return;
+            }
 
+            mEhtOperationInfoPresent = (ie.bytes[0] & EHT_OPERATION_INFO_PRESENT_MASK) != 0;
+            mDisabledSubchannelBitmapPresent =
+                    (ie.bytes[0] & DISABLED_SUBCHANNEL_BITMAP_PRESENT_MASK) != 0;
+            int expectedLen = EHT_OPERATION_BASIC_LENGTH + (mEhtOperationInfoPresent ? (
+                    mDisabledSubchannelBitmapPresent ? 5 : 3) : 0);
+            // Make sure the byte array length is at least fitting the known parameters
+            if (ie.bytes.length < expectedLen) {
+                if (DBG) {
+                    Log.w(TAG, "Invalid EHT_OPERATION info len: " + ie.bytes.length);
+                }
+                // Skipping parsing of the IE
+                return;
+            }
             mPresent = true;
+
+            if (mDisabledSubchannelBitmapPresent) {
+                mDisabledSubchannelBitmap = new byte[2];
+                System.arraycopy(ie.bytes, DISABLED_SUBCHANNEL_BITMAP_START_INDEX,
+                        mDisabledSubchannelBitmap, 0, 2);
+            }
 
             //TODO put more functionality for parsing the IE
         }
@@ -798,8 +994,52 @@ public class InformationElementUtil {
      * HeCapabilities: represents the HE Capabilities IE
      */
     public static class HeCapabilities {
+
+        /**
+         * Represents HE MAC Capabilities Information field. Reference 9.4.2.248.2 HE MAC
+         * Capabilities Information field (IEEE Std 802.11ax-2021).
+         */
+        private static class HeMacCapabilitiesInformation {
+            public static int startOffset = 0;
+            public static int endOffset = 5;
+            public static final int TWT_REQUESTER_SUPPORT_BIT = 1;
+            public static final int TWT_RESPONDER_SUPPORT_BIT = 2;
+            public static final int BROADCAST_TWT_SUPPORT_BIT = 20;
+            public boolean isTwtRequesterSupported = false;
+            public boolean isTwtResponderSupported = false;
+            public boolean isBroadcastTwtSupported = false;
+            private BitSet mBitSet = new BitSet();
+
+            /** Parse HE MAC capabilities Information from the byte array. */
+            public void from(byte[] bytes) {
+                mBitSet = BitSet.valueOf(bytes);
+                isTwtRequesterSupported = mBitSet.get(TWT_REQUESTER_SUPPORT_BIT);
+                isTwtResponderSupported = mBitSet.get(TWT_RESPONDER_SUPPORT_BIT);
+                isBroadcastTwtSupported = mBitSet.get(BROADCAST_TWT_SUPPORT_BIT);
+            }
+        }
+
+        private HeMacCapabilitiesInformation mHeMacCapabilitiesInformation =
+                new HeMacCapabilitiesInformation();
         private int mMaxNumberSpatialStreams = 1;
         private boolean mPresent = false;
+
+        /**
+         * Return whether TWT requester is supported. Set by HE Stations to indicate TWT support
+         */
+        public boolean isTwtRequesterSupported() {
+            return mHeMacCapabilitiesInformation.isTwtRequesterSupported;
+        }
+        /** Return whether TWT responder is supported. Set by HE AP to indicate TWT support. */
+        public boolean isTwtResponderSupported() {
+            return mHeMacCapabilitiesInformation.isTwtResponderSupported;
+        }
+
+        /** Return whether broadcast TWT is supported */
+        public boolean isBroadcastTwtSupported() {
+            return mHeMacCapabilitiesInformation.isBroadcastTwtSupported;
+        }
+
         /** Returns whether HE Capabilities IE is present */
         public boolean isPresent() {
             return mPresent;
@@ -827,17 +1067,63 @@ public class InformationElementUtil {
                     + (ie.bytes[17] & Constants.BYTE_MASK);
             mMaxNumberSpatialStreams = parseMaxNumberSpatialStreamsFromMcsMap(mcsMap);
             mPresent = true;
+            mHeMacCapabilitiesInformation.from(Arrays.copyOfRange(ie.bytes,
+                    mHeMacCapabilitiesInformation.startOffset,
+                    mHeMacCapabilitiesInformation.endOffset));
         }
     }
 
     /**
-     * EhtCapabilities: represents the EHT Capabilities IE
+     * EhtCapabilities: represents the EHT Capabilities IE. Reference 9.4.2.313 EHT Capabilities
+     * element (IEEE P802.11be/D3.1).
      */
     public static class EhtCapabilities {
+        /**
+         * EhtMacCapabilitiesInformation: represents the EHT MAC Capabilities Information element.
+         * Reference 9.4.2.313.2 EHT MAC Capabilities Information field (IEEE P802.11be/D3.1).
+         */
+        public static class EhtMacCapabilitiesInformation {
+            public static int startOffset = 0;
+            public static int endOffset = 1;
+            public static final int EPCS_PRIORITY_ACCESS_SUPPORT_BIT = 0;
+            public static final int RESTRICTED_TWT_SUPPORT_BIT = 4;
+            public boolean isEpcsPriorityAccessSupported = false;
+            public boolean isRestrictedTwtSupported = false;
+            private BitSet mBitSet = new BitSet();
+
+            /** Parse EHT MAC Capabilities Information from the bytes. **/
+            public void from(byte[] bytes) {
+                mBitSet = BitSet.valueOf(bytes);
+                isEpcsPriorityAccessSupported = mBitSet.get(EPCS_PRIORITY_ACCESS_SUPPORT_BIT);
+                isRestrictedTwtSupported = mBitSet.get(RESTRICTED_TWT_SUPPORT_BIT);
+            }
+        }
         private boolean mPresent = false;
-        /** Returns whether HE Capabilities IE is present */
+
+        private EhtMacCapabilitiesInformation mEhtMacCapabilitiesInformation =
+                new EhtMacCapabilitiesInformation();
+        /** Returns whether HE Capabilities IE is present.  */
         public boolean isPresent() {
             return mPresent;
+        }
+
+        /**
+         * Returns whether restricted TWT is supported or not. It enables enhanced medium access
+         * protection and resource reservation mechanisms for delivery of latency sensitive
+         * traffic.
+         */
+        public boolean isRestrictedTwtSupported() {
+            return mEhtMacCapabilitiesInformation.isRestrictedTwtSupported;
+        }
+
+        /**
+         * Returns whether EPCS priority access supported or not. EPCS priority access is a
+         * mechanism that provides prioritized access to the wireless medium for authorized users to
+         * increase their probability of successful communication during periods of network
+         * congestion.
+         */
+        public boolean isEpcsPriorityAccessSupported() {
+            return mEhtMacCapabilitiesInformation.isEpcsPriorityAccessSupported;
         }
 
         /** Parse EHT Capabilities IE */
@@ -847,8 +1133,9 @@ public class InformationElementUtil {
                 throw new IllegalArgumentException("Element id is not EHT_CAPABILITIES: " + ie.id);
             }
             mPresent = true;
-
-            //TODO Add code to parse the IE
+            mEhtMacCapabilitiesInformation.from(Arrays.copyOfRange(ie.bytes,
+                    mEhtMacCapabilitiesInformation.startOffset,
+                    mEhtMacCapabilitiesInformation.endOffset));
         }
     }
 
@@ -956,6 +1243,47 @@ public class InformationElementUtil {
             return commonInfoLength;
         }
 
+        /** Parse per STA sub element (not fragmented) of Multi link element. */
+        private Boolean parsePerStaSubElement(byte[] bytes, int start, int len) {
+            MloLink link = new MloLink();
+            link.setLinkId(
+                    bytes[start + PER_STA_SUB_ELEMENT_LINK_ID_OFFSET]
+                            & PER_STA_SUB_ELEMENT_LINK_ID_MASK);
+
+            int staInfoLength =
+                    bytes[start + PER_STA_SUB_ELEMENT_STA_INFO_OFFSET] & Constants.BYTE_MASK;
+            if (len < PER_STA_SUB_ELEMENT_STA_INFO_OFFSET + staInfoLength) {
+                if (DBG) {
+                    Log.w(TAG, "Invalid sta info length: " + staInfoLength);
+                }
+                // Skipping parsing of the IE
+                return false;
+            }
+
+            // Check if MAC Address is present
+            if ((bytes[start + PER_STA_SUB_ELEMENT_MAC_ADDRESS_PRESENT_OFFSET]
+                            & PER_STA_SUB_ELEMENT_MAC_ADDRESS_PRESENT_MASK)
+                    != 0) {
+                if (staInfoLength < 1 /*length*/ + 6 /*mac address*/) {
+                    if (DBG) {
+                        Log.w(TAG, "Invalid sta info length: " + staInfoLength);
+                    }
+                    // Skipping parsing of the IE
+                    return false;
+                }
+
+                int macAddressOffset =
+                        start
+                                + PER_STA_SUB_ELEMENT_STA_INFO_OFFSET
+                                + PER_STA_SUB_ELEMENT_STA_INFO_MAC_ADDRESS_OFFSET;
+                link.setApMacAddress(
+                        MacAddress.fromBytes(
+                                Arrays.copyOfRange(bytes, macAddressOffset, macAddressOffset + 6)));
+            }
+            mAffiliatedLinks.add(link);
+            return true;
+        }
+
         /**
          * Parse Link Info field in Multi-Link Operation IE
          *
@@ -990,41 +1318,30 @@ public class InformationElementUtil {
                     continue;
                 }
 
-                MloLink link = new MloLink();
-                link.setLinkId(ie.bytes[startOffset + PER_STA_SUB_ELEMENT_LINK_ID_OFFSET]
-                        & PER_STA_SUB_ELEMENT_LINK_ID_MASK);
-
-                int staInfoLength = ie.bytes[startOffset + PER_STA_SUB_ELEMENT_STA_INFO_OFFSET]
-                        & Constants.BYTE_MASK;
-                if (subElementLen < PER_STA_SUB_ELEMENT_STA_INFO_OFFSET + staInfoLength) {
-                    if (DBG) {
-                        Log.w(TAG, "Invalid sta info length: " + staInfoLength);
-                    }
-                    // Skipping parsing of the IE
-                    return false;
-                }
-
-                // Check if MAC Address is present
-                if ((ie.bytes[startOffset + PER_STA_SUB_ELEMENT_MAC_ADDRESS_PRESENT_OFFSET]
-                        & PER_STA_SUB_ELEMENT_MAC_ADDRESS_PRESENT_MASK) != 0) {
-                    if (staInfoLength < 1 /*length*/ + 6 /*mac address*/) {
-                        if (DBG) {
-                            Log.w(TAG, "Invalid sta info length: " + staInfoLength);
-                        }
-                        // Skipping parsing of the IE
+                int bytesRead;
+                // Check for fragmentation before parsing per sta profile sub element
+                if (subElementLen == DefragmentElement.FRAG_MAX_LEN) {
+                    DefragmentElement defragment =
+                            new DefragmentElement(
+                                    ie.bytes,
+                                    startOffset,
+                                    PER_STA_SUB_ELEMENT_ID,
+                                    InformationElement.EID_FRAGMENT_SUB_ELEMENT_MULTI_LINK);
+                    bytesRead = defragment.bytesRead;
+                    if (defragment.bytesRead == 0 || defragment.bytes == null) {
                         return false;
                     }
-
-                    int macAddressOffset = startOffset + PER_STA_SUB_ELEMENT_STA_INFO_OFFSET
-                            + PER_STA_SUB_ELEMENT_STA_INFO_MAC_ADDRESS_OFFSET;
-                    link.setApMacAddress(MacAddress.fromBytes(Arrays.copyOfRange(ie.bytes,
-                            macAddressOffset, macAddressOffset + 6)));
+                    if (!parsePerStaSubElement(defragment.bytes, 0, defragment.bytes.length)) {
+                        return false;
+                    }
+                } else {
+                    bytesRead = subElementLen;
+                    if (!parsePerStaSubElement(ie.bytes, startOffset, subElementLen)) {
+                        return false;
+                    }
                 }
-
-                mAffiliatedLinks.add(link);
-
                 // Done with this sub-element
-                startOffset += subElementLen;
+                startOffset += bytesRead;
             }
 
             return true;
@@ -1207,6 +1524,17 @@ public class InformationElementUtil {
                         ByteBufferReader.readInteger(data, ByteOrder.BIG_ENDIAN, oi3Length);
             }
         }
+
+        @Override
+        public String toString() {
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append("RoamingConsortium [");
+            stringBuilder.append("anqpOICount: " + anqpOICount);
+            stringBuilder.append(", roamingConsortiums: " + (roamingConsortiums == null ? "null"
+                    : Arrays.toString(roamingConsortiums)));
+            stringBuilder.append("]");
+            return stringBuilder.toString();
+        }
     }
 
     public static class Vsa {
@@ -1358,8 +1686,49 @@ public class InformationElementUtil {
     public static class ExtendedCapabilities {
         private static final int RTT_RESP_ENABLE_BIT = 70;
         private static final int SSID_UTF8_BIT = 48;
+        private static final int FILS_CAPABILITY_BIT = 72;
+        private static final int TWT_REQUESTER_CAPABILITY_BIT = 77;
+        private static final int TWT_RESPONDER_CAPABILITY_BIT = 78;
+        private static final int NO_TB_RANGING_RESPONDER = 90;
+        private static final int TB_RANGING_RESPONDER = 91;
 
         public BitSet capabilitiesBitSet;
+
+        /**
+         * @return true if Trigger based ranging responder supported. Refer P802.11az/D7.0,
+         * September 2022, section 9.4.2.26 Extended Capabilities element.
+         */
+        public boolean isTriggerBasedRangingRespSupported() {
+            return capabilitiesBitSet.get(TB_RANGING_RESPONDER);
+        }
+
+        /**
+         * @return true if Non trigger based ranging responder supported. Refer P802.11az/D7.0,
+         * September 2022, section 9.4.2.26 Extended Capabilities element.
+         */
+        public boolean isNonTriggerBasedRangingRespSupported() {
+            return capabilitiesBitSet.get(NO_TB_RANGING_RESPONDER);
+        }
+
+        /**
+         * @return true if TWT Requester capability is set
+         */
+        public boolean isTwtRequesterSupported() {
+            return capabilitiesBitSet.get(TWT_REQUESTER_CAPABILITY_BIT);
+        }
+
+        /**
+         * @return true if TWT Responder capability is set
+         */
+        public boolean isTwtResponderSupported() {
+            return capabilitiesBitSet.get(TWT_RESPONDER_CAPABILITY_BIT);
+        }
+        /**
+         * @return true if Fast Initial Link Setup (FILS) capable
+         */
+        public boolean isFilsCapable() {
+            return capabilitiesBitSet.get(FILS_CAPABILITY_BIT);
+        }
 
         /**
          * @return true if SSID should be interpreted using UTF-8 encoding

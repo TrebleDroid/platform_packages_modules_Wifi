@@ -92,7 +92,12 @@ public interface ClientMode {
      */
     void setLinkLayerStatsPollingInterval(int newIntervalMs);
 
-    boolean setWifiConnectedNetworkScorer(IBinder binder, IWifiConnectedNetworkScorer scorer);
+    /**
+     * See {@link android.net.wifi.WifiManager#setWifiConnectedNetworkScorer(Executor,
+     * WifiManager.WifiConnectedNetworkScorer)}
+     */
+    boolean setWifiConnectedNetworkScorer(IBinder binder, IWifiConnectedNetworkScorer scorer,
+            int callerUid);
 
     void clearWifiConnectedNetworkScorer();
 
@@ -202,6 +207,9 @@ public interface ClientMode {
     boolean isSupplicantTransientState();
 
     void onCellularConnectivityChanged(@WifiDataStall.CellularDataStatusCode int status);
+
+    /** returns whether the current network is labeled as local-only due to ip provision timeout */
+    boolean isIpProvisioningTimedOut();
 
     /** Result callback for {@link #probeLink(LinkProbeCallback, int)} */
     interface LinkProbeCallback extends WifiNl80211Manager.SendMgmtFrameCallback {
@@ -355,4 +363,9 @@ public interface ClientMode {
      * @return true if connection is MLO, otherwise false.
      */
     boolean isMlo();
+
+    /**
+     * Notify changes in PowerManager#isDeviceIdleMode
+     */
+    void onIdleModeChanged(boolean isIdle);
 }

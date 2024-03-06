@@ -424,8 +424,20 @@ public class RttServiceImplTest extends WifiBaseTest {
         results.first.remove(results.first.size() - 1);
         RangingResult removed = results.second.remove(results.second.size() - 1);
         results.second.add(
-                new RangingResult(RangingResult.STATUS_FAIL, removed.getPeerHandle(), 0, 0, 0, 0, 0,
-                        null, null, null, 0));
+                new RangingResult(
+                        RangingResult.STATUS_FAIL,
+                        removed.getPeerHandle(),
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        null,
+                        null,
+                        null,
+                        0,
+                        RangingResult.UNSPECIFIED,
+                        RangingResult.UNSPECIFIED));
         clock.time += MEASUREMENT_DURATION;
         mRangingResultsCbCaptor.getValue()
                 .onRangingResults(mIntCaptor.getValue(), results.first);
@@ -462,14 +474,18 @@ public class RttServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testRangingOnlyAwareAps() throws Exception {
+        final int burstSize = 31;
         assumeTrue(SdkLevel.isAtLeastT());
         mExtras.putParcelable(WifiManager.EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE, mock(
                 AttributionSource.class));
         when(mockPermissionUtil.checkNearbyDevicesPermission(any(), eq(true), any()))
                 .thenReturn(true);
-        RangingRequest request = new RangingRequest.Builder()
-                .addWifiAwarePeer(MacAddress.fromString("08:09:08:07:06:01"))
-                .addWifiAwarePeer(MacAddress.fromString("08:09:08:07:06:02")).build();
+        RangingRequest request =
+                new RangingRequest.Builder()
+                        .addWifiAwarePeer(MacAddress.fromString("08:09:08:07:06:01"))
+                        .addWifiAwarePeer(MacAddress.fromString("08:09:08:07:06:02"))
+                        .setRttBurstSize(burstSize)
+                        .build();
 
         // issue request
         ClockAnswer clock = new ClockAnswer();
@@ -482,6 +498,8 @@ public class RttServiceImplTest extends WifiBaseTest {
         // verify that the request is translated from the PeerHandle issued to WifiRttController
         verify(mockRttControllerHal).rangeRequest(mIntCaptor.capture(), mRequestCaptor.capture());
         verifyWakeupSet(true, 0);
+
+        assertEquals(burstSize, mRequestCaptor.getValue().getRttBurstSize());
 
         // issue results
         Pair<List<RangingResult>, List<RangingResult>> results =

@@ -21,11 +21,14 @@ import static android.Manifest.permission.ACCESS_WIFI_STATE;
 import static android.Manifest.permission.CHANGE_WIFI_STATE;
 import static android.Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION;
 import static android.Manifest.permission.NEARBY_WIFI_DEVICES;
+import static android.Manifest.permission.NETWORK_SETTINGS;
+import static android.Manifest.permission.NETWORK_SETUP_WIZARD;
 import static android.Manifest.permission.READ_WIFI_CREDENTIAL;
 import static android.Manifest.permission.REQUEST_COMPANION_PROFILE_AUTOMOTIVE_PROJECTION;
 
 import android.Manifest;
 import android.annotation.CallbackExecutor;
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
@@ -71,7 +74,6 @@ import android.os.RemoteException;
 import android.os.WorkSource;
 import android.os.connectivity.WifiActivityEnergyInfo;
 import android.telephony.SubscriptionInfo;
-import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.CloseGuard;
@@ -368,7 +370,8 @@ public class WifiManager {
 
     /**
      * Status code if the calling app was approved by virtue of being a carrier privileged app.
-     * @see TelephonyManager#hasCarrierPrivileges().
+     *
+     * @see android.telephony.TelephonyManager#hasCarrierPrivileges()
      */
     public static final int STATUS_SUGGESTION_APPROVAL_APPROVED_BY_CARRIER_PRIVILEGE = 4;
 
@@ -382,6 +385,39 @@ public class WifiManager {
             })
     @Retention(RetentionPolicy.SOURCE)
     public @interface SuggestionUserApprovalStatus {}
+
+    /**
+     * Disable PNO scan until device reboot.
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.runtime_disable_pno_scan")
+    @SystemApi
+    public static final int PNO_SCAN_STATE_DISABLED_UNTIL_REBOOT = 0;
+
+    /**
+     * Disable PNO scan until device reboot or Wi-Fi is toggled.
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.runtime_disable_pno_scan")
+    @SystemApi
+    public static final int PNO_SCAN_STATE_DISABLED_UNTIL_WIFI_TOGGLE = 1;
+
+    /**
+     * Enable PNO scan.
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.runtime_disable_pno_scan")
+    @SystemApi
+    public static final int PNO_SCAN_STATE_ENABLED = 2;
+
+    /** @hide */
+    @IntDef(prefix = {"PNO_SCAN_STATE_"},
+            value = {PNO_SCAN_STATE_DISABLED_UNTIL_REBOOT,
+                    PNO_SCAN_STATE_DISABLED_UNTIL_WIFI_TOGGLE,
+                    PNO_SCAN_STATE_ENABLED
+            })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface PnoScanState {}
 
     /**
      * If one of the removed suggestions is currently connected, that network will be disconnected
@@ -847,10 +883,20 @@ public class WifiManager {
     public static final int API_SET_TDLS_ENABLED_WITH_MAC_ADDRESS = 35;
 
     /**
+     * A constant used in {@link WifiManager#getLastCallerInfoForApi(int, Executor, BiConsumer)}
+     * Tracks usage of {@link WifiManager#setPnoScanState(int)}
+     *
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.runtime_disable_pno_scan")
+    @SystemApi
+    public static final int API_SET_PNO_SCAN_ENABLED = 36;
+
+    /**
      * Used internally to keep track of boundary.
      * @hide
      */
-    public static final int API_MAX = 36;
+    public static final int API_MAX = 37;
 
     /**
      * Broadcast intent action indicating that a Passpoint provider icon has been received.
@@ -3902,11 +3948,24 @@ public class WifiManager {
      * @hide
      */
     public static final long WIFI_FEATURE_DUAL_BAND_SIMULTANEOUS = 1L << 57;
+
     /**
      * Support for TID-To-Link Mapping negotiation.
      * @hide
      */
     public static final long WIFI_FEATURE_T2LM_NEGOTIATION = 1L << 58;
+
+    /**
+     * Support for WEP Wi-Fi Network
+     * @hide
+     */
+    public static final long WIFI_FEATURE_WEP = 1L << 59;
+
+    /**
+     * Support for WPA PERSONAL Wi-Fi Network
+     * @hide
+     */
+    public static final long WIFI_FEATURE_WPA_PERSONAL = 1L << 60;
 
     private long getSupportedFeatures() {
         try {
@@ -4093,6 +4152,16 @@ public class WifiManager {
     }
 
     /**
+     * @return true if this device supports Low latency mode.
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.low_latency_lock_listener")
+    @SystemApi
+    public boolean isLowLatencyModeSupported() {
+        return isFeatureSupported(WIFI_FEATURE_LOW_LATENCY);
+    }
+
+    /**
      * Check if the chipset supports 2.4GHz band.
      * @return {@code true} if supported, {@code false} otherwise.
      */
@@ -4160,10 +4229,6 @@ public class WifiManager {
      * Query whether or not the device supports concurrency of Station (STA) + multiple access
      * points (AP) (where the APs bridged together).
      *
-     * See {@link SoftApConfiguration.Builder#setBands(int[])}
-     * or {@link SoftApConfiguration.Builder#setChannels(android.util.SparseIntArray)} to configure
-     * bridged AP when the bridged AP supported.
-     *
      * @return true if this device supports concurrency of STA + multiple APs which are bridged
      *         together, false otherwise.
      */
@@ -4174,10 +4239,6 @@ public class WifiManager {
     /**
      * Query whether or not the device supports multiple Access point (AP) which are bridged
      * together.
-     *
-     * See {@link SoftApConfiguration.Builder#setBands(int[])}
-     * or {@link SoftApConfiguration.Builder#setChannels(android.util.SparseIntArray)} to configure
-     * bridged AP when the bridged AP supported.
      *
      * @return true if this device supports concurrency of multiple AP which bridged together,
      *         false otherwise.
@@ -7648,7 +7709,13 @@ public class WifiManager {
             synchronized (mBinder) {
                 if (mRefCounted ? (++mRefCount == 1) : (!mHeld)) {
                     try {
-                        mService.acquireWifiLock(mBinder, mLockType, mTag, mWorkSource);
+                        Bundle extras = new Bundle();
+                        if (SdkLevel.isAtLeastS()) {
+                            extras.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE,
+                                    mContext.getAttributionSource());
+                        }
+                        mService.acquireWifiLock(mBinder, mLockType, mTag, mWorkSource,
+                                mContext.getOpPackageName(), extras);
                         synchronized (WifiManager.this) {
                             if (mActiveLockCount >= MAX_ACTIVE_LOCKS) {
                                 mService.releaseWifiLock(mBinder);
@@ -7744,7 +7811,13 @@ public class WifiManager {
                 }
                 if (changed && mHeld) {
                     try {
-                        mService.updateWifiLockWorkSource(mBinder, mWorkSource);
+                        Bundle extras = new Bundle();
+                        if (SdkLevel.isAtLeastS()) {
+                            extras.putParcelable(EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE,
+                                    mContext.getAttributionSource());
+                        }
+                        mService.updateWifiLockWorkSource(mBinder, mWorkSource,
+                                mContext.getOpPackageName(), extras);
                     } catch (RemoteException e) {
                         throw e.rethrowFromSystemServer();
                     }
@@ -7803,46 +7876,50 @@ public class WifiManager {
     }
 
     /**
-     * Interface for low latency lock listener. Should be extended by application and
-     * set when calling {@link WifiManager#addWifiLowLatencyLockListener(Executor,
+     * Interface for low latency lock listener. Should be extended by application and set when
+     * calling {@link WifiManager#addWifiLowLatencyLockListener(Executor,
      * WifiLowLatencyLockListener)}.
      *
      * @hide
      */
+    @FlaggedApi("com.android.wifi.flags.low_latency_lock_listener")
+    @SystemApi
     public interface WifiLowLatencyLockListener {
         /**
          * Provides low latency mode is activated or not. Triggered when Wi-Fi chip enters into low
          * latency mode.
          *
-         * Note: Always called with current state when a new listener gets registered.
+         * <p>Note: Always called with current state when a new listener gets registered.
          */
+        @FlaggedApi("com.android.wifi.flags.low_latency_lock_listener")
         void onActivatedStateChanged(boolean activated);
 
         /**
          * Provides UIDs (lock owners) of the applications which currently acquired low latency
          * lock. Triggered when an application acquires or releases a lock.
          *
-         * Note: Always called with UIDs of the current acquired locks when a new listener gets
+         * <p>Note: Always called with UIDs of the current acquired locks when a new listener gets
          * registered.
          *
          * @param ownerUids An array of UIDs.
          */
+        @FlaggedApi("com.android.wifi.flags.low_latency_lock_listener")
         default void onOwnershipChanged(@NonNull int[] ownerUids) {}
 
         /**
          * Provides UIDs of the applications which acquired the low latency lock and is currently
-         * active. See {@link WifiManager#WIFI_MODE_FULL_LOW_LATENCY} for the conditions to be
-         * met for low latency lock to be active. Triggered when application acquiring the lock
+         * active. See {@link WifiManager#WIFI_MODE_FULL_LOW_LATENCY} for the conditions to be met
+         * for low latency lock to be active. Triggered when application acquiring the lock
          * satisfies or does not satisfy low latency conditions when the low latency mode is
-         * activated. Also gets triggered when the lock becomes active, immediately after the
-         * {@link WifiLowLatencyLockListener#onActivatedStateChanged(boolean)} callback is
-         * triggered.
+         * activated. Also gets triggered when the lock becomes active, immediately after the {@link
+         * WifiLowLatencyLockListener#onActivatedStateChanged(boolean)} callback is triggered.
          *
-         * Note: Always called with UIDs of the current active locks when a new listener gets
+         * <p>Note: Always called with UIDs of the current active locks when a new listener gets
          * registered if the Wi-Fi chip is in low latency mode.
          *
          * @param activeUids An array of UIDs.
          */
+        @FlaggedApi("com.android.wifi.flags.low_latency_lock_listener")
         default void onActiveUsersChanged(@NonNull int[] activeUids) {}
     }
 
@@ -7889,9 +7966,9 @@ public class WifiManager {
      * registered listener using {@link WifiManager#removeWifiLowLatencyLockListener(
      * WifiLowLatencyLockListener)}.
      *
-     * Applications should have the {@link android.Manifest.permission#NETWORK_SETTINGS} and
-     * {@link android.Manifest.permission#MANAGE_WIFI_NETWORK_SELECTION} permission. Callers
-     * without the permission will trigger a {@link java.lang.SecurityException}.
+     * <p>Applications should have the {@link android.Manifest.permission#NETWORK_SETTINGS} and
+     * {@link android.Manifest.permission#MANAGE_WIFI_NETWORK_SELECTION} permission. Callers without
+     * the permission will trigger a {@link java.lang.SecurityException}.
      *
      * @param executor The Executor on which to execute the callbacks.
      * @param listener The listener for the latency mode change.
@@ -7899,10 +7976,13 @@ public class WifiManager {
      * @throws SecurityException if the caller is not allowed to call this API
      * @hide
      */
+    @FlaggedApi("com.android.wifi.flags.low_latency_lock_listener")
+    @SystemApi
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    @RequiresPermission(anyOf = {android.Manifest.permission.NETWORK_SETTINGS,
-            MANAGE_WIFI_NETWORK_SELECTION})
-    public void addWifiLowLatencyLockListener(@NonNull @CallbackExecutor Executor executor,
+    @RequiresPermission(
+            anyOf = {android.Manifest.permission.NETWORK_SETTINGS, MANAGE_WIFI_NETWORK_SELECTION})
+    public void addWifiLowLatencyLockListener(
+            @NonNull @CallbackExecutor Executor executor,
             @NonNull WifiLowLatencyLockListener listener) {
         if (executor == null) throw new IllegalArgumentException("executor cannot be null");
         if (listener == null) throw new IllegalArgumentException("listener cannot be null");
@@ -7927,13 +8007,16 @@ public class WifiManager {
 
     /**
      * Removes a listener added using {@link WifiManager#addWifiLowLatencyLockListener(Executor,
-     * WifiLowLatencyLockListener)}. After calling this method, applications will no longer
-     * receive low latency mode notifications.
+     * WifiLowLatencyLockListener)}. After calling this method, applications will no longer receive
+     * low latency mode notifications.
      *
      * @param listener the listener to be removed.
      * @throws IllegalArgumentException if incorrect input arguments are provided.
      * @hide
      */
+    @FlaggedApi("com.android.wifi.flags.low_latency_lock_listener")
+    @SystemApi
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void removeWifiLowLatencyLockListener(@NonNull WifiLowLatencyLockListener listener) {
         if (listener == null) throw new IllegalArgumentException("listener cannot be null");
         if (mVerboseLoggingEnabled) {
@@ -8190,7 +8273,10 @@ public class WifiManager {
      * @hide
      */
     @SystemApi
-    @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.DUMP
+    })
     public void setVerboseLoggingEnabled(boolean enable) {
         enableVerboseLogging(enable ? VERBOSE_LOGGING_LEVEL_ENABLED
                 : VERBOSE_LOGGING_LEVEL_DISABLED);
@@ -8206,7 +8292,10 @@ public class WifiManager {
      * @hide
      */
     @SystemApi
-    @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.DUMP
+    })
     public void setVerboseLoggingLevel(@VerboseLoggingLevel int verbose) {
         enableVerboseLogging(verbose);
     }
@@ -8216,11 +8305,16 @@ public class WifiManager {
             maxTargetSdk = Build.VERSION_CODES.Q,
             publicAlternatives = "Use {@code #setVerboseLoggingEnabled(boolean)} instead."
     )
-    @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.DUMP
+    })
     public void enableVerboseLogging(@VerboseLoggingLevel int verbose) {
         try {
             mService.enableVerboseLogging(verbose);
-            mVerboseLoggingEnabled = verbose == VERBOSE_LOGGING_LEVEL_ENABLED;
+            mVerboseLoggingEnabled =
+                    verbose == VERBOSE_LOGGING_LEVEL_ENABLED_SHOW_KEY
+                            || verbose == VERBOSE_LOGGING_LEVEL_ENABLED;
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -8238,7 +8332,9 @@ public class WifiManager {
      */
     @SystemApi
     public boolean isVerboseLoggingEnabled() {
-        return getVerboseLoggingLevel() > 0;
+        int verboseLoggingLevel = getVerboseLoggingLevel();
+        return verboseLoggingLevel == VERBOSE_LOGGING_LEVEL_ENABLED_SHOW_KEY
+                || verboseLoggingLevel == VERBOSE_LOGGING_LEVEL_ENABLED;
     }
 
     /**
@@ -8734,6 +8830,26 @@ public class WifiManager {
         return isFeatureSupported(WIFI_FEATURE_T2LM_NEGOTIATION);
     }
 
+
+    /**
+    * @return true if this device supports connections to Wi-Fi WEP networks.
+    */
+    @FlaggedApi("com.android.wifi.flags.wep_usage")
+    public boolean isWepSupported() {
+        return isFeatureSupported(WIFI_FEATURE_WEP);
+    }
+
+    /**
+    * @return true if this device supports connections to Wi-Fi WPA-Personal networks.
+    *
+    * Note that this is the older and less secure WPA-Personal protocol, not WPA2-Personal
+    * or later protocols.
+    */
+    @FlaggedApi("com.android.wifi.flags.wpa_personal_usage")
+    public boolean isWpaPersonalSupported() {
+        return isFeatureSupported(WIFI_FEATURE_WPA_PERSONAL);
+    }
+
     /**
      * Gets the factory Wi-Fi MAC addresses.
      * @return Array of String representing Wi-Fi MAC addresses sorted lexically or an empty Array
@@ -8929,23 +9045,31 @@ public class WifiManager {
     public static final int VERBOSE_LOGGING_LEVEL_ENABLED = 1;
 
     /**
-     * Verbose logging mode: ENABLED_SHOW_KEY.
-     * This mode causes the Wi-Fi password and encryption keys to be output to the logcat.
-     * This is security sensitive information useful for debugging.
-     * This configuration is enabled for 30 seconds and then falls back to
-     * the regular verbose mode (i.e. to {@link VERBOSE_LOGGING_LEVEL_ENABLED}).
-     * Show key mode is not persistent, i.e. rebooting the device would fallback to
-     * the regular verbose mode.
+     * Verbose logging mode: ENABLED_SHOW_KEY. This mode causes the Wi-Fi password and encryption
+     * keys to be output to the logcat. This is security sensitive information useful for debugging.
+     * This configuration is enabled for 30 seconds and then falls back to the regular verbose mode
+     * (i.e. to {@link VERBOSE_LOGGING_LEVEL_ENABLED}). Show key mode is not persistent, i.e.
+     * rebooting the device would fallback to the regular verbose mode.
+     *
      * @hide
      */
+    @SystemApi public static final int VERBOSE_LOGGING_LEVEL_ENABLED_SHOW_KEY = 2;
+
+    /**
+     * Verbose logging mode: only enable for Wi-Fi Aware feature.
+     *
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.verbose_logging_for_aware_only")
     @SystemApi
-    public static final int VERBOSE_LOGGING_LEVEL_ENABLED_SHOW_KEY = 2;
+    public static final int VERBOSE_LOGGING_LEVEL_WIFI_AWARE_ENABLED_ONLY = 3;
 
     /** @hide */
     @IntDef(prefix = {"VERBOSE_LOGGING_LEVEL_"}, value = {
             VERBOSE_LOGGING_LEVEL_DISABLED,
             VERBOSE_LOGGING_LEVEL_ENABLED,
             VERBOSE_LOGGING_LEVEL_ENABLED_SHOW_KEY,
+            VERBOSE_LOGGING_LEVEL_WIFI_AWARE_ENABLED_ONLY,
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface VerboseLoggingLevel {
@@ -10257,6 +10381,86 @@ public class WifiManager {
                     new PnoScanResultsCallbackProxy(executor, callback),
                     ssids, frequencies == null ? new int[0] : frequencies,
                     mContext.getOpPackageName(), mContext.getAttributionTag());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Wi-Fi Preferred Network Offload (PNO) scanning offloads scanning to the chip to save power
+     * when Wi-Fi is disconnected and the screen is off. See
+     * {@link https://source.android.com/docs/core/connect/wifi-scan} for more details.
+     * <p>
+     * This API can be used to enable or disable PNO scanning. After boot, PNO scanning is enabled
+     * by default. When PNO scanning is disabled, the Wi-Fi framework will not trigger scans at all
+     * when the screen is off. This can be used to save power on devices with small batteries.
+     *
+     * @param enabled True - enable PNO scanning
+     *                False - disable PNO scanning
+     * @param enablePnoScanAfterWifiToggle True - Wifi being enabled by
+     *                                     {@link #setWifiEnabled(boolean)} will re-enable PNO
+     *                                     scanning.
+     *                                     False - Wifi being enabled by
+     *                                     {@link #setWifiEnabled(boolean)} will not re-enable PNO
+     *                                     scanning.
+     *
+     * @throws SecurityException if the caller does not have permission.
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.runtime_disable_pno_scan")
+    @SystemApi
+    @RequiresPermission(
+            anyOf = {MANAGE_WIFI_NETWORK_SELECTION, NETWORK_SETTINGS, NETWORK_SETUP_WIZARD})
+    public void setPnoScanState(@PnoScanState int pnoScanState) {
+        try {
+            boolean enabled = false;
+            boolean enablePnoScanAfterWifiToggle = false;
+            switch (pnoScanState) {
+                case PNO_SCAN_STATE_DISABLED_UNTIL_REBOOT:
+                    break;
+                case PNO_SCAN_STATE_DISABLED_UNTIL_WIFI_TOGGLE:
+                    enablePnoScanAfterWifiToggle = true;
+                    break;
+                case PNO_SCAN_STATE_ENABLED:
+                    enabled = true;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid PnoScanState");
+            }
+            mService.setPnoScanEnabled(enabled, enablePnoScanAfterWifiToggle,
+                    mContext.getOpPackageName());
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Wi-Fi Preferred Network Offload (PNO) scanning offloads scanning to the chip to save power
+     * when Wi-Fi is disconnected and the screen is off. See
+     * {@link https://source.android.com/docs/core/connect/wifi-scan} for more details.
+     * <p>
+     * This API can be used to enable or disable PNO scanning. After boot, PNO scanning is enabled
+     * by default. When PNO scanning is disabled, the Wi-Fi framework will not trigger scans at all
+     * when the screen is off. This can be used to save power on devices with small batteries.
+     *
+     * @param enabled True - enable PNO scanning
+     *                False - disable PNO scanning
+     * @param enablePnoScanAfterWifiToggle True - Wifi being enabled by
+     *                                     {@link #setWifiEnabled(boolean)} will re-enable PNO
+     *                                     scanning.
+     *                                     False - Wifi being enabled by
+     *                                     {@link #setWifiEnabled(boolean)} will not re-enable PNO
+     *                                     scanning.
+     *
+     * @throws SecurityException if the caller does not have permission.
+     * @hide
+     */
+    @RequiresPermission(
+            anyOf = {MANAGE_WIFI_NETWORK_SELECTION, NETWORK_SETTINGS, NETWORK_SETUP_WIZARD})
+    public void setPnoScanEnabled(boolean enabled, boolean enablePnoScanAfterWifiToggle) {
+        try {
+            mService.setPnoScanEnabled(enabled, enablePnoScanAfterWifiToggle,
+                    mContext.getOpPackageName());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -11682,6 +11886,8 @@ public class WifiManager {
      * @throws UnsupportedOperationException if the get operation is not supported on this SDK.
      * @hide
      */
+    @SystemApi
+    @FlaggedApi("com.android.wifi.flags.mlo_link_capabilities_info")
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
     public void getMaxMloAssociationLinkCount(@NonNull @CallbackExecutor Executor executor,
@@ -11727,6 +11933,8 @@ public class WifiManager {
      * @throws UnsupportedOperationException if the get operation is not supported on this SDK
      * @hide
      */
+    @SystemApi
+    @FlaggedApi("com.android.wifi.flags.mlo_link_capabilities_info")
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
     public void getMaxMloStrLinkCount(@NonNull @CallbackExecutor Executor executor,
@@ -11768,6 +11976,8 @@ public class WifiManager {
      * @throws UnsupportedOperationException if the get operation is not supported on this SDK.
      * @hide
      */
+    @SystemApi
+    @FlaggedApi("com.android.wifi.flags.mlo_link_capabilities_info")
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @RequiresPermission(MANAGE_WIFI_NETWORK_SELECTION)
     public void getSupportedSimultaneousBandCombinations(
@@ -11794,6 +12004,74 @@ public class WifiManager {
                     });
                 }
             }, extras);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * This API allows a privileged application to set whether or not this device allows
+     * connections to Wi-Fi WEP networks.
+     *
+     * Note: The WEP connections may not work even if caller invokes this method with {@code true}
+     * because device may NOT support connections to Wi-Fi WEP networks.
+     * See: {@link #isWepSupported()}.
+     *
+     * @param isAllowed whether or not the user allow connections to Wi-Fi WEP networks.
+     * @throws SecurityException if the caller does not have permission.
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.wep_usage")
+    @SystemApi
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD
+    })
+    public void setWepAllowed(boolean isAllowed) {
+        try {
+            mService.setWepAllowed(isAllowed);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Query whether or not this device is configured to allow connections to Wi-Fi WEP networks.
+     * @see #setWepAllowed(boolean)
+     *
+     * Note: The WEP connections may not work even if this method returns {@code true} in the
+     * result callback because device may NOT support connections to Wi-Fi WEP networks.
+     * See: {@link #isWepSupported()}.
+     *
+     * @param executor The executor on which callback will be invoked.
+     * @param resultsCallback An asynchronous callback that will return {@code Boolean} indicating
+     *                        whether wep network support is enabled/disabled.
+     *
+     * @throws SecurityException if the caller does not have permission.
+     * @throws NullPointerException if the caller provided invalid inputs.
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.wep_usage")
+    @SystemApi
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD
+    })
+    public void queryWepAllowed(@NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<Boolean> resultsCallback) {
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
+        try {
+            mService.queryWepAllowed(
+                    new IBooleanListener.Stub() {
+                        @Override
+                        public void onResult(boolean value) {
+                            Binder.clearCallingIdentity();
+                            executor.execute(() -> {
+                                resultsCallback.accept(value);
+                            });
+                        }
+                    });
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

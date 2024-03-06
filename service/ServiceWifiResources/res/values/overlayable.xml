@@ -96,6 +96,7 @@
           <item type="bool" name="config_wifiEnable6ghzPscScanning" />
           <item type="bool" name="config_wifiEnablePartialInitialScan" />
           <item type="integer" name="config_wifiInitialPartialScanChannelMaxCount" />
+          <item type="integer" name="config_wifiInitialPartialScanMaxNewChannelsPerNetwork" />
           <item type="integer" name="config_wifiInitialPartialScanChannelCacheAgeMins" />
           <item type="bool" name="config_wifi_framework_use_single_radio_chain_scan_results_network_selection" />
           <item type="bool" name="config_wifiAllowLinkingUnknownDefaultGatewayConfigurations" />
@@ -114,6 +115,7 @@
           <item type="bool" name="config_wifiSoftap24ghzSupported" />
           <item type="bool" name="config_wifiSoftap5ghzSupported" />
           <item type="bool" name="config_wifiSoftap6ghzSupported" />
+          <item type="bool" name="config_wifiAfcSupported" />
           <item type="bool" name="config_wifiSoftap60ghzSupported" />
           <item type="bool" name="config_wifiSoftapAutoAppendLowerBandsToBandConfigurationEnabled" />
           <item type="bool" name="config_wifiSoftapHeSuBeamformerSupported" />
@@ -165,6 +167,7 @@
           <item type="integer" name="config_wifiDisableReasonByWrongPasswordThreshold" />
           <item type="integer" name="config_wifiDisableReasonAuthenticationNoSubscriptionThreshold" />
           <item type="integer" name="config_wifiDisableReasonConsecutiveFailuresThreshold" />
+          <item type="integer" name="config_wifiDisableTemporaryMaximumDurationMs" />
 
           <item type="integer" name="config_wifiDisableReasonAssociationRejectionDurationMs" />
           <item type="integer" name="config_wifiDisableReasonAuthenticationFailureDurationMs" />
@@ -255,6 +258,7 @@
           <item type="array" name="config_wifiDisableReasonAuthenticationFailureCarrierSpecificThreshold_carrier_overrides" />
           <item type="integer" name="config_wifiDisableReasonAuthenticationFailureCarrierSpecificDurationMs" />
           <item type="array" name="config_wifiDisableReasonAuthenticationFailureCarrierSpecificDurationMs_carrier_overrides" />
+          <item type="array" name="config_wifiEapFailureConfig" />
           <item type="bool" name="config_wifiAllowMultipleNetworksOnSameAwareNdi"/>
           <item type="integer" name="config_wifiAwareInstantCommunicationModeDurationMillis" />
           <item type="bool" name="config_wifiSupportChannelOnDataPath"/>
@@ -274,6 +278,7 @@
           <item type="integer" name="config_wifiMaxNumWifiConfigurations" />
           <item type="integer" name="config_wifiMaxNumWifiConfigurationsAddedByAllApps" />
           <item type="bool" name="config_wifiAllowInsecureEnterpriseConfigurationsForSettingsAndSUW" />
+          <item type="bool" name="config_wifiAllowMultiInternetConnectDual5GFrequency" />
           <item type="integer" name="config_wifiConnectivityLocalLogMaxLinesLowRam" />
           <item type="integer" name="config_wifiConnectivityLocalLogMaxLinesHighRam" />
           <item type="integer" name="config_wifiClientModeImplNumLogRecs" />
@@ -307,6 +312,7 @@
           <item type="bool" name="config_wifiAwareNdpSecurityUpdateOnSameNdi" />
           <item type="array" name="config_wifiBackgroundRttThrottleExceptionList" />
           <item type="array" name="config_wifiCharsetsForSsidTranslation" />
+          <item type="array" name="config_wifiAfcServerUrlsForCountry" />
           <item type="string" name="config_wifiBugreportDeepLink" />
           <item type="bool" name="config_wifiWaitForDestroyedListeners" />
           <item type="integer" name="config_wifiNetworkSpecifierMaxPreferredChannels" />
@@ -324,7 +330,12 @@
           <item type="bool" name="config_wifiP2pGoIpAddressAllocationInEapolFrames" />
           <item type="string"  name="config_wifiP2pGoEapolIpAddressRangeStart" />
           <item type="string"  name="config_wifiP2pGoEapolIpAddressRangeEnd" />
+          <item type="bool" name="config_wifiDisableFirmwareRoamingInIdleMode" />
           <item type="bool" name="config_wifiUpdateCountryCodeFromScanResultGeneric" />
+          <item type="bool" name ="config_aware_vdbg_enable_on_verbose_logging" />
+          <item type="bool" name="config_wifiSofapHalMapWpa3TransitionModeToWpa3OnlyIn6GHzBand" />
+          <item type="bool" name ="config_wifiRemainConnectedAfterIpProvisionTimeout" />
+          <item type="bool" name ="config_wifiDisableNudDisconnectsForWapiInSpecificCc" />
 
           <!-- Params from config.xml that can be overlayed -->
 
@@ -471,6 +482,7 @@
           <item type="style" name="wifi_section" />
           <item type="style" name="wifi_dialog" />
           <item type="style" name="wifi_p2p_invitation_received_dialog" />
+          <item type="style" name="wifi_p2p_dialog_timeout" />
           <item type="style" name="wifi_p2p_dialog_row_label" />
           <item type="style" name="wifi_p2p_dialog_row_content" />
           <item type="style" name="wifi_p2p_dialog_enter_pin_message" />

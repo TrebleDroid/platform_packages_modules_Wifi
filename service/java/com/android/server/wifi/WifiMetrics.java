@@ -20,7 +20,7 @@ import static android.net.wifi.WifiConfiguration.MeteredOverride;
 
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_PRIMARY;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONFIG_SAVED;
-import static com.android.server.wifi.proto.WifiStatsLog.WIFI_THREAD_TASK_EXECUTED;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED;
 
 import static java.lang.StrictMath.toIntExact;
 
@@ -28,12 +28,11 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.ActivityManager;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.net.NetworkCapabilities;
 import android.net.wifi.EAPConstants;
 import android.net.wifi.IOnWifiUsabilityStatsListener;
 import android.net.wifi.MloLink;
@@ -43,12 +42,14 @@ import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApInfo;
 import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiAnnotations;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiConfiguration.NetworkSelectionStatus;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.DeviceMobilityState;
+import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiUsabilityStatsEntry.ProbeStatus;
 import android.net.wifi.hotspot2.PasspointConfiguration;
 import android.net.wifi.hotspot2.ProvisioningCallback;
@@ -58,7 +59,7 @@ import android.net.wifi.util.ScanResultUtil;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.os.PowerManager;
+import android.os.Process;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.SystemProperties;
@@ -130,6 +131,8 @@ import com.android.server.wifi.proto.nano.WifiMetricsProto.WifiUsabilityStatsEnt
 import com.android.server.wifi.rtt.RttMetrics;
 import com.android.server.wifi.scanner.KnownBandsChannelHelper;
 import com.android.server.wifi.util.InformationElementUtil;
+import com.android.server.wifi.util.InformationElementUtil.ApType6GHz;
+import com.android.server.wifi.util.InformationElementUtil.WifiMode;
 import com.android.server.wifi.util.IntCounter;
 import com.android.server.wifi.util.IntHistogram;
 import com.android.server.wifi.util.MetricsUtils;
@@ -297,6 +300,13 @@ public class WifiMetrics {
     private IntCounter mRecentFailureAssociationStatus = new IntCounter();
     private boolean mFirstConnectionAfterBoot = true;
     private long mLastTotalBeaconRx = 0;
+    private int mScorerUid = Process.WIFI_UID;
+
+    /**
+     * Wi-Fi usability state per interface as predicted by the network scorer.
+     */
+    public enum WifiUsabilityState {UNKNOWN, USABLE, UNUSABLE};
+    private final Map<String, WifiUsabilityState> mWifiUsabilityStatePerIface = new ArrayMap<>();
 
     /**
      * Metrics are stored within an instance of the WifiLog proto during runtime,
@@ -602,6 +612,36 @@ public class WifiMetrics {
 
     private final WifiToWifiSwitchStats mWifiToWifiSwitchStats = new WifiToWifiSwitchStats();
 
+    /** Wi-Fi link specific metrics (MLO). */
+    public static class LinkMetrics {
+        private long mTotalBeaconRx = 0;
+        private @android.net.wifi.WifiUsabilityStatsEntry.LinkState int mLinkUsageState =
+                android.net.wifi.WifiUsabilityStatsEntry.LINK_STATE_UNKNOWN;
+
+        /** Get Total beacon received on this link */
+        public long getTotalBeaconRx() {
+            return mTotalBeaconRx;
+        }
+
+        /** Set Total beacon received on this link */
+        public void setTotalBeaconRx(long totalBeaconRx) {
+            this.mTotalBeaconRx = totalBeaconRx;
+        }
+
+        /** Get link usage state */
+        public @android.net.wifi.WifiUsabilityStatsEntry.LinkState int getLinkUsageState() {
+            return mLinkUsageState;
+        }
+
+        /** Set link usage state */
+        public void setLinkUsageState(
+                @android.net.wifi.WifiUsabilityStatsEntry.LinkState int linkUsageState) {
+            this.mLinkUsageState = linkUsageState;
+        }
+    }
+
+    public SparseArray<LinkMetrics> mLastLinkMetrics = new SparseArray<>();
+
     @VisibleForTesting
     static class NetworkSelectionExperimentResults {
         public static final int MAX_CHOICES = 10;
@@ -626,18 +666,51 @@ public class WifiMetrics {
         private long mSessionEndTimeMillis;
         private int mBand;
         private int mAuthType;
+        private ConnectionEvent mConnectionEvent;
+        private long mLastRoamCompleteMillis;
 
-        SessionData(String ssid, long sessionStartTimeMillis, int band, int authType) {
+        SessionData(ConnectionEvent connectionEvent, String ssid, long sessionStartTimeMillis,
+                int band, int authType) {
+            mConnectionEvent = connectionEvent;
             mSsid = ssid;
             mSessionStartTimeMillis = sessionStartTimeMillis;
             mBand = band;
             mAuthType = authType;
+            mLastRoamCompleteMillis = sessionStartTimeMillis;
+        }
+    }
+
+    /**
+     * Sets the timestamp after roaming is complete.
+     */
+    public void onRoamComplete() {
+        if (mCurrentSession != null) {
+            mCurrentSession.mLastRoamCompleteMillis = mClock.getElapsedSinceBootMillis();
         }
     }
 
     class RouterFingerPrint {
         private final WifiMetricsProto.RouterFingerPrint mRouterFingerPrintProto =
                 new WifiMetricsProto.RouterFingerPrint();
+        // Additional parameters which is not captured in WifiMetricsProto.RouterFingerPrint.
+        private boolean mIsFrameworkInitiatedRoaming = false;
+        private @WifiConfiguration.SecurityType int mSecurityMode =
+                WifiConfiguration.SECURITY_TYPE_OPEN;
+        private boolean mIsIncorrectlyConfiguredAsHidden = false;
+        private int mWifiStandard = WifiMode.MODE_UNDEFINED;
+        private boolean mIs11bSupported = false;
+        private boolean mIsMboSupported = false;
+        private boolean mIsOceSupported = false;
+        private boolean mIsFilsSupported = false;
+        private boolean mIsIndividualTwtSupported = false;
+        private boolean mIsBroadcastTwtSupported = false;
+        private boolean mIsRestrictedTwtSupported = false;
+        private boolean mIsTwtRequired = false;
+        private boolean mIs11AzSupported = false;
+        private boolean mIs11McSupported = false;
+        private boolean mIsEcpsPriorityAccessSupported = false;
+        private NetworkDetail.HSRelease mHsRelease = NetworkDetail.HSRelease.Unknown;
+        private ApType6GHz mApType6GHz = ApType6GHz.AP_TYPE_6GHZ_UNKNOWN;
 
         public String toString() {
             StringBuilder sb = new StringBuilder();
@@ -657,6 +730,22 @@ public class WifiMetrics {
                         .maxSupportedTxLinkSpeedMbps);
                 sb.append(", mMaxSupportedRxLinkSpeedMbps=" + mRouterFingerPrintProto
                         .maxSupportedRxLinkSpeedMbps);
+                sb.append(", mIsFrameworkInitiatedRoaming=" + mIsFrameworkInitiatedRoaming);
+                sb.append(", mIsIncorrectlyConfiguredAsHidden=" + mIsIncorrectlyConfiguredAsHidden);
+                sb.append(", mWifiStandard=" + mWifiStandard);
+                sb.append(", mIs11bSupported=" + mIs11bSupported);
+                sb.append(", mIsMboSupported=" + mIsMboSupported);
+                sb.append(", mIsOceSupported=" + mIsOceSupported);
+                sb.append(", mIsFilsSupported=" + mIsFilsSupported);
+                sb.append(", mIsIndividualTwtSupported=" + mIsIndividualTwtSupported);
+                sb.append(", mIsBroadcastTwtSupported=" + mIsBroadcastTwtSupported);
+                sb.append(", mIsRestrictedTwtSupported=" + mIsRestrictedTwtSupported);
+                sb.append(", mIsTwtRequired=" + mIsTwtRequired);
+                sb.append(", mIs11mcSupported=" + mIs11McSupported);
+                sb.append(", mIs11azSupported=" + mIs11AzSupported);
+                sb.append(", mApType6Ghz=" + mApType6GHz);
+                sb.append(", mIsEcpsPriorityAccessSupported=" + mIsEcpsPriorityAccessSupported);
+                sb.append(", mHsRelease=" + mHsRelease);
             }
             return sb.toString();
         }
@@ -699,7 +788,8 @@ public class WifiMetrics {
                 return WifiMetricsProto.RouterFingerPrint.TYPE_EAP_UNKNOWN;
         }
     }
-    private int getAuthPhase2MethodProto(int phase2Method) {
+
+    private static int getAuthPhase2MethodProto(int phase2Method) {
         switch (phase2Method) {
             case WifiEnterpriseConfig.Phase2.PAP:
                 return WifiMetricsProto.RouterFingerPrint.TYPE_PHASE2_PAP;
@@ -1085,6 +1175,11 @@ public class WifiMetrics {
         private boolean mIsCarrierWifi;
         private boolean mIsOobPseudonymEnabled;
         private int mRole;
+        private int mCarrierId;
+        private int mEapType;
+        private int mPhase2Method;
+        private int mPasspointRoamingType;
+        private int mTofuConnectionState;
 
         private ConnectionEvent() {
             mConnectionEvent = new WifiMetricsProto.ConnectionEvent();
@@ -1389,6 +1484,7 @@ public class WifiMetrics {
                         mRouterFingerPrint.mRouterFingerPrintProto.ocspType =
                                 getOcspTypeProto(ocspType);
                     }
+                    mTofuConnectionState = convertTofuConnectionStateToProto(config);
                 }
             }
         }
@@ -1507,10 +1603,18 @@ public class WifiMetrics {
         }
     }
 
-    public WifiMetrics(Context context, FrameworkFacade facade, Clock clock, Looper looper,
-            WifiAwareMetrics awareMetrics, RttMetrics rttMetrics,
-            WifiPowerMetrics wifiPowerMetrics, WifiP2pMetrics wifiP2pMetrics,
-            DppMetrics dppMetrics, WifiMonitor wifiMonitor) {
+    public WifiMetrics(
+            Context context,
+            FrameworkFacade facade,
+            Clock clock,
+            Looper looper,
+            WifiAwareMetrics awareMetrics,
+            RttMetrics rttMetrics,
+            WifiPowerMetrics wifiPowerMetrics,
+            WifiP2pMetrics wifiP2pMetrics,
+            DppMetrics dppMetrics,
+            WifiMonitor wifiMonitor,
+            WifiDeviceStateChangeManager wifiDeviceStateChangeManager) {
         mContext = context;
         mFacade = facade;
         mClock = clock;
@@ -1538,26 +1642,13 @@ public class WifiMetrics {
         mCurrentDeviceMobilityStatePnoScanStartMs = -1;
         mOnWifiUsabilityListeners = new RemoteCallbackList<>();
         mScanMetrics = new ScanMetrics(context, clock);
-    }
-
-    /** Begin listening to broadcasts */
-    public void start() {
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_SCREEN_ON);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-        mContext.registerReceiver(
-                new BroadcastReceiver() {
+        wifiDeviceStateChangeManager.registerStateChangeCallback(
+                new WifiDeviceStateChangeManager.StateChangeCallback() {
                     @Override
-                    public void onReceive(Context context, Intent intent) {
-                        String action = intent.getAction();
-                        if (action.equals(Intent.ACTION_SCREEN_ON)) {
-                            setScreenState(true);
-                        } else if (action.equals(Intent.ACTION_SCREEN_OFF)) {
-                            setScreenState(false);
-                        }
+                    public void onScreenStateChanged(boolean screenOn) {
+                        setScreenState(screenOn);
                     }
-                }, filter, null, mHandler);
-        setScreenState(mContext.getSystemService(PowerManager.class).isInteractive());
+                });
     }
 
     /** Sets internal ScoringParams member */
@@ -1850,13 +1941,13 @@ public class WifiMetrics {
                     endConnectionEvent(ifaceName,
                             ConnectionEvent.FAILURE_REDUNDANT_CONNECTION_ATTEMPT,
                             WifiMetricsProto.ConnectionEvent.HLF_NONE,
-                            WifiMetricsProto.ConnectionEvent.FAILURE_REASON_UNKNOWN, 0);
+                            WifiMetricsProto.ConnectionEvent.FAILURE_REASON_UNKNOWN, 0, 0);
                 } else {
                     // End Connection Event due to new connection attempt to different network
                     endConnectionEvent(ifaceName,
                             ConnectionEvent.FAILURE_NEW_CONNECTION_ATTEMPT,
                             WifiMetricsProto.ConnectionEvent.HLF_NONE,
-                            WifiMetricsProto.ConnectionEvent.FAILURE_REASON_UNKNOWN, 0);
+                            WifiMetricsProto.ConnectionEvent.FAILURE_REASON_UNKNOWN, 0, 0);
                 }
             }
             // If past maximum connection events, start removing the oldest
@@ -1903,6 +1994,13 @@ public class WifiMetrics {
                         mNetworkIdToNominatorId.get(config.networkId,
                                 WifiMetricsProto.ConnectionEvent.NOMINATOR_UNKNOWN);
                 currentConnectionEvent.mConnectionEvent.isCarrierMerged = config.carrierMerged;
+                currentConnectionEvent.mCarrierId = config.carrierId;
+                if (config.enterpriseConfig != null) {
+                    currentConnectionEvent.mEapType = config.enterpriseConfig.getEapMethod();
+                    currentConnectionEvent.mPhase2Method =
+                            config.enterpriseConfig.getPhase2Method();
+                    currentConnectionEvent.mPasspointRoamingType = Utils.getRoamingType(config);
+                }
 
                 ScanResult candidate = config.getNetworkSelectionStatus().getCandidate();
                 if (candidate != null) {
@@ -1919,6 +2017,8 @@ public class WifiMetrics {
                 currentConnectionEvent.mConnectionEvent.isOsuProvisioned = false;
                 SecurityParams params = config.getNetworkSelectionStatus()
                         .getCandidateSecurityParams();
+                currentConnectionEvent.mRouterFingerPrint.mSecurityMode =
+                        getSecurityMode(config, true);
                 if (config.isPasspoint()) {
                     currentConnectionEvent.mConnectionEvent.networkType =
                             WifiMetricsProto.ConnectionEvent.TYPE_PASSPOINT;
@@ -2039,6 +2139,44 @@ public class WifiMetrics {
         }
     }
 
+    private int toMetricEapType(int eapType) {
+        switch (eapType) {
+            case WifiEnterpriseConfig.Eap.TLS:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_TLS;
+            case WifiEnterpriseConfig.Eap.TTLS:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_TTLS;
+            case WifiEnterpriseConfig.Eap.SIM:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_SIM;
+            case WifiEnterpriseConfig.Eap.AKA:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_AKA;
+            case WifiEnterpriseConfig.Eap.AKA_PRIME:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_AKA_PRIME;
+            case WifiEnterpriseConfig.Eap.WAPI_CERT:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_WAPI_CERT;
+            case WifiEnterpriseConfig.Eap.UNAUTH_TLS:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_UNAUTH_TLS;
+            case WifiEnterpriseConfig.Eap.PEAP:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_PEAP;
+            case WifiEnterpriseConfig.Eap.PWD:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_PWD;
+            default:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_TYPE__TYPE_EAP_OTHERS;
+        }
+    }
+
+    private int toMetricPhase2Method(int phase2Method) {
+        switch (phase2Method) {
+            case WifiEnterpriseConfig.Phase2.PAP:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_INNER_METHOD__METHOD_PAP;
+            case WifiEnterpriseConfig.Phase2.MSCHAP:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_INNER_METHOD__METHOD_MSCHAP;
+            case WifiEnterpriseConfig.Phase2.MSCHAPV2:
+                return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_INNER_METHOD__METHOD_MSCHAP_V2;
+            default:
+                return  WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__EAP_INNER_METHOD__METHOD_OTHERS;
+        }
+    }
+
     /**
      * End a Connection event record. Call when wifi connection attempt succeeds or fails.
      * If a Connection event has not been started and is active when .end is called, then this
@@ -2054,7 +2192,8 @@ public class WifiMetrics {
             int level2FailureCode,
             int connectivityFailureCode,
             int level2FailureReason,
-            int frequency) {
+            int frequency,
+            int statusCode) {
         synchronized (mLock) {
             ConnectionEvent currentConnectionEvent = mCurrentConnectionEventPerIface.get(ifaceName);
             if (currentConnectionEvent != null) {
@@ -2067,7 +2206,8 @@ public class WifiMetrics {
                                 - currentConnectionEvent.mConnectionEvent.startTimeSinceBootMillis);
 
                 if (connectionSucceeded) {
-                    mCurrentSession = new SessionData(currentConnectionEvent.mConfigSsid,
+                    mCurrentSession = new SessionData(currentConnectionEvent,
+                            currentConnectionEvent.mConfigSsid,
                             mClock.getElapsedSinceBootMillis(),
                             band, currentConnectionEvent.mAuthType);
 
@@ -2101,8 +2241,17 @@ public class WifiMetrics {
                         timeSinceConnectedSeconds,
                         currentConnectionEvent.mIsCarrierWifi,
                         currentConnectionEvent.mIsOobPseudonymEnabled,
-                        currentConnectionEvent.mRole);
+                        currentConnectionEvent.mRole,
+                        statusCode,
+                        toMetricEapType(currentConnectionEvent.mEapType),
+                        toMetricPhase2Method(currentConnectionEvent.mPhase2Method),
+                        currentConnectionEvent.mPasspointRoamingType,
+                        currentConnectionEvent.mCarrierId,
+                        currentConnectionEvent.mTofuConnectionState);
 
+                if (connectionSucceeded) {
+                    reportRouterCapabilities(currentConnectionEvent.mRouterFingerPrint);
+                }
                 // ConnectionEvent already added to ConnectionEvents List. Safe to remove here.
                 mCurrentConnectionEventPerIface.remove(ifaceName);
                 if (!connectionSucceeded) {
@@ -2113,6 +2262,404 @@ public class WifiMetrics {
         }
     }
 
+    protected static int convertTofuConnectionStateToProto(WifiConfiguration config) {
+        if (!config.isEnterprise()) {
+            return WifiStatsLog
+                    .WIFI_CONFIGURED_NETWORK_INFO__TOFU_CONFIGURATION__TOFU_CONFIGURATION_UNSPECIFIED;
+        }
+
+        switch (config.enterpriseConfig.getTofuConnectionState()) {
+            case WifiEnterpriseConfig.TOFU_STATE_NOT_ENABLED:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__TOFU_CONFIGURATION__TOFU_CONFIGURATION_NOT_ENABLED;
+            case WifiEnterpriseConfig.TOFU_STATE_ENABLED_PRE_CONNECTION:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__TOFU_CONFIGURATION__TOFU_CONFIGURATION_ENABLED_PRE_CONNECTION;
+            case WifiEnterpriseConfig.TOFU_STATE_CONFIGURE_ROOT_CA:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__TOFU_CONFIGURATION__TOFU_CONFIGURATION_CONFIGURE_ROOT_CA;
+            case WifiEnterpriseConfig.TOFU_STATE_CERT_PINNING:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__TOFU_CONFIGURATION__TOFU_CONFIGURATION_CERT_PINNING;
+            default:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__TOFU_CONFIGURATION__TOFU_CONFIGURATION_UNSPECIFIED;
+        }
+    }
+
+    protected static int convertTofuDialogStateToProto(WifiConfiguration config) {
+        if (!config.isEnterprise()) {
+            return WifiStatsLog
+                    .WIFI_CONFIGURED_NETWORK_INFO__TOFU_DIALOG_STATE__TOFU_DIALOG_STATE_UNSPECIFIED;
+        }
+
+        switch (config.enterpriseConfig.getTofuDialogState()) {
+            case WifiEnterpriseConfig.TOFU_DIALOG_STATE_REJECTED:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__TOFU_DIALOG_STATE__TOFU_DIALOG_STATE_REJECTED;
+            case WifiEnterpriseConfig.TOFU_DIALOG_STATE_ACCEPTED:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__TOFU_DIALOG_STATE__TOFU_DIALOG_STATE_ACCEPTED;
+            default:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__TOFU_DIALOG_STATE__TOFU_DIALOG_STATE_UNSPECIFIED;
+        }
+    }
+
+    protected static int convertMacRandomizationToProto(
+            @WifiConfiguration.MacRandomizationSetting int macRandomizationSetting) {
+        switch (macRandomizationSetting) {
+            case WifiConfiguration.RANDOMIZATION_NONE:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__MAC_RANDOMIZATION__MAC_RANDOMIZATION_NONE;
+            case WifiConfiguration.RANDOMIZATION_PERSISTENT:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__MAC_RANDOMIZATION__MAC_RANDOMIZATION_PERSISTENT;
+            case WifiConfiguration.RANDOMIZATION_NON_PERSISTENT:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__MAC_RANDOMIZATION__MAC_RANDOMIZATION_NON_PERSISTENT;
+            case WifiConfiguration.RANDOMIZATION_AUTO:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__MAC_RANDOMIZATION__MAC_RANDOMIZATION_AUTO;
+            default:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__MAC_RANDOMIZATION__MAC_RANDOMIZATION_UNSPECIFIED;
+        }
+    }
+
+    protected static int convertMeteredOverrideToProto(
+            @WifiConfiguration.MeteredOverride int meteredOverride) {
+        switch (meteredOverride) {
+            case WifiConfiguration.METERED_OVERRIDE_NONE:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__METERED_OVERRIDE__METERED_OVERRIDE_NONE;
+            case WifiConfiguration.METERED_OVERRIDE_METERED:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__METERED_OVERRIDE__METERED_OVERRIDE_METERED;
+            case WifiConfiguration.METERED_OVERRIDE_NOT_METERED:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__METERED_OVERRIDE__METERED_OVERRIDE_NOT_METERED;
+            default:
+                return WifiStatsLog
+                        .WIFI_CONFIGURED_NETWORK_INFO__METERED_OVERRIDE__METERED_OVERRIDE_UNSPECIFIED;
+        }
+    }
+
+    protected static int getSecurityMode(WifiConfiguration config, boolean useCandidateParams) {
+        SecurityParams params =
+                useCandidateParams
+                        ? config.getNetworkSelectionStatus().getCandidateSecurityParams()
+                        : config.getNetworkSelectionStatus().getLastUsedSecurityParams();
+        if (params != null) {
+            return params.getSecurityType();
+        } else if (WifiConfigurationUtil.isConfigForWpa3Enterprise192BitNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE_192_BIT;
+        } else if (WifiConfigurationUtil.isConfigForWpa3EnterpriseNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE;
+        } else if (WifiConfigurationUtil.isConfigForDppNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_DPP;
+        } else if (WifiConfigurationUtil.isConfigForSaeNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_SAE;
+        } else if (WifiConfigurationUtil.isConfigForWapiPskNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_WAPI_PSK;
+        } else if (WifiConfigurationUtil.isConfigForWapiCertNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_WAPI_CERT;
+        } else if (WifiConfigurationUtil.isConfigForPskNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_PSK;
+        } else if (WifiConfigurationUtil.isConfigForOweNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_OWE;
+        } else if (WifiConfigurationUtil.isConfigForWepNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_WEP;
+        } else if (WifiConfigurationUtil.isConfigForOpenNetwork(config)) {
+            return WifiConfiguration.SECURITY_TYPE_OPEN;
+        } else {
+            Log.e(TAG, "Unknown security mode for config " + config);
+            return -1;
+        }
+    }
+
+    /**
+     * Check if the provided security type is enabled in the security params list.
+     */
+    private static boolean securityTypeEnabled(List<SecurityParams> securityParamsList,
+            int securityType) {
+        for (SecurityParams params : securityParamsList) {
+            if (params.isSecurityType(securityType) && params.isEnabled()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if any security parameters with the provided type were added by auto-upgrade.
+     */
+    private static boolean securityTypeAddedByAutoUpgrade(List<SecurityParams> securityParamsList,
+            int securityType) {
+        for (SecurityParams params : securityParamsList) {
+            if (params.isSecurityType(securityType) && params.isAddedByAutoUpgrade()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected static int convertSecurityModeToProto(WifiConfiguration config) {
+        if (config == null || config.getDefaultSecurityParams() == null) {
+            return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_UNKNOWN;
+        }
+        SecurityParams defaultParams = config.getDefaultSecurityParams();
+        List<SecurityParams> securityParamsList = config.getSecurityParamsList();
+        switch (defaultParams.getSecurityType()) {
+            case WifiConfiguration.SECURITY_TYPE_OPEN:
+            case WifiConfiguration.SECURITY_TYPE_OWE: {
+                boolean openEnabled = securityTypeEnabled(
+                        securityParamsList, WifiConfiguration.SECURITY_TYPE_OPEN);
+                boolean oweEnabled = securityTypeEnabled(
+                        securityParamsList, WifiConfiguration.SECURITY_TYPE_OWE);
+                if (openEnabled && !oweEnabled) {
+                    // OWE params may be disabled or may not exist.
+                    return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_NONE;
+                } else if (!openEnabled && oweEnabled) {
+                    // Open params may get disabled via TDI.
+                    return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_OWE;
+                }
+
+                if (securityTypeAddedByAutoUpgrade(
+                        securityParamsList, WifiConfiguration.SECURITY_TYPE_OWE)) {
+                    // User configured this network using Open, but OWE params were auto-added.
+                    return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_NONE;
+                }
+                // User manually configured this network with both Open and OWE params.
+                return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_OWE_TRANSITION;
+            }
+            case WifiConfiguration.SECURITY_TYPE_WEP:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WEP;
+            case WifiConfiguration.SECURITY_TYPE_PSK: {
+                boolean pskEnabled = securityTypeEnabled(
+                        securityParamsList, WifiConfiguration.SECURITY_TYPE_PSK);
+                boolean saeEnabled = securityTypeEnabled(
+                        securityParamsList, WifiConfiguration.SECURITY_TYPE_SAE);
+                if (pskEnabled && !saeEnabled) {
+                    // WPA3 params may be disabled or may not exist.
+                    return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA2_PERSONAL;
+                } else if (!pskEnabled && saeEnabled) {
+                    // WPA2 params may get disabled via TDI.
+                    return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA3_PERSONAL;
+                }
+
+                if (securityTypeAddedByAutoUpgrade(
+                        securityParamsList, WifiConfiguration.SECURITY_TYPE_SAE)) {
+                    // User configured this network using WPA2, but WPA3 params were auto-added.
+                    return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA2_PERSONAL;
+                }
+                // User manually configured this network with both WPA2 and WPA3 params.
+                return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA3_WPA2_PERSONAL_TRANSITION;
+            }
+            case WifiConfiguration.SECURITY_TYPE_SAE:
+                return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA3_PERSONAL;
+            case WifiConfiguration.SECURITY_TYPE_WAPI_PSK:
+                return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WAPI_PSK;
+            case WifiConfiguration.SECURITY_TYPE_WAPI_CERT:
+                return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WAPI_CERT;
+            case WifiConfiguration.SECURITY_TYPE_DPP:
+                return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_DPP;
+            case WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE_192_BIT:
+                return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA3_ENTERPRISE_192_BIT;
+            case WifiConfiguration.SECURITY_TYPE_EAP:
+            case WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE:
+            case WifiConfiguration.SECURITY_TYPE_PASSPOINT_R1_R2:
+            case WifiConfiguration.SECURITY_TYPE_PASSPOINT_R3: {
+                if (WifiConfigurationUtil.isConfigForWpa3EnterpriseNetwork(config)) {
+                    return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA3_ENTERPRISE;
+                }
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA_ENTERPRISE_LEGACY;
+            }
+            default:
+                return WifiStatsLog.WIFI_CONFIGURED_NETWORK_INFO__CONNECTED_SECURITY_MODE__SECURITY_MODE_INVALID;
+        }
+    }
+
+    static int convertSecurityModeToProto(@WifiConfiguration.SecurityType int securityMode) {
+        switch (securityMode) {
+            case WifiConfiguration.SECURITY_TYPE_OPEN:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_NONE;
+            case WifiConfiguration.SECURITY_TYPE_WEP:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WEP;
+            case WifiConfiguration.SECURITY_TYPE_PSK:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA2_PERSONAL;
+            case WifiConfiguration.SECURITY_TYPE_PASSPOINT_R1_R2:
+                // Passpoint R1 & R2 uses WPA2 Enterprise (Legacy)
+            case WifiConfiguration.SECURITY_TYPE_EAP:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA_ENTERPRISE_LEGACY;
+            case WifiConfiguration.SECURITY_TYPE_SAE:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA3_PERSONAL;
+            case WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE_192_BIT:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA3_ENTERPRISE_192_BIT;
+            case WifiConfiguration.SECURITY_TYPE_OWE:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_OWE;
+            case WifiConfiguration.SECURITY_TYPE_WAPI_PSK:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WAPI_PSK;
+            case WifiConfiguration.SECURITY_TYPE_WAPI_CERT:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WAPI_CERT;
+            case WifiConfiguration.SECURITY_TYPE_PASSPOINT_R3:
+                // Passpoint R3 uses WPA3 Enterprise
+            case WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_WPA3_ENTERPRISE;
+            case WifiConfiguration.SECURITY_TYPE_DPP:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_DPP;
+            default:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CONNECTED_SECURITY_MODE__SECURITY_MODE_UNKNOWN;
+        }
+    }
+
+    private int convertHsReleasetoProto(NetworkDetail.HSRelease hsRelease) {
+        if (hsRelease == NetworkDetail.HSRelease.R1) {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__PASSPOINT_RELEASE__PASSPOINT_RELEASE_1;
+        } else if (hsRelease == NetworkDetail.HSRelease.R2) {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__PASSPOINT_RELEASE__PASSPOINT_RELEASE_2;
+        } else if (hsRelease == NetworkDetail.HSRelease.R3) {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__PASSPOINT_RELEASE__PASSPOINT_RELEASE_3;
+        } else {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__PASSPOINT_RELEASE__PASSPOINT_RELEASE_UNKNOWN;
+        }
+    }
+
+    private int convertApType6GhzToProto(ApType6GHz apType6Ghz) {
+        if (apType6Ghz == ApType6GHz.AP_TYPE_6GHZ_INDOOR) {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__AP_TYPE_6GHZ__AP_TYPE_6GHZ_INDOOR;
+        } else if (apType6Ghz == ApType6GHz.AP_TYPE_6GHZ_STANDARD_POWER) {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__AP_TYPE_6GHZ__AP_TYPE_6GHZ_STANDARD_POWER;
+        } else {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__AP_TYPE_6GHZ__AP_TYPE_6HZ_UNKNOWN;
+        }
+    }
+
+    private int convertWifiStandardToProto(int wifiMode) {
+        switch (wifiMode) {
+            case WifiMode.MODE_11A:
+            case WifiMode.MODE_11B:
+            case WifiMode.MODE_11G:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__STANDARD__WIFI_STANDARD_LEGACY;
+            case WifiMode.MODE_11N:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__STANDARD__WIFI_STANDARD_11N;
+            case WifiMode.MODE_11AC:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__STANDARD__WIFI_STANDARD_11AC;
+            case WifiMode.MODE_11AX:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__STANDARD__WIFI_STANDARD_11AX;
+            case WifiMode.MODE_11BE:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__STANDARD__WIFI_STANDARD_11BE;
+            case WifiMode.MODE_UNDEFINED:
+            default:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__STANDARD__WIFI_STANDARD_UNKNOWN;
+        }
+
+    }
+
+    protected static int convertEapMethodToProto(WifiConfiguration config) {
+        if (config.enterpriseConfig == null) {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_UNKNOWN;
+        }
+        return convertEapMethodToProto(config.enterpriseConfig.getEapMethod());
+    }
+
+    private static int convertEapMethodToProto(int eapMethod) {
+        switch (eapMethod) {
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_WAPI_CERT:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_WAPI_CERT;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_TLS:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_TLS;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_UNAUTH_TLS:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_UNAUTH_TLS;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_PEAP:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_PEAP;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_PWD:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_PWD;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_TTLS:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_TTLS;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_SIM:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_SIM;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_AKA:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_AKA;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_EAP_AKA_PRIME:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_EAP_AKA_PRIME;
+            default:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_TYPE__TYPE_UNKNOWN;
+        }
+    }
+
+    protected static int convertEapInnerMethodToProto(WifiConfiguration config) {
+        if (config.enterpriseConfig == null) {
+            return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_UNKNOWN;
+        }
+        int phase2Method = config.enterpriseConfig.getPhase2Method();
+        return convertEapInnerMethodToProto(getAuthPhase2MethodProto(phase2Method));
+    }
+
+    private static int convertEapInnerMethodToProto(int phase2Method) {
+        switch (phase2Method) {
+            case WifiMetricsProto.RouterFingerPrint.TYPE_PHASE2_PAP:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_PAP;
+            case WifiEnterpriseConfig.Phase2.MSCHAP:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_MSCHAP;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_PHASE2_MSCHAPV2:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_MSCHAP_V2;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_PHASE2_GTC:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_GTC;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_PHASE2_SIM:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_SIM;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_PHASE2_AKA:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_AKA;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_PHASE2_AKA_PRIME:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_AKA_PRIME;
+            default:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__EAP_INNER_METHOD__METHOD_UNKNOWN;
+        }
+    }
+
+    private int convertOcspTypeToProto(int ocspType) {
+        switch (ocspType) {
+            case WifiMetricsProto.RouterFingerPrint.TYPE_OCSP_NONE:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__OCSP_TYPE__TYPE_OCSP_NONE;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_OCSP_REQUEST_CERT_STATUS:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__OCSP_TYPE__TYPE_OCSP_REQUEST_CERT_STATUS;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_OCSP_REQUIRE_CERT_STATUS:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__OCSP_TYPE__TYPE_OCSP_REQUIRE_CERT_STATUS;
+            case WifiMetricsProto.RouterFingerPrint.TYPE_OCSP_REQUIRE_ALL_NON_TRUSTED_CERTS_STATUS:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__OCSP_TYPE__TYPE_OCSP_REQUIRE_ALL_NON_TRUSTED_CERTS_STATUS;
+            default:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__OCSP_TYPE__TYPE_OCSP_UNKNOWN;
+        }
+    }
+
+    protected static boolean isFreeOpenRoaming(WifiConfiguration config) {
+        return Utils.getRoamingType(config)
+                == WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OPENROAMING_FREE;
+    }
+
+    protected static boolean isSettledOpenRoaming(WifiConfiguration config) {
+        return Utils.getRoamingType(config)
+                == WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OPENROAMING_SETTLED;
+    }
+
+    private void reportRouterCapabilities(RouterFingerPrint r) {
+        WifiStatsLog.write(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED,
+                r.mIsFrameworkInitiatedRoaming, r.mRouterFingerPrintProto.channelInfo,
+                KnownBandsChannelHelper.getBand(r.mRouterFingerPrintProto.channelInfo),
+                r.mRouterFingerPrintProto.dtim, convertSecurityModeToProto(r.mSecurityMode),
+                r.mRouterFingerPrintProto.hidden, r.mIsIncorrectlyConfiguredAsHidden,
+                convertWifiStandardToProto(r.mWifiStandard), r.mIs11bSupported,
+                convertEapMethodToProto(r.mRouterFingerPrintProto.eapMethod),
+                convertEapInnerMethodToProto(r.mRouterFingerPrintProto.authPhase2Method),
+                convertOcspTypeToProto(r.mRouterFingerPrintProto.ocspType),
+                r.mRouterFingerPrintProto.pmkCacheEnabled, r.mIsMboSupported, r.mIsOceSupported,
+                r.mIsFilsSupported, r.mIsTwtRequired, r.mIsIndividualTwtSupported,
+                r.mIsBroadcastTwtSupported, r.mIsRestrictedTwtSupported, r.mIs11McSupported,
+                r.mIs11AzSupported, convertHsReleasetoProto(r.mHsRelease),
+                r.mRouterFingerPrintProto.isPasspointHomeProvider,
+                convertApType6GhzToProto(r.mApType6GHz), r.mIsEcpsPriorityAccessSupported);
+    }
+
     /**
      * Report that an active Wifi network connection was dropped.
      *
@@ -2121,7 +2668,7 @@ public class WifiMetrics {
      * @param linkSpeed Last seen link speed.
      */
     public void reportNetworkDisconnect(String ifaceName, int disconnectReason, int rssi,
-            int linkSpeed) {
+            int linkSpeed, long lastRssiUpdateMillis) {
         synchronized (mLock) {
             if (!isPrimary(ifaceName)) {
                 return;
@@ -2135,6 +2682,10 @@ public class WifiMetrics {
                 mCurrentSession.mSessionEndTimeMillis = mClock.getElapsedSinceBootMillis();
                 int durationSeconds = (int) (mCurrentSession.mSessionEndTimeMillis
                         - mCurrentSession.mSessionStartTimeMillis) / 1000;
+                int connectedSinceLastRoamSeconds = (int) (mCurrentSession.mSessionEndTimeMillis
+                        - mCurrentSession.mLastRoamCompleteMillis) / 1000;
+                int timeSinceLastRssiUpdateSeconds = (int) (mClock.getElapsedSinceBootMillis()
+                        - lastRssiUpdateMillis) / 1000;
 
                 WifiStatsLog.write(WifiStatsLog.WIFI_DISCONNECT_REPORTED,
                         durationSeconds,
@@ -2142,7 +2693,14 @@ public class WifiMetrics {
                         mCurrentSession.mBand,
                         mCurrentSession.mAuthType,
                         rssi,
-                        linkSpeed);
+                        linkSpeed,
+                        timeSinceLastRssiUpdateSeconds,
+                        connectedSinceLastRoamSeconds,
+                        mCurrentSession.mConnectionEvent.mRole,
+                        toMetricEapType(mCurrentSession.mConnectionEvent.mEapType),
+                        toMetricPhase2Method(mCurrentSession.mConnectionEvent.mPhase2Method),
+                        mCurrentSession.mConnectionEvent.mPasspointRoamingType,
+                        mCurrentSession.mConnectionEvent.mCarrierId);
 
                 mPreviousSession = mCurrentSession;
                 mCurrentSession = null;
@@ -2235,6 +2793,12 @@ public class WifiMetrics {
             currentConnectionEvent.mRouterFingerPrint.mRouterFingerPrintProto.dtim =
                     dtimInterval;
         }
+
+        if (currentConnectionEvent.mRouterFingerPrint.mRouterFingerPrintProto.hidden
+                && !networkDetail.isHiddenBeaconFrame()) {
+            currentConnectionEvent.mRouterFingerPrint.mIsIncorrectlyConfiguredAsHidden = true;
+        }
+
         final int connectionWifiMode;
         switch (networkDetail.getWifiMode()) {
             case InformationElementUtil.WifiMode.MODE_UNDEFINED:
@@ -2244,6 +2808,7 @@ public class WifiMetrics {
                 connectionWifiMode = WifiMetricsProto.RouterFingerPrint.ROUTER_TECH_A;
                 break;
             case InformationElementUtil.WifiMode.MODE_11B:
+                currentConnectionEvent.mRouterFingerPrint.mIs11bSupported = true;
                 connectionWifiMode = WifiMetricsProto.RouterFingerPrint.ROUTER_TECH_B;
                 break;
             case InformationElementUtil.WifiMode.MODE_11G:
@@ -2264,6 +2829,7 @@ public class WifiMetrics {
         }
         currentConnectionEvent.mRouterFingerPrint.mRouterFingerPrintProto.routerTechnology =
                 connectionWifiMode;
+        currentConnectionEvent.mRouterFingerPrint.mWifiStandard = networkDetail.getWifiMode();
 
         if (networkDetail.isMboSupported()) {
             mWifiLogProto.numConnectToNetworkSupportingMbo++;
@@ -2271,6 +2837,26 @@ public class WifiMetrics {
                 mWifiLogProto.numConnectToNetworkSupportingOce++;
             }
         }
+
+        currentConnectionEvent.mRouterFingerPrint.mApType6GHz =
+                networkDetail.getApType6GHz();
+        currentConnectionEvent.mRouterFingerPrint.mIsBroadcastTwtSupported =
+                networkDetail.isBroadcastTwtSupported();
+        currentConnectionEvent.mRouterFingerPrint.mIsRestrictedTwtSupported =
+                networkDetail.isRestrictedTwtSupported();
+        currentConnectionEvent.mRouterFingerPrint.mIsIndividualTwtSupported =
+                networkDetail.isIndividualTwtSupported();
+        currentConnectionEvent.mRouterFingerPrint.mIsTwtRequired = networkDetail.isTwtRequired();
+        currentConnectionEvent.mRouterFingerPrint.mIsFilsSupported = networkDetail.isFilsCapable();
+        currentConnectionEvent.mRouterFingerPrint.mIs11AzSupported =
+                networkDetail.is11azSupported();
+        currentConnectionEvent.mRouterFingerPrint.mIs11McSupported =
+                networkDetail.is80211McResponderSupport();
+        currentConnectionEvent.mRouterFingerPrint.mIsMboSupported = networkDetail.isMboSupported();
+        currentConnectionEvent.mRouterFingerPrint.mIsOceSupported = networkDetail.isOceSupported();
+        currentConnectionEvent.mRouterFingerPrint.mIsEcpsPriorityAccessSupported =
+                networkDetail.isEpcsPriorityAccessSupported();
+        currentConnectionEvent.mRouterFingerPrint.mHsRelease = networkDetail.getHSRelease();
     }
 
     /**
@@ -2292,7 +2878,7 @@ public class WifiMetrics {
                         WifiMetricsProto.RouterFingerPrint.AUTH_PERSONAL;
             } else if (ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(scanResult)
                     || ScanResultUtil.isScanResultForWpa3EnterpriseOnlyNetwork(scanResult)
-                    || ScanResultUtil.isScanResultForEapNetwork(scanResult)
+                    || ScanResultUtil.isScanResultForWpa2EnterpriseOnlyNetwork(scanResult)
                     || ScanResultUtil.isScanResultForEapSuiteBNetwork(scanResult)) {
                 currentConnectionEvent.mRouterFingerPrint.mRouterFingerPrintProto.authentication =
                         WifiMetricsProto.RouterFingerPrint.AUTH_ENTERPRISE;
@@ -2978,7 +3564,7 @@ public class WifiMetrics {
                     wapiPersonalNetworks++;
                 } else if (ScanResultUtil.isScanResultForWapiCertNetwork(scanResult)) {
                     wapiEnterpriseNetworks++;
-                } else if (ScanResultUtil.isScanResultForEapNetwork(scanResult)) {
+                } else if (ScanResultUtil.isScanResultForWpa2EnterpriseOnlyNetwork(scanResult)) {
                     enterpriseNetworks++;
                 } else if (ScanResultUtil.isScanResultForSaeNetwork(scanResult)) {
                     wpa3PersonalNetworks++;
@@ -5557,14 +6143,22 @@ public class WifiMetrics {
     public void logStaEvent(String ifaceName, int type, int frameworkDisconnectReason,
             WifiConfiguration config) {
         switch (type) {
+            case StaEvent.TYPE_CMD_START_ROAM:
+                ConnectionEvent currentConnectionEvent = mCurrentConnectionEventPerIface.get(
+                        ifaceName);
+                if (currentConnectionEvent != null) {
+                    currentConnectionEvent.mRouterFingerPrint.mIsFrameworkInitiatedRoaming = true;
+                }
+                break;
             case StaEvent.TYPE_CMD_IP_CONFIGURATION_SUCCESSFUL:
             case StaEvent.TYPE_CMD_IP_CONFIGURATION_LOST:
             case StaEvent.TYPE_CMD_IP_REACHABILITY_LOST:
             case StaEvent.TYPE_CMD_START_CONNECT:
-            case StaEvent.TYPE_CMD_START_ROAM:
             case StaEvent.TYPE_CONNECT_NETWORK:
+                break;
             case StaEvent.TYPE_NETWORK_AGENT_VALID_NETWORK:
                 mWifiStatusBuilder.setValidated(true);
+                break;
             case StaEvent.TYPE_FRAMEWORK_DISCONNECT:
             case StaEvent.TYPE_SCORE_BREACH:
             case StaEvent.TYPE_MAC_CHANGE:
@@ -6331,6 +6925,40 @@ public class WifiMetrics {
         if (mWifiIsUnusableList.size() > MAX_UNUSABLE_EVENTS) {
             mWifiIsUnusableList.removeFirst();
         }
+        WifiUsabilityState wifiUsabilityState = mWifiUsabilityStatePerIface.getOrDefault(
+                ifaceName, WifiUsabilityState.UNKNOWN);
+
+        WifiStatsLog.write(WIFI_IS_UNUSABLE_REPORTED,
+                convertWifiUnUsableTypeToProto(triggerType),
+                mScorerUid, wifiUsabilityState == WifiUsabilityState.USABLE,
+                convertWifiUsabilityState(wifiUsabilityState));
+    }
+
+    private int convertWifiUsabilityState(WifiUsabilityState usabilityState) {
+        if (usabilityState == WifiUsabilityState.USABLE) {
+            return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE;
+        } else if (usabilityState == WifiUsabilityState.UNUSABLE) {
+            return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_UNUSABLE;
+        } else {
+            return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_UNKNOWN;
+        }
+    }
+
+    private int convertWifiUnUsableTypeToProto(int triggerType) {
+        switch (triggerType) {
+            case WifiIsUnusableEvent.TYPE_DATA_STALL_BAD_TX:
+                return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__TYPE__TYPE_DATA_STALL_BAD_TX;
+            case WifiIsUnusableEvent.TYPE_DATA_STALL_TX_WITHOUT_RX:
+                return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__TYPE__TYPE_DATA_STALL_TX_WITHOUT_RX;
+            case WifiIsUnusableEvent.TYPE_DATA_STALL_BOTH:
+                return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__TYPE__TYPE_DATA_STALL_BOTH;
+            case WifiIsUnusableEvent.TYPE_FIRMWARE_ALERT:
+                return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__TYPE__TYPE_FIRMWARE_ALERT;
+            case WifiIsUnusableEvent.TYPE_IP_REACHABILITY_LOST:
+                return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__TYPE__TYPE_IP_REACHABILITY_LOST;
+            default:
+                return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__TYPE__TYPE_UNKNOWN;
+        }
     }
 
     /**
@@ -6598,7 +7226,7 @@ public class WifiMetrics {
     }
 
     private android.net.wifi.WifiUsabilityStatsEntry.ContentionTimeStats[]
-            convertContentionTimeStats(WifiLinkLayerStats stats) {
+            convertContentionTimeStats(WifiLinkLayerStats.LinkSpecificStats stats) {
         android.net.wifi.WifiUsabilityStatsEntry.ContentionTimeStats[] contentionTimeStatsArray =
                 new android.net.wifi.WifiUsabilityStatsEntry.ContentionTimeStats[
                         android.net.wifi.WifiUsabilityStatsEntry.NUM_WME_ACCESS_CATEGORIES];
@@ -6652,7 +7280,7 @@ public class WifiMetrics {
     }
 
     private android.net.wifi.WifiUsabilityStatsEntry.RateStats[] convertRateStats(
-            WifiLinkLayerStats stats) {
+            WifiLinkLayerStats.LinkSpecificStats stats) {
         android.net.wifi.WifiUsabilityStatsEntry.RateStats[] rateStats = null;
         if (stats.peerInfo != null && stats.peerInfo.length > 0
                 && stats.peerInfo[0].rateStats != null) {
@@ -6684,16 +7312,21 @@ public class WifiMetrics {
         for (MloLink link: info.getAffiliatedMloLinks()) {
             mloLinks.put(link.getLinkId(), link);
         }
+        mLastLinkMetrics.clear();
         // Fill per link stats.
         for (WifiLinkLayerStats.LinkSpecificStats inStat : stats.links) {
             if (inStat == null) break;
+            LinkMetrics linkMetrics = new LinkMetrics();
+            linkMetrics.setTotalBeaconRx(inStat.beacon_rx);
+            linkMetrics.setLinkUsageState(inStat.state);
+            mLastLinkMetrics.put(inStat.link_id, linkMetrics);
             WifiLinkLayerStats.ChannelStats channelStatsMap = stats.channelStatsMap.get(
                     inStat.frequencyMhz);
             // Note: RSSI, Tx & Rx link speed are derived from signal poll stats which is updated in
             // Mlolink or WifiInfo (non-MLO case).
             android.net.wifi.WifiUsabilityStatsEntry.LinkStats outStat =
                     new android.net.wifi.WifiUsabilityStatsEntry.LinkStats(inStat.link_id,
-                            inStat.radio_id, inStat.state,
+                            inStat.state, inStat.radio_id,
                             (mloLinks.size() > 0) ? mloLinks.get(inStat.link_id,
                                     new MloLink()).getRssi() : info.getRssi(),
                             (mloLinks.size() > 0) ? mloLinks.get(inStat.link_id,
@@ -6702,7 +7335,7 @@ public class WifiMetrics {
                                     new MloLink()).getRxLinkSpeedMbps() : info.getRxLinkSpeedMbps(),
                             inStat.txmpdu_be + inStat.txmpdu_bk + inStat.txmpdu_vi
                                     + inStat.txmpdu_vo,
-                            inStat.retries_be + inStat.retries_be + inStat.retries_vi
+                            inStat.retries_be + inStat.retries_bk + inStat.retries_vi
                                     + inStat.retries_vo,
                             inStat.lostmpdu_be + inStat.lostmpdu_bk + inStat.lostmpdu_vo
                                     + inStat.lostmpdu_vi,
@@ -6711,8 +7344,8 @@ public class WifiMetrics {
                             inStat.beacon_rx, inStat.timeSliceDutyCycleInPercent,
                             (channelStatsMap != null) ? channelStatsMap.ccaBusyTimeMs : 0 ,
                             (channelStatsMap != null) ? channelStatsMap.radioOnTimeMs : 0,
-                            convertContentionTimeStats(stats),
-                            convertRateStats(stats));
+                            convertContentionTimeStats(inStat),
+                            convertRateStats(inStat));
             linkStats.put(inStat.link_id, outStat);
         }
 
@@ -6824,7 +7457,8 @@ public class WifiMetrics {
      * Converts bandwidth enum in proto to WifiUsabilityStatsEntry type.
      * @param value
      */
-    private static int convertBandwidthEnumToUsabilityStatsType(int value) {
+    @VisibleForTesting
+    public static int convertBandwidthEnumToUsabilityStatsType(int value) {
         switch (value) {
             case RateStats.WIFI_BANDWIDTH_20_MHZ:
                 return android.net.wifi.WifiUsabilityStatsEntry.WIFI_BANDWIDTH_20_MHZ;
@@ -6848,7 +7482,8 @@ public class WifiMetrics {
      * Converts spatial streams enum in proto to WifiUsabilityStatsEntry type.
      * @param value
      */
-    private static int convertSpatialStreamEnumToUsabilityStatsType(int value) {
+    @VisibleForTesting
+    public static int convertSpatialStreamEnumToUsabilityStatsType(int value) {
         switch (value) {
             case RateStats.WIFI_SPATIAL_STREAMS_ONE:
                 return android.net.wifi.WifiUsabilityStatsEntry.WIFI_SPATIAL_STREAMS_ONE;
@@ -6866,7 +7501,8 @@ public class WifiMetrics {
      * Converts preamble type enum in proto to WifiUsabilityStatsEntry type.
      * @param value
      */
-    private static int convertPreambleTypeEnumToUsabilityStatsType(int value) {
+    @VisibleForTesting
+    public static int convertPreambleTypeEnumToUsabilityStatsType(int value) {
         switch (value) {
             case RateStats.WIFI_PREAMBLE_OFDM:
                 return android.net.wifi.WifiUsabilityStatsEntry.WIFI_PREAMBLE_OFDM;
@@ -7609,33 +8245,51 @@ public class WifiMetrics {
         }
     }
 
-    /** Add a WifiLock acqusition session */
-    public void addWifiLockAcqSession(int lockType, long duration) {
+    /** Add a WifiLock acquisition session */
+    public void addWifiLockAcqSession(int lockType, int[] attrUids, String[] attrTags,
+            int callerType, long duration, boolean isPowersaveDisableAllowed,
+            boolean isAppExemptedFromScreenOn, boolean isAppExemptedFromForeground) {
+        int lockMode;
         switch (lockType) {
             case WifiManager.WIFI_MODE_FULL_HIGH_PERF:
                 mWifiLockHighPerfAcqDurationSecHistogram.increment((int) (duration / 1000));
+                lockMode = WifiStatsLog.WIFI_LOCK_RELEASED__MODE__WIFI_MODE_FULL_HIGH_PERF;
                 break;
 
             case WifiManager.WIFI_MODE_FULL_LOW_LATENCY:
                 mWifiLockLowLatencyAcqDurationSecHistogram.increment((int) (duration / 1000));
+                lockMode = WifiStatsLog.WIFI_LOCK_RELEASED__MODE__WIFI_MODE_FULL_LOW_LATENCY;
                 break;
-
             default:
                 Log.e(TAG, "addWifiLockAcqSession: Invalid lock type: " + lockType);
-                break;
+                return;
         }
+        WifiStatsLog.write(WifiStatsLog.WIFI_LOCK_RELEASED,
+                attrUids,
+                attrTags,
+                callerType,
+                lockMode,
+                duration,
+                isPowersaveDisableAllowed,
+                isAppExemptedFromScreenOn,
+                isAppExemptedFromForeground);
     }
 
     /** Add a WifiLock active session */
-    public void addWifiLockActiveSession(int lockType, long duration) {
+    public void addWifiLockActiveSession(int lockType, int[] attrUids, String[] attrTags,
+            long duration, boolean isPowersaveDisableAllowed,
+            boolean isAppExemptedFromScreenOn, boolean isAppExemptedFromForeground) {
+        int lockMode;
         switch (lockType) {
             case WifiManager.WIFI_MODE_FULL_HIGH_PERF:
+                lockMode = WifiStatsLog.WIFI_LOCK_DEACTIVATED__MODE__WIFI_MODE_FULL_HIGH_PERF;
                 mWifiLockStats.highPerfActiveTimeMs += duration;
                 mWifiLockHighPerfActiveSessionDurationSecHistogram.increment(
                         (int) (duration / 1000));
                 break;
 
             case WifiManager.WIFI_MODE_FULL_LOW_LATENCY:
+                lockMode = WifiStatsLog.WIFI_LOCK_DEACTIVATED__MODE__WIFI_MODE_FULL_LOW_LATENCY;
                 mWifiLockStats.lowLatencyActiveTimeMs += duration;
                 mWifiLockLowLatencyActiveSessionDurationSecHistogram.increment(
                         (int) (duration / 1000));
@@ -7643,8 +8297,16 @@ public class WifiMetrics {
 
             default:
                 Log.e(TAG, "addWifiLockActiveSession: Invalid lock type: " + lockType);
-                break;
+                return;
         }
+        WifiStatsLog.write(WifiStatsLog.WIFI_LOCK_DEACTIVATED,
+                attrUids,
+                attrTags,
+                lockMode,
+                duration,
+                isPowersaveDisableAllowed,
+                isAppExemptedFromScreenOn,
+                isAppExemptedFromForeground);
     }
 
     /** Increments metrics counting number of addOrUpdateNetwork calls. **/
@@ -7890,26 +8552,32 @@ public class WifiMetrics {
     /**
      * Increment connection duration while link layer stats report are on
      */
-    public void incrementConnectionDuration(int timeDeltaLastTwoPollsMs,
+    public void incrementConnectionDuration(String ifaceName, int timeDeltaLastTwoPollsMs,
             boolean isThroughputSufficient, boolean isCellularDataAvailable, int rssi, int txKbps,
             int rxKbps) {
         synchronized (mLock) {
+            if (!isPrimary(ifaceName)) {
+                return;
+            }
             mConnectionDurationStats.incrementDurationCount(timeDeltaLastTwoPollsMs,
                     isThroughputSufficient, isCellularDataAvailable, mWifiWins);
-
+            WifiUsabilityState wifiUsabilityState = mWifiUsabilityStatePerIface.getOrDefault(
+                    ifaceName, WifiUsabilityState.UNKNOWN);
             int band = KnownBandsChannelHelper.getBand(mLastPollFreq);
             WifiStatsLog.write(WifiStatsLog.WIFI_HEALTH_STAT_REPORTED, timeDeltaLastTwoPollsMs,
-                    isThroughputSufficient || !mWifiWins,  isCellularDataAvailable, band, rssi,
-                    txKbps, rxKbps);
+                    isThroughputSufficient || !mWifiWins, isCellularDataAvailable, band, rssi,
+                    txKbps, rxKbps, mScorerUid, (wifiUsabilityState == WifiUsabilityState.USABLE),
+                    convertWifiUsabilityState(wifiUsabilityState));
         }
     }
 
     /**
      * Sets the status to indicate whether external WiFi connected network scorer is present or not.
      */
-    public void setIsExternalWifiScorerOn(boolean value) {
+    public void setIsExternalWifiScorerOn(boolean value, int callerUid) {
         synchronized (mLock) {
             mWifiLogProto.isExternalWifiScorerOn = value;
+            mScorerUid = callerUid;
         }
     }
 
@@ -8073,6 +8741,20 @@ public class WifiMetrics {
      */
     public long getTotalBeaconRxCount() {
         return mLastTotalBeaconRx;
+    }
+
+    /** Get total beacon receive count for the link */
+    public long getTotalBeaconRxCount(int linkId) {
+        if (!mLastLinkMetrics.contains(linkId)) return 0;
+        return mLastLinkMetrics.get(linkId).getTotalBeaconRx();
+    }
+
+    /** Get link usage state */
+    public @android.net.wifi.WifiUsabilityStatsEntry.LinkState int getLinkUsageState(int linkId) {
+        if (!mLastLinkMetrics.contains(linkId)) {
+            return android.net.wifi.WifiUsabilityStatsEntry.LINK_STATE_UNKNOWN;
+        }
+        return mLastLinkMetrics.get(linkId).getLinkUsageState();
     }
 
     /** Note whether Wifi was enabled at boot time. */
@@ -8616,12 +9298,315 @@ public class WifiMetrics {
     }
 
     /**
-     * Logged when the task on the Wifi Thread has been excuted
-     * @param taskName The name of the task
-     * @param delay The dalay time after post the task on the thread
-     * @param runningTime The time usesd for executing the task
+     * Set Wi-Fi usability state per interface as predicted by the scorer
      */
-    public void wifiThreadTaskExecuted(String taskName, int delay, int runningTime) {
-        WifiStatsLog.write(WIFI_THREAD_TASK_EXECUTED, runningTime, delay, taskName);
+    public void setScorerPredictedWifiUsabilityState(String ifaceName,
+            WifiUsabilityState usabilityState) {
+        mWifiUsabilityStatePerIface.put(ifaceName, usabilityState);
+    }
+
+    private static int getSoftApStartedStartResult(@SoftApManager.StartResult int startResult) {
+        switch (startResult) {
+            case SoftApManager.START_RESULT_UNKNOWN:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_UNKNOWN;
+            case SoftApManager.START_RESULT_SUCCESS:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_SUCCESS;
+            case SoftApManager.START_RESULT_FAILURE_GENERAL:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_GENERAL;
+
+            case SoftApManager.START_RESULT_FAILURE_NO_CHANNEL:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_NO_CHANNEL;
+            case SoftApManager.START_RESULT_FAILURE_UNSUPPORTED_CONFIG:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_UNSUPPORTED_CONFIG;
+            case SoftApManager.START_RESULT_FAILURE_START_HAL:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_START_HAL;
+            case SoftApManager.START_RESULT_FAILURE_START_HOSTAPD:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_START_HOSTAPD;
+            case SoftApManager.START_RESULT_FAILURE_INTERFACE_CONFLICT_USER_REJECTED:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_INTERFACE_CONFLICT_USER_REJECTED;
+            case SoftApManager.START_RESULT_FAILURE_INTERFACE_CONFLICT:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_INTERFACE_CONFLICT;
+            case SoftApManager.START_RESULT_FAILURE_CREATE_INTERFACE:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_CREATE_INTERFACE;
+            case SoftApManager.START_RESULT_FAILURE_SET_COUNTRY_CODE:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_SET_COUNTRY_CODE;
+            case SoftApManager.START_RESULT_FAILURE_SET_MAC_ADDRESS:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_SET_MAC_ADDRESS;
+            case SoftApManager.START_RESULT_FAILURE_REGISTER_AP_CALLBACK_HOSTAPD:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_REGISTER_AP_CALLBACK_HOSTAPD;
+            case SoftApManager.START_RESULT_FAILURE_REGISTER_AP_CALLBACK_WIFICOND:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_REGISTER_AP_CALLBACK_WIFICOND;
+            case SoftApManager.START_RESULT_FAILURE_ADD_AP_HOSTAPD:
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_FAILURE_ADD_AP_HOSTAPD;
+            default:
+                Log.wtf(TAG, "getSoftApStartedStartResult: unknown StartResult" + startResult);
+                return WifiStatsLog.SOFT_AP_STARTED__RESULT__START_RESULT_UNKNOWN;
+        }
+    }
+
+    private static int getSoftApStartedRole(ActiveModeManager.SoftApRole role) {
+        if (ActiveModeManager.ROLE_SOFTAP_LOCAL_ONLY.equals(role)) {
+            return WifiStatsLog.SOFT_AP_STARTED__ROLE__ROLE_LOCAL_ONLY;
+        } else if (ActiveModeManager.ROLE_SOFTAP_TETHERED.equals(role)) {
+            return WifiStatsLog.SOFT_AP_STARTED__ROLE__ROLE_TETHERING;
+        }
+        Log.wtf(TAG, "getSoftApStartedRole: unknown role " + role);
+        return WifiStatsLog.SOFT_AP_STARTED__ROLE__ROLE_UNKNOWN;
+    }
+
+    private static int getSoftApStartedStaApConcurrency(
+            boolean isStaApSupported, boolean isStaDbsSupported) {
+        if (isStaDbsSupported) {
+            return WifiStatsLog.SOFT_AP_STARTED__STA_AP_CONCURRENCY__STA_AP_CONCURRENCY_DBS;
+        }
+        if (isStaApSupported) {
+            return WifiStatsLog.SOFT_AP_STARTED__STA_AP_CONCURRENCY__STA_AP_CONCURRENCY_SINGLE;
+        }
+        return WifiStatsLog.SOFT_AP_STARTED__STA_AP_CONCURRENCY__STA_AP_CONCURRENCY_UNSUPPORTED;
+    }
+
+    private static int getSoftApStartedStaStatus(int staFreqMhz) {
+        if (staFreqMhz == WifiInfo.UNKNOWN_FREQUENCY) {
+            return WifiStatsLog.SOFT_AP_STARTED__STA_STATUS__STA_STATUS_DISCONNECTED;
+        }
+        if (ScanResult.is24GHz(staFreqMhz)) {
+            return WifiStatsLog.SOFT_AP_STARTED__STA_STATUS__STA_STATUS_CONNECTED_2_GHZ;
+        }
+        if (ScanResult.is5GHz(staFreqMhz)) {
+            return WifiStatsLog.SOFT_AP_STARTED__STA_STATUS__STA_STATUS_CONNECTED_5_GHZ;
+        }
+        if (ScanResult.is6GHz(staFreqMhz)) {
+            return WifiStatsLog.SOFT_AP_STARTED__STA_STATUS__STA_STATUS_CONNECTED_6_GHZ;
+        }
+        Log.wtf(TAG, "getSoftApStartedStaStatus: unknown band for freq " + staFreqMhz);
+        return WifiStatsLog.SOFT_AP_STARTED__STA_STATUS__STA_STATUS_UNKNOWN;
+    }
+
+    private static int getSoftApStartedAuthType(
+            @SoftApConfiguration.SecurityType int securityType) {
+        switch (securityType) {
+            case SoftApConfiguration.SECURITY_TYPE_OPEN:
+                return WifiStatsLog.SOFT_AP_STARTED__AUTH_TYPE__AUTH_TYPE_NONE;
+            case SoftApConfiguration.SECURITY_TYPE_WPA2_PSK:
+                return WifiStatsLog.SOFT_AP_STARTED__AUTH_TYPE__AUTH_TYPE_WPA2_PSK;
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION:
+                return WifiStatsLog.SOFT_AP_STARTED__AUTH_TYPE__AUTH_TYPE_SAE_TRANSITION;
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_SAE:
+                return WifiStatsLog.SOFT_AP_STARTED__AUTH_TYPE__AUTH_TYPE_SAE;
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION:
+                return WifiStatsLog.SOFT_AP_STARTED__AUTH_TYPE__AUTH_TYPE_OWE_TRANSITION;
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_OWE:
+                return WifiStatsLog.SOFT_AP_STARTED__AUTH_TYPE__AUTH_TYPE_OWE;
+            default:
+                Log.wtf(TAG, "getSoftApStartedAuthType: unknown type " + securityType);
+                return WifiStatsLog.SOFT_AP_STARTED__STA_STATUS__STA_STATUS_UNKNOWN;
+        }
+    }
+
+    /**
+     * Writes the SoftApStarted event to WifiStatsLog.
+     */
+    public void writeSoftApStartedEvent(@SoftApManager.StartResult int startResult,
+            @NonNull ActiveModeManager.SoftApRole role,
+            @WifiScanner.WifiBand int band1,
+            @WifiScanner.WifiBand int band2,
+            boolean isDbsSupported,
+            boolean isStaApSupported,
+            boolean isStaDbsSupported,
+            int staFreqMhz,
+            @SoftApConfiguration.SecurityType int securityType) {
+        WifiStatsLog.write(WifiStatsLog.SOFT_AP_STARTED,
+                getSoftApStartedStartResult(startResult),
+                getSoftApStartedRole(role),
+                band1,
+                band2,
+                isDbsSupported,
+                getSoftApStartedStaApConcurrency(isStaApSupported, isStaDbsSupported),
+                getSoftApStartedStaStatus(staFreqMhz),
+                getSoftApStartedAuthType(securityType));
+    }
+
+    private static int getSoftApStoppedStopEvent(@SoftApManager.StopEvent int stopEvent) {
+        switch (stopEvent) {
+            case SoftApManager.STOP_EVENT_UNKNOWN:
+                return WifiStatsLog.SOFT_AP_STOPPED__STOP_EVENT__STOP_EVENT_UNKNOWN;
+            case SoftApManager.STOP_EVENT_STOPPED:
+                return WifiStatsLog.SOFT_AP_STOPPED__STOP_EVENT__STOP_EVENT_STOPPED;
+            case SoftApManager.STOP_EVENT_INTERFACE_DOWN:
+                return WifiStatsLog.SOFT_AP_STOPPED__STOP_EVENT__STOP_EVENT_INTERFACE_DOWN;
+            case SoftApManager.STOP_EVENT_INTERFACE_DESTROYED:
+                return WifiStatsLog.SOFT_AP_STOPPED__STOP_EVENT__STOP_EVENT_INTERFACE_DESTROYED;
+            case SoftApManager.STOP_EVENT_HOSTAPD_FAILURE:
+                return WifiStatsLog.SOFT_AP_STOPPED__STOP_EVENT__STOP_EVENT_HOSTAPD_FAILURE;
+            case SoftApManager.STOP_EVENT_NO_USAGE_TIMEOUT:
+                return WifiStatsLog.SOFT_AP_STOPPED__STOP_EVENT__STOP_EVENT_NO_USAGE_TIMEOUT;
+            default:
+                Log.wtf(TAG, "getSoftApStoppedStopEvent: unknown StopEvent " + stopEvent);
+                return WifiStatsLog.SOFT_AP_STOPPED__STOP_EVENT__STOP_EVENT_UNKNOWN;
+        }
+    }
+
+    private static int getSoftApStoppedRole(ActiveModeManager.SoftApRole role) {
+        if (ActiveModeManager.ROLE_SOFTAP_LOCAL_ONLY.equals(role)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__ROLE__ROLE_LOCAL_ONLY;
+        } else if (ActiveModeManager.ROLE_SOFTAP_TETHERED.equals(role)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__ROLE__ROLE_TETHERING;
+        }
+        Log.wtf(TAG, "getSoftApStoppedRole: unknown role " + role);
+        return WifiStatsLog.SOFT_AP_STOPPED__ROLE__ROLE_UNKNOWN;
+    }
+
+    private static int getSoftApStoppedStaApConcurrency(
+            boolean isStaApSupported, boolean isStaDbsSupported) {
+        if (isStaDbsSupported) {
+            return WifiStatsLog.SOFT_AP_STOPPED__STA_AP_CONCURRENCY__STA_AP_CONCURRENCY_DBS;
+        }
+        if (isStaApSupported) {
+            return WifiStatsLog.SOFT_AP_STOPPED__STA_AP_CONCURRENCY__STA_AP_CONCURRENCY_SINGLE;
+        }
+        return WifiStatsLog.SOFT_AP_STOPPED__STA_AP_CONCURRENCY__STA_AP_CONCURRENCY_UNSUPPORTED;
+    }
+    private static int getSoftApStoppedStaStatus(int staFreqMhz) {
+        if (staFreqMhz == WifiInfo.UNKNOWN_FREQUENCY) {
+            return WifiStatsLog.SOFT_AP_STOPPED__STA_STATUS__STA_STATUS_DISCONNECTED;
+        }
+        if (ScanResult.is24GHz(staFreqMhz)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__STA_STATUS__STA_STATUS_CONNECTED_2_GHZ;
+        }
+        if (ScanResult.is5GHz(staFreqMhz)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__STA_STATUS__STA_STATUS_CONNECTED_5_GHZ;
+        }
+        if (ScanResult.is6GHz(staFreqMhz)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__STA_STATUS__STA_STATUS_CONNECTED_6_GHZ;
+        }
+        Log.wtf(TAG, "getSoftApStoppedStaStatus: unknown band for freq " + staFreqMhz);
+        return WifiStatsLog.SOFT_AP_STOPPED__STA_STATUS__STA_STATUS_UNKNOWN;
+    }
+
+    private static int getSoftApStoppedAuthType(
+            @SoftApConfiguration.SecurityType int securityType) {
+        switch (securityType) {
+            case SoftApConfiguration.SECURITY_TYPE_OPEN:
+                return WifiStatsLog.SOFT_AP_STOPPED__AUTH_TYPE__AUTH_TYPE_NONE;
+            case SoftApConfiguration.SECURITY_TYPE_WPA2_PSK:
+                return WifiStatsLog.SOFT_AP_STOPPED__AUTH_TYPE__AUTH_TYPE_WPA2_PSK;
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION:
+                return WifiStatsLog.SOFT_AP_STOPPED__AUTH_TYPE__AUTH_TYPE_SAE_TRANSITION;
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_SAE:
+                return WifiStatsLog.SOFT_AP_STOPPED__AUTH_TYPE__AUTH_TYPE_SAE;
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION:
+                return WifiStatsLog.SOFT_AP_STOPPED__AUTH_TYPE__AUTH_TYPE_OWE_TRANSITION;
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_OWE:
+                return WifiStatsLog.SOFT_AP_STOPPED__AUTH_TYPE__AUTH_TYPE_OWE;
+            default:
+                Log.wtf(TAG, "getSoftApStoppedAuthType: unknown type " + securityType);
+                return WifiStatsLog.SOFT_AP_STOPPED__STA_STATUS__STA_STATUS_UNKNOWN;
+        }
+    }
+
+    private static int getSoftApStoppedStandard(@WifiAnnotations.WifiStandard int standard) {
+        switch (standard) {
+            case ScanResult.WIFI_STANDARD_UNKNOWN:
+                return WifiStatsLog.SOFT_AP_STOPPED__STANDARD__WIFI_STANDARD_UNKNOWN;
+            case ScanResult.WIFI_STANDARD_LEGACY:
+                return WifiStatsLog.SOFT_AP_STOPPED__STANDARD__WIFI_STANDARD_LEGACY;
+            case ScanResult.WIFI_STANDARD_11N:
+                return WifiStatsLog.SOFT_AP_STOPPED__STANDARD__WIFI_STANDARD_11N;
+            case ScanResult.WIFI_STANDARD_11AC:
+                return WifiStatsLog.SOFT_AP_STOPPED__STANDARD__WIFI_STANDARD_11AC;
+            case ScanResult.WIFI_STANDARD_11AX:
+                return WifiStatsLog.SOFT_AP_STOPPED__STANDARD__WIFI_STANDARD_11AX;
+            case ScanResult.WIFI_STANDARD_11AD:
+                return WifiStatsLog.SOFT_AP_STOPPED__STANDARD__WIFI_STANDARD_11AD;
+            case ScanResult.WIFI_STANDARD_11BE:
+                return WifiStatsLog.SOFT_AP_STOPPED__STANDARD__WIFI_STANDARD_11BE;
+            default:
+                Log.wtf(TAG, "getSoftApStoppedStandard: unknown standard " + standard);
+                return WifiStatsLog.SOFT_AP_STOPPED__STANDARD__WIFI_STANDARD_UNKNOWN;
+        }
+    }
+
+    private static int getSoftApStoppedUpstreamType(@Nullable NetworkCapabilities caps) {
+        if (caps == null) {
+            return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_UNKNOWN;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_WIFI_CELLULAR_VPN;
+                }
+                return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_WIFI_VPN;
+            }
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_CELLULAR_VPN;
+            }
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH)) {
+                return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_BLUETOOTH_VPN;
+            }
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_ETHERNET_VPN;
+            }
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_WIFI;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_CELLULAR;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_BLUETOOTH;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_ETHERNET;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI_AWARE)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_WIFI_AWARE;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_LOWPAN)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_LOWPAN;
+        }
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_TEST)) {
+            return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_TEST;
+        }
+        Log.wtf(TAG, "getSoftApStoppedStandard: unknown transport types for caps "
+                + Arrays.toString(caps.getTransportTypes()));
+        return WifiStatsLog.SOFT_AP_STOPPED__UPSTREAM_TRANSPORT__TT_UNKNOWN;
+    }
+
+    /**
+     * Writes the SoftApStoppedEvent to WifiStatsLog.
+     */
+    public void writeSoftApStoppedEvent(@SoftApManager.StopEvent int stopEvent,
+            @NonNull ActiveModeManager.SoftApRole role,
+            @WifiScanner.WifiBand int band,
+            boolean isDbs,
+            boolean isStaApSupported,
+            boolean isStaBridgedApSupported,
+            int staFreqMhz,
+            boolean isTimeoutEnabled,
+            int sessionDurationSeconds,
+            @SoftApConfiguration.SecurityType int securityType,
+            @WifiAnnotations.WifiStandard int standard,
+            int maxClients,
+            boolean isDbsTimeoutEnabled,
+            int dbsFailureBand,
+            int dbsTimeoutBand,
+            @Nullable NetworkCapabilities upstreamCaps) {
+        WifiStatsLog.write(WifiStatsLog.SOFT_AP_STOPPED,
+                getSoftApStoppedStopEvent(stopEvent),
+                getSoftApStoppedRole(role),
+                band,
+                isDbs,
+                getSoftApStoppedStaApConcurrency(isStaApSupported, isStaBridgedApSupported),
+                getSoftApStoppedStaStatus(staFreqMhz),
+                isTimeoutEnabled,
+                sessionDurationSeconds,
+                getSoftApStoppedAuthType(securityType),
+                getSoftApStoppedStandard(standard),
+                maxClients,
+                isDbsTimeoutEnabled,
+                dbsFailureBand,
+                dbsTimeoutBand,
+                getSoftApStoppedUpstreamType(upstreamCaps));
     }
 }

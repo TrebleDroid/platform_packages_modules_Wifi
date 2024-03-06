@@ -198,9 +198,9 @@ interface IWifiManager
 
     boolean isScanAlwaysAvailable();
 
-    boolean acquireWifiLock(IBinder lock, int lockType, String tag, in WorkSource ws);
+    boolean acquireWifiLock(IBinder lock, int lockType, String tag, in WorkSource ws, in String packageName, in Bundle extras);
 
-    void updateWifiLockWorkSource(IBinder lock, in WorkSource ws);
+    void updateWifiLockWorkSource(IBinder lock, in WorkSource ws, in String packageName, in Bundle extras);
 
     boolean releaseWifiLock(IBinder lock);
 
@@ -370,6 +370,8 @@ interface IWifiManager
 
     void setExternalPnoScanRequest(in IBinder binder, in IPnoScanResultsCallback callback, in List<WifiSsid> ssids, in int[] frequencies, String packageName, String featureId);
 
+    void setPnoScanEnabled(boolean enabled, boolean enablePnoScanAfterWifiToggle, String packageName);
+
     void clearExternalPnoScanRequest();
 
     void getLastCallerInfoForApi(int api, in ILastCallerListener listener);
@@ -466,4 +468,8 @@ interface IWifiManager
     void getMaxMloStrLinkCount(in IIntegerListener listener, in Bundle extras);
 
     void getSupportedSimultaneousBandCombinations(in IWifiBandsListener listener, in Bundle extras);
+
+    void setWepAllowed(boolean isAllowed);
+
+    void queryWepAllowed(in IBooleanListener listener);
 }

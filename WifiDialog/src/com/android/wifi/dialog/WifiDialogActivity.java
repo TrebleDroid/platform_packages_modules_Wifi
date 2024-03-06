@@ -35,7 +35,6 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.text.Editable;
@@ -144,26 +143,24 @@ public class WifiDialogActivity extends Activity  {
         return mWifiManager;
     }
 
-    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction() != Intent.ACTION_CLOSE_SYSTEM_DIALOGS) {
-                return;
-            }
-            PowerManager powerManager = context.getSystemService(PowerManager.class);
-            if (powerManager == null) {
-                return;
-            }
-            if (!powerManager.isInteractive()) {
-                // Ignore screen off case.
-                return;
-            }
-            // Cancel all dialogs for ACTION_CLOSE_SYSTEM_DIALOGS (e.g. Home button pressed).
-            for (int i = 0; i < mActiveDialogsPerId.size(); i++) {
-                mActiveDialogsPerId.get(i).cancel();
-            }
-        }
-    };
+    private final BroadcastReceiver mBroadcastReceiver =
+            new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (!Intent.ACTION_CLOSE_SYSTEM_DIALOGS.equals(intent.getAction())) {
+                        return;
+                    }
+                    if (intent.getBooleanExtra(
+                            WifiManager.EXTRA_CLOSE_SYSTEM_DIALOGS_EXCEPT_WIFI, false)) {
+                        return;
+                    }
+                    // Cancel all dialogs for ACTION_CLOSE_SYSTEM_DIALOGS (e.g. Home button
+                    // pressed).
+                    for (int i = 0; i < mActiveDialogsPerId.size(); i++) {
+                        mActiveDialogsPerId.valueAt(i).cancel();
+                    }
+                }
+            };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -254,7 +251,7 @@ public class WifiDialogActivity extends Activity  {
                 // Before U, we don't have INTERNAL_SYSTEM_WINDOW permission to always show at the
                 // top, so close all dialogs when we're not visible anymore.
                 for (int i = 0; i < mActiveDialogsPerId.size(); i++) {
-                    mActiveDialogsPerId.get(i).cancel();
+                    mActiveDialogsPerId.valueAt(i).cancel();
                 }
             }
             return;
@@ -283,7 +280,7 @@ public class WifiDialogActivity extends Activity  {
         // We don't expect to be destroyed while dialogs are still up, but make sure to cancel them
         // just in case.
         for (int i = 0; i < mActiveDialogsPerId.size(); i++) {
-            mActiveDialogsPerId.get(i).cancel();
+            mActiveDialogsPerId.valueAt(i).cancel();
         }
     }
 
@@ -406,9 +403,12 @@ public class WifiDialogActivity extends Activity  {
                             // Round up to the nearest whole second.
                             secondsRemaining++;
                         }
-                        dialog.setMessage(MessageFormat.format(
+                        TextView timeRemaining = dialog.getWindow().findViewById(
+                                getWifiViewId("time_remaining"));
+                        timeRemaining.setText(MessageFormat.format(
                                 getWifiString("wifi_p2p_invitation_seconds_remaining"),
                                 secondsRemaining));
+                        timeRemaining.setVisibility(View.VISIBLE);
                     }
                 }
 
@@ -586,15 +586,15 @@ public class WifiDialogActivity extends Activity  {
             @Nullable final String deviceName,
             final boolean isPinRequested,
             @Nullable final String displayPin) {
-        final View textEntryView = getWifiLayoutInflater()
-                .inflate(getWifiLayoutId("wifi_p2p_dialog"), null);
-        ViewGroup group = textEntryView.findViewById(getWifiViewId("info"));
         if (TextUtils.isEmpty(deviceName)) {
             Log.w(TAG, "P2P Invitation Received dialog device name is null or empty."
                     + " id=" + dialogId
                     + " deviceName=" + deviceName
                     + " displayPin=" + displayPin);
         }
+        final View textEntryView = getWifiLayoutInflater()
+                .inflate(getWifiLayoutId("wifi_p2p_dialog"), null);
+        ViewGroup group = textEntryView.findViewById(getWifiViewId("info"));
         addRowToP2pDialog(group, getWifiString("wifi_p2p_from_message"), deviceName);
 
         final EditText pinEditText;
@@ -612,8 +612,6 @@ public class WifiDialogActivity extends Activity  {
 
         AlertDialog dialog = getWifiAlertDialogBuilder("wifi_p2p_invitation_received_dialog")
                 .setTitle(getWifiString("wifi_p2p_invitation_to_connect_title"))
-                // Set the message to "" to allow us to modify it after building (b/36913966).
-                .setMessage("")
                 .setView(textEntryView)
                 .setPositiveButton(getWifiString("accept"), (dialogPositive, which) -> {
                     String pin = null;
@@ -663,7 +661,8 @@ public class WifiDialogActivity extends Activity  {
                     pinEditText.requestFocus();
                     pinEditText.setSelection(pinEditText.getText().length());
                 }
-                dialog.getButton(Dialog.BUTTON_POSITIVE).setEnabled(false);
+                dialog.getButton(Dialog.BUTTON_POSITIVE).setEnabled(
+                        pinEditText.length() == 4 || pinEditText.length() == 8);
             });
             pinEditText.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -684,11 +683,8 @@ public class WifiDialogActivity extends Activity  {
                         // configuration change.
                         intent.putExtra(EXTRA_DIALOG_P2P_PIN_INPUT, s);
                     }
-                    if (s.length() == 4 || s.length() == 8) {
-                        dialog.getButton(Dialog.BUTTON_POSITIVE).setEnabled(true);
-                    } else {
-                        dialog.getButton(Dialog.BUTTON_POSITIVE).setEnabled(false);
-                    }
+                    dialog.getButton(Dialog.BUTTON_POSITIVE).setEnabled(
+                            s.length() == 4 || s.length() == 8);
                 }
             });
         } else {

@@ -22,6 +22,7 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.hardware.wifi.WifiStatusCode;
 import android.net.wifi.CoexUnsafeChannel;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
@@ -278,6 +279,43 @@ public class WifiChip {
     }
 
     /**
+     * AFC channel allowance.
+     */
+    public static class AfcChannelAllowance {
+        /**
+         * AFC max permissible information queried from AFC server based on frequency.
+         */
+        public List<AvailableAfcFrequencyInfo> availableAfcFrequencyInfos;
+        /**
+         * AFC max permissible information queried from AFC server based on channel number.
+         */
+        public List<AvailableAfcChannelInfo> availableAfcChannelInfos;
+        /**
+         * The time in UTC at which this information expires, as the difference, measured in
+         * milliseconds, between the expiration time and midnight, January 1, 1970 UTC.
+         */
+        public long availabilityExpireTimeMs;
+    }
+
+    /**
+     * Available AFC frequency info.
+     */
+    public static class AvailableAfcFrequencyInfo {
+        public int startFrequencyMhz = 0;
+        public int endFrequencyMhz = 0;
+        public int maxPsdDbmPerMhz = 0;
+    }
+
+    /**
+     * Available AFC channel info.
+     */
+    public static class AvailableAfcChannelInfo {
+        public int globalOperatingClass = 0;
+        public int channelCfi = 0;
+        public int maxEirpDbm = 0;
+    }
+
+    /**
      * Wifi Chip capabilities.
      */
     public static class WifiChipCapabilities {
@@ -492,21 +530,29 @@ public class WifiChip {
     }
 
     /**
-     * See comments for {@link IWifiChip#createApIface()}
+     * See comments for {@link IWifiChip#createApIface(List)}
      */
     @Nullable
-    public WifiApIface createApIface() {
+    public WifiApIface createApIface(@NonNull List<OuiKeyedData> vendorData) {
+        if (vendorData == null) {
+            Log.e(TAG, "createApIface received null vendorData");
+            return null;
+        }
         return validateAndCall("createApIface", null,
-                () -> mWifiChip.createApIface());
+                () -> mWifiChip.createApIface(vendorData));
     }
 
     /**
-     * See comments for {@link IWifiChip#createBridgedApIface()}
+     * See comments for {@link IWifiChip#createBridgedApIface(List)}
      */
     @Nullable
-    public WifiApIface createBridgedApIface() {
+    public WifiApIface createBridgedApIface(@NonNull List<OuiKeyedData> vendorData) {
+        if (vendorData == null) {
+            Log.e(TAG, "createBridgedApIface received null vendorData");
+            return null;
+        }
         return validateAndCall("createBridgedApIface", null,
-                () -> mWifiChip.createBridgedApIface());
+                () -> mWifiChip.createBridgedApIface(vendorData));
     }
 
     /**
@@ -901,5 +947,14 @@ public class WifiChip {
         return validateAndCall("enableStaChannelForPeerNetwork", false,
                 () -> mWifiChip.enableStaChannelForPeerNetwork(enableIndoorChannel,
                         enableDfsChannel));
+    }
+
+    /**
+     * See comments for {@link IWifiChip#setAfcChannelAllowance(AfcChannelAllowance)}
+     */
+    public boolean setAfcChannelAllowance(AfcChannelAllowance afcChannelAllowance) {
+        if (afcChannelAllowance == null) return false;
+        return validateAndCall("setAfcChannelAllowance", false,
+                () -> mWifiChip.setAfcChannelAllowance(afcChannelAllowance));
     }
 }

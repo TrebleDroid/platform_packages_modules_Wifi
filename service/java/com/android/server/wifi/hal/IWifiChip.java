@@ -16,9 +16,11 @@
 
 package com.android.server.wifi.hal;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.hardware.wifi.WifiStatusCode;
 import android.net.wifi.CoexUnsafeChannel;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
@@ -43,18 +45,22 @@ public interface IWifiChip {
     /**
      * Create an AP interface on the chip.
      *
+     * @param vendorData List of {@link OuiKeyedData} containing vendor-provided
+     *                   configuration data. Empty list indicates no vendor data.
      * @return {@link WifiApIface} object, or null if a failure occurred.
      */
     @Nullable
-    WifiApIface createApIface();
+    WifiApIface createApIface(@NonNull List<OuiKeyedData> vendorData);
 
     /**
      * Create a bridged AP interface on the chip.
      *
+     * @param vendorData List of {@link OuiKeyedData} containing vendor-provided
+     *                   configuration data. Empty list indicates no vendor data.
      * @return {@link WifiApIface} object, or null if a failure occurred.
      */
     @Nullable
-    WifiApIface createBridgedApIface();
+    WifiApIface createBridgedApIface(@NonNull List<OuiKeyedData> vendorData);
 
     /**
      * Create a NAN interface on the chip.
@@ -455,4 +461,13 @@ public interface IWifiChip {
      * @return true if successful, false otherwise.
      */
     boolean enableStaChannelForPeerNetwork(boolean enableIndoorChannel, boolean enableDfsChannel);
+
+    /**
+     * Sends the AFC allowed channels and frequencies to the driver.
+     *
+     * @param afcChannelAllowance the allowed frequencies and channels received from
+     * querying the AFC server.
+     * @return whether the channel allowance was set successfully.
+     */
+    boolean setAfcChannelAllowance(WifiChip.AfcChannelAllowance afcChannelAllowance);
 }

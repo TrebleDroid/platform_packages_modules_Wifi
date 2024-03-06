@@ -73,7 +73,7 @@ public interface ClientModeDefaults extends ClientMode {
     default void setLinkLayerStatsPollingInterval(int newIntervalMs) { }
 
     default boolean setWifiConnectedNetworkScorer(
-            IBinder binder, IWifiConnectedNetworkScorer scorer) {
+            IBinder binder, IWifiConnectedNetworkScorer scorer, int callerUid) {
         // don't fail the public API when wifi is off.
         return true;
     }
@@ -207,6 +207,10 @@ public interface ClientModeDefaults extends ClientMode {
         return true;
     }
 
+    default boolean isIpProvisioningTimedOut() {
+        return false;
+    }
+
     default boolean isSupplicantTransientState() {
         return false;
     }
@@ -276,4 +280,7 @@ public interface ClientModeDefaults extends ClientMode {
     default boolean isMlo() {
         return false;
     }
+
+    @Override
+    default void onIdleModeChanged(boolean isIdle) { }
 }

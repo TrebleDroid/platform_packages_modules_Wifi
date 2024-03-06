@@ -35,10 +35,7 @@ import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.AppOpsManager;
 import android.companion.CompanionDeviceManager;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.MacAddress;
@@ -63,7 +60,6 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PatternMatcher;
-import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
@@ -338,6 +334,10 @@ public class WifiNetworkFactory extends NetworkFactory {
 
         @Override
         public void select(WifiConfiguration wifiConfiguration) {
+            if (wifiConfiguration == null) {
+                Log.wtf(TAG, "User select null config, seems a settings UI issue");
+                return;
+            }
             mHandler.post(() -> {
                 Log.i(TAG, "select configuration " + wifiConfiguration);
                 if (mActiveSpecificNetworkRequest != mNetworkRequest) {
@@ -593,23 +593,6 @@ public class WifiNetworkFactory extends NetworkFactory {
         mFacade = facade;
         mMultiInternetManager = multiInternetManager;
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_SCREEN_ON);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-        context.registerReceiver(
-                new BroadcastReceiver() {
-                    @Override
-                    public void onReceive(Context context, Intent intent) {
-                        String action = intent.getAction();
-                        if (action.equals(Intent.ACTION_SCREEN_ON)) {
-                            handleScreenStateChanged(true);
-                        } else if (action.equals(Intent.ACTION_SCREEN_OFF)) {
-                            handleScreenStateChanged(false);
-                        }
-                    }
-                }, filter, null, mHandler);
-        handleScreenStateChanged(context.getSystemService(PowerManager.class).isInteractive());
-
         // register the data store for serializing/deserializing data.
         configStore.registerStoreData(
                 wifiInjector.makeNetworkRequestStoreData(new NetworkRequestDataSource()));
@@ -617,6 +600,15 @@ public class WifiNetworkFactory extends NetworkFactory {
         activeModeWarden.registerModeChangeCallback(new ModeChangeCallback());
 
         setScoreFilter(SCORE_FILTER);
+        mWifiInjector
+                .getWifiDeviceStateChangeManager()
+                .registerStateChangeCallback(
+                        new WifiDeviceStateChangeManager.StateChangeCallback() {
+                            @Override
+                            public void onScreenStateChanged(boolean screenOn) {
+                                handleScreenStateChanged(screenOn);
+                            }
+                        });
     }
 
     private void saveToStore() {
@@ -743,6 +735,11 @@ public class WifiNetworkFactory extends NetworkFactory {
         if (!WifiConfigurationUtil.validateNetworkSpecifier(wns, mContext.getResources()
                 .getInteger(R.integer.config_wifiNetworkSpecifierMaxPreferredChannels))) {
             Log.e(TAG, "Invalid wifi network specifier: " + wns + ". Rejecting ");
+            return false;
+        }
+        if (wns.wifiConfiguration.enterpriseConfig != null
+                && wns.wifiConfiguration.enterpriseConfig.isTrustOnFirstUseEnabled()) {
+            Log.e(TAG, "Invalid wifi network specifier with TOFU enabled: " + wns + ". Rejecting ");
             return false;
         }
         return true;
@@ -1723,8 +1720,7 @@ public class WifiNetworkFactory extends NetworkFactory {
                         mActiveSpecificNetworkRequest.getRequestorUid()));
         intent.putExtra(UI_START_INTENT_EXTRA_REQUEST_IS_FOR_SINGLE_NETWORK,
                 isActiveRequestForSingleNetwork());
-        mContext.startActivityAsUser(intent, UserHandle.getUserHandleForUid(
-                mActiveSpecificNetworkRequest.getRequestorUid()));
+        mContext.startActivityAsUser(intent, UserHandle.CURRENT);
     }
 
     // Helper method to determine if the specifier does not contain any patterns and matches

@@ -121,7 +121,8 @@ public class MockWifiServiceUtil {
         intent.setComponent(new ComponentName(mPackageName, mServiceName));
         intent.setAction(actionName);
 
-        status = mContext.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        status = mContext.createContextAsUser(CURRENT, 0)
+                .bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
         return status;
     }
 

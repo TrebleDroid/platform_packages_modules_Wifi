@@ -20,6 +20,8 @@ import static android.hardware.wifi.V1_0.NanRangingIndication.EGRESS_MET_MASK;
 import static android.net.wifi.WifiAvailableChannel.OP_MODE_WIFI_AWARE;
 import static android.net.wifi.aware.Characteristics.WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128;
 
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_AWARE_CAPABILITIES;
+
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
@@ -51,6 +53,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import android.app.AppOpsManager;
+import android.app.StatsManager;
 import android.app.test.MockAnswerUtil;
 import android.app.test.TestAlarmManager;
 import android.content.AttributionSource;
@@ -89,12 +92,13 @@ import android.os.RemoteException;
 import android.os.UserHandle;
 import android.os.WorkSource;
 import android.os.test.TestLooper;
-import android.util.LocalLog;
 import android.util.Log;
 import android.util.SparseArray;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.dx.mockito.inline.extended.ExtendedMockito;
+import com.android.dx.mockito.inline.extended.StaticMockitoSession;
 import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
@@ -108,6 +112,7 @@ import com.android.server.wifi.WifiNative;
 import com.android.server.wifi.WifiThreadRunner;
 import com.android.server.wifi.hal.WifiNanIface.NanRangingIndication;
 import com.android.server.wifi.hal.WifiNanIface.NanStatusCode;
+import com.android.server.wifi.proto.WifiStatsLog;
 import com.android.server.wifi.util.NetdWrapper;
 import com.android.server.wifi.util.WaitingState;
 import com.android.server.wifi.util.WifiPermissionsUtil;
@@ -120,14 +125,17 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.quality.Strictness;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -164,6 +172,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
     @Mock private WifiAwareDataPathStateManager mMockAwareDataPathStatemanager;
     @Mock private WifiInjector mWifiInjector;
     @Mock private PairingConfigManager mPairingConfigManager;
+    @Mock private StatsManager mStatsManager;
 
     @Rule
     public ErrorCollector collector = new ErrorCollector();
@@ -173,20 +182,29 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
     private Bundle mExtras = new Bundle();
     private WifiManager.ActiveCountryCodeChangedCallback mActiveCountryCodeChangedCallback;
     private HandlerThread mWifiHandlerThread;
-    private LocalLog mLocalLog = new LocalLog(512);
     private byte[] mNik = "0123456789012345".getBytes();
     private byte[] mPeerNik = "6789012345678901".getBytes();
     private byte[] mPmk = "01234567890123456789012345678901".getBytes();
+    private StaticMockitoSession mSession;
+
+    @Captor
+    ArgumentCaptor<StatsManager.StatsPullAtomCallback> mPullAtomCallbackArgumentCaptor;
+
     /**
      * Pre-test configuration. Initialize and install mocks.
      */
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        mSession = ExtendedMockito.mockitoSession()
+                .strictness(Strictness.LENIENT)
+                .mockStatic(WifiStatsLog.class)
+                .startMocking();
 
         mAlarmManager = new TestAlarmManager();
         when(mMockContext.getSystemService(Context.ALARM_SERVICE))
                 .thenReturn(mAlarmManager.getAlarmManager());
+        when(mMockContext.getSystemService(StatsManager.class)).thenReturn(mStatsManager);
 
         when(mMockContext.getSystemService(Context.WIFI_SERVICE)).thenReturn(mMockWifiManager);
         when(mMockWifiManager.getWifiState()).thenReturn(WifiManager.WIFI_STATE_ENABLED);
@@ -230,14 +248,13 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         WifiThreadRunner wifiThreadRunner = new WifiThreadRunner(wifiHandler);
         when(mWifiInjector.getWifiNative()).thenReturn(mWifiNative);
         when(mWifiInjector.getWifiThreadRunner()).thenReturn(wifiThreadRunner);
-        when(mWifiInjector.getWifiAwareLocalLog()).thenReturn(mLocalLog);
         mDut = new WifiAwareStateManager(mWifiInjector, mPairingConfigManager);
         mDut.setNative(mMockNativeManager, mMockNative);
         mDut.start(mMockContext, mMockLooper.getLooper(), mAwareMetricsMock,
                 mWifiPermissionsUtil, mPermissionsWrapperMock, new Clock(),
                 mock(NetdWrapper.class), mInterfaceConflictManager);
         mDut.startLate();
-        mDut.enableVerboseLogging(true, true);
+        mDut.enableVerboseLogging(true, true, true);
         mMockLooper.dispatchAll();
         ArgumentCaptor<WifiManager.ActiveCountryCodeChangedCallback> callbackArgumentCaptor =
                 ArgumentCaptor.forClass(WifiManager.ActiveCountryCodeChangedCallback.class);
@@ -246,8 +263,12 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
                     callbackArgumentCaptor.capture());
             mActiveCountryCodeChangedCallback = callbackArgumentCaptor.getValue();
         }
-        verify(mMockContext, times(3)).registerReceiver(bcastRxCaptor.capture(),
-                any(IntentFilter.class));
+        verify(mMockContext, times(3))
+                .registerReceiver(
+                        bcastRxCaptor.capture(),
+                        any(IntentFilter.class),
+                        isNull(),
+                        any(Handler.class));
         mPowerBcastReceiver = bcastRxCaptor.getAllValues().get(0);
         mLocationModeReceiver = bcastRxCaptor.getAllValues().get(1);
         mWifiStateChangedReceiver = bcastRxCaptor.getAllValues().get(2);
@@ -260,6 +281,12 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         mDut.onCapabilitiesUpdateResponse(transactionId.getValue(), getCapabilities());
         mMockLooper.dispatchAll();
         when(mMockAwareDataPathStatemanager.getNumOfNdps()).thenReturn(1);
+        verify(mStatsManager).setPullAtomCallback(eq(WIFI_AWARE_CAPABILITIES), isNull(), any(),
+                mPullAtomCallbackArgumentCaptor.capture());
+        assertEquals(StatsManager.PULL_SUCCESS, mPullAtomCallbackArgumentCaptor.getValue()
+                .onPullAtom(WIFI_AWARE_CAPABILITIES, new ArrayList<>()));
+        ExtendedMockito.verify(() -> WifiStatsLog.buildStatsEvent(
+                WIFI_AWARE_CAPABILITIES, true, true, true, 0, 1, 1, 2));
     }
 
     /**
@@ -267,6 +294,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
      */
     @After
     public void tearDown() throws Exception {
+        mSession.finishMocking();
         mMockNative.validateUniqueTransactionIds();
         mWifiHandlerThread.quit();
     }
@@ -4466,7 +4494,9 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
      * Validate the connection operation when user approval is required and the user accepts or
      * rejects the request.
      */
-    private void runTestConnectUserApproval(boolean userAcceptsRequest) throws Exception {
+    private void runTestConnectUserApproval(
+            boolean userAcceptsRequest,
+            boolean changedToOpportunistic) throws Exception {
         final int clientId = 1005;
         final int uid = 1000;
         final int pid = 2000;
@@ -4503,6 +4533,11 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
                 any(), any(), mWaitingStateCaptor.capture(), mTargetStateCaptor.capture(),
                 eq(HalDeviceManager.HDM_CREATE_IFACE_NAN), any(), anyBoolean());
 
+        if (changedToOpportunistic) {
+            // calling package changed to opportunistic before the response was received.
+            mDut.setOpportunisticPackage(callingPackage, true);
+        }
+
         // simulate user approval triggered and granted/rejected (userAcceptsRequest)
         when(mInterfaceConflictManager.manageInterfaceConflictForStateMachine(any(), any(), any(),
                 any(), any(), eq(HalDeviceManager.HDM_CREATE_IFACE_NAN), any(), anyBoolean()))
@@ -4512,7 +4547,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         mMockLooper.dispatchAll();
         inOrder.verify(mInterfaceConflictManager).manageInterfaceConflictForStateMachine(any(),
                 any(), any(), any(), any(), eq(HalDeviceManager.HDM_CREATE_IFACE_NAN), any(),
-                anyBoolean());
+                eq(changedToOpportunistic));
 
         if (userAcceptsRequest) {
             verify(mMockNative).enableAndConfigure(anyShort(), eq(configRequest), eq(false),
@@ -5377,7 +5412,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
      */
     @Test
     public void testConnectUserApprovalAccept() throws Exception {
-        runTestConnectUserApproval(true);
+        runTestConnectUserApproval(true, false);
     }
 
     /**
@@ -5386,7 +5421,25 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
      */
     @Test
     public void testConnectUserApprovalReject() throws Exception {
-        runTestConnectUserApproval(false);
+        runTestConnectUserApproval(false, false);
+    }
+
+    /**
+     * Validate the connection operation when user approval is required and the user accepts the
+     * request after the request changes to opportunistic.
+     */
+    @Test
+    public void testConnectUserApprovalAcceptAfterChangingToOpportunistic() throws Exception {
+        runTestConnectUserApproval(true, true);
+    }
+
+    /**
+     * Validate the connection operation when user approval is required and the user rejects the
+     * request after the request changes to opportunistic.
+     */
+    @Test
+    public void testConnectUserApprovalRejectAfterChangingToOpportunistic() throws Exception {
+        runTestConnectUserApproval(false, true);
     }
 
     /*
@@ -5623,6 +5676,10 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         cap.maxQueuedTransmitMessages = 6;
         cap.isInstantCommunicationModeSupported = true;
         cap.isSuspensionSupported = true;
+        cap.isNanPairingSupported = true;
+        cap.isSetClusterIdSupported = true;
+        cap.isHeSupported = true;
+        cap.is6gSupported = true;
         return cap;
     }
 

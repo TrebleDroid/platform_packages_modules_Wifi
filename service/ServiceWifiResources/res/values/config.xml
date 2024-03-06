@@ -33,6 +33,13 @@
     <!-- boolean indicating whether the WiFi chipset has 6GHz band support -->
     <bool translatable="false" name ="config_wifi6ghzSupport">false</bool>
 
+    <!-- Boolean indicating whether the device supports AFC.
+            Note that this flag should remain disabled unless the device is allowed to
+            use AFC by the regulatory rules.
+            Note that enabling AFC will result in the device's location being shared
+            with the AFC server. -->
+    <bool translatable="false" name ="config_wifiAfcSupported">false</bool>
+
     <!-- boolean indicating whether the WiFi chipset has 60GHz band support -->
     <bool translatable="false" name ="config_wifi60ghzSupport">false</bool>
 
@@ -262,6 +269,10 @@
 
     <!-- Integer for maximum number of channels to use in initial partial scan. If equals to 0, means add all available channels for networks -->
     <integer translatable="false" name="config_wifiInitialPartialScanChannelMaxCount">10</integer>
+
+    <!-- Configure the max number of new channels to add into the initial partial scan list per network.
+         If equals to 0, it means there's no limit on the max number of channels to include per network.-->
+    <integer translatable="false" name="config_wifiInitialPartialScanMaxNewChannelsPerNetwork">0</integer>
 
     <!-- Integer for maximum age for scan results used to identify channels for partial initial
          scan in minutes -->
@@ -585,6 +596,9 @@
     <integer translatable="false" name="config_wifiDisableReasonAuthenticationNoSubscriptionThreshold"> 1 </integer>
     <integer translatable="false" name="config_wifiDisableReasonConsecutiveFailuresThreshold"> 1 </integer>
 
+    <!-- Integer for maximum value of temporarily disabled duration -->
+    <integer translatable="false" name="config_wifiDisableTemporaryMaximumDurationMs"> 64800000 </integer>
+
     <!-- Base duration to set a network disabled after validation failure happen-->
     <integer translatable="false" name="config_wifiDisableReasonAssociationRejectionDurationMs"> 300000 </integer>
     <integer translatable="false" name="config_wifiDisableReasonAuthenticationFailureDurationMs"> 300000 </integer>
@@ -873,6 +887,21 @@
     <string-array translatable="false" name="config_wifiDisableReasonAuthenticationFailureCarrierSpecificDurationMs_carrier_overrides">
         <item><xliff:g id="carrier_id_prefix">:::1839:::</xliff:g>14400000</item>
     </string-array>
+
+    <!-- Configure the Carrier specific override for EAP failure disable behavior starting from Android 14.
+         Should be a comma separated list of the following information:
+           - Carrier ID
+           - EAP failure code
+           - display notification or not (0=false, 1=true)
+           - EAP profile failure threshold
+           - EAP profile disable duration in minutes -->
+    <string-array translatable="false" name="config_wifiEapFailureConfig">
+        <item>1839, 0,     0, 1, 240 </item>
+        <item>1839, 16384, 0, 1, 5 </item>
+        <item>1839, 1026,  0, 1, 240 </item>
+        <item>1839, 1031,  1, 1, 1440 </item>
+        <item>1839, 16385, 0, 3, 120 </item>
+    </string-array>
     <!-- Flush ANQP cache on Wi-Fi toggle off event -->
     <bool translatable="false" name="config_wifiFlushAnqpCacheOnWifiToggleOffEvent">true</bool>
 
@@ -960,6 +989,9 @@
          certificate is not validated, by not specifying a Root CA certificate and/or server domain
          name. It is STRONGLY RECOMMENDED to be set to false -->
     <bool translatable="false" name="config_wifiAllowInsecureEnterpriseConfigurationsForSettingsAndSUW">false</bool>
+
+    <!-- Configuration that allows Multi-internet to connect simultaneously to both 5GHz high and 5GHz low -->
+    <bool translatable="false" name="config_wifiAllowMultiInternetConnectDual5GFrequency">false</bool>
 
     <!-- Indicate the max lines for connectivity local log based on the device ram size -->
     <integer translatable="false" name="config_wifiConnectivityLocalLogMaxLinesLowRam">256</integer>
@@ -1137,6 +1169,18 @@
         -->
     </string-array>
 
+    <!-- Lists available AFC servers for each country, based on country code. Each country may
+     have more than one server listed. If a country is not present in the list, then AFC is not
+     available in that country, and the device will behave as if AFC is disabled.
+     Entries should be in the format:
+     <item>countryCode,url1,url2,url3...</item> -->
+    <string-array translatable="false" name="config_wifiAfcServerUrlsForCountry">
+        <!-- Below is a sample configuration for this list:
+            <item>US,https://example.com/,https://google.com/</item>
+            <item>CA,https://example.com/</item>
+        -->
+    </string-array>
+
     <!-- ACTION_FILE_BUG_DEEPLINK intent name -->
     <string name="config_wifiBugreportDeepLink" translatable="false">com.google.android.apps.betterbug.intent.FILE_BUG_DEEPLINK</string>
 
@@ -1197,9 +1241,36 @@
          configured, the default range is 192.168.49.128 to 192.168.49.254 -->
     <string translatable="false" name="config_wifiP2pGoEapolIpAddressRangeStart"/>
     <string translatable="false" name="config_wifiP2pGoEapolIpAddressRangeEnd"/>
+    <!-- Boolean indicating whether to disable firmware roaming when the device goes into idle mode.
+         true: firmware roaming will be disabled when the device goes into idle mode, and then
+               re-activated when the device exits idle mode.
+         false: firmware roaming will not be affected. -->
+    <bool translatable="false" name ="config_wifiDisableFirmwareRoamingInIdleMode">false</bool>
     <!-- Boolean indicating whether the framework updates country from scan results when there is
          no telephony country code. This is applied to all generic cases and might require the
          regulatory approval (for example, FCC pre-approval is required according to "594280 D01
          Software Configuration Control v02r01").-->
     <bool translatable="false" name ="config_wifiUpdateCountryCodeFromScanResultGeneric">false</bool>
+    <!-- Boolean indication whether enable VDBG for more detailed log when Wi-Fi aware verbose
+    logging is enabled -->
+    <bool translatable="false" name ="config_aware_vdbg_enable_on_verbose_logging">false</bool>
+    <!-- Boolean indicating the Hal support for mapping WPA3 transition mode to WPA3 for Softap in
+         6GHz band. WPA3 transition mode or SAE+WPA_PSK key management(AKM) is not allowed in 6GHz.
+         By default, framework removes 6GHz band for WPA3_SAE_TRANSITION security type.
+         Enabling this config allows framework to send the 6GHz band to Hostapd HAL for
+         WPA3_SAE_TRANSITION security type. Only enable this flag if Hostapd HAL has the
+         implementation to convert WPA3 transition mode to WPA3 only. otherwise driver/firmware may
+         fail to set up the AP.-->
+    <bool translatable="false" name="config_wifiSofapHalMapWpa3TransitionModeToWpa3OnlyIn6GHzBand">false</bool>
+    <!-- Boolean indicating whether the device should remain connected to a network without DHCP.
+        If true, the IpClient provisioning timeout will be set to infinite, which means that the
+        connection will not be torn down if the DHCP server does not respond. As a result the device
+        will be discoverable and reachable via the local-only IPv6 address. -->
+    <bool translatable="false" name ="config_wifiRemainConnectedAfterIpProvisionTimeout">false</bool>
+    <!-- Boolean indicating whether to disable disconnects on NUD failures. Such a configuration
+         is limited to WAPI and to a specific country code.
+     true: do not disconnect IF the connection type is WAPI and in the specific country code
+           regulatory domain.
+     false: disconnect on NUD failures (normal/default action). -->
+    <bool translatable="false" name ="config_wifiDisableNudDisconnectsForWapiInSpecificCc">false</bool>
 </resources>

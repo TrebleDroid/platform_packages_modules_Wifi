@@ -63,6 +63,7 @@ java_library {
         "framework-configinfrastructure",
         "framework-connectivity.stubs.module_lib",
         "framework-connectivity-t.stubs.module_lib",
+        "framework-location.stubs.module_lib",
         "framework-statsd.stubs.module_lib",
         "framework-tethering.stubs.module_lib",
         "unsupportedappusage",
@@ -75,8 +76,10 @@ java_library {
     ],
 
     static_libs: [
+        // Types-only package shared across the HALs
+        "android.hardware.wifi.common-V1-java",
         // AIDL vendor hal implementation
-        "android.hardware.wifi-V1-java",
+        "android.hardware.wifi-V2-java",
         // HIDL vendor hal implementation
         "android.hardware.wifi-V1.0-java",
         "android.hardware.wifi-V1.1-java",
@@ -86,14 +89,14 @@ java_library {
         "android.hardware.wifi-V1.5-java",
         "android.hardware.wifi-V1.6-java",
         // AIDL hostapd implementation
-        "android.hardware.wifi.hostapd-V1-java",
+        "android.hardware.wifi.hostapd-V2-java",
         // HIDL hostapd implementation
         "android.hardware.wifi.hostapd-V1.0-java",
         "android.hardware.wifi.hostapd-V1.1-java",
         "android.hardware.wifi.hostapd-V1.2-java",
         "android.hardware.wifi.hostapd-V1.3-java",
         // AIDL supplicant implementation
-        "android.hardware.wifi.supplicant-V2-java",
+        "android.hardware.wifi.supplicant-V3-java",
         // HIDL supplicant implementation
         "android.hardware.wifi.supplicant-V1.0-java",
         "android.hardware.wifi.supplicant-V1.1-java",
@@ -118,6 +121,7 @@ java_library {
         "service-entitlement",
         "wifi-lite-protos",
         "wifi-nano-protos",
+        "wifi_aconfig_flags_lib",
     ],
     apex_available: ["com.android.wifi"],
 }

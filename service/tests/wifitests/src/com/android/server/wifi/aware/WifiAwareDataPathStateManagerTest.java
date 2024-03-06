@@ -44,6 +44,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import android.Manifest;
+import android.app.StatsManager;
 import android.app.test.TestAlarmManager;
 import android.content.Context;
 import android.content.Intent;
@@ -84,7 +85,6 @@ import android.os.PowerManager;
 import android.os.Process;
 import android.os.UserHandle;
 import android.os.test.TestLooper;
-import android.util.LocalLog;
 
 import androidx.test.filters.SmallTest;
 
@@ -158,12 +158,12 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
     @Mock private PowerManager mMockPowerManager;
     @Mock private WifiInjector mWifiInjector;
     @Mock private PairingConfigManager mPairingConfigManager;
+    @Mock private StatsManager mStatsManager;
 
     @Rule
     public ErrorCollector collector = new ErrorCollector();
     private MockResources mResources;
     private Bundle mExtras = new Bundle();
-    private LocalLog mLocalLog = new LocalLog(512);
 
     /**
      * Initialize mocks.
@@ -187,6 +187,7 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
         when(mMockContext.getSystemServiceName(PowerManager.class)).thenReturn(
                 Context.POWER_SERVICE);
         when(mMockContext.getSystemService(PowerManager.class)).thenReturn(mMockPowerManager);
+        when(mMockContext.getSystemService(StatsManager.class)).thenReturn(mStatsManager);
 
         when(mInterfaceConflictManager.manageInterfaceConflictForStateMachine(any(), any(), any(),
                 any(), any(), eq(HalDeviceManager.HDM_CREATE_IFACE_NAN), any(), anyBoolean()))
@@ -201,7 +202,6 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
         if (SdkLevel.isAtLeastS()) {
             when(mWifiPermissionsUtil.getWifiCallerType(any())).thenReturn(6);
         }
-        when(mWifiInjector.getWifiAwareLocalLog()).thenReturn(mLocalLog);
 
         mDut = new WifiAwareStateManager(mWifiInjector, mPairingConfigManager);
         mDut.setNative(mMockNativeManager, mMockNative);
@@ -209,7 +209,7 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
                 mWifiPermissionsUtil, mPermissionsWrapperMock, mClock, mMockNetdWrapper,
                 mInterfaceConflictManager);
         mDut.startLate();
-        mDut.enableVerboseLogging(true, true);
+        mDut.enableVerboseLogging(true, true , true);
         mMockLooper.dispatchAll();
 
         when(mMockNetworkInterface.configureAgentProperties(any(), any(), any())).thenReturn(true);

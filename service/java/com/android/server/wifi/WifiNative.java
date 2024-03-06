@@ -32,6 +32,7 @@ import android.net.MacAddress;
 import android.net.TrafficStats;
 import android.net.apf.ApfCapabilities;
 import android.net.wifi.CoexUnsafeChannel;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
@@ -64,8 +65,10 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.HexDump;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.SupplicantStaIfaceHal.QosPolicyStatus;
+import com.android.server.wifi.hal.WifiChip;
 import com.android.server.wifi.hotspot2.NetworkDetail;
 import com.android.server.wifi.mockwifi.MockWifiServiceUtil;
+import com.android.server.wifi.proto.WifiStatsLog;
 import com.android.server.wifi.util.FrameParser;
 import com.android.server.wifi.util.InformationElementUtil;
 import com.android.server.wifi.util.NativeUtil;
@@ -503,7 +506,10 @@ public class WifiNative {
         @Override
         public void onScanFailed() {
             Log.d(TAG, "Pno Scan failed event");
-            mWifiMetrics.incrementPnoScanFailedCount();
+            WifiStatsLog.write(WifiStatsLog.PNO_SCAN_STOPPED,
+                    WifiStatsLog.PNO_SCAN_STOPPED__STOP_REASON__SCAN_FAILED,
+                    0, false, false, false, false, // default values
+                    WifiStatsLog.PNO_SCAN_STOPPED__FAILURE_CODE__WIFICOND_SCAN_FAILURE);
         }
     }
 
@@ -840,11 +846,13 @@ public class WifiNative {
     private class SupplicantDeathHandlerInternal implements SupplicantDeathEventHandler {
         @Override
         public void onDeath() {
-            synchronized (mLock) {
-                Log.i(TAG, "wpa_supplicant died. Cleaning up internal state.");
-                onNativeDaemonDeath();
-                mWifiMetrics.incrementNumSupplicantCrashes();
-            }
+            mHandler.post(() -> {
+                synchronized (mLock) {
+                    Log.i(TAG, "wpa_supplicant died. Cleaning up internal state.");
+                    onNativeDaemonDeath();
+                    mWifiMetrics.incrementNumSupplicantCrashes();
+                }
+            });
         }
     }
 
@@ -1097,12 +1105,12 @@ public class WifiNative {
      */
     private String createApIface(@NonNull Iface iface, @NonNull WorkSource requestorWs,
             @SoftApConfiguration.BandType int band, boolean isBridged,
-            @NonNull SoftApManager softApManager) {
+            @NonNull SoftApManager softApManager, @NonNull List<OuiKeyedData> vendorData) {
         synchronized (mLock) {
             if (mWifiVendorHal.isVendorHalSupported()) {
                 return mWifiVendorHal.createApIface(
                         new InterfaceDestoyedListenerInternal(iface.id), requestorWs,
-                        band, isBridged, softApManager);
+                        band, isBridged, softApManager, vendorData);
             } else {
                 Log.i(TAG, "Vendor Hal not supported, ignoring createApIface.");
                 return handleIfaceCreationWhenVendorHalNotSupported(iface);
@@ -1354,12 +1362,14 @@ public class WifiNative {
      * @param requestorWs Requestor worksource.
      * @param isBridged Whether or not AP interface is a bridge interface.
      * @param softApManager SoftApManager of the request.
+     * @param vendorData List of {@link OuiKeyedData} containing vendor-provided
+     *                   configuration data. Empty list indicates no vendor data.
      * @return Returns the name of the allocated interface, will be null on failure.
      */
     public String setupInterfaceForSoftApMode(
             @NonNull InterfaceCallback interfaceCallback, @NonNull WorkSource requestorWs,
             @SoftApConfiguration.BandType int band, boolean isBridged,
-            @NonNull SoftApManager softApManager) {
+            @NonNull SoftApManager softApManager, @NonNull List<OuiKeyedData> vendorData) {
         synchronized (mLock) {
             String bugTitle = "Wi-Fi BugReport (softAp interface failure)";
             String errorMsg = "";
@@ -1368,6 +1378,7 @@ public class WifiNative {
                 Log.e(TAG, errorMsg);
                 mWifiMetrics.incrementNumSetupSoftApInterfaceFailureDueToHal();
                 takeBugReportInterfaceFailureIfNeeded(bugTitle, errorMsg);
+                softApManager.writeSoftApStartedEvent(SoftApManager.START_RESULT_FAILURE_START_HAL);
                 return null;
             }
             if (!startHostapd()) {
@@ -1375,6 +1386,8 @@ public class WifiNative {
                 Log.e(TAG, errorMsg);
                 mWifiMetrics.incrementNumSetupSoftApInterfaceFailureDueToHostapd();
                 takeBugReportInterfaceFailureIfNeeded(bugTitle, errorMsg);
+                softApManager.writeSoftApStartedEvent(
+                        SoftApManager.START_RESULT_FAILURE_START_HOSTAPD);
                 return null;
             }
             Iface iface = mIfaceMgr.allocateIface(Iface.IFACE_TYPE_AP);
@@ -1383,7 +1396,8 @@ public class WifiNative {
                 return null;
             }
             iface.externalListener = interfaceCallback;
-            iface.name = createApIface(iface, requestorWs, band, isBridged, softApManager);
+            iface.name = createApIface(iface, requestorWs, band, isBridged, softApManager,
+                    vendorData);
             if (TextUtils.isEmpty(iface.name)) {
                 errorMsg = "Failed to create softAp iface in vendor HAL";
                 Log.e(TAG, errorMsg);
@@ -1957,8 +1971,11 @@ public class WifiNative {
 
                     @Override
                     public void onPnoRequestFailed() {
-                        mWifiMetrics.incrementPnoScanStartAttemptCount();
-                        mWifiMetrics.incrementPnoScanFailedCount();
+                        WifiStatsLog.write(WifiStatsLog.PNO_SCAN_STOPPED,
+                                WifiStatsLog.PNO_SCAN_STOPPED__STOP_REASON__SCAN_FAILED,
+                                0, false, false, false, false, // default values
+                                WifiStatsLog
+                                        .PNO_SCAN_STOPPED__FAILURE_CODE__WIFICOND_REQUEST_FAILURE);
                     }
                 });
     }
@@ -2117,18 +2134,18 @@ public class WifiNative {
      * Start Soft AP operation using the provided configuration.
      *
      * @param ifaceName Name of the interface.
-     * @param config Configuration to use for the soft ap created.
+     * @param config    Configuration to use for the soft ap created.
      * @param isMetered Indicates the network is metered or not.
-     * @param callback Callback for AP events.
-     * @return true on success, false otherwise.
+     * @param callback  Callback for AP events.
+     * @return one of {@link SoftApManager.StartResult}
      */
-    public boolean startSoftAp(
+    public @SoftApManager.StartResult int startSoftAp(
             @NonNull String ifaceName, SoftApConfiguration config, boolean isMetered,
             SoftApHalCallback callback) {
         if (mHostapdHal.isApInfoCallbackSupported()) {
             if (!mHostapdHal.registerApCallback(ifaceName, callback)) {
                 Log.e(TAG, "Failed to register ap hal event callback");
-                return false;
+                return SoftApManager.START_RESULT_FAILURE_REGISTER_AP_CALLBACK_HOSTAPD;
             }
         } else {
             SoftApHalCallbackFromWificond softApHalCallbackFromWificond =
@@ -2136,7 +2153,7 @@ public class WifiNative {
             if (!mWifiCondManager.registerApCallback(ifaceName,
                     Runnable::run, softApHalCallbackFromWificond)) {
                 Log.e(TAG, "Failed to register ap hal event callback from wificond");
-                return false;
+                return SoftApManager.START_RESULT_FAILURE_REGISTER_AP_CALLBACK_WIFICOND;
             }
         }
 
@@ -2146,10 +2163,10 @@ public class WifiNative {
             mWifiMetrics.incrementNumSetupSoftApInterfaceFailureDueToHostapd();
             takeBugReportInterfaceFailureIfNeeded("Wi-Fi BugReport (softap interface failure)",
                     errorMsg);
-            return false;
+            return SoftApManager.START_RESULT_FAILURE_ADD_AP_HOSTAPD;
         }
 
-        return true;
+        return SoftApManager.START_RESULT_SUCCESS;
     }
 
     /**
@@ -4576,6 +4593,15 @@ public class WifiNative {
             if (iface.phyCapabilities == null) {
                 iface.phyCapabilities = mWifiCondManager.getDeviceWiphyCapabilities(ifaceName);
             }
+            if (iface.phyCapabilities != null
+                    && iface.phyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE)
+                    != mWifiInjector.getSettingsConfigStore()
+                    .get(WifiSettingsConfigStore.WIFI_WIPHY_11BE_SUPPORTED)) {
+                mWifiInjector.getSettingsConfigStore().put(
+                        WifiSettingsConfigStore.WIFI_WIPHY_11BE_SUPPORTED,
+                        iface.phyCapabilities.isWifiStandardSupported(
+                        ScanResult.WIFI_STANDARD_11BE));
+            }
             return iface.phyCapabilities;
         }
     }
@@ -5017,5 +5043,16 @@ public class WifiNative {
      */
     public Set<List<Integer>> getSupportedBandCombinations(@NonNull String ifaceName) {
         return mWifiVendorHal.getSupportedBandCombinations(ifaceName);
+    }
+
+    /**
+     * Sends the AFC allowed channels and frequencies to the driver.
+     *
+     * @param afcChannelAllowance the allowed frequencies and channels received from
+     * querying the AFC server.
+     * @return whether the channel allowance was set successfully.
+     */
+    public boolean setAfcChannelAllowance(WifiChip.AfcChannelAllowance afcChannelAllowance) {
+        return mWifiVendorHal.setAfcChannelAllowance(afcChannelAllowance);
     }
 }

@@ -252,7 +252,7 @@ public class PasspointManagerTest extends WifiBaseTest {
         initMocks(this);
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
         when(mObjectFactory.makeAnqpCache(mClock)).thenReturn(mAnqpCache);
-        when(mObjectFactory.makeANQPRequestManager(any(), eq(mClock)))
+        when(mObjectFactory.makeANQPRequestManager(any(), eq(mClock), any(), any()))
                 .thenReturn(mAnqpRequestManager);
         when(mObjectFactory.makeOsuNetworkConnection(any(Context.class)))
                 .thenReturn(mOsuNetworkConnection);
@@ -279,7 +279,7 @@ public class PasspointManagerTest extends WifiBaseTest {
         when(mWifiSettingsStore.isWifiPasspointEnabled())
                 .thenReturn(mConfigSettingsPasspointEnabled);
         mLooper = new TestLooper();
-        mHandler = new RunnerHandler(mLooper.getLooper(), 100, new LocalLog(128), mWifiMetrics);
+        mHandler = new RunnerHandler(mLooper.getLooper(), 100, new LocalLog(128));
         mWifiCarrierInfoManager = new WifiCarrierInfoManager(mTelephonyManager,
                 mSubscriptionManager, mWifiInjector, mock(FrameworkFacade.class),
                 mock(WifiContext.class), mWifiConfigStore, mHandler, mWifiMetrics, mClock,
@@ -1304,11 +1304,13 @@ public class PasspointManagerTest extends WifiBaseTest {
         WifiConfiguration config4 = provider4.getWifiConfig();
         when(mWifiConfigManager.getConfiguredNetwork(provider4.getConfig().getUniqueId()))
                 .thenReturn(config4);
-
+        verify(mPasspointNetworkNominateHelper, times(4)).refreshWifiConfigsForProviders();
+        reset(mPasspointNetworkNominateHelper);
         List<WifiConfiguration> wifiConfigurationList = mManager.getWifiConfigsForPasspointProfiles(
                 List.of(provider1.getConfig().getUniqueId(), provider2.getConfig().getUniqueId(),
                         provider3.getConfig().getUniqueId(), provider4.getConfig().getUniqueId(),
                         TEST_FQDN + "_353ab8c93", TEST_FQDN + "_83765319aca"));
+        verify(mPasspointNetworkNominateHelper).refreshWifiConfigsForProviders();
         assertEquals(2, wifiConfigurationList.size());
         Set<String> uniqueIdSet = wifiConfigurationList
                 .stream()
@@ -1363,8 +1365,8 @@ public class PasspointManagerTest extends WifiBaseTest {
     }
 
     /**
-     * Verify that {@link PasspointManager#getWifiConfigsForPasspointProfilesWithSsids()}
-     * only returns configs for providers that have been assigned a recent SSID.
+     * Verify that {@link PasspointManager#getWifiConfigsForPasspointProfiles(boolean)} returns
+     * configs for the expected providers.
      */
     @Test
     public void testGetWifiConfigsForPasspointProfilesWithSsids() {
@@ -1374,8 +1376,12 @@ public class PasspointManagerTest extends WifiBaseTest {
                 TEST_PACKAGE, false, null, false);
         when(provider2.getMostRecentSsid()).thenReturn(TEST_SSID); // assign a recent SSID
 
-        // Only entry should be for the provider that was assigned a recent SSID.
-        List<WifiConfiguration> configs = mManager.getWifiConfigsForPasspointProfilesWithSsids();
+        // If SSIDs are not required, both providers should appear in the results list.
+        List<WifiConfiguration> configs = mManager.getWifiConfigsForPasspointProfiles(false);
+        assertEquals(2, configs.size());
+
+        // If SSIDs are required, only the provider with an SSID should appear in the results.
+        configs = mManager.getWifiConfigsForPasspointProfiles(true);
         assertEquals(1, configs.size());
         assertEquals(provider2.getConfig().getUniqueId(), configs.get(0).getPasspointUniqueId());
         assertEquals(TEST_SSID, configs.get(0).SSID);

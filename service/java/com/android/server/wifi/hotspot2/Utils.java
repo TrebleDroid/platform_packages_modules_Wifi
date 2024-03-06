@@ -1,8 +1,15 @@
 package com.android.server.wifi.hotspot2;
 
-import static com.android.server.wifi.hotspot2.anqp.Constants.BYTES_IN_EUI48;
 import static com.android.server.wifi.hotspot2.anqp.Constants.BYTE_MASK;
 import static com.android.server.wifi.hotspot2.anqp.Constants.NIBBLE_MASK;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_NONE;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_NOT_PASSPOINT;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_NOT_RCOI;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OPENROAMING_FREE;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OPENROAMING_SETTLED;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OTHERS;
+
+import android.net.wifi.WifiConfiguration;
 
 import com.android.server.wifi.hotspot2.anqp.Constants;
 
@@ -23,9 +30,15 @@ public abstract class Utils {
     private static final long EUI48Mask = 0xffffffffffffL;
     private static final String[] PLMNText = {"org", "3gppnetwork", "mcc*", "mnc*", "wlan" };
 
-    public static String hs2LogTag(Class c) {
-        return "HS20";
-    }
+    /*
+     * OpenRoaming defines the use of multiple RCOIs to facilitate the implementation of policies
+     * across the federation. The currently defined RCOIs are:
+     * OpenRoaming-Settled: BA-A2-D0-xx-xx
+     * OpenRoaming-Settlement-Free: 5A-03-BA -xx-xx
+     * Refer to "OpenRoaming Framework & Standard Arch v3.0.0".
+     */
+    private static final long RCOI_OPEN_ROAMING_SETTLED_PREFIX = 0xBAA2D0;
+    private static final long RCOI_OPEN_ROAMING_FREE_PREFIX = 0x5A03BA;
 
     public static List<String> splitDomain(String domain) {
 
@@ -61,20 +74,6 @@ public abstract class Utils {
             throw new IllegalArgumentException("Bad MAC address: '" + s + "'");
         }
         return mac;
-    }
-
-    /**
-     * Convert from mac address as long to simple string in hex code, same as "%012x".
-     * @param mac The Mac address as long value.
-     * @return String value of mac address.
-     */
-    public static String macToSimpleString(long mac) {
-        StringBuilder sb = new StringBuilder();
-        for (int n = BYTES_IN_EUI48 - 1; n >= 0; n--) {
-            long b = (mac >>> (n * Byte.SIZE)) & BYTE_MASK;
-            sb.append(b > 0xf ? Long.toHexString(b) : "0" + Long.toHexString(b));
-        }
-        return sb.toString();
     }
 
     /**
@@ -306,5 +305,88 @@ public abstract class Utils {
         else {
             return s;
         }
+    }
+
+    /*
+     * Gets the first three octets from the RCOI which has 3 or 5 octets.
+     */
+    private static long getRcoiPrefix(long rcoi) {
+        rcoi &= 0xff_ffff_ffffL;
+        if ((rcoi & 0xff_ff00_0000L) != 0) {
+            // This is a 5-octet RCOI, pick the first 3 octets.
+            rcoi >>= 16;
+        }
+        return rcoi;
+    }
+
+    /**
+     * Checks whether the given RCOI is a free Openroaming RCOI.
+     */
+    public static boolean isFreeOpenRoaming(long rcoi) {
+        // There are more than 5 octets in the rcoi
+        if (Long.numberOfLeadingZeros(rcoi) < 24) return false;
+        return getRcoiPrefix(rcoi) == RCOI_OPEN_ROAMING_FREE_PREFIX;
+    }
+
+    /**
+     * Checks whether there is a free OpenRoaming RCOI.
+     */
+    public static boolean containsFreeOpenRoaming(long[] rcois) {
+        for (int i = 0; i < rcois.length; i++) {
+            if (isFreeOpenRoaming(rcois[i])) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether the given RCOI is a settled OpenRoaming RCOI.
+     */
+    public static boolean isSettledOpenRoaming(long rcoi) {
+        // There are more than 5 octets in the rcoi
+        if (Long.numberOfLeadingZeros(rcoi) < 24) return false;
+        return getRcoiPrefix(rcoi) == RCOI_OPEN_ROAMING_SETTLED_PREFIX;
+    }
+
+    /**
+     * Checks whether there is a settled OpenRoaming RCOI.
+     */
+    public static boolean containsSettledOpenRoaming(long[] rcois) {
+        for (int i = 0; i < rcois.length; i++) {
+            if (isSettledOpenRoaming(rcois[i])) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Gets the roaming type of the given WifiConfiguration.
+     *
+     * @param connectConfig the passpoint WifiConfuration which has been connected or is being
+     *                      connecting.
+     * @return ROAMING_NOT_PASSPOINT if the input WifiConfiguration is not for passpoint.
+     *         ROAMING_NONE if it is a home network.
+     *         ROAMING_UNKNOWN if there is no selected RCOI which is set during connection.
+     *         ROAMING_OPENROAMING_FREE if it is a free OpenRoaming network.
+     *         ROAMING_OPENROAMING_SETTLED if it is a settled OpenRoaming network.
+     */
+    public static int getRoamingType(WifiConfiguration connectConfig) {
+        if (!connectConfig.isPasspoint()) {
+            return WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_NOT_PASSPOINT;
+        }
+        if (connectConfig.isHomeProviderNetwork) {
+            return WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_NONE;
+        }
+
+        long selectedRcoi = connectConfig.enterpriseConfig.getSelectedRcoi();
+        if (isFreeOpenRoaming(selectedRcoi)) {
+            return WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OPENROAMING_FREE;
+        }
+        if (isSettledOpenRoaming(selectedRcoi)) {
+            return WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OPENROAMING_SETTLED;
+        }
+        if (selectedRcoi != 0L) {
+            return WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OTHERS;
+        }
+
+        return WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_NOT_RCOI;
     }
 }
