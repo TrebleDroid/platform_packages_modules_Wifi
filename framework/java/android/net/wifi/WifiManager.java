@@ -55,6 +55,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.NetworkStack;
+import android.net.TetheringManager;
 import android.net.Uri;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
@@ -5626,6 +5627,36 @@ public class WifiManager {
         }
     }
 
+    /**
+     * Start Soft AP (hotspot) mode for tethering purposes with the specified TetheringRequest.
+     * Note that starting Soft AP mode may disable station mode operation if the device does not
+     * support concurrency.
+     * </p>
+     * This will fail and return {@code false} under the following circumstances:
+     * <ul>
+     *     <li>No interfaces are currently available for hotspot. See
+     *     {@link #reportCreateInterfaceImpact(int, boolean, Executor, BiConsumer)}. </li>
+     *     <li>TetheringRequest is misconfigured.</li>
+     *     <li>Wi-Fi tethering is disallowed for the current user.</li>
+     * </ul>
+     *
+     * @param request A valid TetheringRequest specifying the configuration of the SAP.
+     *
+     * @return {@code true} if the start operation was successfully posted, {@code false} otherwise.
+     *         If {@code true} was returned, then the success/failure of the request will be
+     *         conveyed afterwards via SoftApCallback.
+     *
+     * @hide
+     */
+    @FlaggedApi("com.android.wifi.flags.android_v_wifi_api")
+    @SystemApi
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_STACK,
+            NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
+    })
+    public boolean startTetheredHotspotRequest(@NonNull TetheringManager.TetheringRequest request) {
+        throw new UnsupportedOperationException("Not supported before API 35");
+    }
 
     /**
      * Stop SoftAp mode.
@@ -6516,6 +6547,14 @@ public class WifiManager {
          *                      {@link #SAP_START_FAILURE_USER_REJECTED}
          */
         default void onStateChanged(@WifiApState int state, @SapStartFailure int failureReason) {}
+
+        /**
+         * Called when soft AP state changes.
+         *
+         * @param state the new state.
+         */
+        @FlaggedApi("com.android.wifi.flags.android_v_wifi_api")
+        default void onStateChanged(@NonNull SoftApState state) {}
 
         /**
          * Called when the connected clients to soft AP changes.
