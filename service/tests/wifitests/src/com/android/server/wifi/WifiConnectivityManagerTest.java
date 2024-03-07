@@ -6107,7 +6107,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
                                 "wlan1", false, true, wifiInfo2, false));
         verify(mWifiNS).getCandidatesFromScan(any(), any(),
                 eq(expectedCmmStates), anyBoolean(), anyBoolean(), anyBoolean(), any(),
-                anyBoolean());
+                eq(false));
     }
 
     @Test
@@ -6137,14 +6137,42 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
                 primaryCmm,
                 WifiConnectivityManager.WIFI_STATE_DISCONNECTED);
         mLooper.dispatchAll();
-        List<WifiNetworkSelector.ClientModeManagerState> expectedCmmStates =
-                Arrays.asList(new WifiNetworkSelector.ClientModeManagerState(
-                        "wlan0", false, true, wifiInfo1, false),
-                new WifiNetworkSelector.ClientModeManagerState(
-                        "unknown", false, true, new WifiInfo(), false));
         verify(mWifiNS).getCandidatesFromScan(any(), any(),
-                eq(expectedCmmStates), anyBoolean(), anyBoolean(), anyBoolean(), any(),
-                anyBoolean());
+                any(), anyBoolean(), anyBoolean(), anyBoolean(), any(),
+                eq(true));
+    }
+
+    @Test
+    public void testMbbAvailableWillSkipSufficiencyCheck() {
+        // Set screen to on
+        setScreenState(true);
+        // set OEM paid connection allowed.
+        WorkSource oemPaidWs = new WorkSource();
+        mWifiConnectivityManager.setOemPaidConnectionAllowed(true, oemPaidWs);
+
+        ConcreteClientModeManager primaryCmm = mock(ConcreteClientModeManager.class);
+        WifiInfo wifiInfo1 = mock(WifiInfo.class);
+        when(primaryCmm.getInterfaceName()).thenReturn("wlan0");
+        when(primaryCmm.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
+        when(primaryCmm.isConnected()).thenReturn(false);
+        when(primaryCmm.isDisconnected()).thenReturn(true);
+        when(primaryCmm.getConnectionInfo()).thenReturn(wifiInfo1);
+
+        when(mActiveModeWarden.getInternetConnectivityClientModeManagers())
+                .thenReturn(Arrays.asList(primaryCmm));
+        // Second STA creation is allowed.
+        when(mActiveModeWarden.canRequestMoreClientModeManagersInRole(
+                eq(ActiveModeWarden.INTERNAL_REQUESTOR_WS), eq(ROLE_CLIENT_SECONDARY_TRANSIENT),
+                eq(false))).thenReturn(true);
+
+        // Set WiFi to disconnected state to trigger scan
+        mWifiConnectivityManager.handleConnectionStateChanged(
+                primaryCmm,
+                WifiConnectivityManager.WIFI_STATE_DISCONNECTED);
+        mLooper.dispatchAll();
+        verify(mWifiNS).getCandidatesFromScan(any(), any(),
+                any(), anyBoolean(), anyBoolean(), anyBoolean(), any(),
+                eq(true));
     }
 
     /**
