@@ -319,7 +319,7 @@ public class WifiHealthMonitor {
     }
 
     private void setPostBootDetectionAlarm() {
-        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME,
                 mClock.getElapsedSinceBootMillis() + POST_BOOT_DETECTION_WAIT_TIME_MS,
                 POST_BOOT_DETECTION_TIMER_TAG,
                 mPostBootDetectionListener, mHandler);
