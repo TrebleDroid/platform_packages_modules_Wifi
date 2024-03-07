@@ -544,6 +544,47 @@ public class WifiConnectivityManager {
         return true;
     }
 
+    private boolean shouldSkipSufficiencyCheck(boolean hasExistingSecondaryCmm) {
+        if (hasExistingSecondaryCmm) {
+            // Secondary CMM already exists. NetworkSelector will evaluate if network selection
+            // should proceed
+            return false;
+        }
+
+        // Otherwise check the various secondary use-cases. Network selection should be triggered
+        // if any secondary use-case is available.
+        if (mOemPaidConnectionAllowed || mOemPrivateConnectionAllowed) {
+            // prefer OEM PAID requestor if it exists.
+            WorkSource oemPaidOrOemPrivateRequestorWs =
+                    mOemPaidConnectionRequestorWs != null
+                            ? mOemPaidConnectionRequestorWs
+                            : mOemPrivateConnectionRequestorWs;
+            if (oemPaidOrOemPrivateRequestorWs == null) {
+                Log.e(TAG, "Both mOemPaidConnectionRequestorWs & mOemPrivateConnectionRequestorWs "
+                        + "are null!");
+            }
+            if (oemPaidOrOemPrivateRequestorWs != null
+                    && mActiveModeWarden.canRequestMoreClientModeManagersInRole(
+                    oemPaidOrOemPrivateRequestorWs,
+                    ROLE_CLIENT_SECONDARY_LONG_LIVED, false)) {
+                return true;
+            }
+        }
+        if (isMultiInternetConnectionRequested()) {
+            if (mMultiInternetConnectionRequestorWs == null) {
+                Log.e(TAG, "mMultiInternetConnectionRequestorWs is null!");
+            } else if (mActiveModeWarden.canRequestMoreClientModeManagersInRole(
+                    mMultiInternetConnectionRequestorWs, ROLE_CLIENT_SECONDARY_LONG_LIVED, false)) {
+                return true;
+            }
+        }
+        if (mActiveModeWarden.canRequestMoreClientModeManagersInRole(
+                ActiveModeWarden.INTERNAL_REQUESTOR_WS, ROLE_CLIENT_SECONDARY_TRANSIENT, false)) {
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Handles 'onResult' callbacks for the Periodic, Single & Pno ScanListener.
      * Executes selection of potential network candidates, initiation of connection attempt to that
@@ -583,40 +624,7 @@ public class WifiConnectivityManager {
             }
             cmmStates.add(cmmState);
         }
-        // We don't have any existing secondary CMM, but are we allowed to create a secondary CMM
-        // and do we have a request for OEM_PAID/OEM_PRIVATE request? If yes, we need to perform
-        // network selection to check if we have any potential candidate for the secondary CMM
-        // creation.
-        if (!hasExistingSecondaryCmm
-                && (mOemPaidConnectionAllowed || mOemPrivateConnectionAllowed)) {
-            // prefer OEM PAID requestor if it exists.
-            WorkSource oemPaidOrOemPrivateRequestorWs =
-                    mOemPaidConnectionRequestorWs != null
-                            ? mOemPaidConnectionRequestorWs
-                            : mOemPrivateConnectionRequestorWs;
-            if (oemPaidOrOemPrivateRequestorWs == null) {
-                Log.e(TAG, "Both mOemPaidConnectionRequestorWs & mOemPrivateConnectionRequestorWs "
-                        + "are null!");
-            }
-            if (oemPaidOrOemPrivateRequestorWs != null
-                    && mActiveModeWarden.canRequestMoreClientModeManagersInRole(
-                            oemPaidOrOemPrivateRequestorWs,
-                            ROLE_CLIENT_SECONDARY_LONG_LIVED, false)) {
-                // Add a placeholder CMM state to ensure network selection is performed for a
-                // potential second STA creation.
-                cmmStates.add(new WifiNetworkSelector.ClientModeManagerState());
-                hasExistingSecondaryCmm = true;
-            }
-        }
-        // If secondary cmm has not been created and need to connect secondary internet
-        if (!hasExistingSecondaryCmm && isMultiInternetConnectionRequested()) {
-            if (mMultiInternetConnectionRequestorWs == null) {
-                Log.e(TAG, "mMultiInternetConnectionRequestorWs is null!");
-            } else if (mActiveModeWarden.canRequestMoreClientModeManagersInRole(
-                    mMultiInternetConnectionRequestorWs, ROLE_CLIENT_SECONDARY_LONG_LIVED, false)) {
-                cmmStates.add(new WifiNetworkSelector.ClientModeManagerState());
-            }
-        }
+        boolean skipSufficiencyCheck = shouldSkipSufficiencyCheck(hasExistingSecondaryCmm);
 
         // Check if any blocklisted BSSIDs can be freed.
         List<ScanDetail> enabledDetails =
@@ -639,7 +647,7 @@ public class WifiConnectivityManager {
         List<WifiCandidates.Candidate> candidates = mNetworkSelector.getCandidatesFromScan(
                 scanDetails, bssidBlocklist, cmmStates, mUntrustedConnectionAllowed,
                 mOemPaidConnectionAllowed, mOemPrivateConnectionAllowed,
-                mRestrictedConnectionAllowedUids, isMultiInternetConnectionRequested());
+                mRestrictedConnectionAllowedUids, skipSufficiencyCheck);
         mLatestCandidates = candidates;
         mLatestCandidatesTimestampMs = mClock.getElapsedSinceBootMillis();
 
