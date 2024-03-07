@@ -1424,6 +1424,12 @@ package android.net.wifi.p2p {
     field public static final String EXTRA_WIFI_P2P_GROUP = "p2pGroupInfo";
     field public static final String EXTRA_WIFI_P2P_INFO = "wifiP2pInfo";
     field public static final String EXTRA_WIFI_STATE = "wifi_p2p_state";
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int GROUP_CREATION_FAILURE_REASON_CONNECTION_CANCELLED = 0; // 0x0
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int GROUP_CREATION_FAILURE_REASON_GROUP_REMOVED = 4; // 0x4
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int GROUP_CREATION_FAILURE_REASON_INVITATION_FAILED = 5; // 0x5
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int GROUP_CREATION_FAILURE_REASON_PROVISION_DISCOVERY_FAILED = 3; // 0x3
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int GROUP_CREATION_FAILURE_REASON_TIMED_OUT = 1; // 0x1
+    field @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static final int GROUP_CREATION_FAILURE_REASON_USER_REJECTED = 2; // 0x2
     field public static final int NO_SERVICE_REQUESTS = 3; // 0x3
     field public static final int P2P_UNSUPPORTED = 1; // 0x1
     field public static final String WIFI_P2P_CONNECTION_CHANGED_ACTION = "android.net.wifi.p2p.CONNECTION_STATE_CHANGE";
@@ -1515,18 +1521,18 @@ package android.net.wifi.p2p {
 
   @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public static interface WifiP2pManager.WifiP2pListener {
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onDeviceConfigurationChanged(@Nullable android.net.wifi.p2p.WifiP2pDevice);
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onDiscoveryStateChanged(boolean);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onDiscoveryStateChanged(int);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onFrequencyChanged(@NonNull android.net.wifi.p2p.WifiP2pInfo, @NonNull android.net.wifi.p2p.WifiP2pGroup);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onGroupCreated(@NonNull android.net.wifi.p2p.WifiP2pInfo, @NonNull android.net.wifi.p2p.WifiP2pGroup);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onGroupCreating();
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onGroupCreationFailed();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onGroupCreationFailed(int);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onGroupNegotiationRejectedByUser();
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onGroupRemoved();
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onListenStateChanged(boolean);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onListenStateChanged(int);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onP2pStateChanged(int);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onPeerClientDisconnected(@NonNull android.net.wifi.p2p.WifiP2pInfo, @NonNull android.net.wifi.p2p.WifiP2pGroup);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onPeerClientJoined(@NonNull android.net.wifi.p2p.WifiP2pInfo, @NonNull android.net.wifi.p2p.WifiP2pGroup);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onPeerListChanged(@NonNull android.net.wifi.p2p.WifiP2pDeviceList);
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onStateChanged(boolean);
   }
 
   public final class WifiP2pWfdInfo implements android.os.Parcelable {

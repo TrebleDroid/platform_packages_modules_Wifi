@@ -1262,10 +1262,12 @@ public class WifiP2pManager {
          * @see #WIFI_P2P_STATE_CHANGED_ACTION
          * @see #requestP2pState(Channel, P2pStateListener)
          *
-         * @param p2pEnabled indicates whether Wi-Fi p2p is enabled or disabled.
+         * @param state indicates whether Wi-Fi p2p is enabled or disabled.
+         *          @see #WIFI_P2P_STATE_ENABLED
+         *          @see #WIFI_P2P_STATE_DISABLED
          */
         @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-        default void onStateChanged(boolean p2pEnabled) {
+        default void onP2pStateChanged(@WifiP2pState int state) {
         }
 
         /**
@@ -1273,10 +1275,12 @@ public class WifiP2pManager {
          * @see #WIFI_P2P_DISCOVERY_CHANGED_ACTION
          * @see #requestDiscoveryState(Channel, DiscoveryStateListener)
          *
-         * @param started indicates whether discovery has started or stopped.
+         * @param state indicates whether discovery has started or stopped.
+         *          @see #WIFI_P2P_DISCOVERY_STARTED
+         *          @see #WIFI_P2P_DISCOVERY_STOPPED
          */
         @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-        default void onDiscoveryStateChanged(boolean started) {
+        default void onDiscoveryStateChanged(@WifiP2pDiscoveryState int state) {
         }
 
         /**
@@ -1284,10 +1288,12 @@ public class WifiP2pManager {
          * @see #ACTION_WIFI_P2P_LISTEN_STATE_CHANGED
          * @see #getListenState(Channel, Executor, Consumer)
          *
-         * @param started indicates whether listen has started or stopped.
+         * @param state indicates whether listen has started or stopped.
+         *          @see #WIFI_P2P_LISTEN_STARTED
+         *          @see #WIFI_P2P_LISTEN_STOPPED
          */
         @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-        default void onListenStateChanged(boolean started) {
+        default void onListenStateChanged(@WifiP2pListenState int state) {
         }
 
         /**
@@ -1343,9 +1349,11 @@ public class WifiP2pManager {
 
         /**
          * Called when group creation has failed.
+         *
+         * @param reason provides the group creation failure reason.
          */
         @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-        default void onGroupCreationFailed() {
+        default void onGroupCreationFailed(@GroupCreationFailureReason int reason) {
         }
 
         /**
@@ -1401,6 +1409,58 @@ public class WifiP2pManager {
     }
 
     /**
+     * P2p group creation failed because the connection has been cancelled.
+     * Used in {@link WifiP2pListener#onGroupCreationFailed(int reason)}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int GROUP_CREATION_FAILURE_REASON_CONNECTION_CANCELLED = 0;
+    /**
+     * P2p group creation failed because it has timed out.
+     * Used in {@link WifiP2pListener#onGroupCreationFailed(int reason)}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int GROUP_CREATION_FAILURE_REASON_TIMED_OUT = 1;
+    /**
+     * P2p group creation failed because user has rejected.
+     * Used in {@link WifiP2pListener#onGroupCreationFailed(int reason)}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int GROUP_CREATION_FAILURE_REASON_USER_REJECTED = 2;
+    /**
+     * P2p group creation failed because provision discovery has failed.
+     * Used in {@link WifiP2pListener#onGroupCreationFailed(int reason)}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int GROUP_CREATION_FAILURE_REASON_PROVISION_DISCOVERY_FAILED = 3;
+    /**
+     * P2p group creation failed because the group has been removed.
+     * Used in {@link WifiP2pListener#onGroupCreationFailed(int reason)}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int GROUP_CREATION_FAILURE_REASON_GROUP_REMOVED = 4;
+    /**
+     * P2p group creation failed because invitation has failed.
+     * Used in {@link WifiP2pListener#onGroupCreationFailed(int reason)}.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public static final int GROUP_CREATION_FAILURE_REASON_INVITATION_FAILED = 5;
+
+    /**
+     * @hide
+     */
+    @IntDef(prefix = {"GROUP_CREATION_FAILURE_REASON_"}, value = {
+            GROUP_CREATION_FAILURE_REASON_CONNECTION_CANCELLED,
+            GROUP_CREATION_FAILURE_REASON_TIMED_OUT,
+            GROUP_CREATION_FAILURE_REASON_USER_REJECTED,
+            GROUP_CREATION_FAILURE_REASON_PROVISION_DISCOVERY_FAILED,
+            GROUP_CREATION_FAILURE_REASON_GROUP_REMOVED,
+            GROUP_CREATION_FAILURE_REASON_INVITATION_FAILED
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface GroupCreationFailureReason {
+    }
+
+    /**
      * Helper class to support wifi p2p listener.
      */
     private static class OnWifiP2pListenerProxy extends IWifiP2pListener.Stub {
@@ -1418,21 +1478,21 @@ public class WifiP2pManager {
         }
 
         @Override
-        public void onStateChanged(boolean p2pEnabled) {
+        public void onP2pStateChanged(@WifiP2pState int state) {
             Binder.clearCallingIdentity();
-            mExecutor.execute(() -> mListener.onStateChanged(p2pEnabled));
+            mExecutor.execute(() -> mListener.onP2pStateChanged(state));
         }
 
         @Override
-        public void onDiscoveryStateChanged(boolean started) {
+        public void onDiscoveryStateChanged(@WifiP2pDiscoveryState int state) {
             Binder.clearCallingIdentity();
-            mExecutor.execute(() -> mListener.onDiscoveryStateChanged(started));
+            mExecutor.execute(() -> mListener.onDiscoveryStateChanged(state));
         }
 
         @Override
-        public void onListenStateChanged(boolean started) {
+        public void onListenStateChanged(@WifiP2pListenState int state) {
             Binder.clearCallingIdentity();
-            mExecutor.execute(() -> mListener.onListenStateChanged(started));
+            mExecutor.execute(() -> mListener.onListenStateChanged(state));
         }
 
         @Override
@@ -1466,9 +1526,9 @@ public class WifiP2pManager {
         }
 
         @Override
-        public void onGroupCreationFailed() {
+        public void onGroupCreationFailed(@GroupCreationFailureReason int reason) {
             Binder.clearCallingIdentity();
-            mExecutor.execute(() -> mListener.onGroupCreationFailed());
+            mExecutor.execute(() -> mListener.onGroupCreationFailed(reason));
         }
 
         @Override
