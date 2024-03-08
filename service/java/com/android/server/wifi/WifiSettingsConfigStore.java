@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -202,9 +203,9 @@ public class WifiSettingsConfigStore {
             new Key<>("d2d_allowed_when_infra_sta_disabled", false);
 
     // List of all keys which require to backup and restore.
-    @SuppressWarnings("DoubleBraceInitialization")
-    private static final ArrayList<Key> sBackupRestoreKeys = new ArrayList<>() {{
-            add(WIFI_WEP_ALLOWED); }};
+    private static final List<Key> sBackupRestoreKeys = List.of(
+            WIFI_WEP_ALLOWED,
+            D2D_ALLOWED_WHEN_INFRA_STA_DISABLED);
     /******** Wifi shared pref keys ***************/
 
     private final Context mContext;
@@ -253,7 +254,7 @@ public class WifiSettingsConfigStore {
         return sKeys;
     }
 
-    public ArrayList<Key> getAllBackupRestoreKeys() {
+    public List<Key> getAllBackupRestoreKeys() {
         return sBackupRestoreKeys;
     }
 
