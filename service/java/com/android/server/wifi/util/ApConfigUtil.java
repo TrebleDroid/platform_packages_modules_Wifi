@@ -1088,6 +1088,19 @@ public class ApConfigUtil {
                         }});
     }
 
+   /**
+     * Helper function to get whether or not device claim support bridged AP.
+     * (i.e. In resource file)
+     *
+     * @param context the caller context used to get value from resource file.
+     * @return true if supported, false otherwise.
+     */
+    public static boolean isBridgedModeSupportedInConfig(@NonNull Context context) {
+        return SdkLevel.isAtLeastS() && context.getResources().getBoolean(
+                    R.bool.config_wifiBridgedSoftApSupported);
+    }
+
+
     /**
      * Helper function to get HAL support STA + bridged AP or not.
      *

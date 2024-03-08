@@ -181,6 +181,13 @@ public class HalDeviceManager {
     }
 
     /**
+     * Returns whether or not the concurrency combo is loaded from the driver.
+     */
+    public boolean isConcurrencyComboLoadedFromDriver() {
+        return mIsConcurrencyComboLoadedFromDriver;
+    }
+
+    /**
      * Enables verbose logging.
      */
     public void enableVerboseLogging(boolean verboseEnabled) {
