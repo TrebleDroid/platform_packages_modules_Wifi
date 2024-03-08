@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"प्रापक:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"आवश्यक PIN टाइप गर्नुहोस्:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"तपाईंको डिभाइस <xliff:g id="DEVICE_NAME">%1$s</xliff:g> मा कनेक्ट गरिएको बेलामा यो केही बेर Wi-Fi बाट डिस्कनेक्ट हुने छ"</string>
     <string name="dlg_ok" msgid="254496739491689405">"ठिक छ"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g> मा जडान गर्न सकिएन"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"गोपनीयता सेटिङ परिवर्तन गर्न ट्याप गरेर फेरि प्रयास गर्नुहोस्"</string>

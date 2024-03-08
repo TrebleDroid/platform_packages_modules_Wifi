@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"ለ፦"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"የሚፈለገውን ፒን ተይብ፦"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"ፒን፦"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"መሣሪያዎ ከ<xliff:g id="DEVICE_NAME">%1$s</xliff:g> ጋር በሚገናኝበት ጊዜ ለጊዜው ከWi-Fi ጋር ግንኙነቱ ይቋረጣል"</string>
     <string name="dlg_ok" msgid="254496739491689405">"እሺ"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"ከ<xliff:g id="SSID">%1$s</xliff:g> ጋር መገናኘት አልተቻለም"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"የግላዊነት ቅንብሮችን ለመቀየር መታ ያድርጉ እና ዳግም ይሞክሩ"</string>

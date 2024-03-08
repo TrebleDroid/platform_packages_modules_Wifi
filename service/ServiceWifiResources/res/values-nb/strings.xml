@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Til:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Skriv inn påkrevd PIN-kode:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Enheten din blir midlertidig koblet fra wifi mens den er koblet til <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"OK"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Kan ikke koble til <xliff:g id="SSID">%1$s</xliff:g>"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Trykk for å endre personverninnstillingene og prøve på nytt"</string>
