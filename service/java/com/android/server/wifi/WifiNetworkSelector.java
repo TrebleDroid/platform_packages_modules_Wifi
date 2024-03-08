@@ -1038,15 +1038,14 @@ public class WifiNetworkSelector {
      * @param oemPaidNetworkAllowed    True if oem paid networks are allowed for connection
      * @param oemPrivateNetworkAllowed True if oem private networks are allowed for connection
      * @param restrictedNetworkAllowedUids a set of Uids are allowed for restricted network
-     * @param multiInternetNetworkAllowed True if multi internet networks are allowed for
-     *                                    connection.
+     * @param skipSufficiencyCheck     True to skip network sufficiency check
      * @return list of valid Candidate(s)
      */
     public List<WifiCandidates.Candidate> getCandidatesFromScan(
             @NonNull List<ScanDetail> scanDetails, @NonNull Set<String> bssidBlocklist,
             @NonNull List<ClientModeManagerState> cmmStates, boolean untrustedNetworkAllowed,
             boolean oemPaidNetworkAllowed, boolean oemPrivateNetworkAllowed,
-            Set<Integer> restrictedNetworkAllowedUids, boolean multiInternetNetworkAllowed) {
+            Set<Integer> restrictedNetworkAllowedUids, boolean skipSufficiencyCheck) {
         mFilteredNetworks.clear();
         mConnectableNetworks.clear();
         if (scanDetails.size() == 0) {
@@ -1063,7 +1062,7 @@ public class WifiNetworkSelector {
         }
 
         // Shall we start network selection at all?
-        if (!multiInternetNetworkAllowed && !isNetworkSelectionNeeded(scanDetails, cmmStates)) {
+        if (!skipSufficiencyCheck && !isNetworkSelectionNeeded(scanDetails, cmmStates)) {
             return null;
         }
 
