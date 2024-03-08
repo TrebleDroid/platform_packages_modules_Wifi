@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"ទៅ៖"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"បញ្ចូល​កូដ PIN ដែល​ទាមទារ៖"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"កូដ PIN ៖"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"ឧបករណ៍របស់អ្នកនឹងផ្ដាច់ពី Wi-Fi ជាបណ្ដោះអាសន្ន នៅពេលឧបករណ៍នេះភ្ជាប់ជាមួយ <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"យល់ព្រម"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"មិនអាចភ្ជាប់ជាមួយ <xliff:g id="SSID">%1$s</xliff:g> បានទេ"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"ចុច ដើម្បី​ប្ដូរ​ការកំណត់​ឯកជនភាព រួច​ព្យាយាម​ម្ដងទៀត"</string>
