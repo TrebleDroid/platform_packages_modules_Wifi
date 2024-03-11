@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"אל:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"יש להקליד את קוד האימות הנדרש:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"קוד אימות:"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"‏המכשיר יתנתק מרשת ה-Wi-Fi באופן זמני כשהוא מחובר אל <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"אישור"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"לא ניתן להתחבר אל <xliff:g id="SSID">%1$s</xliff:g>"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"יש להקיש כדי לשנות את הגדרות הפרטיות ולנסות שוב"</string>

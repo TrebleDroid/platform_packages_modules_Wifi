@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Kohde:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Kirjoita pyydetty PIN-koodi:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN-koodi:"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Laitteen Wi-Fi-yhteys katkeaa tilapäisesti, kun siihen on yhdistetty <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"OK"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Verkkoon <xliff:g id="SSID">%1$s</xliff:g> ei saada yhteyttä"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Napauta muuttaaksesi yksityisyysasetusta ja yritä uudelleen"</string>

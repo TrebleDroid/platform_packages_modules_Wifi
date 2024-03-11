@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Za:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Vnesite zahtevano kodo PIN:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Naprava bo začasno prekinila povezavo z omrežjem Wi-Fi, medtem ko je povezana z napravo <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"V redu"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Povezava z omrežjem <xliff:g id="SSID">%1$s</xliff:g> ni mogoča"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Dotaknite se za spremembo nastavitev zasebnosti in poskusite znova"</string>
