@@ -3353,4 +3353,38 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         assertEquals(streamTimeoutUs, halParams.streamTimeoutUs);
         assertEquals(halFrameClassifierMask, halParams.frameClassifierMask);
     }
+
+    /**
+     * Test that MSCS params set through {@link SupplicantStaIfaceHalAidlImpl#enableMscs(
+     * MscsParams, String)} are cached for later resends.
+     */
+    @Test
+    public void testEnableAndResendMscs() throws Exception {
+        executeAndValidateInitializationSequence();
+        mDut.setupIface(WLAN0_IFACE_NAME);
+
+        doNothing().when(mISupplicantStaIfaceMock).configureMscs(any());
+        MscsParams defaultParams = new MscsParams.Builder().build();
+
+        ArgumentCaptor<android.hardware.wifi.supplicant.MscsParams> halParamsCaptor =
+                ArgumentCaptor.forClass(android.hardware.wifi.supplicant.MscsParams.class);
+        mDut.enableMscs(defaultParams, WLAN0_IFACE_NAME);
+        verify(mISupplicantStaIfaceMock).configureMscs(halParamsCaptor.capture());
+        android.hardware.wifi.supplicant.MscsParams initialParams = halParamsCaptor.getValue();
+
+        // Resend should use the params cached during the initial send.
+        mDut.resendMscs(WLAN0_IFACE_NAME);
+        verify(mISupplicantStaIfaceMock, times(2)).configureMscs(halParamsCaptor.capture());
+        android.hardware.wifi.supplicant.MscsParams resendParams = halParamsCaptor.getValue();
+
+        assertEquals(initialParams.upBitmap, resendParams.upBitmap);
+        assertEquals(initialParams.upLimit, resendParams.upLimit);
+        assertEquals(initialParams.streamTimeoutUs, resendParams.streamTimeoutUs);
+        assertEquals(initialParams.frameClassifierMask, resendParams.frameClassifierMask);
+
+        // Disabling MSCS should clear the cached params and prevent future resends.
+        mDut.disableMscs(WLAN0_IFACE_NAME);
+        mDut.resendMscs(WLAN0_IFACE_NAME);
+        verify(mISupplicantStaIfaceMock, times(2)).configureMscs(halParamsCaptor.capture());
+    }
 }

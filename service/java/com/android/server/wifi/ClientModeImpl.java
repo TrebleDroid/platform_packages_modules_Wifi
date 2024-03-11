@@ -5831,6 +5831,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                         mApplicationQosPolicyRequestHandler.queueAllPoliciesOnIface(
                                 mInterfaceName, mostRecentConnectionSupports11ax());
                     }
+                    mWifiNative.resendMscs(mInterfaceName);
                     updateLayer2Information();
                     updateCurrentConnectionInfo();
                     transitionTo(mL3ProvisioningState);
