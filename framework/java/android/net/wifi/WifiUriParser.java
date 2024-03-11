@@ -65,6 +65,7 @@ public class WifiUriParser {
     static final String PREFIX_ZXING_SSID = "S:";
     static final String PREFIX_ZXING_PASSWORD = "P:";
     static final String PREFIX_ZXING_HIDDEN_SSID = "H:";
+    static final String PREFIX_ZXING_TRANSITION_DISABLE = "R:";
 
     static final String DELIMITER_QR_CODE = ";";
 
@@ -125,7 +126,10 @@ public class WifiUriParser {
         String ssid = getValueOrNull(keyValueList, PREFIX_ZXING_SSID);
         String password = getValueOrNull(keyValueList, PREFIX_ZXING_PASSWORD);
         String hiddenSsidString = getValueOrNull(keyValueList, PREFIX_ZXING_HIDDEN_SSID);
+        String transitionDisabledValue = getValueOrNull(keyValueList,
+                PREFIX_ZXING_TRANSITION_DISABLE);
         boolean hiddenSsid = "true".equalsIgnoreCase(hiddenSsidString);
+        boolean isTransitionDisabled = "1".equalsIgnoreCase(transitionDisabledValue);
 
         // "\", ";", "," and ":" are escaped with a backslash "\", should remove at first
         security = removeBackSlash(security);
@@ -133,7 +137,8 @@ public class WifiUriParser {
         password = removeBackSlash(password);
         if (isValidConfig(security, ssid, password)) {
             config = generatetWifiConfiguration(
-                        security, ssid, password, hiddenSsid, WifiConfiguration.INVALID_NETWORK_ID);
+                        security, ssid, password, hiddenSsid, WifiConfiguration.INVALID_NETWORK_ID,
+                        isTransitionDisabled);
         }
 
         if (config == null) {
@@ -232,21 +237,20 @@ public class WifiUriParser {
      * @return WifiConfiguration from parsing result
      */
     private static WifiConfiguration generatetWifiConfiguration(
-            String security, String ssid, String preSharedKey, boolean hiddenSsid, int networkId) {
+            String security, String ssid, String preSharedKey, boolean hiddenSsid, int networkId,
+            boolean isTransitionDisabled) {
         final WifiConfiguration wifiConfiguration = new WifiConfiguration();
         wifiConfiguration.SSID = addQuotationIfNeeded(ssid);
         wifiConfiguration.hiddenSSID = hiddenSsid;
         wifiConfiguration.networkId = networkId;
 
         if (TextUtils.isEmpty(security) || SECURITY_NO_PASSWORD.equals(security)) {
-            List<SecurityParams> securityParamsList = new ArrayList<>();
-            securityParamsList.add(
-                    SecurityParams.createSecurityParamsBySecurityType(
-                            WifiConfiguration.SECURITY_TYPE_OPEN));
-            securityParamsList.add(
-                    SecurityParams.createSecurityParamsBySecurityType(
-                            WifiConfiguration.SECURITY_TYPE_OWE));
-            wifiConfiguration.setSecurityParams(securityParamsList);
+            wifiConfiguration.setSecurityParams(
+                    Arrays.asList(
+                            SecurityParams.createSecurityParamsBySecurityType(
+                                    WifiConfiguration.SECURITY_TYPE_OPEN),
+                            SecurityParams.createSecurityParamsBySecurityType(
+                                    WifiConfiguration.SECURITY_TYPE_OWE)));
             return wifiConfiguration;
         }
 
@@ -262,7 +266,17 @@ public class WifiUriParser {
                 wifiConfiguration.wepKeys[0] = addQuotationIfNeeded(preSharedKey);
             }
         } else if (security.startsWith(SECURITY_WPA_PSK)) {
-            wifiConfiguration.setSecurityParams(WifiConfiguration.SECURITY_TYPE_PSK);
+            List<SecurityParams> securityParamsList = new ArrayList<>();
+            SecurityParams scannedSecurityParam = SecurityParams.createSecurityParamsBySecurityType(
+                            WifiConfiguration.SECURITY_TYPE_PSK);
+            securityParamsList.add(scannedSecurityParam);
+            if (isTransitionDisabled) {
+                scannedSecurityParam.setEnabled(false);
+                securityParamsList.add(
+                        SecurityParams.createSecurityParamsBySecurityType(
+                                WifiConfiguration.SECURITY_TYPE_SAE));
+            }
+            wifiConfiguration.setSecurityParams(securityParamsList);
 
             if (preSharedKey.matches("[0-9A-Fa-f]{64}")) {
                 wifiConfiguration.preSharedKey = preSharedKey;
