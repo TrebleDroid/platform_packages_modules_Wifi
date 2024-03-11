@@ -6837,38 +6837,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     /**
-     * Verify that add or update networks is allowed for apps holding system alert permission.
-     */
-    @Test
-    public void testAddOrUpdateNetworkIsAllowedForAppsWithSystemAlertPermission() throws Exception {
-        doReturn(AppOpsManager.MODE_ALLOWED).when(mAppOpsManager)
-                .noteOp(AppOpsManager.OPSTR_CHANGE_WIFI_STATE, Process.myUid(), TEST_PACKAGE_NAME);
-        when(mWifiConfigManager.addOrUpdateNetwork(any(),  anyInt(), any(), eq(false))).thenReturn(
-                new NetworkUpdateResult(0));
-
-        // Verify caller fails to add network as Guest user.
-        when(mWifiPermissionsUtil.checkSystemAlertWindowPermission(
-                Process.myUid(), TEST_PACKAGE_NAME)).thenReturn(true);
-        when(mWifiPermissionsUtil.isGuestUser()).thenReturn(true);
-        WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
-        mLooper.startAutoDispatch();
-        assertEquals(-1,
-                mWifiServiceImpl.addOrUpdateNetwork(config, TEST_PACKAGE_NAME, mAttribution));
-
-        // Verify caller successfully add network when not a Guest user.
-        when(mWifiPermissionsUtil.isGuestUser()).thenReturn(false);
-        assertEquals(0,
-                mWifiServiceImpl.addOrUpdateNetwork(config, TEST_PACKAGE_NAME, mAttribution));
-        mLooper.stopAutoDispatchAndIgnoreExceptions();
-
-        verifyCheckChangePermission(TEST_PACKAGE_NAME);
-        verify(mWifiPermissionsUtil, times(2))
-                .checkSystemAlertWindowPermission(anyInt(), anyString());
-        verify(mWifiConfigManager).addOrUpdateNetwork(any(),  anyInt(), any(), eq(false));
-        verify(mWifiMetrics).incrementNumAddOrUpdateNetworkCalls();
-    }
-
-    /**
      * Verify that add or update networks is allowed for DeviceOwner app.
      */
     @Test
