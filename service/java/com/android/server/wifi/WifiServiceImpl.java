@@ -512,7 +512,6 @@ public class WifiServiceImpl extends BaseWifiService {
         }
     }
 
-
     public WifiServiceImpl(WifiContext context, WifiInjector wifiInjector) {
         mContext = context;
         mWifiInjector = wifiInjector;
@@ -604,6 +603,15 @@ public class WifiServiceImpl extends BaseWifiService {
             mWifiInjector.getWifiScanAlwaysAvailableSettingsCompatibility().initialize();
             mWifiInjector.getWifiNotificationManager().createNotificationChannels();
             // Align the value between config stroe (i.e.WifiConfigStore.xml) and WifiGlobals.
+            mSettingsConfigStore.registerChangeListener(WIFI_WEP_ALLOWED,
+                    (key, value) -> {
+                        if (mWifiGlobals.isWepAllowed() != value) {
+                            // It should only happen when settings is restored from cloud.
+                            handleWepAllowedChanged(value);
+                            Log.i(TAG, "(Cloud Restoration) Wep allowed is changed to " + value);
+                        }
+                    },
+                    new Handler(mWifiHandlerThread.getLooper()));
             mWifiGlobals.setWepAllowed(mSettingsConfigStore.get(WIFI_WEP_ALLOWED));
             mContext.registerReceiver(
                     new BroadcastReceiver() {
@@ -8202,22 +8210,26 @@ public class WifiServiceImpl extends BaseWifiService {
         mLog.info("setWepAllowed=% uid=%").c(isAllowed).c(callingUid).flush();
         mWifiThreadRunner.post(() -> {
             mSettingsConfigStore.put(WIFI_WEP_ALLOWED, isAllowed);
-            mWifiGlobals.setWepAllowed(isAllowed);
-            if (!isAllowed) {
-                for (ClientModeManager clientModeManager
-                        : mActiveModeWarden.getClientModeManagers()) {
-                    if (!(clientModeManager instanceof ConcreteClientModeManager)) {
-                        continue;
-                    }
-                    ConcreteClientModeManager cmm = (ConcreteClientModeManager) clientModeManager;
-                    WifiInfo info = cmm.getConnectionInfo();
-                    if (info != null
-                            && info.getCurrentSecurityType() == WifiInfo.SECURITY_TYPE_WEP) {
-                        clientModeManager.disconnect();
-                    }
+            handleWepAllowedChanged(isAllowed);
+        });
+    }
+
+    private void handleWepAllowedChanged(boolean isAllowed) {
+        mWifiGlobals.setWepAllowed(isAllowed);
+        if (!isAllowed) {
+            for (ClientModeManager clientModeManager
+                    : mActiveModeWarden.getClientModeManagers()) {
+                if (!(clientModeManager instanceof ConcreteClientModeManager)) {
+                    continue;
+                }
+                ConcreteClientModeManager cmm = (ConcreteClientModeManager) clientModeManager;
+                WifiInfo info = cmm.getConnectionInfo();
+                if (info != null
+                        && info.getCurrentSecurityType() == WifiInfo.SECURITY_TYPE_WEP) {
+                    clientModeManager.disconnect();
                 }
             }
-        });
+        }
     }
 
     /**

@@ -386,6 +386,10 @@ public class WifiServiceImplTest extends WifiBaseTest {
     final ArgumentCaptor<SoftApModeConfiguration> mSoftApModeConfigCaptor =
             ArgumentCaptor.forClass(SoftApModeConfiguration.class);
 
+    final ArgumentCaptor<WifiSettingsConfigStore.OnSettingsChangedListener>
+            mWepAllowedSettingChangedListenerCaptor =
+            ArgumentCaptor.forClass(WifiSettingsConfigStore.OnSettingsChangedListener.class);
+
     @Mock Bundle mBundle;
     @Mock WifiContext mContext;
     @Mock Context mContextAsUser;
@@ -12669,5 +12673,33 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mWifiServiceImpl.restoreWifiBackupData(mockTestRestoredData);
         mLooper.dispatchAll();
         verify(mBackupRestoreController).parserBackupDataAndDispatch(mockTestRestoredData);
+    }
+
+    @Test
+    public void testWepAllowedChangedFromCloudRestoration() {
+        when(mWifiSettingsConfigStore.get(eq(WIFI_WEP_ALLOWED))).thenReturn(true);
+        when(mWifiGlobals.isWepAllowed()).thenReturn(true);
+        mWifiServiceImpl.checkAndStartWifi();
+        mLooper.dispatchAll();
+        verify(mWifiSettingsConfigStore).registerChangeListener(
+                eq(WIFI_WEP_ALLOWED),
+                mWepAllowedSettingChangedListenerCaptor.capture(),
+                any(Handler.class));
+        verify(mWifiGlobals).setWepAllowed(true);
+        // Mock wep connection to make sure it will disconnect
+        ConcreteClientModeManager cmmWep = mock(ConcreteClientModeManager.class);
+        WifiInfo mockWifiInfoWep = mock(WifiInfo.class);
+        List<ClientModeManager> cmms = Arrays.asList(cmmWep);
+        when(mActiveModeWarden.getClientModeManagers()).thenReturn(cmms);
+        when(mockWifiInfoWep.getCurrentSecurityType()).thenReturn(WifiInfo.SECURITY_TYPE_WEP);
+        when(cmmWep.getConnectionInfo()).thenReturn(mockWifiInfoWep);
+
+        // Test wep is changed from cloud restoration.
+        mWepAllowedSettingChangedListenerCaptor.getValue()
+                .onSettingsChanged(WIFI_WEP_ALLOWED, false);
+        mLooper.dispatchAll();
+        verify(mWifiGlobals).setWepAllowed(false);
+        // Only WEP disconnect
+        verify(cmmWep).disconnect();
     }
 }
