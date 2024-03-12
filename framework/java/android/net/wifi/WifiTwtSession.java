@@ -86,14 +86,11 @@ public class WifiTwtSession implements TwtSession {
         mMloLinkId = mloLinkId;
         mOwner = owner;
         mSessionId = sessionId;
-        mCloseGuard.open("close");
+        mCloseGuard.open("teardown");
     }
 
-    /**
-     * Closes this resource, relinquishing any underlying resources.
-     */
     @Override
-    public void close() {
+    public void teardown() {
         try {
             WifiManager mgr = mMgr.get();
             if (mgr == null) {
@@ -103,8 +100,6 @@ public class WifiTwtSession implements TwtSession {
             mgr.teardownTwtSession(mSessionId);
             mMgr.clear();
             mCloseGuard.close();
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to close WifiTwtSession.");
         } finally {
             Reference.reachabilityFence(this);
         }
