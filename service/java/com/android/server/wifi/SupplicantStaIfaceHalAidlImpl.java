@@ -171,6 +171,7 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
     private CountDownLatch mWaitForDeathLatch;
     private INonStandardCertCallback mNonStandardCertCallback;
     private SupplicantStaIfaceHal.QosScsResponseCallback mQosScsResponseCallback;
+    private MscsParams mLastMscsParams;
 
     private class SupplicantDeathRecipient implements DeathRecipient {
         @Override
@@ -3919,7 +3920,32 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
             if (!isServiceVersionAtLeast(3)) {
                 return;
             }
-            String methodStr = "enableMscs";
+            configureMscsInternal(mscsParams, ifaceName);
+            mLastMscsParams = mscsParams;
+        }
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIfaceHal#resendMscs(String)}
+     */
+    public void resendMscs(String ifaceName) {
+        synchronized (mLock) {
+            if (!isServiceVersionAtLeast(3)) {
+                return;
+            }
+            if (mLastMscsParams == null) {
+                return;
+            }
+            configureMscsInternal(mLastMscsParams, ifaceName);
+        }
+    }
+
+    private void configureMscsInternal(@NonNull MscsParams mscsParams, String ifaceName) {
+        synchronized (mLock) {
+            if (!isServiceVersionAtLeast(3)) {
+                return;
+            }
+            String methodStr = "configureMscsInternal";
             ISupplicantStaIface iface = checkStaIfaceAndLogFailure(ifaceName, methodStr);
             if (iface == null) {
                 return;
@@ -3945,6 +3971,7 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
             return;
         }
         String methodStr = "disableMscs";
+        mLastMscsParams = null;
         ISupplicantStaIface iface = checkStaIfaceAndLogFailure(ifaceName, methodStr);
         if (iface == null) {
             return;

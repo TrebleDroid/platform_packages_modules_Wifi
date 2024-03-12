@@ -5335,6 +5335,15 @@ public class WifiNative {
     }
 
     /**
+     * Resend the previously configured MSCS parameters on this interface, if any exist.
+     *
+     * @param ifaceName Name of the interface.
+     */
+    public void resendMscs(String ifaceName) {
+        mSupplicantStaIfaceHal.resendMscs(ifaceName);
+    }
+
+    /**
      * Disable Mirrored Stream Classification Service (MSCS).
      *
      * @param ifaceName Name of the interface.
