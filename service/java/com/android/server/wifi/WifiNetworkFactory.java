@@ -1298,7 +1298,7 @@ public class WifiNetworkFactory extends NetworkFactory {
             return;
         }
 
-        if (!mPendingConnectionSuccess) {
+        if (!mPendingConnectionSuccess || mActiveSpecificNetworkRequest == null) {
             if (mConnectedSpecificNetworkRequest != null) {
                 Log.w(TAG, "Connection is terminated, cancelling "
                         + mConnectedSpecificNetworkRequest);
