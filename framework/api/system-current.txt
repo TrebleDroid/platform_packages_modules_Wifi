@@ -1743,12 +1743,12 @@ package android.net.wifi.twt {
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @NonNull public android.net.wifi.twt.TwtRequest.Builder setLinkId(@IntRange(from=0x0, to=0xf) int);
   }
 
-  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public interface TwtSession extends java.lang.AutoCloseable {
-    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void close();
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public interface TwtSession {
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getMloLinkId();
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void getStats(@NonNull java.util.concurrent.Executor, @NonNull java.util.function.Consumer<android.os.Bundle>);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public int getWakeDurationMicros();
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public long getWakeIntervalMicros();
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public void teardown();
     field public static final String TWT_STATS_KEY_INT_AVERAGE_EOSP_DURATION_MICROS = "key_avg_eosp_dur";
     field public static final String TWT_STATS_KEY_INT_AVERAGE_RX_PACKET_COUNT = "key_avg_rx_pkt_count";
     field public static final String TWT_STATS_KEY_INT_AVERAGE_RX_PACKET_SIZE = "key_avg_rx_pkt_size";
