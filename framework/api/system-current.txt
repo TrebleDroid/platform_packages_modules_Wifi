@@ -436,6 +436,16 @@ package android.net.wifi {
     field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.SoftApInfo> CREATOR;
   }
 
+  @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public final class SoftApState implements android.os.Parcelable {
+    method public int describeContents();
+    method public int getFailureReason();
+    method @Nullable public String getIface();
+    method public int getState();
+    method @Nullable public android.net.TetheringManager.TetheringRequest getTetheringRequest();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.net.wifi.SoftApState> CREATOR;
+  }
+
   public final class WifiClient implements android.os.Parcelable {
     method public int describeContents();
     method @NonNull public android.net.MacAddress getMacAddress();
@@ -713,6 +723,7 @@ package android.net.wifi {
     method @RequiresPermission(android.Manifest.permission.UPDATE_DEVICE_STATS) public boolean startScan(android.os.WorkSource);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void startSubscriptionProvisioning(@NonNull android.net.wifi.hotspot2.OsuProvider, @NonNull java.util.concurrent.Executor, @NonNull android.net.wifi.hotspot2.ProvisioningCallback);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public boolean startTetheredHotspot(@Nullable android.net.wifi.SoftApConfiguration);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public boolean startTetheredHotspotRequest(@NonNull android.net.TetheringManager.TetheringRequest);
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void stopEasyConnectSession();
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_SETTINGS, android.Manifest.permission.NETWORK_SETUP_WIZARD}) public void stopRestrictingAutoJoinToSubscriptionId();
     method @RequiresPermission(anyOf={android.Manifest.permission.NETWORK_STACK, android.net.NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK}) public boolean stopSoftAp();
@@ -914,6 +925,7 @@ package android.net.wifi {
     method @Deprecated public default void onInfoChanged(@NonNull android.net.wifi.SoftApInfo);
     method public default void onInfoChanged(@NonNull java.util.List<android.net.wifi.SoftApInfo>);
     method public default void onStateChanged(int, int);
+    method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onStateChanged(@NonNull android.net.wifi.SoftApState);
   }
 
   public static interface WifiManager.TrafficStateCallback {
