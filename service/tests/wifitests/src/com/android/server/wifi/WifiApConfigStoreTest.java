@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.android.server.wifi;
 
 import static android.net.wifi.SoftApConfiguration.RANDOMIZATION_NON_PERSISTENT;
@@ -23,6 +22,7 @@ import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_SAE;
 import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION;
 
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
+import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_STATIC_CHIP_INFO;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -33,9 +33,11 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -110,6 +112,8 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
     @Mock private ActiveModeWarden mActiveModeWarden;
     @Mock private PackageManager mPackageManager;
     @Mock private SoftApCapability mSoftApCapability;
+    @Mock private HalDeviceManager mHalDeviceManager;
+    @Mock private WifiSettingsConfigStore mWifiSettingsConfigStore;
 
     private Random mRandom;
     private MockResources mResources;
@@ -118,6 +122,10 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
     private SoftApStoreData.DataSource mDataStoreSource;
     private ArrayList<Integer> mKnownGood2GChannelList;
 
+    final ArgumentCaptor<WifiSettingsConfigStore.OnSettingsChangedListener>
+            mStaticChipInfoListenerCaptor =
+            ArgumentCaptor.forClass(WifiSettingsConfigStore.OnSettingsChangedListener.class);
+
     @Before
     public void setUp() throws Exception {
         mLooper = new TestLooper();
@@ -125,7 +133,10 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         MockitoAnnotations.initMocks(this);
         mMockApplInfo.targetSdkVersion = Build.VERSION_CODES.P;
         when(mContext.getApplicationInfo()).thenReturn(mMockApplInfo);
-
+        when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
+        when(mWifiInjector.getHalDeviceManager()).thenReturn(mHalDeviceManager);
+        // Default assume true for all old test cases.
+        when(mHalDeviceManager.isConcurrencyComboLoadedFromDriver()).thenReturn(true);
         /* Setup expectations for Resources to return some default settings. */
         mResources = new MockResources();
         mResources.setString(R.string.config_wifiSoftap2gChannelList,
@@ -187,7 +198,10 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(SoftApStoreData.DataSource.class);
         verify(mWifiInjector).makeSoftApStoreData(dataStoreSourceArgumentCaptor.capture());
         mDataStoreSource = dataStoreSourceArgumentCaptor.getValue();
-
+        verify(mWifiSettingsConfigStore).registerChangeListener(
+                eq(WIFI_STATIC_CHIP_INFO),
+                mStaticChipInfoListenerCaptor.capture(),
+                any(Handler.class));
         return store;
     }
 
@@ -222,7 +236,6 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
             boolean isSaeSupport) {
         verifyDefaultApConfig(config, expectedSsid, isSaeSupport, true, false);
     }
-
 
     private void verifyDefaultApConfig(SoftApConfiguration config, String expectedSsid,
             boolean isSaeSupport, boolean isMacRandomizationSupport, boolean isBridgedApSupport) {
@@ -1471,5 +1484,44 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         store.setApConfiguration(new SoftApConfiguration.Builder()
                 .setSsid(TEST_DEFAULT_HOTSPOT_SSID).build());
         assertEquals(lastPassphrase, store.getLastConfiguredTetheredApPassphraseSinceBoot());
+    }
+
+    @Test
+    public void testChipSupportBridgedButStaticChipUpdatedAfterGeneratingDefaultConfig()
+            throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mHalDeviceManager.isConcurrencyComboLoadedFromDriver()).thenReturn(false);
+        mResources.setBoolean(R.bool.config_wifiBridgedSoftApSupported, true);
+        WifiApConfigStore store = createWifiApConfigStore();
+        verifyDefaultApConfig(store.getApConfiguration(),
+                TEST_DEFAULT_AP_SSID, false, true, true);
+        mLooper.dispatchAll();
+        mStaticChipInfoListenerCaptor.getValue()
+                .onSettingsChanged(WIFI_STATIC_CHIP_INFO, "new static chip info");
+        mLooper.dispatchAll();
+        // Chip supports bridged mode, so no extra saveToStore when chip info is updated.
+        verify(mWifiConfigManager).saveToStore(true);
+    }
+
+    @Test
+    public void testChipNotSupportButStaticChipUpdatedAfterGeneratingDefaultConfig()
+            throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        reset(mWifiNative);
+        when(mWifiNative.canDeviceSupportCreateTypeCombo(any())).thenReturn(false);
+        when(mHalDeviceManager.isConcurrencyComboLoadedFromDriver()).thenReturn(false);
+        mResources.setBoolean(R.bool.config_wifiBridgedSoftApSupported, true);
+        WifiApConfigStore store = createWifiApConfigStore();
+        // Verify default band is bridged mode
+        verifyDefaultApConfig(store.getApConfiguration(),
+                TEST_DEFAULT_AP_SSID, false, true, true);
+        mLooper.dispatchAll();
+        mStaticChipInfoListenerCaptor.getValue()
+                .onSettingsChanged(WIFI_STATIC_CHIP_INFO, "new static chip info");
+        mLooper.dispatchAll();
+        // Chip didn't support bridged mode, so extra saveToStore for update to default band.
+        verify(mWifiConfigManager, times(2)).saveToStore(true);
+        // Verify it changes to default band.
+        verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID, false, true, false);
     }
 }
