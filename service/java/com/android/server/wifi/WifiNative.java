@@ -4845,6 +4845,20 @@ public class WifiNative {
      * @return the device capabilities for this interface
      */
     public DeviceWiphyCapabilities getDeviceWiphyCapabilities(@NonNull String ifaceName) {
+        return getDeviceWiphyCapabilities(ifaceName, false);
+    }
+
+    /**
+     * Get the Wiphy capabilities of a device for a given interface
+     * If the interface is not associated with one,
+     * it will be read from the device through wificond
+     *
+     * @param ifaceName name of the interface
+     * @param isBridgedAp If the iface is bridge AP iface or not.
+     * @return the device capabilities for this interface
+     */
+    public DeviceWiphyCapabilities getDeviceWiphyCapabilities(@NonNull String ifaceName,
+            boolean isBridgedAp) {
         synchronized (mLock) {
             Iface iface = mIfaceMgr.getIface(ifaceName);
             if (iface == null) {
@@ -4852,7 +4866,15 @@ public class WifiNative {
                 return null;
             }
             if (iface.phyCapabilities == null) {
-                iface.phyCapabilities = mWifiCondManager.getDeviceWiphyCapabilities(ifaceName);
+                if (isBridgedAp) {
+                    List<String> instances = getBridgedApInstances(ifaceName);
+                    if (instances != null && instances.size() != 0) {
+                        iface.phyCapabilities = mWifiCondManager.getDeviceWiphyCapabilities(
+                                instances.get(0));
+                    }
+                } else {
+                    iface.phyCapabilities = mWifiCondManager.getDeviceWiphyCapabilities(ifaceName);
+                }
             }
             if (iface.phyCapabilities != null
                     && iface.phyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE)
