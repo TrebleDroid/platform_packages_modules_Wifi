@@ -711,6 +711,7 @@ public class WifiMetrics {
         private boolean mIsEcpsPriorityAccessSupported = false;
         private NetworkDetail.HSRelease mHsRelease = NetworkDetail.HSRelease.Unknown;
         private ApType6GHz mApType6GHz = ApType6GHz.AP_TYPE_6GHZ_UNKNOWN;
+        public @WifiAnnotations.ChannelWidth int mChannelWidth = ScanResult.UNSPECIFIED;
 
         public String toString() {
             StringBuilder sb = new StringBuilder();
@@ -746,6 +747,7 @@ public class WifiMetrics {
                 sb.append(", mApType6Ghz=" + mApType6GHz);
                 sb.append(", mIsEcpsPriorityAccessSupported=" + mIsEcpsPriorityAccessSupported);
                 sb.append(", mHsRelease=" + mHsRelease);
+                sb.append(", mChannelWidth" + mChannelWidth);
             }
             return sb.toString();
         }
@@ -2129,6 +2131,20 @@ public class WifiMetrics {
     }
 
     /**
+     * Set channel width of the current connection.
+     */
+    public void setConnectionChannelWidth(String interfaceName,
+            @WifiAnnotations.ChannelWidth int channelWidth) {
+        synchronized (mLock) {
+            ConnectionEvent currentConnectionEvent = mCurrentConnectionEventPerIface.get(
+                    interfaceName);
+            if (currentConnectionEvent != null) {
+                currentConnectionEvent.mRouterFingerPrint.mChannelWidth = channelWidth;
+            }
+        }
+    }
+
+    /**
      * Set the max link speed supported by current network
      */
     public void setConnectionMaxSupportedLinkSpeedMbps(
@@ -2646,6 +2662,25 @@ public class WifiMetrics {
                 == WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__PASSPOINT_ROAMING_TYPE__ROAMING_RCOI_OPENROAMING_SETTLED;
     }
 
+    private int convertChannelWidthToProto(@WifiAnnotations.ChannelWidth int channelWidth) {
+        switch(channelWidth) {
+            case ScanResult.CHANNEL_WIDTH_20MHZ:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_20MHZ;
+            case ScanResult.CHANNEL_WIDTH_40MHZ:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_40MHZ;
+            case ScanResult.CHANNEL_WIDTH_80MHZ:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_80MHZ;
+            case ScanResult.CHANNEL_WIDTH_160MHZ:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_160MHZ;
+            case ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_80MHZ_PLUS_MHZ;
+            case ScanResult.CHANNEL_WIDTH_320MHZ:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_320MHZ;
+            default:
+                return WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_UNKNOWN;
+        }
+    }
+
     private void reportRouterCapabilities(RouterFingerPrint r) {
         WifiStatsLog.write(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED,
                 r.mIsFrameworkInitiatedRoaming, r.mRouterFingerPrintProto.channelInfo,
@@ -2661,7 +2696,8 @@ public class WifiMetrics {
                 r.mIsBroadcastTwtSupported, r.mIsRestrictedTwtSupported, r.mIs11McSupported,
                 r.mIs11AzSupported, convertHsReleasetoProto(r.mHsRelease),
                 r.mRouterFingerPrintProto.isPasspointHomeProvider,
-                convertApType6GhzToProto(r.mApType6GHz), r.mIsEcpsPriorityAccessSupported);
+                convertApType6GhzToProto(r.mApType6GHz), r.mIsEcpsPriorityAccessSupported,
+                convertChannelWidthToProto(r.mChannelWidth));
     }
 
     /**

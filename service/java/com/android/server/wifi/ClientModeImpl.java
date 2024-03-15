@@ -3432,6 +3432,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 mLastConnectionCapabilities.apTidToLinkMapNegotiationSupported);
         mWifiMetrics.setConnectionMaxSupportedLinkSpeedMbps(mInterfaceName,
                 maxTxLinkSpeedMbps, maxRxLinkSpeedMbps);
+        mWifiMetrics.setConnectionChannelWidth(mInterfaceName,
+                mLastConnectionCapabilities.channelBandwidth);
         if (mLastConnectionCapabilities.wifiStandard == ScanResult.WIFI_STANDARD_11BE) {
             updateMloLinkAddrAndStates(mWifiNative.getConnectionMloLinksInfo(mInterfaceName));
             updateBlockListAffiliatedBssids();

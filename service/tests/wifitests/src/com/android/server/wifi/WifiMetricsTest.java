@@ -2235,6 +2235,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         mWifiMetrics.setConnectionScanDetail("nonexistentIface", mock(ScanDetail.class));
         mWifiMetrics.setConnectionPmkCache("nonexistentIface", false);
         mWifiMetrics.setConnectionMaxSupportedLinkSpeedMbps("nonexistentIface", 100, 50);
+        mWifiMetrics.setConnectionChannelWidth("nonexistentIface", ScanResult.CHANNEL_WIDTH_160MHZ);
         mWifiMetrics.endConnectionEvent("nonexistentIface",
                 WifiMetrics.ConnectionEvent.FAILURE_ASSOCIATION_REJECTION,
                 WifiMetricsProto.ConnectionEvent.HLF_DHCP,
@@ -7277,6 +7278,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         mWifiMetrics.logBugReport();
         mWifiMetrics.logStaEvent(TEST_IFACE_NAME, StaEvent.TYPE_CMD_START_ROAM,
                 StaEvent.DISCONNECT_UNKNOWN, null);
+        mWifiMetrics.setConnectionChannelWidth(TEST_IFACE_NAME, ScanResult.CHANNEL_WIDTH_160MHZ);
         mWifiMetrics.endConnectionEvent(TEST_IFACE_NAME,
                 WifiMetrics.ConnectionEvent.FAILURE_NONE,
                 WifiMetricsProto.ConnectionEvent.HLF_NONE,
@@ -7310,6 +7312,7 @@ public class WifiMetricsTest extends WifiBaseTest {
                         eq(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__PASSPOINT_RELEASE__PASSPOINT_RELEASE_UNKNOWN),
                         eq(false), // isPasspointHomeProvider
                         eq(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__AP_TYPE_6GHZ__AP_TYPE_6GHZ_STANDARD_POWER),
-                        eq(true))); // mIsEcpsPriorityAccessSupported
+                        eq(true), // mIsEcpsPriorityAccessSupported
+                        eq(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_160MHZ))); // mChannelWidth
     }
 }
