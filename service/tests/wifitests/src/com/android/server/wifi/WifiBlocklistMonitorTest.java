@@ -80,6 +80,8 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
     private static final int TEST_DHCP_FAILURE = WifiBlocklistMonitor.REASON_DHCP_FAILURE;
     private static final long TEST_MAX_DISABLE_DURATION_MILLIS =
             TimeUnit.HOURS.toMillis(18); // 18 hours
+    private static final long TEST_SHORT_MAX_DISABLE_DURATION_MILLIS =
+            TimeUnit.SECONDS.toMillis(10); // 10 seconds
     private static final long BASE_BLOCKLIST_DURATION = TimeUnit.MINUTES.toMillis(5); // 5 minutes
     private static final long BASE_CONNECTED_SCORE_BLOCKLIST_DURATION =
             TimeUnit.SECONDS.toMillis(30);
@@ -1640,6 +1642,24 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
         verifyNetworkIsEnabledAfter(openNetwork,
                 TEST_ELAPSED_UPDATE_NETWORK_SELECTION_TIME_MILLIS
                         + TEST_MAX_DISABLE_DURATION_MILLIS);
+    }
+
+    /**
+     * Verify the disable duration for a network is capped at
+     * a short WifiConfigMaxDisableDurationMs.
+     */
+    @Test
+    public void testTryEnableNetworkCappedByShortMaxDisableDuration() {
+        WifiConfiguration openNetwork = WifiConfigurationTestUtil.createOpenNetwork();
+        int disableReason = NetworkSelectionStatus.DISABLED_ASSOCIATION_REJECTION;
+        when(mWifiGlobals.getWifiConfigMaxDisableDurationMs())
+                .thenReturn(TEST_SHORT_MAX_DISABLE_DURATION_MILLIS);
+        verifyDisableNetwork(openNetwork, disableReason);
+
+        // verify the exponential backoff is capped at WifiConfigMaxDisableDurationMs
+        verifyNetworkIsEnabledAfter(openNetwork,
+                TEST_ELAPSED_UPDATE_NETWORK_SELECTION_TIME_MILLIS
+                        + TEST_SHORT_MAX_DISABLE_DURATION_MILLIS);
     }
 
     /**

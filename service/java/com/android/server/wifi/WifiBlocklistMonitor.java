@@ -1393,7 +1393,8 @@ public class WifiBlocklistMonitor {
                 break;
             }
         }
-        return mClock.getElapsedSinceBootMillis() + disableDurationMs;
+        return mClock.getElapsedSinceBootMillis() + Math.min(
+            disableDurationMs, mWifiGlobals.getWifiConfigMaxDisableDurationMs());
     }
 
     /**
