@@ -1315,4 +1315,15 @@
 
     <!-- Boolean indicating whether the device supports d2d allowed control when infra STA is disabled  -->
     <bool translatable="false" name ="config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled">false</bool>
+    <!-- Array describing MAC OUI list to block TWT session setup request. If the primary station is
+         connected to an AP with a MAC address OUI (https://standards-oui.ieee.org/oui/oui.txt)
+         matching with any of entries in this blocked list, WifiManager#setupTwtSession() will fail
+         with TwtSessionCallback#onFailure(errorCode = TWT_ERROR_CODE_AP_OUI_BLOCKLISTED).
+     -->
+    <integer-array translatable="false" name="config_wifiTwtBlockedOuiList">
+        <!-- Below is a sample configuration for this list:
+        <item>0x001122</item>
+        <item>0x334455</item>
+        -->
+    </integer-array>
 </resources>

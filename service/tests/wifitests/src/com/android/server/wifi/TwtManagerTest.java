@@ -30,9 +30,11 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
 import android.app.AlarmManager;
 import android.app.test.TestAlarmManager;
+import android.content.res.Resources;
 import android.net.wifi.ITwtCallback;
 import android.net.wifi.ITwtCapabilitiesListener;
 import android.net.wifi.ITwtStatsListener;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiTwtSession;
 import android.net.wifi.twt.TwtRequest;
@@ -46,6 +48,8 @@ import android.os.RemoteException;
 import android.os.test.TestLooper;
 
 import androidx.test.filters.SmallTest;
+
+import com.android.wifi.resources.R;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -65,6 +69,12 @@ public class TwtManagerTest extends WifiBaseTest {
 
     private static final int TEST_TWT_SESSION_ID = 10;
     private static final int TEST_TWT_CMD_ID = 1;
+    private static final String TEST_BSSID = "00:11:22:33:44:55";
+    private static final String TEST_BLOCKED_BSSID_1 = "AA:BB:CC:DD:EE:FF";
+    private static final int TEST_BLOCKED_OUI_1 = 0xAABBCC;
+    private static final int TEST_BLOCKED_OUI_2 = 0xAABBCD;
+    private static final int TEST_BLOCKED_OUI_3 = 0xAABBCE;
+    private static final int TEST_BLOCKED_OUI_4 = 0xAABBCF;
 
     @Mock
     Clock mClock;
@@ -87,6 +97,10 @@ public class TwtManagerTest extends WifiBaseTest {
     ConcreteClientModeManager mClientModeManager;
     @Captor
     private ArgumentCaptor<TwtManager.WifiNativeTwtEvents> mWifiNativeTwtEventsArgumentCaptor;
+    @Mock
+    Resources mResources;
+    @Mock
+    WifiContext mContext;
 
     /**
      * Test setup.
@@ -98,6 +112,12 @@ public class TwtManagerTest extends WifiBaseTest {
         mTestAlarmManager = new TestAlarmManager();
         mAlarmManager = mTestAlarmManager.getAlarmManager();
         when(mWifiInjector.getAlarmManager()).thenReturn(mAlarmManager);
+        when(mWifiInjector.getContext()).thenReturn(mContext);
+        when(mContext.getResources()).thenReturn(mResources);
+        int[] blockedOuiList =
+                {TEST_BLOCKED_OUI_4, TEST_BLOCKED_OUI_3, TEST_BLOCKED_OUI_2, TEST_BLOCKED_OUI_1};
+        when(mResources.getIntArray(R.array.config_wifiTwtBlockedOuiList)).thenReturn(
+                blockedOuiList);
         mTwtManager = new TwtManager(mWifiInjector, mCmiMonitor, mWifiNative, mHandler, mClock,
                 WifiTwtSession.MAX_TWT_SESSIONS, TWT_CALLBACKS_ID_START_OFFSET);
         verify(mCmiMonitor).registerListener(mCmiListenerCaptor.capture());
@@ -182,6 +202,20 @@ public class TwtManagerTest extends WifiBaseTest {
     }
 
     @Test
+    public void testOuiBlockListing() throws RemoteException {
+        ITwtCallback iTwtCallback = mock(ITwtCallback.class);
+        TwtRequest twtRequest = mock(TwtRequest.class);
+        InOrder inOrderCallback = inOrder(iTwtCallback);
+        when(iTwtCallback.asBinder()).thenReturn(mAppBinder);
+        when(mWifiNative.setupTwtSession(eq(1), eq(WIFI_IFACE_NAME), eq(twtRequest))).thenReturn(
+                true);
+        mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
+                Binder.getCallingUid(), TEST_BLOCKED_BSSID_1);
+        inOrderCallback.verify(iTwtCallback).onFailure(
+                TwtSessionCallback.TWT_ERROR_CODE_AP_OUI_BLOCKLISTED);
+    }
+
+    @Test
     public void testSetupTwtSession() throws RemoteException {
         ITwtCallback iTwtCallback = mock(ITwtCallback.class);
         TwtRequest twtRequest = mock(TwtRequest.class);
@@ -190,14 +224,15 @@ public class TwtManagerTest extends WifiBaseTest {
         InOrder inOrderBinder = inOrder(mAppBinder);
         InOrder inOrderAlarm = inOrder(mAlarmManager);
         // Test with null interface
-        mTwtManager.setupTwtSession(null, twtRequest, iTwtCallback, Binder.getCallingUid());
+        mTwtManager.setupTwtSession(null, twtRequest, iTwtCallback, Binder.getCallingUid(),
+                TEST_BSSID);
         inOrderCallback.verify(iTwtCallback).onFailure(
                 TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE);
         // Test when wifiNative.setupTwtSession return false
         when(mWifiNative.setupTwtSession(eq(1), eq(WIFI_IFACE_NAME), eq(twtRequest))).thenReturn(
                 false);
         mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
-                Binder.getCallingUid());
+                Binder.getCallingUid(), TEST_BSSID);
         inOrderBinder.verify(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
         inOrderAlarm.verify(mAlarmManager).set(eq(AlarmManager.ELAPSED_REALTIME), anyLong(),
                 anyString(), any(AlarmManager.OnAlarmListener.class), eq(mHandler));
@@ -209,7 +244,7 @@ public class TwtManagerTest extends WifiBaseTest {
         when(mWifiNative.setupTwtSession(eq(1), eq(WIFI_IFACE_NAME), eq(twtRequest))).thenReturn(
                 true);
         mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
-                Binder.getCallingUid());
+                Binder.getCallingUid(), TEST_BSSID);
         inOrderBinder.verify(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
         inOrderAlarm.verify(mAlarmManager).set(eq(AlarmManager.ELAPSED_REALTIME), anyLong(),
                 anyString(), any(AlarmManager.OnAlarmListener.class), eq(mHandler));
@@ -234,7 +269,7 @@ public class TwtManagerTest extends WifiBaseTest {
         inOrderAlarm.verifyNoMoreInteractions();
         // Make a session
         mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
-                Binder.getCallingUid());
+                Binder.getCallingUid(), TEST_BSSID);
         inOrderBinder.verify(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
         inOrderAlarm.verify(mAlarmManager).set(eq(AlarmManager.ELAPSED_REALTIME), anyLong(),
                 anyString(), any(AlarmManager.OnAlarmListener.class), eq(mHandler));
@@ -282,7 +317,7 @@ public class TwtManagerTest extends WifiBaseTest {
                 argThat(argument -> isBundleContentEqual(defaultTwtStats, argument)));
         // Make a session
         mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
-                Binder.getCallingUid());
+                Binder.getCallingUid(), TEST_BSSID);
         inOrderBinder.verify(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
         inOrderAlarm.verify(mAlarmManager).set(eq(AlarmManager.ELAPSED_REALTIME), anyLong(),
                 anyString(), any(AlarmManager.OnAlarmListener.class), eq(mHandler));
@@ -313,7 +348,7 @@ public class TwtManagerTest extends WifiBaseTest {
         when(mWifiNative.setupTwtSession(eq(1), eq(WIFI_IFACE_NAME), eq(twtRequest))).thenReturn(
                 true);
         mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
-                Binder.getCallingUid());
+                Binder.getCallingUid(), TEST_BSSID);
         inOrderBinder.verify(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
         inOrderAlarm.verify(mAlarmManager).set(eq(AlarmManager.ELAPSED_REALTIME), anyLong(),
                 anyString(), any(AlarmManager.OnAlarmListener.class), eq(mHandler));

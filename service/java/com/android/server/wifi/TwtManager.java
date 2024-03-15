@@ -18,6 +18,7 @@ package com.android.server.wifi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.AlarmManager;
+import android.net.MacAddress;
 import android.net.wifi.ITwtCallback;
 import android.net.wifi.ITwtCapabilitiesListener;
 import android.net.wifi.ITwtStatsListener;
@@ -31,8 +32,11 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.IInterface;
 import android.os.RemoteException;
+import android.util.ArraySet;
 import android.util.Log;
 import android.util.SparseArray;
+
+import com.android.wifi.resources.R;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -92,6 +96,7 @@ class TwtManager {
     private final Clock mClock;
     private final AlarmManager mAlarmManager;
     private final Handler mHandler;
+    ArraySet<Integer> mBlockedOuiSet = new ArraySet<>();
 
     private final WifiNative mWifiNative;
     private final WifiNativeTwtEvents mWifiNativeTwtEvents;
@@ -125,6 +130,13 @@ class TwtManager {
         mWifiNative = wifiNative;
         mWifiNativeTwtEvents = new WifiNativeTwtEvents();
         cmiMonitor.registerListener(new ClientModeImplListenerInternal());
+        int[] ouis = wifiInjector.getContext().getResources().getIntArray(
+                R.array.config_wifiTwtBlockedOuiList);
+        if (ouis != null) {
+            for (int oui : ouis) {
+                mBlockedOuiSet.add(oui);
+            }
+        }
     }
 
     /**
@@ -490,9 +502,15 @@ class TwtManager {
      * @param twtRequest    TWT request parameters
      * @param iTwtCallback  Callback for the TWT setup command
      * @param callingUid    Caller UID
+     * @param bssid         BSSID
      */
     public void setupTwtSession(@Nullable String interfaceName, @NonNull TwtRequest twtRequest,
-            @NonNull ITwtCallback iTwtCallback, int callingUid) {
+            @NonNull ITwtCallback iTwtCallback, int callingUid, @NonNull String bssid) {
+        if (isOuiBlockListed(bssid)) {
+            notifyFailure(iTwtCallback, CallbackType.SETUP,
+                    TwtSessionCallback.TWT_ERROR_CODE_AP_OUI_BLOCKLISTED);
+            return;
+        }
         if (!registerInterface(interfaceName)) {
             notifyFailure(iTwtCallback, CallbackType.SETUP,
                     TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE);
@@ -507,6 +525,13 @@ class TwtManager {
             notifyFailure(iTwtCallback, CallbackType.SETUP,
                     TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE);
         }
+    }
+
+    private boolean isOuiBlockListed(@NonNull String bssid) {
+        if (mBlockedOuiSet.isEmpty()) return false;
+        byte[] macBytes = MacAddress.fromString(bssid).toByteArray();
+        int oui = (macBytes[0] & 0xFF) << 16 | (macBytes[1] & 0xFF) << 8 | (macBytes[2] & 0xFF);
+        return mBlockedOuiSet.contains(oui);
     }
 
     /**

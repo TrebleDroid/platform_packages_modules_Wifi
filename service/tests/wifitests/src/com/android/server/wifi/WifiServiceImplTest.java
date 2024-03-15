@@ -12546,10 +12546,11 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(iTwtCallback).onFailure(eq(TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE));
         // Test setupTwtSession with station connected
         when(mClientModeManager.isConnected()).thenReturn(true);
+        when(mClientModeManager.getConnectedBssid()).thenReturn(TEST_BSSID);
         mWifiServiceImpl.setupTwtSession(twtRequest, iTwtCallback, mExtras);
         mLooper.dispatchAll();
         verify(mTwtManager).setupTwtSession(eq(WIFI_IFACE_NAME), eq(twtRequest), eq(iTwtCallback),
-                eq(Binder.getCallingUid()));
+                eq(Binder.getCallingUid()), eq(TEST_BSSID));
     }
 
     @Test
