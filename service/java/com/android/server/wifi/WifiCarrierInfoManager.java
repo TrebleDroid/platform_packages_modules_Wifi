@@ -1545,22 +1545,26 @@ public class WifiCarrierInfoManager {
             Log.v(TAG, "Raw Response - " + tmResponse);
         }
 
-        boolean goodReponse = false;
+        boolean goodResponse = false;
         if (tmResponse != null && tmResponse.length() > 4) {
             byte[] result = Base64.decode(tmResponse, Base64.DEFAULT);
             Log.e(TAG, "Hex Response - " + makeHex(result));
             byte tag = result[0];
             if (tag == (byte) 0xdb) {
                 Log.v(TAG, "successful 3G authentication ");
-                int resLen = result[1];
-                String res = makeHex(result, 2, resLen);
-                int ckLen = result[resLen + 2];
-                String ck = makeHex(result, resLen + 3, ckLen);
-                int ikLen = result[resLen + ckLen + 3];
-                String ik = makeHex(result, resLen + ckLen + 4, ikLen);
-                sb.append(":" + ik + ":" + ck + ":" + res);
-                Log.v(TAG, "ik:" + ik + "ck:" + ck + " res:" + res);
-                goodReponse = true;
+                try {
+                    int resLen = result[1];
+                    String res = makeHex(result, 2, resLen);
+                    int ckLen = result[resLen + 2];
+                    String ck = makeHex(result, resLen + 3, ckLen);
+                    int ikLen = result[resLen + ckLen + 3];
+                    String ik = makeHex(result, resLen + ckLen + 4, ikLen);
+                    sb.append(":" + ik + ":" + ck + ":" + res);
+                    Log.v(TAG, "ik:" + ik + "ck:" + ck + " res:" + res);
+                    goodResponse = true;
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    Log.e(TAG, "ArrayIndexOutOfBoundsException in get3GAuthResponse: " + e);
+                }
             } else if (tag == (byte) 0xdc) {
                 Log.e(TAG, "synchronisation failure");
                 int autsLen = result[1];
@@ -1568,7 +1572,7 @@ public class WifiCarrierInfoManager {
                 resType = WifiNative.SIM_AUTH_RESP_TYPE_UMTS_AUTS;
                 sb.append(":" + auts);
                 Log.v(TAG, "auts:" + auts);
-                goodReponse = true;
+                goodResponse = true;
             } else {
                 Log.e(TAG, "bad response - unknown tag = " + tag);
             }
@@ -1576,7 +1580,7 @@ public class WifiCarrierInfoManager {
             Log.e(TAG, "bad response - " + tmResponse);
         }
 
-        if (goodReponse) {
+        if (goodResponse) {
             String response = sb.toString();
             Log.v(TAG, "Supplicant Response -" + response);
             return new SimAuthResponseData(resType, response);
