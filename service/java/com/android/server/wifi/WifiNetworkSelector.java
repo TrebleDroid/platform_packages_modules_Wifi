@@ -428,12 +428,7 @@ public class WifiNetworkSelector {
 
     }
 
-    private boolean isNetworkSelectionNeeded(@NonNull List<ScanDetail> scanDetails,
-            @NonNull List<ClientModeManagerState> cmmStates) {
-        if (scanDetails.size() == 0) {
-            localLog("Empty connectivity scan results. Skip network selection.");
-            return false;
-        }
+    private boolean isNetworkSelectionNeeded(@NonNull List<ClientModeManagerState> cmmStates) {
         for (ClientModeManagerState cmmState : cmmStates) {
             // network selection needed by this CMM instance, perform network selection
             if (isNetworkSelectionNeededForCmm(cmmState)) {
@@ -1093,12 +1088,18 @@ public class WifiNetworkSelector {
         for (NetworkNominator registeredNominator : mNominators) {
             registeredNominator.update(scanDetails);
         }
+
+        // Filter out unwanted networks.
+        mFilteredNetworks = filterScanResults(scanDetails, bssidBlocklist, cmmStates);
+        if (mFilteredNetworks.size() == 0) {
+            return null;
+        }
         // Update the matching profiles into WifiConfigManager, help displaying Passpoint networks
         // in Wifi Picker
-        mWifiInjector.getPasspointNetworkNominateHelper().updatePasspointConfig(scanDetails);
+        mWifiInjector.getPasspointNetworkNominateHelper().updatePasspointConfig(mFilteredNetworks);
 
         boolean networkSelectionNeeded = skipSufficiencyCheck
-                || isNetworkSelectionNeeded(scanDetails, cmmStates);
+                || isNetworkSelectionNeeded(cmmStates);
         final String userConnectChoiceKey;
         if (!networkSelectionNeeded) {
             userConnectChoiceKey = getConnectChoiceKey(cmmStates);
@@ -1110,12 +1111,6 @@ public class WifiNetworkSelector {
                     + "considering user connect choice: " + userConnectChoiceKey);
         } else {
             userConnectChoiceKey = null;
-        }
-
-        // Filter out unwanted networks.
-        mFilteredNetworks = filterScanResults(scanDetails, bssidBlocklist, cmmStates);
-        if (mFilteredNetworks.size() == 0) {
-            return null;
         }
 
         WifiCandidates wifiCandidates = new WifiCandidates(mWifiScoreCard, mContext);

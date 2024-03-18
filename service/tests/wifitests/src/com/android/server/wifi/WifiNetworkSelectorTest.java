@@ -593,7 +593,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
         assertTrue(mWifiNetworkSelector.getConnectableScanDetails().isEmpty());
-        verify(mPasspointNetworkNominateHelper).updatePasspointConfig(any());
+        verify(mPasspointNetworkNominateHelper, never()).updatePasspointConfig(any());
         verify(mPasspointNetworkNominateHelper, never()).getPasspointNetworkCandidates(any());
     }
 
@@ -628,6 +628,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                         false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
+        assertNotNull(candidate);
 
         when(mClock.getElapsedSinceBootMillis()).thenReturn(SystemClock.elapsedRealtime()
                 + WifiNetworkSelector.MINIMUM_NETWORK_SELECTION_INTERVAL_MS - 2000);
@@ -640,12 +641,12 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
-        assertEquals("Expect null configuration", null, candidate);
+        assertNull("Expect null configuration", candidate);
         assertTrue(mWifiNetworkSelector.getConnectableScanDetails().isEmpty());
 
         verify(mWifiConfigManager, atLeast(2))
                 .updateScanDetailCacheFromScanDetailForSavedNetwork(any());
-        verify(mPasspointNetworkNominateHelper, times(2)).updatePasspointConfig(any());
+        verify(mPasspointNetworkNominateHelper).updatePasspointConfig(any());
         verify(mPasspointNetworkNominateHelper).getPasspointNetworkCandidates(any());
     }
 
