@@ -45,7 +45,7 @@ public class BackupRestoreController {
     private final WifiSettingsBackupRestore mWifiSettingsBackupRestore;
     private final Clock mClock;
 
-    private static final String XML_TAG_DOCUMENT_HEADER = "WifiBackupDataUnion";
+    private static final String XML_TAG_DOCUMENT_HEADER = "WifiSettingsBackupData";
     private static final SimpleDateFormat FORMATTER = new SimpleDateFormat("MM-dd HH:mm:ss.SSS");
 
     /**

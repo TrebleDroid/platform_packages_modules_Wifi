@@ -42,7 +42,7 @@ public class WifiSettingsBackupRestore {
     private static final String TAG = "WifiSettingsBackupRestore";
 
     public static final String XML_TAG_SECTION_HEADER_WIFI_SETTINGS_DATA =
-            "WifiSettingsBackupData";
+            "WifiSettingsSection";
 
     private WifiSettingsConfigStore mWifiSettingsConfigStore;
     private Map<String, WifiSettingsConfigStore.Key> mRestoreSettingsMap = new HashMap<>();

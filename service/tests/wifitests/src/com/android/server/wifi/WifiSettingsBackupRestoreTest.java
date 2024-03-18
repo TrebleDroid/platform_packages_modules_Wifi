@@ -55,17 +55,17 @@ public class WifiSettingsBackupRestoreTest extends WifiBaseTest {
             add(WifiSettingsConfigStore.WIFI_WEP_ALLOWED); }};
 
     /**
-     * The data we backup in this module is <WifiSettingsBackupData></WifiSettingsBackupData>
+     * The data we backup in this module is <WifiSettingsSection></WifiSettingsSection>
      * and the depth is 1.
      */
     public static String generateTestWifiSettingsTestingXml(String backupKeys) {
-        return  "<WifiSettingsBackupData>\n"
+        return  "<WifiSettingsSection>\n"
             + "<Settings>\n"
             + "<map name=\"Values\">\n"
             + backupKeys
             + "</map>\n"
             + "</Settings>\n"
-            + "</WifiSettingsBackupData>\n";
+            + "</WifiSettingsSection>\n";
     }
 
     private WifiSettingsBackupRestore mWifiSettingsBackupRestore;
@@ -115,7 +115,7 @@ public class WifiSettingsBackupRestoreTest extends WifiBaseTest {
         mWifiSettingsBackupRestore.restoreSettingsFromBackupData(
                 generateTestXmlPullParser(
                         generateTestWifiSettingsTestingXml(testBackupMap).getBytes()),
-                        0 /* The depth of Tag: WifiSettingsBackupData */);
+                        0 /* The depth of Tag: WifiSettingsSection */);
         verify(mWifiSettingsConfigStore).put(eq(WifiSettingsConfigStore.WIFI_WEP_ALLOWED),
                 eq(Boolean.TRUE));
     }
@@ -126,7 +126,7 @@ public class WifiSettingsBackupRestoreTest extends WifiBaseTest {
         mWifiSettingsBackupRestore.restoreSettingsFromBackupData(
                 generateTestXmlPullParser(
                         generateTestWifiSettingsTestingXml(testBackupMap).getBytes()),
-                        0 /* The depth of Tag: WifiSettingsBackupData */);
+                        0 /* The depth of Tag: WifiSettingsSection */);
         verify(mWifiSettingsConfigStore, never()).put(any(), any());
     }
 }
