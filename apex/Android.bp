@@ -26,9 +26,7 @@ apex_defaults {
     compat_configs: ["wifi-compat-config"],
     // from build rule `cacerts_wfa`
     prebuilts: [
-        "target-cacert-wifi-674b5f5b.0",
-        "target-cacert-wifi-21125ccd.0",
-        "target-cacert-wifi-ea93cb5b.0",
+        "cacerts_wfa",
     ],
     key: "com.android.wifi.key",
     certificate: ":com.android.wifi.certificate",
