@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.server.wifi;
+package com.android.server.wifi.b2b;
 
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -30,7 +30,11 @@ import android.net.wifi.WifiSsid;
 import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.build.SdkLevel;
-import com.android.server.wifi.b2b.WifiRoamingModeManager;
+import com.android.server.wifi.ActiveModeWarden;
+import com.android.server.wifi.ClientModeManager;
+import com.android.server.wifi.WifiBaseTest;
+import com.android.server.wifi.WifiNative;
+import com.android.server.wifi.WifiRoamingConfigStore;
 
 import org.junit.Before;
 import org.junit.Test;
