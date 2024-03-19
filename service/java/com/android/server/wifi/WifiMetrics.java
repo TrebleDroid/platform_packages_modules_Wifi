@@ -2890,7 +2890,7 @@ public class WifiMetrics {
         currentConnectionEvent.mRouterFingerPrint.mIsTwtRequired = networkDetail.isTwtRequired();
         currentConnectionEvent.mRouterFingerPrint.mIsFilsSupported = networkDetail.isFilsCapable();
         currentConnectionEvent.mRouterFingerPrint.mIs11AzSupported =
-                networkDetail.is11azSupported();
+                networkDetail.is80211azNtbResponder() || networkDetail.is80211azTbResponder();
         currentConnectionEvent.mRouterFingerPrint.mIs11McSupported =
                 networkDetail.is80211McResponderSupport();
         currentConnectionEvent.mRouterFingerPrint.mIsMboSupported = networkDetail.isMboSupported();
