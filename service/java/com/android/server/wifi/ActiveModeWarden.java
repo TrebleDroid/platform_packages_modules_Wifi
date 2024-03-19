@@ -2427,7 +2427,8 @@ public class ActiveModeWarden {
                         if (mAllowRootToGetLocalOnlyCmm && curUid == 0) { // 0 is root UID.
                             continue;
                         }
-                        if (mWifiPermissionsUtil.checkEnterCarModePrioritized(curUid)) {
+                        if (curUid != Process.SYSTEM_UID
+                                && mWifiPermissionsUtil.checkEnterCarModePrioritized(curUid)) {
                             requestInfo.listener.onAnswer(primaryManager);
                             if (mVerboseLoggingEnabled) {
                                 Log.w(TAG, "Uid " + curUid
