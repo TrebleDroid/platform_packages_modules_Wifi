@@ -7257,7 +7257,8 @@ public class WifiMetricsTest extends WifiBaseTest {
         when(networkDetail.isIndividualTwtSupported()).thenReturn(true);
         when(networkDetail.isTwtRequired()).thenReturn(true);
         when(networkDetail.isFilsCapable()).thenReturn(true);
-        when(networkDetail.is11azSupported()).thenReturn(true);
+        when(networkDetail.is80211azNtbResponder()).thenReturn(true);
+        when(networkDetail.is80211azTbResponder()).thenReturn(false);
         when(networkDetail.is80211McResponderSupport()).thenReturn(true);
         when(networkDetail.isEpcsPriorityAccessSupported()).thenReturn(true);
         when(networkDetail.getHSRelease()).thenReturn(NetworkDetail.HSRelease.Unknown);

@@ -1773,7 +1773,7 @@ public class InformationElementUtil {
         private static final int FILS_CAPABILITY_BIT = 72;
         private static final int TWT_REQUESTER_CAPABILITY_BIT = 77;
         private static final int TWT_RESPONDER_CAPABILITY_BIT = 78;
-        private static final int NO_TB_RANGING_RESPONDER = 90;
+        private static final int NON_TB_RANGING_RESPONDER = 90;
         private static final int TB_RANGING_RESPONDER = 91;
 
         public BitSet capabilitiesBitSet;
@@ -1782,7 +1782,7 @@ public class InformationElementUtil {
          * @return true if Trigger based ranging responder supported. Refer P802.11az/D7.0,
          * September 2022, section 9.4.2.26 Extended Capabilities element.
          */
-        public boolean isTriggerBasedRangingRespSupported() {
+        public boolean is80211azTbResponder() {
             return capabilitiesBitSet.get(TB_RANGING_RESPONDER);
         }
 
@@ -1790,8 +1790,8 @@ public class InformationElementUtil {
          * @return true if Non trigger based ranging responder supported. Refer P802.11az/D7.0,
          * September 2022, section 9.4.2.26 Extended Capabilities element.
          */
-        public boolean isNonTriggerBasedRangingRespSupported() {
-            return capabilitiesBitSet.get(NO_TB_RANGING_RESPONDER);
+        public boolean is80211azNtbResponder() {
+            return capabilitiesBitSet.get(NON_TB_RANGING_RESPONDER);
         }
 
         /**
