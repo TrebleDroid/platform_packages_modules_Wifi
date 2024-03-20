@@ -17,6 +17,12 @@
 package com.android.server.wifi.util;
 
 import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE;
+import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_OPEN;
+import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA2_PSK;
+import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_OWE;
+import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION;
+import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_SAE;
+import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION;
 
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
@@ -47,6 +53,7 @@ import android.net.wifi.SoftApConfiguration.Builder;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
@@ -164,6 +171,8 @@ public class ApConfigUtilTest extends WifiBaseTest {
     @Mock WifiNative mWifiNative;
     @Mock CoexManager mCoexManager;
     @Mock WifiSettingsConfigStore mConfigStore;
+    @Mock
+    DeviceWiphyCapabilities mDeviceWiphyCapabilities;
     private SoftApCapability mCapability;
     private boolean mApBridgeIfaceCobinationSupported = false;
     private boolean mApBridgeWithStaIfaceCobinationSupported = false;
@@ -191,6 +200,8 @@ public class ApConfigUtilTest extends WifiBaseTest {
         when(mWifiNative.getUsableChannels(anyInt(), anyInt(), anyInt())).thenReturn(null);
         when(mConfigStore.get(
                 WifiSettingsConfigStore.WIFI_WIPHY_11BE_SUPPORTED)).thenReturn(false);
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
+                .thenReturn(false);
         when(mWifiNative.canDeviceSupportCreateTypeCombo(any()))
                 .thenAnswer(answer -> {
                     SparseArray<Integer> combo = answer.getArgument(0);
@@ -615,7 +626,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
 
         config = new SoftApConfiguration.Builder()
                 .setBand(SoftApConfiguration.BAND_5GHZ | SoftApConfiguration.BAND_6GHZ)
-                .setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setPassphrase("somepassword", SECURITY_TYPE_WPA2_PSK)
                 .build();
         assertEquals(SoftApConfiguration.BAND_5GHZ,
                 ApConfigUtil.remove6gBandForUnsupportedSecurity(mResources, config, false)
@@ -649,7 +660,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
         }
         config = new SoftApConfiguration.Builder()
                 .setBand(SoftApConfiguration.BAND_6GHZ)
-                .setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setPassphrase("somepassword", SECURITY_TYPE_WPA2_PSK)
                 .build();
         assertNull(ApConfigUtil.remove6gBandForUnsupportedSecurity(mResources, config, false));
     }
@@ -677,7 +688,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
 
         config = new SoftApConfiguration.Builder()
                 .setBands(bands)
-                .setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setPassphrase("somepassword", SECURITY_TYPE_WPA2_PSK)
                 .build();
         assertArrayEquals(bands_no6g,
                 ApConfigUtil.remove6gBandForUnsupportedSecurity(mResources, config, true)
@@ -945,7 +956,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
         MacAddress testBssid = MacAddress.fromString("aa:22:33:44:55:66");
         SoftApConfiguration currentConfig = new SoftApConfiguration.Builder()
                 .setSsid("TestSSid")
-                .setPassphrase("testpassphrase", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setPassphrase("testpassphrase", SECURITY_TYPE_WPA2_PSK)
                 .setBand(SoftApConfiguration.BAND_2GHZ)
                 .setChannel(11, SoftApConfiguration.BAND_2GHZ)
                 .setHiddenSsid(true)
@@ -955,7 +966,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
         // DO NOT use copy constructor to copy to test since it's instance is the same.
         SoftApConfiguration newConfig_noChange = new SoftApConfiguration.Builder()
                 .setSsid("TestSSid")
-                .setPassphrase("testpassphrase", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setPassphrase("testpassphrase", SECURITY_TYPE_WPA2_PSK)
                 .setBand(SoftApConfiguration.BAND_2GHZ)
                 .setChannel(11, SoftApConfiguration.BAND_2GHZ)
                 .setHiddenSsid(true)
@@ -985,7 +996,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
         SoftApConfiguration newConfig_passphraseChanged = new SoftApConfiguration
                 .Builder(newConfig_noChange)
                 .setPassphrase("newtestpassphrase",
-                SoftApConfiguration.SECURITY_TYPE_WPA2_PSK).build();
+                SECURITY_TYPE_WPA2_PSK).build();
         assertTrue(ApConfigUtil.checkConfigurationChangeNeedToRestart(currentConfig,
                 newConfig_passphraseChanged));
         // Test Security Type Changed
@@ -1150,7 +1161,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
         testSoftApCapability.setSupportedChannelList(SoftApConfiguration.BAND_6GHZ, new int[0]);
         config = new SoftApConfiguration.Builder()
                 .setBand(SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ)
-                .setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setPassphrase("somepassword", SECURITY_TYPE_WPA2_PSK)
                 .build();
         assertEquals(SoftApConfiguration.BAND_2GHZ,
                 ApConfigUtil.removeUnavailableBandsFromConfig(config, testSoftApCapability,
@@ -1164,7 +1175,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
         testSoftApCapability.setSupportedChannelList(SoftApConfiguration.BAND_6GHZ, new int[0]);
         config = new SoftApConfiguration.Builder()
                 .setBand(SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_6GHZ)
-                .setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA2_PSK)
+                .setPassphrase("somepassword", SECURITY_TYPE_WPA2_PSK)
                 .build();
         assertNull(ApConfigUtil.removeUnavailableBandsFromConfig(config, testSoftApCapability,
                         mCoexManager, mContext));
@@ -1428,5 +1439,45 @@ public class ApConfigUtilTest extends WifiBaseTest {
         for (int freq : result) {
             assertTrue(Arrays.stream(ALLOWED_5G_FREQS).anyMatch(n -> n == freq));
         }
+    }
+
+    @Test
+    public void testIs11beAllowedInBridgedModeConfiguration() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastT());
+        SoftApConfiguration config;
+        int[] dualBands = {SoftApConfiguration.BAND_2GHZ, SoftApConfiguration.BAND_5GHZ};
+
+        config = new SoftApConfiguration.Builder()
+                .setBands(dualBands)
+                .setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA3_SAE)
+                .build();
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
+                .thenReturn(false);
+        /* 11be is disallowed when IEEE80211_BE feature is not supported */
+        assertFalse(ApConfigUtil.is11beAllowedForThisConfiguration(mDeviceWiphyCapabilities,
+                mResources, config, true));
+
+        when(mResources.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
+                .thenReturn(true);
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
+                .thenReturn(true);
+        /* 11be is allowed if chip supports single link MLO in bridged mode */
+        assertTrue(ApConfigUtil.is11beAllowedForThisConfiguration(mDeviceWiphyCapabilities,
+                mResources, config, true));
+
+        /* 11be is not allowed if chip doesn't support single link MLO in bridged mode */
+        when(mResources.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
+                .thenReturn(false);
+        assertFalse(ApConfigUtil.is11beAllowedForThisConfiguration(mDeviceWiphyCapabilities,
+                mResources, config, true));
+    }
+    @Test
+    public void testIs11beDisabledForSecurityType() throws Exception {
+        assertTrue(ApConfigUtil.is11beDisabledForSecurityType(SECURITY_TYPE_OPEN));
+        assertTrue(ApConfigUtil.is11beDisabledForSecurityType(SECURITY_TYPE_WPA2_PSK));
+        assertFalse(ApConfigUtil.is11beDisabledForSecurityType(SECURITY_TYPE_WPA3_SAE));
+        assertFalse(ApConfigUtil.is11beDisabledForSecurityType(SECURITY_TYPE_WPA3_SAE_TRANSITION));
+        assertFalse(ApConfigUtil.is11beDisabledForSecurityType(SECURITY_TYPE_WPA3_OWE));
+        assertTrue(ApConfigUtil.is11beDisabledForSecurityType(SECURITY_TYPE_WPA3_OWE_TRANSITION));
     }
 }

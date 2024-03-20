@@ -342,6 +342,7 @@
           <item type="integer" name="config_wifi80211azMaxTimeBetweenNtbMeasurementsMicros"/>
           <item type="bool" name="config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled" />
           <item type="array" name="config_wifiTwtBlockedOuiList" />
+          <item type="bool" name="config_wifiSoftApSingleLinkMloInBridgedModeSupported" />
 
           <!-- Params from config.xml that can be overlayed -->
 
