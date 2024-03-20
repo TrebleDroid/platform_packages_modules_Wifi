@@ -80,6 +80,8 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
     private static final int TEST_DHCP_FAILURE = WifiBlocklistMonitor.REASON_DHCP_FAILURE;
     private static final long TEST_MAX_DISABLE_DURATION_MILLIS =
             TimeUnit.HOURS.toMillis(18); // 18 hours
+    private static final long TEST_SHORT_MAX_DISABLE_DURATION_MILLIS =
+            TimeUnit.SECONDS.toMillis(10); // 10 seconds
     private static final long BASE_BLOCKLIST_DURATION = TimeUnit.MINUTES.toMillis(5); // 5 minutes
     private static final long BASE_CONNECTED_SCORE_BLOCKLIST_DURATION =
             TimeUnit.SECONDS.toMillis(30);
@@ -88,6 +90,7 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
     private static final long ABNORMAL_DISCONNECT_TIME_WINDOW_MS = TimeUnit.SECONDS.toMillis(30);
     private static final long ABNORMAL_DISCONNECT_RESET_TIME_MS = TimeUnit.HOURS.toMillis(3);
     private static final int FAILURE_STREAK_CAP = 7;
+    private static final int FAILURE_STREAK_CAP_LONG = 20;
     private static final Map<Integer, Integer> BLOCK_REASON_TO_DISABLE_THRESHOLD_MAP =
             Map.ofEntries(
                     Map.entry(WifiBlocklistMonitor.REASON_AP_UNABLE_TO_HANDLE_NEW_STA, 1),
@@ -440,7 +443,7 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
      * streak), we are setting the blocklist duration using an exponential backoff technique.
      */
     @Test
-    public void testBssidIsRemoveFromBlocklistAfterTimoutExponentialBackoff() {
+    public void testBssidIsRemoveFromBlocklistAfterTimeoutExponentialBackoff() {
         verifyAddTestBssidToBlocklist();
         int multiplier = 2;
         long duration = 0;
@@ -461,7 +464,7 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
             multiplier *= 2;
         }
 
-        // finally verify that the timout is capped by the FAILURE_STREAK_CAP
+        // finally verify that the timeout is capped by the FAILURE_STREAK_CAP
         when(mWifiScoreCard.getBssidBlocklistStreak(anyString(), anyString(), anyInt()))
                 .thenReturn(FAILURE_STREAK_CAP + 1);
         when(mClock.getWallClockMillis()).thenReturn(0L);
@@ -469,6 +472,26 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
         when(mClock.getWallClockMillis()).thenReturn(duration);
         assertTrue(mWifiBlocklistMonitor.updateAndGetBssidBlocklist().contains(TEST_BSSID_1));
         when(mClock.getWallClockMillis()).thenReturn(duration + 1);
+        assertEquals(0, mWifiBlocklistMonitor.updateAndGetBssidBlocklist().size());
+    }
+
+    /**
+     * Verify that when adding a AP that had already been failing (therefore has a blocklist
+     * streak), we are setting the blocklist duration using an exponential backoff technique,
+     * and the disable duration for a network is capped at WifiConfigMaxDisableDurationMs.
+     */
+    @Test
+    public void testBssidIsRemoveFromBlocklistAfterTimeoutExponentialBackoffCapped() {
+        mResources.setInteger(R.integer.config_wifiBssidBlocklistMonitorFailureStreakCap,
+                FAILURE_STREAK_CAP_LONG);
+        when(mWifiScoreCard.getBssidBlocklistStreak(anyString(), anyString(), anyInt()))
+                    .thenReturn(FAILURE_STREAK_CAP_LONG);
+        // verify that the timeout is capped at WifiConfigMaxDisableDurationMs
+        when(mClock.getWallClockMillis()).thenReturn(0L);
+        verifyAddTestBssidToBlocklist();
+        when(mClock.getWallClockMillis()).thenReturn(TEST_MAX_DISABLE_DURATION_MILLIS);
+        assertTrue(mWifiBlocklistMonitor.updateAndGetBssidBlocklist().contains(TEST_BSSID_1));
+        when(mClock.getWallClockMillis()).thenReturn(TEST_MAX_DISABLE_DURATION_MILLIS + 1);
         assertEquals(0, mWifiBlocklistMonitor.updateAndGetBssidBlocklist().size());
     }
 
@@ -1619,6 +1642,24 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
         verifyNetworkIsEnabledAfter(openNetwork,
                 TEST_ELAPSED_UPDATE_NETWORK_SELECTION_TIME_MILLIS
                         + TEST_MAX_DISABLE_DURATION_MILLIS);
+    }
+
+    /**
+     * Verify the disable duration for a network is capped at
+     * a short WifiConfigMaxDisableDurationMs.
+     */
+    @Test
+    public void testTryEnableNetworkCappedByShortMaxDisableDuration() {
+        WifiConfiguration openNetwork = WifiConfigurationTestUtil.createOpenNetwork();
+        int disableReason = NetworkSelectionStatus.DISABLED_ASSOCIATION_REJECTION;
+        when(mWifiGlobals.getWifiConfigMaxDisableDurationMs())
+                .thenReturn(TEST_SHORT_MAX_DISABLE_DURATION_MILLIS);
+        verifyDisableNetwork(openNetwork, disableReason);
+
+        // verify the exponential backoff is capped at WifiConfigMaxDisableDurationMs
+        verifyNetworkIsEnabledAfter(openNetwork,
+                TEST_ELAPSED_UPDATE_NETWORK_SELECTION_TIME_MILLIS
+                        + TEST_SHORT_MAX_DISABLE_DURATION_MILLIS);
     }
 
     /**

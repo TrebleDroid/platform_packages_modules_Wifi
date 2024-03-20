@@ -279,12 +279,14 @@ public class WifiBlocklistMonitor {
      */
     private long getBlocklistDurationWithExponentialBackoff(int failureStreak,
             int baseBlocklistDurationMs) {
+        long disableDurationMs = baseBlocklistDurationMs;
         failureStreak = Math.min(failureStreak, mContext.getResources().getInteger(
                 R.integer.config_wifiBssidBlocklistMonitorFailureStreakCap));
-        if (failureStreak < 1) {
-            return baseBlocklistDurationMs;
+        if (failureStreak >= 1) {
+            disableDurationMs =
+                (long) (Math.pow(2.0, (double) failureStreak) * baseBlocklistDurationMs);
         }
-        return (long) (Math.pow(2.0, (double) failureStreak) * baseBlocklistDurationMs);
+        return Math.min(disableDurationMs, mWifiGlobals.getWifiConfigMaxDisableDurationMs());
     }
 
     /**
@@ -1391,7 +1393,8 @@ public class WifiBlocklistMonitor {
                 break;
             }
         }
-        return mClock.getElapsedSinceBootMillis() + disableDurationMs;
+        return mClock.getElapsedSinceBootMillis() + Math.min(
+            disableDurationMs, mWifiGlobals.getWifiConfigMaxDisableDurationMs());
     }
 
     /**
