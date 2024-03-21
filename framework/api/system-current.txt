@@ -1027,7 +1027,7 @@ package android.net.wifi {
     method public default void onConnectedClientsChanged(@NonNull android.net.wifi.SoftApInfo, @NonNull java.util.List<android.net.wifi.WifiClient>);
     method @Deprecated public default void onInfoChanged(@NonNull android.net.wifi.SoftApInfo);
     method public default void onInfoChanged(@NonNull java.util.List<android.net.wifi.SoftApInfo>);
-    method @Deprecated public default void onStateChanged(int, int);
+    method public default void onStateChanged(int, int);
     method @FlaggedApi("com.android.wifi.flags.android_v_wifi_api") public default void onStateChanged(@NonNull android.net.wifi.SoftApState);
   }
 

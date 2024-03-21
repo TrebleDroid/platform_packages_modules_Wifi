@@ -6623,12 +6623,15 @@ public class WifiManager {
          *                      {@link #SAP_START_FAILURE_NO_CHANNEL},
          *                      {@link #SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION},
          *                      {@link #SAP_START_FAILURE_USER_REJECTED}
-         * @deprecated Use {@link #onStateChanged(StateInfo)}.
          */
         default void onStateChanged(@WifiApState int state, @SapStartFailure int failureReason) {}
 
         /**
          * Called when soft AP state changes.
+         * <p>
+         * This provides the same state and failure reason as {@link #onStateChanged(int, int)}, but
+         * also provides extra information such as interface name and TetheringRequest in order to
+         * replace usage of the WIFI_AP_STATE_CHANGED_ACTION broadcast.
          *
          * @param state the new state.
          */
@@ -6780,7 +6783,7 @@ public class WifiManager {
             Binder.clearCallingIdentity();
             mExecutor.execute(() -> {
                 mCallback.onStateChanged(state);
-                mCallback.onStateChanged(state.getState(), state.getFailureReason());
+                mCallback.onStateChanged(state.getState(), state.getFailureReasonInternal());
             });
         }
 
