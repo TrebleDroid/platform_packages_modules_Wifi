@@ -2519,7 +2519,7 @@ public class WifiServiceImpl extends BaseWifiService {
             synchronized (mLocalOnlyHotspotRequests) {
                 Log.d(TAG, "lohs.onStateChanged: " + softApState);
                 int state = softApState.getState();
-                int failureReason = softApState.getFailureReason();
+                int failureReason = softApState.getFailureReasonInternal();
 
                 // check if we have a failure - since it is possible (worst case scenario where
                 // WifiController and ClientModeImpl are out of sync wrt modes) to get two FAILED
