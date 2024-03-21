@@ -6102,9 +6102,10 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         mLooper.dispatchAll();
         List<WifiNetworkSelector.ClientModeManagerState> expectedCmmStates =
                 Arrays.asList(new WifiNetworkSelector.ClientModeManagerState(
-                                "wlan0", false, true, wifiInfo1, false),
+                                "wlan0", false, true, wifiInfo1, false, ROLE_CLIENT_PRIMARY),
                         new WifiNetworkSelector.ClientModeManagerState(
-                                "wlan1", false, true, wifiInfo2, false));
+                                "wlan1", false, true, wifiInfo2, false,
+                                ROLE_CLIENT_SECONDARY_LONG_LIVED));
         verify(mWifiNS).getCandidatesFromScan(any(), any(),
                 eq(expectedCmmStates), anyBoolean(), anyBoolean(), anyBoolean(), any(),
                 eq(false));

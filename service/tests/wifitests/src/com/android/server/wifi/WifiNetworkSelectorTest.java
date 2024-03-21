@@ -19,6 +19,8 @@ package com.android.server.wifi;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_OWE;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SAE;
 
+import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_PRIMARY;
+import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_LONG_LIVED;
 import static com.android.server.wifi.WifiConfigurationTestUtil.SECURITY_EAP;
 import static com.android.server.wifi.WifiConfigurationTestUtil.SECURITY_NONE;
 import static com.android.server.wifi.WifiConfigurationTestUtil.SECURITY_OWE;
@@ -552,7 +554,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
@@ -586,12 +588,12 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
         assertTrue(mWifiNetworkSelector.getConnectableScanDetails().isEmpty());
-        verify(mPasspointNetworkNominateHelper).updatePasspointConfig(any());
+        verify(mPasspointNetworkNominateHelper, never()).updatePasspointConfig(any());
         verify(mPasspointNetworkNominateHelper, never()).getPasspointNetworkCandidates(any());
     }
 
@@ -623,9 +625,10 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
+        assertNotNull(candidate);
 
         when(mClock.getElapsedSinceBootMillis()).thenReturn(SystemClock.elapsedRealtime()
                 + WifiNetworkSelector.MINIMUM_NETWORK_SELECTION_INTERVAL_MS - 2000);
@@ -634,16 +637,16 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, true, false, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
-        assertEquals("Expect null configuration", null, candidate);
+        assertNull("Expect null configuration", candidate);
         assertTrue(mWifiNetworkSelector.getConnectableScanDetails().isEmpty());
 
         verify(mWifiConfigManager, atLeast(2))
                 .updateScanDetailCacheFromScanDetailForSavedNetwork(any());
-        verify(mPasspointNetworkNominateHelper, times(2)).updatePasspointConfig(any());
+        verify(mPasspointNetworkNominateHelper).updatePasspointConfig(any());
         verify(mPasspointNetworkNominateHelper).getPasspointNetworkCandidates(any());
     }
 
@@ -676,7 +679,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         WifiConfigurationTestUtil.assertConfigurationEqual(savedConfigs[0], candidate);
@@ -688,7 +691,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -728,7 +731,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         when(mWifiInfo.getSupplicantState()).thenReturn(SupplicantState.COMPLETED);
@@ -746,7 +749,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, true, false, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -788,7 +791,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         when(mWifiInfo.getSupplicantState()).thenReturn(SupplicantState.COMPLETED);
@@ -814,7 +817,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, true, false, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -850,7 +853,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         verify(mWifiMetrics).incrementNetworkSelectionFilteredBssidCount(0);
@@ -891,7 +894,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         verify(mWifiMetrics).incrementNetworkSelectionFilteredBssidCount(1);
@@ -931,7 +934,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
@@ -969,7 +972,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
@@ -1009,7 +1012,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
@@ -1052,7 +1055,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
@@ -1101,7 +1104,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
     }
@@ -1135,7 +1138,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
@@ -1170,7 +1173,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect null configuration", null, candidate);
@@ -1205,7 +1208,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals(ssids[0], candidate.SSID);
@@ -1239,7 +1242,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -1265,7 +1268,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, true, false, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -1304,7 +1307,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -1335,7 +1338,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, true, false, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         assertEquals(2, candidates.size());
         assertEquals(100, candidates.get(0).getPredictedThroughputMbps());
@@ -1375,7 +1378,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -1401,7 +1404,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -1454,7 +1457,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         WifiConfigurationTestUtil.assertConfigurationEqual(userChoice, candidate);
@@ -1469,7 +1472,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
         WifiConfigurationTestUtil.assertConfigurationEqual(networkSelectorChoice, candidate);
@@ -1510,7 +1513,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         WifiConfigurationTestUtil.assertConfigurationEqual(userChoice, candidate);
@@ -1523,7 +1526,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -1565,7 +1568,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         WifiConfigurationTestUtil.assertConfigurationEqual(userChoice, candidate);
@@ -1576,7 +1579,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
         WifiConfigurationTestUtil.assertConfigurationEqual(networkSelectorChoice, candidate);
@@ -1611,7 +1614,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
 
         assertFalse(candidates.isEmpty());
@@ -1628,7 +1631,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
 
         assertFalse(candidates.isEmpty());
@@ -1678,7 +1681,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -1894,7 +1897,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         //WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals(1, candidates.size());
@@ -1906,7 +1909,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         //WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals(1, candidates.size());
@@ -2022,7 +2025,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 true, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertNotNull("Result should be not null", candidate);
@@ -2064,7 +2067,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, true, false, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 true, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -2102,7 +2105,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         List<ScanDetail> expectedOpenUnsavedNetworks = new ArrayList<>();
@@ -2137,7 +2140,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 unSavedScanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertEquals("Expect open unsaved networks",
@@ -2152,7 +2155,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 savedScanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         candidate = mWifiNetworkSelector.selectNetwork(candidates);
         // Saved networks are filtered out.
@@ -2182,7 +2185,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         List<ScanDetail> expectedOpenUnsavedNetworks = new ArrayList<>();
@@ -2214,7 +2217,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         assertTrue(mWifiNetworkSelector.getFilteredScanDetailsForOpenUnsavedNetworks().isEmpty());
@@ -2256,7 +2259,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         List<ScanDetail> expectedOpenUnsavedNetworks = new ArrayList<>();
@@ -2292,7 +2295,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         List<ScanDetail> expectedOpenUnsavedNetworks = new ArrayList<>();
@@ -2323,7 +2326,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                 setUpTwoNetworks(-35, -40),
                 EMPTY_BLOCKLIST,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 true, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -2461,7 +2464,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 true, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         // Check if the wifiConfig is updated with the latest
@@ -2492,7 +2495,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         // Expect one privileged and one regular candidate.
         assertEquals(2, candidates.size());
@@ -2542,7 +2545,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
         verify(mWifiMetrics, times(1))
@@ -2666,10 +2669,10 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(
-                        TEST_IFACE_NAME, true, false, mWifiInfo, false),
+                        TEST_IFACE_NAME, true, false, mWifiInfo, false, ROLE_CLIENT_PRIMARY),
                         new ClientModeManagerState(
                                 TEST_IFACE_NAME_SECONDARY, true, false, mSecondaryWifiInfo,
-                                false)),
+                                false, ROLE_CLIENT_SECONDARY_LONG_LIVED)),
                 false, true, true, Collections.emptySet(), false);
         WifiConfiguration candidate = mWifiNetworkSelector.selectNetwork(candidates);
 
@@ -2730,16 +2733,33 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         when(mClock.getElapsedSinceBootMillis()).thenReturn(SystemClock.elapsedRealtime()
                 + WifiNetworkSelector.MINIMUM_NETWORK_SELECTION_INTERVAL_MS + 2000);
 
+        List<ClientModeManagerState> cmmStates =
+                Arrays.asList(new ClientModeManagerState(
+                        TEST_IFACE_NAME, true, false, mWifiInfo, false, ROLE_CLIENT_PRIMARY),
+                        new ClientModeManagerState(
+                                TEST_IFACE_NAME_SECONDARY, true, false, mSecondaryWifiInfo, false,
+                                ROLE_CLIENT_SECONDARY_LONG_LIVED));
+
         // Do network selection.
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
-                scanDetails, blocklist,
-                Arrays.asList(new ClientModeManagerState(
-                                TEST_IFACE_NAME, true, false, mWifiInfo, false),
-                        new ClientModeManagerState(
-                                TEST_IFACE_NAME_SECONDARY, true, false, mSecondaryWifiInfo,
-                                false)),
-                false, true, true, Collections.emptySet(), false);
-        assertNull(mWifiNetworkSelector.selectNetwork(candidates));
+                scanDetails, blocklist, cmmStates, false, true, true, Collections.emptySet(),
+                false);
+        assertNull(candidates);
+
+        // Mock that the primary connection has a user connect choice pointing something
+        // Verify candidate return is not null in this case
+        WifiConfiguration primaryConfig = mock(WifiConfiguration.class);
+        WifiConfiguration.NetworkSelectionStatus networkSelectionStatus = mock(
+                WifiConfiguration.NetworkSelectionStatus.class);
+        when(networkSelectionStatus.getConnectChoice()).thenReturn("\"ConnectChoiceTest\"NONE");
+        when(primaryConfig.getNetworkSelectionStatus()).thenReturn(networkSelectionStatus);
+        when(mWifiConfigManager.getConfiguredNetwork(mWifiInfo.getNetworkId())).thenReturn(
+                primaryConfig);
+        candidates = mWifiNetworkSelector.getCandidatesFromScan(
+                scanDetails, blocklist, cmmStates, false, true, true, Collections.emptySet(),
+                false);
+        // Candidate should not be null
+        assertNotNull(candidates);
     }
 
     private void runNetworkSelectionWith(ScanDetailsAndWifiConfigs scanDetailsAndConfigs) {
@@ -2747,7 +2767,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                 scanDetailsAndConfigs.getScanDetails(),
                 new HashSet<>(), // blocklist
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 true, // untrustedNetworkAllowed
                 true, // oemPaid
                 true, // oemPrivate
@@ -2806,7 +2826,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         assertEquals(2, candidates.size());
 
@@ -2862,7 +2882,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         // PSK type is disabled, PSK network is not matched.
         assertEquals(1, candidates.size());
@@ -2896,7 +2916,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         assertEquals(2, candidates.size());
 
@@ -2929,7 +2949,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         // The SAE-only network should be filtered.
         assertEquals(1, candidates.size());
@@ -2964,7 +2984,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         assertEquals(2, candidates.size());
 
@@ -3008,7 +3028,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         // OPEN type is disabled, OPEN network is not matched.
         assertEquals(1, candidates.size());
@@ -3041,7 +3061,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         assertEquals(2, candidates.size());
 
@@ -3074,7 +3094,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         // The OWE-only network should be filtered.
         assertEquals(1, candidates.size());
@@ -3107,7 +3127,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         assertEquals(2, candidates.size());
 
@@ -3151,7 +3171,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         // WPA2 Enterprise type is disabled, WPA2 Enterprise network is not matched.
         assertEquals(1, candidates.size());
@@ -3223,7 +3243,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         assertNotNull(candidates);
         if (expectedSecurityParamType == -1) {
@@ -3262,7 +3282,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, new HashSet<>(),
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         assertEquals(2, candidates.size());
 
@@ -3370,7 +3390,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
                 Arrays.asList(new ClientModeManagerState(TEST_IFACE_NAME, false, true, mWifiInfo,
-                        false)),
+                        false, ROLE_CLIENT_PRIMARY)),
                 false, true, true, Collections.emptySet(), false);
         return candidates;
     }
