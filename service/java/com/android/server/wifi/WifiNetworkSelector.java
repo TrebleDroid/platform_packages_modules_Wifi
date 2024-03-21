@@ -24,6 +24,8 @@ import static android.net.wifi.WifiNetworkSelectionConfig
 import static android.net.wifi.WifiNetworkSelectionConfig
         .ASSOCIATED_NETWORK_SELECTION_OVERRIDE_NONE;
 
+import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_PRIMARY;
+
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -920,12 +922,14 @@ public class WifiNetworkSelector {
         public final boolean disconnected;
          /** Currently connected network */
         public final WifiInfo wifiInfo;
+        public final ActiveModeManager.ClientRole role;
 
         ClientModeManagerState(@NonNull ClientModeManager clientModeManager) {
             ifaceName = clientModeManager.getInterfaceName();
             connected = clientModeManager.isConnected();
             disconnected = clientModeManager.isDisconnected();
             wifiInfo = clientModeManager.getConnectionInfo();
+            role = clientModeManager.getRole();
         }
 
         ClientModeManagerState() {
@@ -933,15 +937,17 @@ public class WifiNetworkSelector {
             connected = false;
             disconnected = true;
             wifiInfo = new WifiInfo();
+            role = null;
         }
 
         @VisibleForTesting
         ClientModeManagerState(@NonNull String ifaceName, boolean connected, boolean disconnected,
-                @NonNull WifiInfo wifiInfo) {
+                @NonNull WifiInfo wifiInfo, ActiveModeManager.ClientRole role) {
             this.ifaceName = ifaceName;
             this.connected = connected;
             this.disconnected = disconnected;
             this.wifiInfo = wifiInfo;
+            this.role = role;
         }
 
         @Override
@@ -952,6 +958,7 @@ public class WifiNetworkSelector {
             return Objects.equals(ifaceName, thatCmmState.ifaceName)
                     && connected == thatCmmState.connected
                     && disconnected == thatCmmState.disconnected
+                    && role == thatCmmState.role
                     // Since wifiinfo does not have equals currently.
                     && Objects.equals(wifiInfo.getSSID(), thatCmmState.wifiInfo.getSSID())
                     && Objects.equals(wifiInfo.getBSSID(), thatCmmState.wifiInfo.getBSSID());
@@ -960,12 +967,13 @@ public class WifiNetworkSelector {
         @Override
         public int hashCode() {
             return Objects.hash(ifaceName, connected, disconnected,
-                    wifiInfo.getSSID(), wifiInfo.getBSSID());
+                    wifiInfo.getSSID(), wifiInfo.getBSSID(), role);
         }
 
         @Override
         public String toString() {
             return "ClientModeManagerState: " + ifaceName
+                    + ", role:" + role
                     + ", connection state: "
                     + (connected ? " connected" : (disconnected ? " disconnected" : "unknown"))
                     + ", WifiInfo: " + wifiInfo;
@@ -1026,6 +1034,20 @@ public class WifiNetworkSelector {
         mLastSelectionWeightEnabled = enabled;
     }
 
+    private String getConnectChoiceKey(@NonNull List<ClientModeManagerState> cmmStates) {
+        for (ClientModeManagerState cmmState : cmmStates) {
+            if (cmmState.role != ROLE_CLIENT_PRIMARY) {
+                continue;
+            }
+            WifiConfiguration currentNetwork =
+                    mWifiConfigManager.getConfiguredNetwork(cmmState.wifiInfo.getNetworkId());
+            if (currentNetwork != null) {
+                return currentNetwork.getNetworkSelectionStatus().getConnectChoice();
+            }
+        }
+        return null;
+    }
+
     /**
      * Returns the list of Candidates from networks in range.
      *
@@ -1061,9 +1083,19 @@ public class WifiNetworkSelector {
             registeredNominator.update(scanDetails);
         }
 
-        // Shall we start network selection at all?
-        if (!skipSufficiencyCheck && !isNetworkSelectionNeeded(scanDetails, cmmStates)) {
-            return null;
+        boolean networkSelectionNeeded = skipSufficiencyCheck
+                || isNetworkSelectionNeeded(scanDetails, cmmStates);
+        final String userConnectChoiceKey;
+        if (!networkSelectionNeeded) {
+            userConnectChoiceKey = getConnectChoiceKey(cmmStates);
+            if (userConnectChoiceKey == null) {
+                return null;
+            }
+            // Continue candidate selection but only allow the user connect choice as candidate
+            localLog("Current network is sufficient. Continue network selection only "
+                    + "considering user connect choice: " + userConnectChoiceKey);
+        } else {
+            userConnectChoiceKey = null;
         }
 
         // Filter out unwanted networks.
@@ -1073,42 +1105,47 @@ public class WifiNetworkSelector {
         }
 
         WifiCandidates wifiCandidates = new WifiCandidates(mWifiScoreCard, mContext);
-        for (ClientModeManagerState cmmState : cmmStates) {
-            // Always get the current BSSID from WifiInfo in case that firmware initiated
-            // roaming happened.
-            String currentBssid = cmmState.wifiInfo.getBSSID();
-            WifiConfiguration currentNetwork =
-                    mWifiConfigManager.getConfiguredNetwork(cmmState.wifiInfo.getNetworkId());
-            if (currentNetwork != null) {
-                wifiCandidates.setCurrent(currentNetwork.networkId, currentBssid);
-                // We always want the current network to be a candidate so that it can participate.
-                // It may also get re-added by a nominator, in which case this fallback
-                // will be replaced.
-                MacAddress bssid = MacAddress.fromString(currentBssid);
-                SecurityParams params = currentNetwork.getNetworkSelectionStatus()
-                        .getLastUsedSecurityParams();
-                if (null == params) {
-                    localLog("No known candidate security params for current network.");
-                    continue;
+        if (userConnectChoiceKey == null) {
+            // Add connected network as candidates unless only considering connect choice.
+            for (ClientModeManagerState cmmState : cmmStates) {
+                // Always get the current BSSID from WifiInfo in case that firmware initiated
+                // roaming happened.
+                String currentBssid = cmmState.wifiInfo.getBSSID();
+                WifiConfiguration currentNetwork =
+                        mWifiConfigManager.getConfiguredNetwork(cmmState.wifiInfo.getNetworkId());
+                if (currentNetwork != null) {
+                    wifiCandidates.setCurrent(currentNetwork.networkId, currentBssid);
+                    // We always want the current network to be a candidate so that it can
+                    // participate.
+                    // It may also get re-added by a nominator, in which case this fallback
+                    // will be replaced.
+                    MacAddress bssid = MacAddress.fromString(currentBssid);
+                    SecurityParams params = currentNetwork.getNetworkSelectionStatus()
+                            .getLastUsedSecurityParams();
+                    if (null == params) {
+                        localLog("No known candidate security params for current network.");
+                        continue;
+                    }
+                    WifiCandidates.Key key = new WifiCandidates.Key(
+                            ScanResultMatchInfo.fromWifiConfiguration(currentNetwork),
+                            bssid, currentNetwork.networkId,
+                            params.getSecurityType());
+                    ScanDetail scanDetail = findScanDetailForBssid(mFilteredNetworks, currentBssid);
+                    int predictedTputMbps = (scanDetail == null) ? 0
+                            : predictThroughput(scanDetail);
+                    wifiCandidates.add(key, currentNetwork,
+                            NetworkNominator.NOMINATOR_ID_CURRENT,
+                            cmmState.wifiInfo.getRssi(),
+                            cmmState.wifiInfo.getFrequency(),
+                            ScanResult.CHANNEL_WIDTH_20MHZ, // channel width unavailable in WifiInfo
+                            calculateLastSelectionWeight(currentNetwork.networkId,
+                                    WifiConfiguration.isMetered(currentNetwork, cmmState.wifiInfo)),
+                            WifiConfiguration.isMetered(currentNetwork, cmmState.wifiInfo),
+                            isFromCarrierOrPrivilegedApp(currentNetwork),
+                            predictedTputMbps,
+                            (scanDetail != null) ? scanDetail.getScanResult().getApMldMacAddress()
+                                    : null);
                 }
-                WifiCandidates.Key key = new WifiCandidates.Key(
-                        ScanResultMatchInfo.fromWifiConfiguration(currentNetwork),
-                        bssid, currentNetwork.networkId,
-                        params.getSecurityType());
-                ScanDetail scanDetail = findScanDetailForBssid(mFilteredNetworks, currentBssid);
-                int predictedTputMbps = (scanDetail == null) ? 0 : predictThroughput(scanDetail);
-                wifiCandidates.add(key, currentNetwork,
-                        NetworkNominator.NOMINATOR_ID_CURRENT,
-                        cmmState.wifiInfo.getRssi(),
-                        cmmState.wifiInfo.getFrequency(),
-                        ScanResult.CHANNEL_WIDTH_20MHZ, // channel width not available in WifiInfo
-                        calculateLastSelectionWeight(currentNetwork.networkId,
-                                WifiConfiguration.isMetered(currentNetwork, cmmState.wifiInfo)),
-                        WifiConfiguration.isMetered(currentNetwork, cmmState.wifiInfo),
-                        isFromCarrierOrPrivilegedApp(currentNetwork),
-                        predictedTputMbps,
-                        (scanDetail != null) ? scanDetail.getScanResult().getApMldMacAddress()
-                                : null);
             }
         }
 
@@ -1124,6 +1161,10 @@ public class WifiNetworkSelector {
                         WifiCandidates.Key key = wifiCandidates.keyFromScanDetailAndConfig(
                                 scanDetail, config);
                         if (key != null) {
+                            if (userConnectChoiceKey != null
+                                    && !userConnectChoiceKey.equals(config.getProfileKey())) {
+                                return;
+                            }
                             boolean metered = false;
                             for (ClientModeManagerState cmmState : cmmStates) {
                                 if (isEverMetered(config, cmmState.wifiInfo, scanDetail)) {
@@ -1436,7 +1477,7 @@ public class WifiNetworkSelector {
     /**
      * Using the registered Scorers, choose the best network from the list of Candidate(s).
      * The ScanDetailCache is also updated here.
-     * @param candidates - Candidates to perferm network selection on.
+     * @param candidates - Candidates to perform network selection on.
      * @param overrideEnabled If it is allowed to override candidate with User Connect Choice.
      * @return WifiConfiguration - the selected network, or null.
      */
