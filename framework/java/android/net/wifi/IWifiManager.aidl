@@ -235,7 +235,7 @@ interface IWifiManager
 
     boolean startTetheredHotspot(in SoftApConfiguration softApConfig, String packageName);
 
-    boolean startTetheredHotspotRequest(in TetheringRequest request, String packageName);
+    void startTetheredHotspotRequest(in TetheringRequest request, in ISoftApCallback callback, String packageName);
 
     boolean stopSoftAp();
 
