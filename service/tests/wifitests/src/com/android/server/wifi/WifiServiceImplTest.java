@@ -10605,7 +10605,13 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(SoftApState.class);
         verify(mClientSoftApCallback).onStateChanged(softApStateCaptor.capture());
         assertThat(softApStateCaptor.getValue().getState()).isEqualTo(WIFI_AP_STATE_DISABLED);
-        assertThat(softApStateCaptor.getValue().getFailureReason()).isEqualTo(0);
+        try {
+            softApStateCaptor.getValue().getFailureReason();
+            fail("getFailureReason should throw if not in failure state");
+        } catch (IllegalStateException e) {
+            // Pass.
+        }
+        assertThat(softApStateCaptor.getValue().getFailureReasonInternal()).isEqualTo(0);
         verify(mClientSoftApCallback).onConnectedClientsOrInfoChanged(
                 new HashMap<String, SoftApInfo>(),
                 new HashMap<String, List<WifiClient>>(), false, true);

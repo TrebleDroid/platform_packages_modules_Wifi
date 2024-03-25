@@ -1865,7 +1865,12 @@ public class WifiManagerTest {
         verify(mSoftApCallback).onStateChanged(softApStateCaptor.capture());
         SoftApState softApState = softApStateCaptor.getValue();
         assertEquals(WIFI_AP_STATE_ENABLED, softApState.getState());
-        assertEquals(0, softApState.getFailureReason());
+        try {
+            softApState.getFailureReason();
+            fail("getFailureReason should throw if not in failure state");
+        } catch (IllegalStateException e) {
+            // Pass.
+        }
         assertEquals(TEST_INTERFACE_NAME, softApState.getIface());
         assertEquals(TEST_TETHERING_REQUEST, softApState.getTetheringRequest());
     }

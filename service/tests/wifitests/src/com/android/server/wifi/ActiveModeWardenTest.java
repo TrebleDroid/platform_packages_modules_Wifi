@@ -2271,6 +2271,8 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         assertThat(softApStateCaptor.getValue().getState()).isEqualTo(WIFI_AP_STATE_FAILED);
         assertThat(softApStateCaptor.getValue().getFailureReason())
                 .isEqualTo(SAP_START_FAILURE_GENERAL);
+        assertThat(softApStateCaptor.getValue().getFailureReasonInternal())
+                .isEqualTo(SAP_START_FAILURE_GENERAL);
 
         // try to start LOHS
         mActiveModeWarden.startSoftAp(
@@ -2286,6 +2288,8 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mLohsStateMachineCallback).onStateChanged(softApStateCaptor.capture());
         assertThat(softApStateCaptor.getValue().getState()).isEqualTo(WIFI_AP_STATE_FAILED);
         assertThat(softApStateCaptor.getValue().getFailureReason())
+                .isEqualTo(SAP_START_FAILURE_GENERAL);
+        assertThat(softApStateCaptor.getValue().getFailureReasonInternal())
                 .isEqualTo(SAP_START_FAILURE_GENERAL);
     }
 

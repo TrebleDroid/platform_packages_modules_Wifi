@@ -16,10 +16,13 @@
 
 package com.android.server.wifi;
 
+import static com.android.server.wifi.RunnerHandler.KEY_SIGNATURE;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -183,6 +186,20 @@ public class WifiThreadRunner {
      */
     public boolean post(@NonNull Runnable runnable) {
         return mHandler.post(runnable);
+    }
+
+    /**
+     * Asynchronously runs a Runnable on the main Wifi thread. With specified task name for metrics
+     * logging
+     * @return true if the runnable was successfully posted <b>(not executed)</b> to the main Wifi
+     * thread, false otherwise
+     * @param runnable The Runnable that will be executed.
+     * @param taskName The task name for performance logging
+     */
+    public boolean post(@NonNull Runnable runnable, String taskName) {
+        Message m = Message.obtain(mHandler, runnable);
+        m.getData().putString(KEY_SIGNATURE, taskName);
+        return mHandler.sendMessage(m);
     }
 
     /**

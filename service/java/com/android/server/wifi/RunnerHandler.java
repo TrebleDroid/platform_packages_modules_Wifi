@@ -42,7 +42,7 @@ import java.util.Set;
 public class RunnerHandler extends Handler {
     private static final String TAG = "WifiThreadRunner";
 
-    private static final String KEY_SIGNATURE = "KEY_RUNNER_HANDLER_SIGNATURE";
+    public static final String KEY_SIGNATURE = "KEY_RUNNER_HANDLER_SIGNATURE";
     private static final String KEY_WHEN = "KEY_RUNNER_HANDLER_WHEN";
     private static final int METRICS_THRESHOLD_MILLIS = 100;
 
@@ -101,10 +101,12 @@ public class RunnerHandler extends Handler {
 
     @Override
     public boolean sendMessageAtTime(Message msg, long uptimeMillis) {
-        String signature = getSignature(new Throwable("RunnerHandler:").getStackTrace(),
-                msg.getCallback());
         Bundle bundle = msg.getData();
-        bundle.putString(KEY_SIGNATURE, signature);
+        if (bundle.getString(KEY_SIGNATURE) == null) {
+            String signature = getSignature(new Throwable("RunnerHandler:").getStackTrace(),
+                    msg.getCallback());
+            bundle.putString(KEY_SIGNATURE, signature);
+        }
         return super.sendMessageAtTime(msg, uptimeMillis);
     }
 
