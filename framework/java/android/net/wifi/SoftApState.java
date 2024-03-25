@@ -134,9 +134,22 @@ public final class SoftApState implements Parcelable {
      *                {@link WifiManager#SAP_START_FAILURE_NO_CHANNEL},
      *                {@link WifiManager#SAP_START_FAILURE_UNSUPPORTED_CONFIGURATION},
      *                {@link WifiManager#SAP_START_FAILURE_USER_REJECTED}
+     * @throws IllegalStateException if the state is not {@link WifiManager#WIFI_AP_STATE_FAILED}.
      */
     @WifiManager.SapStartFailure
     public int getFailureReason() {
+        if (mState != WifiManager.WIFI_AP_STATE_FAILED) {
+            throw new IllegalStateException("Called getFailureReason() when state is not"
+                    + " WIFI_AP_STATE_FAILED. Actual state is " + mState);
+        }
+        return getFailureReasonInternal();
+    }
+
+    /**
+     * @hide
+     */
+    @WifiManager.SapStartFailure
+    public int getFailureReasonInternal() {
         return mFailureReason;
     }
 
