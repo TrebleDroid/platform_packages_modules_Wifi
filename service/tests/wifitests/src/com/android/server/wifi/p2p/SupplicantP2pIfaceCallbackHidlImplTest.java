@@ -31,6 +31,7 @@ import android.app.test.MockAnswerUtil.AnswerWithArguments;
 import android.hardware.wifi.supplicant.V1_0.ISupplicantP2pIfaceCallback;
 import android.hardware.wifi.supplicant.V1_0.ISupplicantP2pIfaceCallback.P2pStatusCode;
 import android.hardware.wifi.supplicant.V1_0.WpsConfigMethods;
+import android.net.MacAddress;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -542,6 +543,8 @@ public class SupplicantP2pIfaceCallbackHidlImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(WifiP2pDevice.class);
         mDut.onStaAuthorized(mDeviceAddress1Bytes, mDeviceAddress2Bytes);
         verify(mMonitor).broadcastP2pApStaConnected(any(String.class), p2pDeviceCaptor.capture());
+        assertEquals(MacAddress.fromBytes(mDeviceAddress1Bytes),
+                p2pDeviceCaptor.getValue().getInterfaceMacAddress());
         assertEquals(mDeviceAddress2String, p2pDeviceCaptor.getValue().deviceAddress);
     }
 
@@ -556,6 +559,8 @@ public class SupplicantP2pIfaceCallbackHidlImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(WifiP2pDevice.class);
         mDut.onStaAuthorized(mDeviceAddress1Bytes, NativeUtil.ANY_MAC_BYTES);
         verify(mMonitor).broadcastP2pApStaConnected(any(String.class), p2pDeviceCaptor.capture());
+        assertEquals(MacAddress.fromBytes(mDeviceAddress1Bytes),
+                p2pDeviceCaptor.getValue().getInterfaceMacAddress());
         assertEquals(mDeviceAddress1String, p2pDeviceCaptor.getValue().deviceAddress);
     }
 

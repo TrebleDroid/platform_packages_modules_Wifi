@@ -284,9 +284,13 @@ public class WifiP2pGroup implements Parcelable {
     /** @hide */
     public void setClientInterfaceMacAddress(@NonNull String deviceAddress,
             @NonNull final MacAddress interfaceMacAddress) {
+        if (null == interfaceMacAddress) {
+            Log.e("setClientInterfaceMacAddress", "cannot set null interface mac address");
+            return;
+        }
         for (WifiP2pDevice client : mClients) {
             if (client.deviceAddress.equals(deviceAddress)) {
-                Log.i("setClientInterfaceMacAddress", " device: " + deviceAddress
+                Log.i("setClientInterfaceMacAddress", "device: " + deviceAddress
                         + " interfaceAddress: " + interfaceMacAddress.toString());
                 client.setInterfaceMacAddress(interfaceMacAddress);
                 break;
@@ -296,6 +300,14 @@ public class WifiP2pGroup implements Parcelable {
     /** @hide */
     public void setClientIpAddress(@NonNull final MacAddress interfaceMacAddress,
             @NonNull final InetAddress ipAddress) {
+        if (null == interfaceMacAddress) {
+            Log.e("setClientIpAddress", "cannot set IP address with null interface mac address");
+            return;
+        }
+        if (null == ipAddress) {
+            Log.e("setClientIpAddress", "Null IP - Failed to set IP address in WifiP2pDevice");
+            return;
+        }
         for (WifiP2pDevice client : mClients) {
             if (client.getInterfaceMacAddress().equals(interfaceMacAddress)) {
                 Log.i("setClientIpAddress", "Update the IP address"
