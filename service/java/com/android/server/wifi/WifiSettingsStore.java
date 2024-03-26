@@ -44,6 +44,7 @@ public class WifiSettingsStore {
      *     WIFI_ENABLED_APM_OVERRIDE
      *     WIFI_DISABLED_APM_ON
      */
+    private static final String TAG = "WifiSettingsStore";
     @VisibleForTesting
     public static final int WIFI_DISABLED                      = 0;
     @VisibleForTesting
@@ -263,7 +264,8 @@ public class WifiSettingsStore {
                             NOTIFICATION_NOT_SHOWN) == NOTIFICATION_NOT_SHOWN) {
                         mWifiThreadRunner.post(
                                 () -> showNotification(R.string.wifi_enabled_apm_first_time_title,
-                                        R.string.wifi_enabled_apm_first_time_message));
+                                        R.string.wifi_enabled_apm_first_time_message),
+                                TAG + "#handleWifiToggled");
                         setUserSecureIntegerSetting(
                                 APM_WIFI_ENABLED_NOTIFICATION, NOTIFICATION_SHOWN);
                     }
@@ -316,7 +318,8 @@ public class WifiSettingsStore {
                             && !isBluetoothEnabledOnApm()) {
                         mWifiThreadRunner.post(
                                 () -> showNotification(R.string.apm_enabled_first_time_title,
-                                        R.string.apm_enabled_first_time_message));
+                                        R.string.apm_enabled_first_time_message),
+                                TAG + "#handleAirplaneModeToggled");
                         setUserSecureIntegerSetting(APM_WIFI_NOTIFICATION, NOTIFICATION_SHOWN);
                     }
                 } else {
