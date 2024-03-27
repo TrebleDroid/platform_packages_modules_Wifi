@@ -3789,6 +3789,12 @@ public class ClientModeImplTest extends WifiBaseTest {
         mLooper.moveTimeForward(mWifiGlobals.getPollRssiIntervalMillis());
         mLooper.dispatchAll();
         assertRssiChangeBroadcastSent(3);
+
+        // Setup for invalid RSSI poll, should not send broadcast
+        signalPollResults.addEntry(0, -999, 65, 54, sFreq);
+        mLooper.moveTimeForward(mWifiGlobals.getPollRssiIntervalMillis());
+        mLooper.dispatchAll();
+        assertRssiChangeBroadcastSent(3);
     }
 
     /**

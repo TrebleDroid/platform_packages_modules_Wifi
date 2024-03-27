@@ -2679,7 +2679,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             return stats;
         }
 
-        int newRssi = pollResults.getRssi();
+        int newRssi = RssiUtil.calculateAdjustedRssi(pollResults.getRssi());
         int newTxLinkSpeed = pollResults.getTxLinkSpeed();
         int newFrequency = pollResults.getFrequency();
         int newRxLinkSpeed = pollResults.getRxLinkSpeed();
@@ -2694,7 +2694,10 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         /* Set link specific signal poll results for associated links */
         for (MloLink link : mWifiInfo.getAssociatedMloLinks()) {
             int linkId = link.getLinkId();
-            link.setRssi(pollResults.getRssi(linkId));
+            int rssi = RssiUtil.calculateAdjustedRssi(pollResults.getRssi(linkId));
+            if (rssi > WifiInfo.INVALID_RSSI) {
+                link.setRssi(rssi);
+            }
             link.setTxLinkSpeedMbps(pollResults.getTxLinkSpeed(linkId));
             link.setRxLinkSpeedMbps(pollResults.getRxLinkSpeed(linkId));
             link.setChannel(ScanResult.convertFrequencyMhzToChannelIfSupported(
@@ -2728,18 +2731,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             }
             mWifiInfo.setFrequency(newFrequency);
         }
+
         // updateLinkBandwidth() requires the latest frequency information
-        if (newRssi > WifiInfo.INVALID_RSSI && newRssi < WifiInfo.MAX_RSSI) {
-            /*
-             * Positive RSSI is possible when devices are close(~0m apart) to each other.
-             * And there are some driver/firmware implementation, where they avoid
-             * reporting large negative rssi values by adding 256.
-             * so adjust the valid rssi reports for such implementations.
-             */
-            if (newRssi > (WifiInfo.INVALID_RSSI + 256)) {
-                Log.wtf(getTag(), "Error! +ve value RSSI: " + newRssi);
-                newRssi -= 256;
-            }
+        if (newRssi > WifiInfo.INVALID_RSSI) {
             int oldRssi = mWifiInfo.getRssi();
             mWifiInfo.setRssi(newRssi);
             /*
@@ -2766,10 +2760,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             updateLinkBandwidthAndCapabilities(stats, updateNetworkCapabilities, txBytes,
                     rxBytes);
             mLastSignalLevel = newSignalLevel;
-        } else {
-            mWifiInfo.setRssi(WifiInfo.INVALID_RSSI);
-            updateCapabilities();
-            mLastSignalLevel = -1;
         }
         mWifiConfigManager.updateScanDetailCacheFromWifiInfo(mWifiInfo);
         /*
