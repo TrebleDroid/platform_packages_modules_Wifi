@@ -5688,7 +5688,7 @@ public class WifiManager {
      *                     using {@link WifiManager#setSoftApConfiguration(SoftApConfiguration)}.
      * @return {@code true} if the operation succeeded, {@code false} otherwise
      *
-     * @deprecated Use {@link #startTetheredHotspotRequest(TetheringManager.TetheringRequest)}
+     * @deprecated Use {@link #startTetheredHotspot(TetheringManager.TetheringRequest)}
      *             instead.
      * @hide
      */
@@ -5722,7 +5722,7 @@ public class WifiManager {
             android.Manifest.permission.NETWORK_STACK,
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
     })
-    public void startTetheredHotspotRequest(@NonNull TetheringManager.TetheringRequest request,
+    public void startTetheredHotspot(@NonNull TetheringManager.TetheringRequest request,
             @NonNull @CallbackExecutor Executor executor, @NonNull SoftApCallback callback) {
         if (executor == null) throw new IllegalArgumentException("executor cannot be null");
         if (callback == null) throw new IllegalArgumentException("callback cannot be null");
@@ -6636,7 +6636,9 @@ public class WifiManager {
          * @param state the new state.
          */
         @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
-        default void onStateChanged(@NonNull SoftApState state) {}
+        default void onStateChanged(@NonNull SoftApState state) {
+            onStateChanged(state.mState, state.mFailureReason);
+        }
 
         /**
          * Called when the connected clients to soft AP changes.
