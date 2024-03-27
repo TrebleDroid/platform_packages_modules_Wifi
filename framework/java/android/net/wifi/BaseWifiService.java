@@ -484,8 +484,8 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public boolean startTetheredHotspotRequest(
-            TetheringManager.TetheringRequest request, String packageName) {
+    public void startTetheredHotspotRequest(TetheringManager.TetheringRequest request,
+            ISoftApCallback callback, String packageName) {
         throw new UnsupportedOperationException();
     }
 

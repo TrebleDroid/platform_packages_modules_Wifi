@@ -23,6 +23,7 @@ import static android.net.wifi.ScanResult.WIFI_BAND_5_GHZ;
 import static android.net.wifi.ScanResult.WIFI_BAND_6_GHZ;
 import static android.net.wifi.WifiManager.CHANNEL_DATA_KEY_FREQUENCY_MHZ;
 import static android.net.wifi.WifiManager.CHANNEL_DATA_KEY_NUM_AP;
+import static android.net.wifi.WifiManager.IFACE_IP_MODE_TETHERED;
 import static android.net.wifi.WifiManager.LocalOnlyHotspotCallback.ERROR_GENERIC;
 import static android.net.wifi.WifiManager.LocalOnlyHotspotCallback.ERROR_NO_CHANNEL;
 import static android.net.wifi.WifiManager.NOT_OVERRIDE_EXISTING_NETWORKS_ON_RESTORE;
@@ -446,12 +447,11 @@ public class WifiServiceImpl extends BaseWifiService {
             callbacks.finishBroadcast();
         }
 
-
        /**
-         * Notify register the connected clients to soft AP changed.
-         *
-         * @param clients connected clients to soft AP
-         */
+        * Notify register the connected clients to soft AP changed.
+        *
+        * @param clients connected clients to soft AP
+        */
         public void notifyRegisterOnConnectedClientsOrInfoChanged(
                 RemoteCallbackList<ISoftApCallback> callbacks, Map<String, SoftApInfo> infos,
                 Map<String, List<WifiClient>> clients, boolean isBridged) {
@@ -479,10 +479,9 @@ public class WifiServiceImpl extends BaseWifiService {
             int itemCount = callbacks.beginBroadcast();
             for (int i = 0; i < itemCount; i++) {
                 try {
-                    callbacks.getBroadcastItem(i).onCapabilityChanged(
-                            capability);
+                    callbacks.getBroadcastItem(i).onCapabilityChanged(capability);
                 } catch (RemoteException e) {
-                    Log.e(TAG, "onCapabiliyChanged: remote exception -- " + e);
+                    Log.e(TAG, "onCapabilityChanged: remote exception -- " + e);
                 }
             }
             callbacks.finishBroadcast();
@@ -492,9 +491,9 @@ public class WifiServiceImpl extends BaseWifiService {
          * Notify register there was a client trying to connect but device blocked the client with
          * specific reason.
          *
-         * @param client the currently blocked client.
+         * @param client        the currently blocked client.
          * @param blockedReason one of blocked reason from
-         * {@link WifiManager.SapClientBlockedReason}
+         *                      {@link SapClientBlockedReason}
          */
         public void notifyRegisterOnBlockedClientConnecting(
                 RemoteCallbackList<ISoftApCallback> callbacks, WifiClient client,
@@ -502,8 +501,7 @@ public class WifiServiceImpl extends BaseWifiService {
             int itemCount = callbacks.beginBroadcast();
             for (int i = 0; i < itemCount; i++) {
                 try {
-                    callbacks.getBroadcastItem(i).onBlockedClientConnecting(client,
-                            blockedReason);
+                    callbacks.getBroadcastItem(i).onBlockedClientConnecting(client, blockedReason);
                 } catch (RemoteException e) {
                     Log.e(TAG, "onBlockedClientConnecting: remote exception -- " + e);
                 }
@@ -1708,7 +1706,7 @@ public class WifiServiceImpl extends BaseWifiService {
         if (!startSoftApInternal(new SoftApModeConfiguration(
                 WifiManager.IFACE_IP_MODE_TETHERED, softApConfig,
                 mTetheredSoftApTracker.getSoftApCapability(),
-                mCountryCode.getCountryCode(), null), requestorWs)) {
+                mCountryCode.getCountryCode(), null), requestorWs, null)) {
             mTetheredSoftApTracker.setFailedWhileEnabling();
             return false;
         }
@@ -1741,7 +1739,7 @@ public class WifiServiceImpl extends BaseWifiService {
         return startTetheredHotspotInternal(new SoftApModeConfiguration(
                 WifiManager.IFACE_IP_MODE_TETHERED, softApConfig,
                 mTetheredSoftApTracker.getSoftApCapability(),
-                mCountryCode.getCountryCode(), null /* request */), callingUid, packageName);
+                mCountryCode.getCountryCode(), null /* request */), callingUid, packageName, null);
     }
 
     /**
@@ -1751,7 +1749,8 @@ public class WifiServiceImpl extends BaseWifiService {
      * @throws SecurityException if the caller does not have permission to start softap
      */
     @Override
-    public boolean startTetheredHotspotRequest(@NonNull TetheringManager.TetheringRequest request,
+    public void startTetheredHotspotRequest(@NonNull TetheringManager.TetheringRequest request,
+            @NonNull ISoftApCallback callback,
             @NonNull String packageName) {
         if (request == null) {
             throw new IllegalArgumentException("TetheringRequest must not be null");
@@ -1765,14 +1764,20 @@ public class WifiServiceImpl extends BaseWifiService {
         // If user restriction is set, cannot start softap
         if (mWifiTetheringDisallowed) {
             mLog.err("startTetheredHotspotRequest with user restriction: not permitted").flush();
-            return false;
+            try {
+                callback.onStateChanged(new SoftApState(WIFI_AP_STATE_FAILED,
+                        SAP_START_FAILURE_GENERAL, request, null));
+            } catch (RemoteException e) {
+                Log.e(TAG, "ISoftApCallback.onStateChanged: remote exception -- " + e);
+            }
+            return;
         }
 
         mLog.info("startTetheredHotspotRequest uid=%").c(callingUid).flush();
-        return startTetheredHotspotInternal(new SoftApModeConfiguration(
+        startTetheredHotspotInternal(new SoftApModeConfiguration(
                 WifiManager.IFACE_IP_MODE_TETHERED, null /* config */,
                 mTetheredSoftApTracker.getSoftApCapability(),
-                mCountryCode.getCountryCode(), request), callingUid, packageName);
+                mCountryCode.getCountryCode(), request), callingUid, packageName, callback);
     }
 
     /**
@@ -1780,9 +1785,17 @@ public class WifiServiceImpl extends BaseWifiService {
      * proper permissions beyond the NetworkStack permission.
      */
     private boolean startTetheredHotspotInternal(@NonNull SoftApModeConfiguration modeConfig,
-            int callingUid, String packageName) {
+            int callingUid, String packageName, @Nullable ISoftApCallback callback) {
         if (!mTetheredSoftApTracker.setEnablingIfAllowed()) {
             mLog.err("Tethering is already active or activating.").flush();
+            if (callback != null) {
+                try {
+                    callback.onStateChanged(new SoftApState(WIFI_AP_STATE_FAILED,
+                            SAP_START_FAILURE_GENERAL, modeConfig.getTetheringRequest(), null));
+                } catch (RemoteException e) {
+                    Log.e(TAG, "ISoftApCallback.onStateChanged: remote exception -- " + e);
+                }
+            }
             return false;
         }
 
@@ -1797,7 +1810,7 @@ public class WifiServiceImpl extends BaseWifiService {
             Binder.restoreCallingIdentity(id);
         }
 
-        if (!startSoftApInternal(modeConfig, requestorWs)) {
+        if (!startSoftApInternal(modeConfig, requestorWs, callback)) {
             mTetheredSoftApTracker.setFailedWhileEnabling();
             return false;
         }
@@ -1810,7 +1823,8 @@ public class WifiServiceImpl extends BaseWifiService {
      * Internal method to start softap mode. Callers of this method should have already checked
      * proper permissions beyond the NetworkStack permission.
      */
-    private boolean startSoftApInternal(SoftApModeConfiguration apConfig, WorkSource requestorWs) {
+    private boolean startSoftApInternal(SoftApModeConfiguration apConfig, WorkSource requestorWs,
+            @Nullable ISoftApCallback callback) {
         int uid = Binder.getCallingUid();
         boolean privileged = isSettingsOrSuw(Binder.getCallingPid(), uid);
         mLog.trace("startSoftApInternal uid=% mode=%")
@@ -1823,9 +1837,20 @@ public class WifiServiceImpl extends BaseWifiService {
                 && (!WifiApConfigStore.validateApWifiConfiguration(
                     softApConfig, privileged, mContext, mWifiNative))) {
             Log.e(TAG, "Invalid SoftApConfiguration");
+            if (callback != null) {
+                try {
+                    callback.onStateChanged(new SoftApState(WIFI_AP_STATE_FAILED,
+                            SAP_START_FAILURE_GENERAL,
+                            apConfig.getTetheringRequest(), null));
+                } catch (RemoteException e) {
+                    Log.e(TAG, "ISoftApCallback.onStateChanged: remote exception -- " + e);
+                }
+            }
             return false;
         }
-
+        if (apConfig.getTargetMode() == IFACE_IP_MODE_TETHERED) {
+            mTetheredSoftApTracker.setRequestCallback(callback);
+        }
         mActiveModeWarden.startSoftAp(apConfig, requestorWs);
         return true;
     }
@@ -2028,6 +2053,8 @@ public class WifiServiceImpl extends BaseWifiService {
         protected SoftApCapability mSoftApCapability = null;
         protected final RemoteCallbackList<ISoftApCallback> mRegisteredSoftApCallbacks =
                 new RemoteCallbackList<>();
+        // Callback tied to the current SoftAp request.
+        protected ISoftApCallback mRequestCallback = null;
 
         public SoftApState getState() {
             synchronized (mLock) {
@@ -2152,6 +2179,19 @@ public class WifiServiceImpl extends BaseWifiService {
 
         public void unregisterSoftApCallback(ISoftApCallback callback) {
             mRegisteredSoftApCallbacks.unregister(callback);
+        }
+
+        /**
+         * Set the callback to track the state of the current SoftAP request.
+         */
+        public void setRequestCallback(@Nullable ISoftApCallback callback) {
+            if (mRequestCallback != null) {
+                mRegisteredSoftApCallbacks.unregister(mRequestCallback);
+            }
+            mRequestCallback = callback;
+            if (callback != null) {
+                mRegisteredSoftApCallbacks.register(callback);
+            }
         }
 
         /**
@@ -2431,7 +2471,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     softApConfig, lohsCapability, mCountryCode.getCountryCode(), null);
             mIsExclusive = (request.getCustomConfig() != null);
             // Report the error if we got failure in startSoftApInternal
-            if (!startSoftApInternal(mActiveConfig, request.getWorkSource())) {
+            if (!startSoftApInternal(mActiveConfig, request.getWorkSource(), null)) {
                 onStateChanged(new SoftApState(
                         WIFI_AP_STATE_FAILED, SAP_START_FAILURE_GENERAL,
                         mActiveConfig.getTetheringRequest(), null /* iface */));

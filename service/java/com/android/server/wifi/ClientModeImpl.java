@@ -6433,6 +6433,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     mLinkProbeManager.resetOnNewConnection();
                 }
                 sendMessage(CMD_RSSI_POLL, mRssiPollToken, 0);
+            } else {
+                updateLinkLayerStatsRssiAndScoreReport();
             }
             sendNetworkChangeBroadcast(DetailedState.CONNECTING);
             // If this network was explicitly selected by the user, evaluate whether to inform
@@ -7329,7 +7331,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             WifiConfiguration config = getConnectedWifiConfigurationInternal();
             mWifiScoreReport.startConnectedNetworkScorer(
                     mNetworkAgent.getNetwork().getNetId(), isRecentlySelectedByTheUser(config));
-            updateLinkLayerStatsRssiAndScoreReport();
             mWifiScoreCard.noteIpConfiguration(mWifiInfo);
             // too many places to record L3 failure with too many failure reasons.
             // So only record success here.
