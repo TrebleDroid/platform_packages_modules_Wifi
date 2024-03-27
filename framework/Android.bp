@@ -155,6 +155,7 @@ java_sdk_library {
     ],
 
     impl_only_libs: [
+        "framework-location.stubs.module_lib",
         "framework-connectivity.stubs.module_lib",
         "framework-location.stubs.module_lib",
         "framework-tethering.stubs.module_lib",

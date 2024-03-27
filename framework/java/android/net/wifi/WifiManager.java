@@ -5655,8 +5655,7 @@ public class WifiManager {
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
     })
     public boolean startTetheredHotspotRequest(@NonNull TetheringManager.TetheringRequest request) {
-        Log.e(TAG, "startTetheredHotspotRequest not supported before API 35");
-        return false;
+        throw new UnsupportedOperationException("Not supported before API 35");
     }
 
     /**
