@@ -107,6 +107,7 @@ public class WifiHealthMonitor {
     private final Clock mClock;
     private final AlarmManager mAlarmManager;
     private final RunnerHandler mHandler;
+    private final WifiThreadRunner mWifiThreadRunner;
     private final WifiNative mWifiNative;
     private final WifiInjector mWifiInjector;
     private final DeviceConfigFacade mDeviceConfigFacade;
@@ -159,6 +160,7 @@ public class WifiHealthMonitor {
         mWifiScoreCard = wifiScoreCard;
         mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         mHandler = handler;
+        mWifiThreadRunner = new WifiThreadRunner(mHandler);
         mWifiNative = wifiNative;
         mDeviceConfigFacade = deviceConfigFacade;
         mActiveModeWarden = activeModeWarden;
@@ -271,7 +273,7 @@ public class WifiHealthMonitor {
         if (mScanner == null) return;
         // Register for all single scan results
         mScanner.registerScanListener(
-                new WifiScannerInternal.ScanListener(new ScanListener(), mHandler));
+                new WifiScannerInternal.ScanListener(new ScanListener(), mWifiThreadRunner));
     }
 
     /**

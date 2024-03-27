@@ -458,8 +458,8 @@ public class WifiInjector {
         mScanRequestProxy = new ScanRequestProxy(mContext,
                 mContext.getSystemService(AppOpsManager.class),
                 mContext.getSystemService(ActivityManager.class),
-                this, mWifiConfigManager,
-                mWifiPermissionsUtil, mWifiMetrics, mClock, wifiHandler, mSettingsConfigStore);
+                this, mWifiConfigManager, mWifiPermissionsUtil, mWifiMetrics, mClock,
+                mWifiThreadRunner, mSettingsConfigStore);
         mWifiBlocklistMonitor.setScanRequestProxy(mScanRequestProxy);
         mSarManager = new SarManager(mContext, makeTelephonyManager(), wifiLooper,
                 mWifiNative, mWifiDeviceStateChangeManager);

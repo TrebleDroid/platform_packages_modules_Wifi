@@ -184,6 +184,7 @@ public class WifiConnectivityManager {
     private final FrameworkFacade mFrameworkFacade;
     private final WifiPermissionsUtil mWifiPermissionsUtil;
     private final WifiDialogManager mWifiDialogManager;
+    private final WifiThreadRunner mWifiThreadRunner;
 
     private WifiScannerInternal mScanner;
     private final MultiInternetManager mMultiInternetManager;
@@ -334,7 +335,7 @@ public class WifiConnectivityManager {
                     SingleScanListener singleScanListener = new SingleScanListener(false);
                     mScanner.startScan(settings,
                             new WifiScannerInternal.ScanListener(singleScanListener,
-                                    mEventHandler));
+                                    mWifiThreadRunner));
                     mWifiMetrics.incrementConnectivityOneshotScanCount();
                 }
             };
@@ -1365,6 +1366,7 @@ public class WifiConnectivityManager {
         mOpenNetworkNotifier = openNetworkNotifier;
         mWifiMetrics = wifiMetrics;
         mEventHandler = handler;
+        mWifiThreadRunner = new WifiThreadRunner(mEventHandler);
         mClock = clock;
         mLocalLog = localLog;
         mWifiScoreCard = scoreCard;
@@ -1397,10 +1399,10 @@ public class WifiConnectivityManager {
                 new InternalMultiInternetConnectionStatusListener());
         mAllSingleScanListener = new AllSingleScanListener();
         mInternalAllSingleScanListener = new WifiScannerInternal.ScanListener(
-                mAllSingleScanListener, mEventHandler);
+                mAllSingleScanListener, mWifiThreadRunner);
         mPnoScanListener = new PnoScanListener();
         mInternalPnoScanListener = new WifiScannerInternal.ScanListener(mPnoScanListener,
-                mEventHandler);
+                mWifiThreadRunner);
         mPnoScanPasspointSsids = new ArraySet<>();
         wifiDeviceStateChangeManager.registerStateChangeCallback(
                 new WifiDeviceStateChangeManager.StateChangeCallback() {
@@ -1678,7 +1680,7 @@ public class WifiConnectivityManager {
                     primaryManager.onNetworkSwitchRejected(candidate.networkId,
                             candidate.getNetworkSelectionStatus().getNetworkSelectionBSSID());
                 }),
-                new WifiThreadRunner(mEventHandler));
+                mWifiThreadRunner);
         mNetworkSwitchDialog.launchDialog();
         mDialogCandidateNetId = candidate.networkId;
     }
@@ -2325,7 +2327,7 @@ public class WifiConnectivityManager {
         SingleScanListener singleScanListener =
                 new SingleScanListener(isFullBandScan);
         mScanner.startScan(settings,
-                new WifiScannerInternal.ScanListener(singleScanListener, mEventHandler));
+                new WifiScannerInternal.ScanListener(singleScanListener, mWifiThreadRunner));
         mWifiMetrics.incrementConnectivityOneshotScanCount();
     }
 

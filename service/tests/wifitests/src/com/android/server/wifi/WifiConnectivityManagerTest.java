@@ -284,6 +284,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
     private TestAlarmManager mAlarmManager;
     private TestLooper mLooper;
     private TestHandler mTestHandler;
+    private WifiThreadRunner mWifiThreadRunner;
     private WifiConnectivityManager mWifiConnectivityManager;
     private WifiNetworkSelector mWifiNS;
     private WifiConnectivityHelper mWifiConnectivityHelper;
@@ -4092,7 +4093,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
     public void listenToAllSingleScanResults() {
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
 
         // Request a single scan outside of WifiConnectivityManager.
         mWifiScanner.startScan(settings, scanListener);
@@ -4123,7 +4124,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // Request a single scan to trigger network selection.
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
         mWifiScanner.startScan(settings, scanListener);
         mLooper.dispatchAll();
 
@@ -4154,7 +4155,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // Request a single scan to trigger network selection.
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
         mWifiScanner.startScan(settings, scanListener);
         mLooper.dispatchAll();
 
@@ -4192,7 +4193,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // Request a single scan to trigger network selection.
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
         mWifiScanner.startScan(settings, scanListener);
         mLooper.dispatchAll();
 
@@ -4253,7 +4254,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // Request a single scan to trigger network selection.
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
         mWifiScanner.startScan(settings, scanListener);
         mLooper.dispatchAll();
 
@@ -4309,7 +4310,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // Request a single scan to trigger network selection.
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
         mWifiScanner.startScan(settings, scanListener);
         mLooper.dispatchAll();
 
@@ -4365,7 +4366,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // Request a single scan to trigger network selection.
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
         mWifiScanner.startScan(settings, scanListener);
         mLooper.dispatchAll();
 
@@ -4403,7 +4404,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // Request a single scan to trigger network selection.
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
         mWifiScanner.startScan(settings, scanListener);
         mLooper.dispatchAll();
 
@@ -4465,7 +4466,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // Request a single scan to trigger network selection.
         ScanSettings settings = new ScanSettings();
         WifiScannerInternal.ScanListener scanListener = new WifiScannerInternal.ScanListener(mock(
-                WifiScanner.ScanListener.class), mTestHandler);
+                WifiScanner.ScanListener.class), mWifiThreadRunner);
         mWifiScanner.startScan(settings, scanListener);
         mLooper.dispatchAll();
 

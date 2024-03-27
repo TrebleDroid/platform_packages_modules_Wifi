@@ -31,7 +31,6 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.util.ScanResultUtil;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.UserHandle;
@@ -93,7 +92,7 @@ public class ScanRequestProxy {
     public static final int PARTIAL_SCAN_CACHE_SIZE = 200;
 
     private final Context mContext;
-    private final Handler mHandler;
+    private final WifiThreadRunner mWifiThreadRunner;
     private final AppOpsManager mAppOps;
     private final ActivityManager mActivityManager;
     private final WifiInjector mWifiInjector;
@@ -238,9 +237,9 @@ public class ScanRequestProxy {
     ScanRequestProxy(Context context, AppOpsManager appOpsManager, ActivityManager activityManager,
                      WifiInjector wifiInjector, WifiConfigManager configManager,
                      WifiPermissionsUtil wifiPermissionUtil, WifiMetrics wifiMetrics, Clock clock,
-                     Handler handler, WifiSettingsConfigStore settingsConfigStore) {
+                     WifiThreadRunner runner, WifiSettingsConfigStore settingsConfigStore) {
         mContext = context;
-        mHandler = handler;
+        mWifiThreadRunner = runner;
         mAppOps = appOpsManager;
         mActivityManager = activityManager;
         mWifiInjector = wifiInjector;
@@ -280,7 +279,8 @@ public class ScanRequestProxy {
             // Register the global scan listener.
             if (mWifiScanner != null) {
                 mWifiScanner.registerScanListener(
-                        new WifiScannerInternal.ScanListener(new GlobalScanListener(), mHandler));
+                        new WifiScannerInternal.ScanListener(new GlobalScanListener(),
+                                mWifiThreadRunner));
             }
         }
         return mWifiScanner != null;
@@ -558,7 +558,8 @@ public class ScanRequestProxy {
                     .retrieveHiddenNetworkList(false));
         }
         mWifiScanner.startScan(settings,
-                new WifiScannerInternal.ScanListener(new ScanRequestProxyScanListener(), mHandler),
+                new WifiScannerInternal.ScanListener(new ScanRequestProxyScanListener(),
+                        mWifiThreadRunner),
                 workSource);
         return true;
     }

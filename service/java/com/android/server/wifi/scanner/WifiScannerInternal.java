@@ -21,12 +21,12 @@ import android.annotation.Nullable;
 import android.net.wifi.IWifiScannerListener;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiScanner;
-import android.os.Handler;
 import android.os.Process;
 import android.os.WorkSource;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.server.wifi.WifiThreadRunner;
 
 import java.util.Collections;
 import java.util.List;
@@ -44,16 +44,16 @@ public abstract class WifiScannerInternal {
     public static class ScanListener extends IWifiScannerListener.Stub {
         private static final String TAG = "WifiScannerInternal";
         private final WifiScanner.ScanListener mScanListener;
-        private final Handler mHandler;
+        private final WifiThreadRunner mWifiThreadRunner;
 
         /**
          * Local scan listener constructor
          * @param scanListener WifiScanner listener
          * @param handler handler for the listener
          */
-        public ScanListener(WifiScanner.ScanListener scanListener, Handler handler) {
+        public ScanListener(WifiScanner.ScanListener scanListener, WifiThreadRunner runner) {
             mScanListener = scanListener;
-            mHandler = handler;
+            mWifiThreadRunner = runner;
         }
 
         /**
@@ -67,30 +67,29 @@ public abstract class WifiScannerInternal {
 
         @Override
         public void onSuccess() {
-            mHandler.post(() -> {
-                mScanListener.onSuccess();
-            });
+            mWifiThreadRunner.post(mScanListener::onSuccess,
+                    TAG + "#onSuccess");
         }
 
         @Override
         public void onFailure(int reason, String description) {
-            mHandler.post(() -> {
+            mWifiThreadRunner.post(() -> {
                 mScanListener.onFailure(reason, description);
-            });
+            }, TAG + "#onFailure");
         }
 
         @Override
         public void onResults(WifiScanner.ScanData[] scanDatas) {
-            mHandler.post(() -> {
+            mWifiThreadRunner.post(() -> {
                 mScanListener.onResults(scanDatas);
-            });
+            }, TAG + "#onResults");
         }
 
         @Override
         public void onFullResult(ScanResult fullScanResult) {
-            mHandler.post(() -> {
+            mWifiThreadRunner.post(() -> {
                 mScanListener.onFullResult(fullScanResult);
-            });
+            }, TAG + "#onFullResult");
         }
 
         @Override
@@ -106,9 +105,9 @@ public abstract class WifiScannerInternal {
             }
             WifiScanner.PnoScanListener pnoScanListener =
                     (WifiScanner.PnoScanListener) mScanListener;
-            mHandler.post(() -> {
+            mWifiThreadRunner.post(() -> {
                 pnoScanListener.onPnoNetworkFound(scanResult);
-            });
+            }, TAG + "#onPnoNetworkFound");
         }
     }
 
