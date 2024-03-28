@@ -1764,6 +1764,9 @@ public class WifiServiceImpl extends BaseWifiService {
         if (request == null) {
             throw new IllegalArgumentException("TetheringRequest must not be null");
         }
+        if (callback == null) {
+            throw new IllegalArgumentException("callback must not be null");
+        }
 
         // NETWORK_STACK is a signature only permission.
         enforceNetworkStackPermission();
