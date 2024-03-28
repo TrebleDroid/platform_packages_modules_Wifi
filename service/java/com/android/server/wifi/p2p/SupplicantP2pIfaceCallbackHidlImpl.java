@@ -19,6 +19,7 @@ package com.android.server.wifi.p2p;
 import android.annotation.NonNull;
 import android.hardware.wifi.supplicant.V1_0.ISupplicantP2pIfaceCallback;
 import android.hardware.wifi.supplicant.V1_0.WpsConfigMethods;
+import android.net.MacAddress;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -489,18 +490,19 @@ public class SupplicantP2pIfaceCallbackHidlImpl extends ISupplicantP2pIfaceCallb
         mMonitor.broadcastP2pServiceDiscoveryResponse(mInterface, response);
     }
 
-    private WifiP2pDevice createStaEventDevice(byte[] srcAddress, byte[] p2pDeviceAddress) {
+    private WifiP2pDevice createStaEventDevice(byte[] interfaceAddress, byte[] p2pDeviceAddress) {
         WifiP2pDevice device = new WifiP2pDevice();
         byte[] deviceAddressBytes;
         // Legacy STAs may not supply a p2pDeviceAddress (signaled by a zero'd p2pDeviceAddress)
-        // In this case, use srcAddress instead
+        // In this case, use interfaceAddress instead
         if (!Arrays.equals(NativeUtil.ANY_MAC_BYTES, p2pDeviceAddress)) {
             deviceAddressBytes = p2pDeviceAddress;
         } else {
-            deviceAddressBytes = srcAddress;
+            deviceAddressBytes = interfaceAddress;
         }
         try {
             device.deviceAddress = NativeUtil.macAddressFromByteArray(deviceAddressBytes);
+            device.setInterfaceMacAddress(MacAddress.fromBytes(interfaceAddress));
         } catch (Exception e) {
             Log.e(TAG, "Could not decode MAC address", e);
             return null;
