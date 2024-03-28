@@ -31,7 +31,7 @@
     <string name="wifi_suggestion_title" msgid="2564179935989099139">"Permitir redes Wi-Fi sugeridas?"</string>
     <string name="wifi_suggestion_content" msgid="6985149577828091835">"Redes sugeridas por <xliff:g id="NAME">%s</xliff:g>. O dispositivo pode estabelecer ligação automaticamente."</string>
     <string name="wifi_suggestion_action_allow_app" msgid="7757859972144671588">"Permitir"</string>
-    <string name="wifi_suggestion_action_disallow_app" msgid="4565857699629860726">"Não, obrigado"</string>
+    <string name="wifi_suggestion_action_disallow_app" msgid="4565857699629860726">"Não"</string>
     <string name="wifi_suggestion_imsi_privacy_title" msgid="8969261812845304079">"Quer estabelecer ligação à rede Wi-Fi do operador <xliff:g id="CARRIERNAME">%s</xliff:g>?"</string>
     <string name="wifi_suggestion_imsi_privacy_content" msgid="4266931269306079184">"Estas redes recebem um ID do SIM que pode ser utilizado para monitorizar a localização dos dispositivos."</string>
     <string name="wifi_suggestion_action_allow_imsi_privacy_exemption_carrier" msgid="3888538126440442636">"Ligar"</string>
