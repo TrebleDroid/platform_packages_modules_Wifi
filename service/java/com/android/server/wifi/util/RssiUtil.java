@@ -17,12 +17,33 @@ package com.android.server.wifi.util;
 
 import android.annotation.NonNull;
 import android.content.Context;
+import android.net.wifi.WifiInfo;
 
 import com.android.wifi.resources.R;
 
 /** Utilities for computations involving RSSI. */
 public class RssiUtil {
     private RssiUtil() {}
+
+    /**
+     * Apply known fixes to a RSSi from signal poll and return INVALID_RSSI to indicate the data
+     * is invalid.
+     */
+    public static int calculateAdjustedRssi(int rssi) {
+        if (rssi > WifiInfo.INVALID_RSSI && rssi < WifiInfo.MAX_RSSI) {
+            /*
+             * Positive RSSI is possible when devices are close(~0m apart) to each other.
+             * And there are some driver/firmware implementation, where they avoid
+             * reporting large negative rssi values by adding 256.
+             * so adjust the valid rssi reports for such implementations.
+             */
+            if (rssi > (WifiInfo.INVALID_RSSI + 256)) {
+                return rssi - 256;
+            }
+            return rssi;
+        }
+        return WifiInfo.INVALID_RSSI;
+    }
 
     /** Calculate RSSI level from RSSI using overlaid RSSI level thresholds. */
     public static int calculateSignalLevel(Context context, int rssi) {
