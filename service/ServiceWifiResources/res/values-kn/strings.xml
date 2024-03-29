@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"ಗೆ:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"ಅಗತ್ಯವಿರುವ ಪಿನ್‌ ಟೈಪ್ ಮಾಡಿ:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"ಪಿನ್‌:"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"ನಿಮ್ಮ ಸಾಧನವು <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ಗೆ ಕನೆಕ್ಟ್ ಆಗಿರುವಾಗ, ವೈ-ಫೈನಿಂದ ಅದು ತಾತ್ಕಾಲಿಕವಾಗಿ ಡಿಸ್‌ಕನೆಕ್ಟ್ ಆಗುತ್ತದೆ"</string>
     <string name="dlg_ok" msgid="254496739491689405">"ಸರಿ"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g> ಗೆ ಕನೆಕ್ಟ್ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"ಗೌಪ್ಯತೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಬದಲಾಯಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ ಮತ್ತು ಮರುಪ್ರಯತ್ನಿಸಿ"</string>

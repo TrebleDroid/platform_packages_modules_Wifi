@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"До:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Внеси го бараниот PIN:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Ќе се прекине врската на вашиот уред со Wi-Fi привремено додека е поврзан со <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"Во ред"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Не може да се поврзе на „<xliff:g id="SSID">%1$s</xliff:g>“"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Допрете за да ги промените поставките за приватност и обидете се повторно"</string>
