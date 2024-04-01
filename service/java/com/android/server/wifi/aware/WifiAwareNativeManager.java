@@ -91,7 +91,7 @@ public class WifiAwareNativeManager {
                         if (mHalDeviceManager.isStarted()) {
                             mWifiAwareStateManager.tryToGetAwareCapability();
                         } else {
-                            awareIsDown(false);
+                            awareIsDown(mWifiAwareStateManager.isD2dAllowedWhenStaDisabled());
                         }
                     }
                 }, mHandler);
@@ -127,7 +127,7 @@ public class WifiAwareNativeManager {
             }
             if (mHalDeviceManager == null) {
                 Log.e(TAG, "tryToGetAware: mHalDeviceManager is null!?");
-                awareIsDown(false);
+                awareIsDown(mWifiAwareStateManager.isD2dAllowedWhenStaDisabled());
                 return;
             }
 
@@ -150,7 +150,7 @@ public class WifiAwareNativeManager {
                 if (!mWifiNanIface.registerFrameworkCallback(mWifiAwareNativeCallback)) {
                     Log.e(TAG, "Unable to register callback with WifiNanIface");
                     mHalDeviceManager.removeIface(mWifiNanIface);
-                    awareIsDown(false);
+                    awareIsDown(mWifiAwareStateManager.isD2dAllowedWhenStaDisabled());
                     return;
                 }
                 mReferenceCount = 1;
@@ -211,7 +211,7 @@ public class WifiAwareNativeManager {
             }
             if (mHalDeviceManager == null) {
                 Log.e(TAG, "tryToGetAware: mHalDeviceManager is null!?");
-                awareIsDown(false);
+                awareIsDown(mWifiAwareStateManager.isD2dAllowedWhenStaDisabled());
                 return false;
             }
 

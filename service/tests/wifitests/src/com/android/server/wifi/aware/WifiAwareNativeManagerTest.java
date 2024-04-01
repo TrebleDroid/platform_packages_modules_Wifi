@@ -119,6 +119,7 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
     }
 
     private void testControlFlowWithoutInterface(boolean isD2dEnabled) {
+        when(mWifiAwareStateManagerMock.isD2dAllowedWhenStaDisabled()).thenReturn(isD2dEnabled);
         // configure HalDeviceManager as ready/wifi started (and to return an interface if
         // requested)
         when(mHalDeviceManager.isStarted()).thenReturn(true);
@@ -130,8 +131,9 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
         // 2. onStatusChange (not ready) -> disableUsage
         when(mHalDeviceManager.isStarted()).thenReturn(false);
         mManagerStatusListenerCaptor.getValue().onStatusChanged();
+        mInOrder.verify(mWifiAwareStateManagerMock).isD2dAllowedWhenStaDisabled();
 
-        mInOrder.verify(mWifiAwareStateManagerMock).disableUsage(false);
+        mInOrder.verify(mWifiAwareStateManagerMock).disableUsage(isD2dEnabled);
 
         // 3. onStatusChange (ready/started) + available -> enableUsage
         when(mHalDeviceManager.isStarted()).thenReturn(true);
