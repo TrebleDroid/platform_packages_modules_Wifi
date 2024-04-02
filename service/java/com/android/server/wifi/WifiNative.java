@@ -901,11 +901,13 @@ public class WifiNative {
     private class WificondDeathHandlerInternal implements Runnable {
         @Override
         public void run() {
-            synchronized (mLock) {
-                Log.i(TAG, "wificond died. Cleaning up internal state.");
-                onNativeDaemonDeath();
-                mWifiMetrics.incrementNumWificondCrashes();
-            }
+            mHandler.post(() -> {
+                synchronized (mLock) {
+                    Log.i(TAG, "wificond died. Cleaning up internal state.");
+                    onNativeDaemonDeath();
+                    mWifiMetrics.incrementNumWificondCrashes();
+                }
+            });
         }
     }
 
