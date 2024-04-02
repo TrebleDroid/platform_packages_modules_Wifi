@@ -366,7 +366,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 mActiveModeWarden.updateSoftApCapability(
                         mTetheredSoftApTracker.getSoftApCapability(),
                         WifiManager.IFACE_IP_MODE_TETHERED);
-            });
+            }, this.getClass().getSimpleName() + "#onActiveDataSubscriptionIdChanged");
         }
     }
 
@@ -729,7 +729,7 @@ public class WifiServiceImpl extends BaseWifiService {
             registerForCarrierConfigChange();
             mWifiInjector.getAdaptiveConnectivityEnabledSettingObserver().initialize();
             mIsWifiServiceStarted = true;
-        });
+        }, TAG + "#checkAndStartWifi");
     }
 
     private void setPulledAtomCallbacks() {
@@ -780,7 +780,8 @@ public class WifiServiceImpl extends BaseWifiService {
         for (ClientModeManager cmm : mActiveModeWarden.getClientModeManagers()) {
             cmm.resetSimAuthNetworks(resetReason);
         }
-        mWifiThreadRunner.post(mWifiNetworkSuggestionsManager::updateCarrierPrivilegedApps);
+        mWifiThreadRunner.post(mWifiNetworkSuggestionsManager::updateCarrierPrivilegedApps,
+                TAG + "#resetCarrierNetworks$1");
         if (resetReason == RESET_SIM_REASON_SIM_INSERTED) {
             // clear the blocklists in case any SIM based network were disabled due to the SIM
             // not being available.
@@ -792,7 +793,8 @@ public class WifiServiceImpl extends BaseWifiService {
             // mWifiNetworkSuggestionsManager#updateCarrierPrivilegedApps
             mWifiThreadRunner.post(() -> mWifiConfigManager
                     .removeEphemeralCarrierNetworks(mWifiCarrierInfoManager
-                            .getCurrentCarrierPrivilegedPackages()));
+                            .getCurrentCarrierPrivilegedPackages()),
+                    TAG + "#resetCarrierNetworks$2");
         }
     }
 
@@ -879,7 +881,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mWifiInjector.getWifiDeviceStateChangeManager().handleBootCompleted();
             setPulledAtomCallbacks();
             mTwtManager.registerWifiNativeTwtEvents();
-        });
+        }, TAG + "#handleBootCompleted");
     }
 
     public void handleUserSwitch(int userId) {
@@ -888,17 +890,19 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mWifiConfigManager.handleUserSwitch(userId);
             resetNotificationManager();
-        });
+        }, TAG + "#handleUserSwitch");
     }
 
     public void handleUserUnlock(int userId) {
         Log.d(TAG, "Handle user unlock " + userId);
-        mWifiThreadRunner.post(() -> mWifiConfigManager.handleUserUnlock(userId));
+        mWifiThreadRunner.post(() -> mWifiConfigManager.handleUserUnlock(userId),
+                TAG + "#handleUserUnlock");
     }
 
     public void handleUserStop(int userId) {
         Log.d(TAG, "Handle user stop " + userId);
-        mWifiThreadRunner.post(() -> mWifiConfigManager.handleUserStop(userId));
+        mWifiThreadRunner.post(() -> mWifiConfigManager.handleUserStop(userId),
+                TAG + "#handleUserStop");
     }
 
     /**
@@ -1308,7 +1312,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     return;
                 }
                 showWifiEnableRequestDialog(callingUid, callingPid, packageName);
-            });
+            }, TAG + "#setWifiEnabled");
             return true;
         }
         setWifiEnabledInternal(packageName, enable, callingUid, callingPid, isPrivileged);
@@ -1336,12 +1340,13 @@ public class WifiServiceImpl extends BaseWifiService {
                     mWifiEnableRequestDialogHandles.valueAt(i).dismissDialog();
                 }
                 mWifiEnableRequestDialogHandles.clear();
-            });
+            }, TAG + "#setWifiEnabledInternal$1");
         }
         if (mWifiPermissionsUtil.checkNetworkSettingsPermission(callingUid)) {
             if (enable) {
                 mWifiThreadRunner.post(
-                        () -> mWifiConnectivityManager.setAutoJoinEnabledExternal(true, false));
+                        () -> mWifiConnectivityManager.setAutoJoinEnabledExternal(true, false),
+                        TAG + "#setWifiEnabledInternal$2");
                 mWifiMetrics.logUserActionEvent(UserActionEvent.EVENT_TOGGLE_WIFI_ON);
             } else {
                 WifiInfo wifiInfo = mActiveModeWarden.getConnectionInfo();
@@ -1433,7 +1438,7 @@ public class WifiServiceImpl extends BaseWifiService {
             if (!mActiveModeWarden.registerSubsystemRestartCallback(callback)) {
                 Log.e(TAG, "registerSubsystemRestartCallback: Failed to register callback");
             }
-        });
+        }, TAG + "#registerSubsystemRestartCallback");
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
@@ -1450,7 +1455,7 @@ public class WifiServiceImpl extends BaseWifiService {
             if (!mActiveModeWarden.unregisterSubsystemRestartCallback(callback)) {
                 Log.e(TAG, "unregisterSubsystemRestartCallback: Failed to register callback");
             }
-        });
+        }, TAG + "#unregisterSubsystemRestartCallback");
     }
 
     /**
@@ -1469,7 +1474,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() -> {
             mActiveModeWarden.addWifiNetworkStateChangedListener(listener);
-        });
+        }, TAG + "#addWifiNetworkStateChangedListener");
     }
 
     /**
@@ -1489,7 +1494,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() -> {
             mActiveModeWarden.removeWifiNetworkStateChangedListener(listener);
-        });
+        }, TAG + "#removeWifiNetworkStateChangedListener");
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
@@ -1507,7 +1512,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mWifiMetrics.logUserActionEvent(UserActionEvent.EVENT_RESTART_WIFI_SUB_SYSTEM,
                     wifiInfo == null ? -1 : wifiInfo.getNetworkId());
             mWifiInjector.getSelfRecovery().trigger(REASON_API_CALL);
-        });
+        }, TAG + "#restartWifiSubsystem");
     }
 
     /**
@@ -1570,7 +1575,8 @@ public class WifiServiceImpl extends BaseWifiService {
         enforceNetworkStackPermission();
         mLog.info("updateInterfaceIpState uid=%").c(Binder.getCallingUid()).flush();
         // hand off the work to our handler thread
-        mWifiThreadRunner.post(() -> mLohsSoftApTracker.updateInterfaceIpState(ifaceName, mode));
+        mWifiThreadRunner.post(() -> mLohsSoftApTracker.updateInterfaceIpState(ifaceName, mode),
+                TAG + "#updateInterfaceIpState");
     }
 
     /**
@@ -1605,7 +1611,8 @@ public class WifiServiceImpl extends BaseWifiService {
             return;
         }
         mWifiThreadRunner.post(() ->
-                mCoexManager.setCoexUnsafeChannels(unsafeChannels, restrictions));
+                mCoexManager.setCoexUnsafeChannels(unsafeChannels, restrictions),
+                TAG + "#setCoexUnsafeChannels");
     }
 
     /**
@@ -1624,7 +1631,8 @@ public class WifiServiceImpl extends BaseWifiService {
         if (mVerboseLoggingEnabled) {
             mLog.info("registerCoexCallback uid=%").c(Binder.getCallingUid()).flush();
         }
-        mWifiThreadRunner.post(() -> mCoexManager.registerRemoteCoexCallback(callback));
+        mWifiThreadRunner.post(() -> mCoexManager.registerRemoteCoexCallback(callback),
+                TAG + "#registerCoexCallback");
     }
 
     /**
@@ -1661,7 +1669,8 @@ public class WifiServiceImpl extends BaseWifiService {
         if (mVerboseLoggingEnabled) {
             mLog.info("unregisterCoexCallback uid=%").c(Binder.getCallingUid()).flush();
         }
-        mWifiThreadRunner.post(() -> mCoexManager.unregisterRemoteCoexCallback(callback));
+        mWifiThreadRunner.post(() -> mCoexManager.unregisterRemoteCoexCallback(callback),
+                TAG + "#unregisterCoexCallback");
     }
 
     /**
@@ -1743,7 +1752,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     /**
-     * see {@link WifiManager#startTetheredHotspotRequest(TetheringManager.TetheringRequest)}
+     * see {@link WifiManager#startTetheredHotspot(TetheringManager.TetheringRequest, Executor, WifiManager.SoftApCallback)}
      * @param request TetheringRequest details of the Soft AP.
      * @return {@code true} if softap start was triggered
      * @throws SecurityException if the caller does not have permission to start softap
@@ -1773,7 +1782,7 @@ public class WifiServiceImpl extends BaseWifiService {
             return;
         }
 
-        mLog.info("startTetheredHotspotRequest uid=%").c(callingUid).flush();
+        mLog.info("startTetheredHotspot uid=%").c(callingUid).flush();
         startTetheredHotspotInternal(new SoftApModeConfiguration(
                 WifiManager.IFACE_IP_MODE_TETHERED, null /* config */,
                 mTetheredSoftApTracker.getSoftApCapability(),
@@ -1943,7 +1952,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 if (mLohsSoftApTracker != null) {
                     mLohsSoftApTracker.notifyNewCountryCodeChangePending(countryCode);
                 }
-            });
+            }, this.getClass().getSimpleName() + "#onCountryCodeChangePending");
         }
 
         @Override
@@ -2026,7 +2035,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     mRegisteredDriverCountryCodeListeners.finishBroadcast();
                 }
                 mAfcManager.onCountryCodeChange(countryCode);
-            });
+            }, this.getClass().getSimpleName() + "#onCountryCodeChangePending");
         }
     }
 
@@ -2442,7 +2451,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 if (mLocalOnlyHotspotRequests.isEmpty()) {
                     mWifiThreadRunner.post(() -> {
                         startForFirstRequestLocked(request);
-                    });
+                    }, "LohsSoftApTracker#start");
 
                 } else if (mLohsInterfaceMode == WifiManager.IFACE_IP_MODE_LOCAL_ONLY) {
                     // LOHS has already started up for an earlier request, so we can send the
@@ -2636,7 +2645,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 Log.e(TAG, "registerSoftApCallback: Failed to add callback");
                 return;
             }
-        });
+        }, TAG + "#registerSoftApCallback");
     }
 
     /**
@@ -2664,7 +2673,8 @@ public class WifiServiceImpl extends BaseWifiService {
 
         // post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mTetheredSoftApTracker.unregisterSoftApCallback(callback));
+                mTetheredSoftApTracker.unregisterSoftApCallback(callback),
+                TAG + "#unregisterSoftApCallback");
     }
 
     /**
@@ -2832,7 +2842,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 Log.e(TAG, "registerSoftApCallback: Failed to add callback");
                 return;
             }
-        });
+        }, TAG + "#registerLocalOnlyHotspotSoftApCallback");
     }
 
     @Override
@@ -2854,7 +2864,8 @@ public class WifiServiceImpl extends BaseWifiService {
 
         // post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mLohsSoftApTracker.unregisterSoftApCallback(callback));
+                mLohsSoftApTracker.unregisterSoftApCallback(callback),
+                TAG + "#unregisterLocalOnlyHotspotSoftApCallback");
     }
 
     /**
@@ -2958,7 +2969,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#queryLastConfiguredTetheredApPassphraseSinceBoot");
     }
 
     /**
@@ -3078,7 +3089,8 @@ public class WifiServiceImpl extends BaseWifiService {
             return false;
         }
         mLog.info("disconnect uid=%").c(callingUid).flush();
-        mWifiThreadRunner.post(() -> mActiveModeWarden.getPrimaryClientModeManager().disconnect());
+        mWifiThreadRunner.post(() -> mActiveModeWarden.getPrimaryClientModeManager().disconnect(),
+                TAG + "#disconnect");
         return true;
     }
 
@@ -3100,7 +3112,7 @@ public class WifiServiceImpl extends BaseWifiService {
 
         mWifiThreadRunner.post(() -> {
             mActiveModeWarden.getPrimaryClientModeManager().reconnect(new WorkSource(callingUid));
-        });
+        }, TAG + "#reconnect");
         return true;
     }
 
@@ -3120,7 +3132,8 @@ public class WifiServiceImpl extends BaseWifiService {
             return false;
         }
         mLog.info("reassociate uid=%").c(callingUid).flush();
-        mWifiThreadRunner.post(() -> mActiveModeWarden.getPrimaryClientModeManager().reassociate());
+        mWifiThreadRunner.post(() -> mActiveModeWarden.getPrimaryClientModeManager().reassociate(),
+                TAG + "#reassociate");
         return true;
     }
 
@@ -3191,7 +3204,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, "onWifiActivityEnergyInfo: RemoteException -- ", e);
             }
-        });
+        }, TAG + "#getWifiActivityEnergyInfoAsync");
     }
 
     private WifiActivityEnergyInfo getWifiActivityEnergyInfo() {
@@ -3422,7 +3435,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mNetworkSelectionConfig = nsConfig;
             mWifiConnectivityManager.setNetworkSelectionConfig(nsConfig);
-        });
+        }, TAG + "#setNetworkSelectionConfig");
         mLastCallerInfoManager.put(
                 WifiManager.API_SET_NETWORK_SELECTION_CONFIG,
                 Process.myTid(),
@@ -3475,7 +3488,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getNetworkSelectionConfig");
     }
 
     /**
@@ -3558,7 +3571,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mLog.info("scanSchedule=% scanType=% uid=%").c(Arrays.toString(scanScheduleSeconds))
                 .c(Arrays.toString(scanType)).c(uid).flush();
         mWifiThreadRunner.post(() -> mWifiConnectivityManager.setExternalScreenOnScanSchedule(
-                scanScheduleSeconds, scanType));
+                scanScheduleSeconds, scanType), TAG + "#setScreenOnScanSchedule");
         mLastCallerInfoManager.put(WifiManager.API_SET_SCAN_SCHEDULE, Process.myTid(),
                 uid, Binder.getCallingPid(), "<unknown>",
                 scanScheduleSeconds != null);
@@ -3581,7 +3594,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mLog.info("delayMs=% uid=%").c(delayMs).c(uid).flush();
         mWifiThreadRunner.post(() ->
-                mWifiConnectivityManager.setOneShotScreenOnConnectivityScanDelayMillis(delayMs));
+                mWifiConnectivityManager.setOneShotScreenOnConnectivityScanDelayMillis(delayMs),
+                TAG + "#setOneShotScreenOnConnectivityScanDelayMillis");
         mLastCallerInfoManager.put(WifiManager.API_SET_ONE_SHOT_SCREEN_ON_CONNECTIVITY_SCAN_DELAY,
                 Process.myTid(), uid, Binder.getCallingPid(), "<unknown>",
                 delayMs > 0);
@@ -3634,7 +3648,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("setSsidsAllowlist uid=%").c(uid).flush();
         }
         mWifiThreadRunner.post(() ->
-                mWifiBlocklistMonitor.setSsidsAllowlist(ssids));
+                mWifiBlocklistMonitor.setSsidsAllowlist(ssids), TAG + "#setSsidsAllowlist");
     }
 
     /**
@@ -4022,7 +4036,7 @@ public class WifiServiceImpl extends BaseWifiService {
                                 new NetworkUpdateResult(netId),
                                 new ActionListenerWrapper(connectListener),
                                 callingUid, packageName, null)
-                )
+                ), TAG + "#triggerConnectAndReturnStatus"
         );
         // now wait for response.
         try {
@@ -4153,7 +4167,7 @@ public class WifiServiceImpl extends BaseWifiService {
             // primary STA disconnecting (such as promoting the secondary to primary), potentially
             // resulting in messy and unexpected state transitions.
             mActiveModeWarden.getPrimaryClientModeManager().disconnect();
-        });
+        }, TAG + "#startRestrictingAutoJoinToSubscriptionId");
     }
 
     /**
@@ -4172,7 +4186,8 @@ public class WifiServiceImpl extends BaseWifiService {
         mLog.info("stopRestrictingAutoJoinToSubscriptionId uid=%")
                 .c(Binder.getCallingUid()).flush();
         mWifiThreadRunner.post(() ->
-                mWifiConfigManager.stopRestrictingAutoJoinToSubscriptionId());
+                mWifiConfigManager.stopRestrictingAutoJoinToSubscriptionId(),
+                TAG + "#stopRestrictingAutoJoinToSubscriptionId");
     }
 
     /**
@@ -4207,7 +4222,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         boolean finalIsDeviceAdmin = isDeviceAdmin;
         mWifiThreadRunner.post(() -> mWifiConnectivityManager.setAutoJoinEnabledExternal(choice,
-                finalIsDeviceAdmin));
+                finalIsDeviceAdmin), TAG + "#allowAutojoinGlobal");
         mLastCallerInfoManager.put(WifiManager.API_AUTOJOIN_GLOBAL, Process.myTid(),
                 callingUid, Binder.getCallingPid(), "<unknown>", choice);
     }
@@ -4233,7 +4248,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#queryAutojoinGlobal");
     }
 
     /**
@@ -4286,7 +4301,7 @@ public class WifiServiceImpl extends BaseWifiService {
                             : UserActionEvent.EVENT_CONFIGURE_AUTO_CONNECT_OFF, netId);
                 }
             }
-        });
+        }, TAG + "#allowAutojoin");
     }
 
     /**
@@ -4304,7 +4319,8 @@ public class WifiServiceImpl extends BaseWifiService {
         int callingUid = Binder.getCallingUid();
         mLog.info("allowAutojoinPasspoint=% uid=%").c(enableAutojoin).c(callingUid).flush();
         mWifiThreadRunner.post(
-                () -> mPasspointManager.enableAutojoin(null, fqdn, enableAutojoin));
+                () -> mPasspointManager.enableAutojoin(null, fqdn, enableAutojoin),
+                TAG + "#allowAutojoinPasspoint");
     }
 
     /**
@@ -4324,7 +4340,8 @@ public class WifiServiceImpl extends BaseWifiService {
         mLog.info("setMacRandomizationSettingPasspointEnabled=% uid=%")
                 .c(enable).c(callingUid).flush();
         mWifiThreadRunner.post(
-                () -> mPasspointManager.enableMacRandomization(fqdn, enable));
+                () -> mPasspointManager.enableMacRandomization(fqdn, enable),
+                TAG + "#setMacRandomizationSettingPasspointEnabled");
     }
 
     /**
@@ -4343,7 +4360,8 @@ public class WifiServiceImpl extends BaseWifiService {
         mLog.info("setPasspointMeteredOverride=% uid=%")
                 .c(meteredOverride).c(callingUid).flush();
         mWifiThreadRunner.post(
-                () -> mPasspointManager.setMeteredOverride(fqdn, meteredOverride));
+                () -> mPasspointManager.setMeteredOverride(fqdn, meteredOverride),
+                TAG + "#setPasspointMeteredOverride");
     }
 
     /**
@@ -4524,7 +4542,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getChannelData");
     }
 
     private List<Bundle> getChannelDataInternal() {
@@ -4705,7 +4723,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mLog.info("queryPasspointIcon uid=%").c(Binder.getCallingUid()).flush();
         mWifiThreadRunner.post(() -> {
             mActiveModeWarden.getPrimaryClientModeManager().syncQueryPasspointIcon(bssid, fileName);
-        });
+        }, TAG + "#queryPasspointIcon");
     }
 
     /**
@@ -4771,7 +4789,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, "registerDriverCountryCodeChangedListener: remote exception -- " + e);
             }
-        });
+        }, TAG + "#registerDriverCountryCodeChangedListener");
     }
 
     /**
@@ -4802,7 +4820,8 @@ public class WifiServiceImpl extends BaseWifiService {
 
         // post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mCountryCodeTracker.unregisterDriverCountryCodeChangedListener(listener));
+                mCountryCodeTracker.unregisterDriverCountryCodeChangedListener(listener),
+                TAG + "#unregisterDriverCountryCodeChangedListener");
     }
 
      /**
@@ -4849,7 +4868,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     .c(Binder.getCallingUid()).c(countryCode).flush();
         }
         // Post operation to handler thread
-        mWifiThreadRunner.post(() -> mCountryCode.setOverrideCountryCode(countryCode));
+        mWifiThreadRunner.post(() -> mCountryCode.setOverrideCountryCode(countryCode),
+                TAG + "#setOverrideCountryCode");
     }
 
     /**
@@ -4868,7 +4888,8 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("clearCountryCode uid=%").c(Binder.getCallingUid()).flush();
         }
         // Post operation to handler thread
-        mWifiThreadRunner.post(() -> mCountryCode.clearOverrideCountryCode());
+        mWifiThreadRunner.post(() -> mCountryCode.clearOverrideCountryCode(),
+                TAG + "#clearOverrideCountryCode");
     }
 
     /**
@@ -4894,7 +4915,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     .c(Binder.getCallingUid()).c(countryCode).flush();
         }
         // Post operation to handler thread
-        mWifiThreadRunner.post(() -> mCountryCode.setDefaultCountryCode(countryCode));
+        mWifiThreadRunner.post(() -> mCountryCode.setDefaultCountryCode(countryCode),
+                TAG + "#setDefaultCountryCode");
     }
 
     @Override
@@ -5132,7 +5154,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#enableTdlsWithRemoteIpAddress");
     }
 
     @Override
@@ -5149,7 +5171,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 enable);
         mWifiThreadRunner.post(() ->
                 mActiveModeWarden.getPrimaryClientModeManager().enableTdls(
-                        remoteMacAddress, enable));
+                        remoteMacAddress, enable), TAG + "#enableTdlsWithMacAddress");
     }
 
     /**
@@ -5180,7 +5202,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#enableTdlsWithRemoteMacAddress");
     }
 
     /**
@@ -5199,7 +5221,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#isTdlsOperationCurrentlyAvailable");
     }
 
     /**
@@ -5222,7 +5244,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getMaxSupportedConcurrentTdlsSessions");
     }
 
     /**
@@ -5241,7 +5263,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getNumberOfEnabledTdlsSessions");
     }
 
     /**
@@ -5259,7 +5281,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mLog.info("disableEphemeralNetwork uid=%").c(callingUid).flush();
         mWifiThreadRunner.post(() -> mWifiConfigManager.userTemporarilyDisabledNetwork(network,
-                callingUid));
+                callingUid), TAG + "#disableEphemeralNetwork");
     }
 
     private void removeAppStateInternal(int uid, @NonNull String pkgName) {
@@ -5738,7 +5760,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     mWifiCarrierInfoManager.clear();
                     notifyFactoryReset();
                     mContext.resetResourceCache();
-                });
+                }, TAG + "#factoryReset");
     }
 
     /**
@@ -5814,7 +5836,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#retrieveWifiBackupData");
     }
 
     /**
@@ -5833,7 +5855,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mLog.info("restoreWifiBackupData uid=%").c(Binder.getCallingUid()).flush();
             mBackupRestoreController.parserBackupDataAndDispatch(data);
-        });
+        }, TAG + "#restoreWifiBackupData");
     }
 
     /**
@@ -5895,7 +5917,7 @@ public class WifiServiceImpl extends BaseWifiService {
             }
             if (nextStartIdx < mConfigurations.size()) {
                 mWifiThreadRunner.post(new NetworkUpdater(mCallingUid, mConfigurations,
-                        nextStartIdx, mBatchNum));
+                        nextStartIdx, mBatchNum), TAG + "#restoreNetworks");
             }
             Log.d(TAG, "Restored backup data index " + nextStartIdx + " of total "
                     + mConfigurations.size() + " configs ");
@@ -5926,7 +5948,8 @@ public class WifiServiceImpl extends BaseWifiService {
                         callingUid,
                         configurations,
                         0,
-                        batchNum > 0 ? batchNum : configurations.size()));
+                        batchNum > 0 ? batchNum : configurations.size()),
+                TAG + "#restoreNetworks");
     }
 
     /**
@@ -6044,7 +6067,8 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("registerTrafficStateCallback uid=%").c(Binder.getCallingUid()).flush();
         }
         // Post operation to handler thread
-        mWifiThreadRunner.post(() -> mWifiTrafficPoller.addCallback(callback));
+        mWifiThreadRunner.post(() -> mWifiTrafficPoller.addCallback(callback),
+                TAG + "#registerTrafficStateCallback");
     }
 
     /**
@@ -6062,7 +6086,8 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("unregisterTrafficStateCallback uid=%").c(Binder.getCallingUid()).flush();
         }
         // Post operation to handler thread
-        mWifiThreadRunner.post(() -> mWifiTrafficPoller.removeCallback(callback));
+        mWifiThreadRunner.post(() -> mWifiTrafficPoller.removeCallback(callback),
+                TAG + "#unregisterTrafficStateCallback");
     }
 
     private long getSupportedFeaturesInternal() {
@@ -6093,7 +6118,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         // Post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mWifiInjector.getWifiNetworkFactory().addCallback(callback));
+                mWifiInjector.getWifiNetworkFactory().addCallback(callback),
+                TAG + "#registerNetworkRequestMatchCallback");
     }
 
     /**
@@ -6113,7 +6139,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         // Post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mWifiInjector.getWifiNetworkFactory().removeCallback(callback));
+                mWifiInjector.getWifiNetworkFactory().removeCallback(callback),
+                TAG + "#unregisterNetworkRequestMatchCallback");
     }
 
     /**
@@ -6266,7 +6293,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mWifiHealthMonitor.setDeviceMobilityState(state);
             mWifiDataStall.setDeviceMobilityState(state);
             mActiveModeWarden.setDeviceMobilityState(state);
-        });
+        }, TAG + "#setDeviceMobilityState");
     }
 
     /**
@@ -6320,7 +6347,8 @@ public class WifiServiceImpl extends BaseWifiService {
                         mDppManager.startDppAsConfiguratorInitiator(
                                 uid, packageName,
                                 mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
-                                binder, enrolleeUri, selectedNetworkId, netRole, callback)));
+                                binder, enrolleeUri, selectedNetworkId, netRole, callback)),
+                TAG + "#startDppAsConfiguratorInitiator");
     }
 
     /**
@@ -6357,7 +6385,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
                         mDppManager.startDppAsEnrolleeInitiator(uid,
                                 mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
-                                binder, configuratorUri, callback)));
+                                binder, configuratorUri, callback)),
+                TAG + "#startDppAsEnrolleeInitiator");
     }
 
     /**
@@ -6414,7 +6443,8 @@ public class WifiServiceImpl extends BaseWifiService {
                 mMakeBeforeBreakManager.stopAllSecondaryTransientClientModeManagers(() ->
                         mDppManager.startDppAsEnrolleeResponder(uid,
                                 mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
-                                binder, deviceInfo, curve, callback)));
+                                binder, deviceInfo, curve, callback)),
+                TAG + "#startDppAsEnrolleeResponder");
     }
 
     /**
@@ -6427,7 +6457,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         final int uid = getMockableCallingUid();
 
-        mWifiThreadRunner.post(() -> mDppManager.stopDppSession(uid));
+        mWifiThreadRunner.post(() -> mDppManager.stopDppSession(uid),
+                TAG + "#stopDppSession");
     }
 
     /**
@@ -6491,7 +6522,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         // Post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mWifiMetrics.addOnWifiUsabilityListener(listener));
+                mWifiMetrics.addOnWifiUsabilityListener(listener),
+                TAG + "#addOnWifiUsabilityStatsListener");
     }
 
     /**
@@ -6515,7 +6547,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         // Post operation to handler thread
         mWifiThreadRunner.post(() ->
-                mWifiMetrics.removeOnWifiUsabilityListener(listener));
+                mWifiMetrics.removeOnWifiUsabilityListener(listener),
+                TAG + "#removeOnWifiUsabilityStatsListener");
     }
 
     /**
@@ -6542,7 +6575,7 @@ public class WifiServiceImpl extends BaseWifiService {
             String ifaceName = mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName();
             mWifiMetrics.incrementWifiUsabilityScoreCount(
                     ifaceName, seqNum, score, predictionHorizonSec);
-        });
+        }, TAG + "#updateWifiUsabilityScore");
     }
 
     /**
@@ -6763,7 +6796,7 @@ public class WifiServiceImpl extends BaseWifiService {
                                     mConnectHelper.connectToNetwork(
                                             result, wrapper, uidToUse, packageNameToUse,
                                             attributionTagToUse));
-                });
+                }, TAG + "#connect");
     }
 
     /**
@@ -6799,7 +6832,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } else {
                 wrapper.sendFailure(WifiManager.ActionListener.FAILURE_INTERNAL_ERROR);
             }
-        });
+        }, TAG + "#save");
     }
 
     /**
@@ -6830,7 +6863,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 Log.e(TAG, "Failed to remove network");
                 wrapper.sendFailure(WifiManager.ActionListener.FAILURE_INTERNAL_ERROR);
             }
-        });
+        }, TAG + "#forget");
     }
 
     /**
@@ -6849,7 +6882,7 @@ public class WifiServiceImpl extends BaseWifiService {
             if (!mWifiInjector.getScanRequestProxy().registerScanResultsCallback(callback)) {
                 Log.e(TAG, "registerScanResultsCallback: Failed to register callback");
             }
-        });
+        }, TAG + "#registerScanResultsCallback");
     }
 
     /**
@@ -6862,7 +6895,8 @@ public class WifiServiceImpl extends BaseWifiService {
         enforceAccessPermission();
         // post operation to handler thread
         mWifiThreadRunner.post(() -> mWifiInjector.getScanRequestProxy()
-                        .unregisterScanResultsCallback(callback));
+                        .unregisterScanResultsCallback(callback),
+                TAG + "#unregisterScanResultsCallback");
 
     }
 
@@ -6889,7 +6923,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() ->
                 mWifiNetworkSuggestionsManager
-                        .registerSuggestionConnectionStatusListener(listener, packageName, uid));
+                        .registerSuggestionConnectionStatusListener(listener, packageName, uid),
+                TAG + "#registerSuggestionConnectionStatusListener");
     }
 
     /**
@@ -6910,7 +6945,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() ->
                 mWifiNetworkSuggestionsManager
-                        .unregisterSuggestionConnectionStatusListener(listener, packageName, uid));
+                        .unregisterSuggestionConnectionStatusListener(listener, packageName, uid),
+                TAG + "#unregisterSuggestionConnectionStatusListener");
     }
 
     /**
@@ -6941,7 +6977,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() ->
                 mWifiNetworkFactory.addLocalOnlyConnectionStatusListener(listener, packageName,
-                        featureId));
+                        featureId), TAG + "#addLocalOnlyConnectionStatusListener");
     }
 
     /**
@@ -6971,7 +7007,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     .c(uid).flush();
         }
         mWifiThreadRunner.post(() ->
-                mWifiNetworkFactory.removeLocalOnlyConnectionStatusListener(listener, packageName));
+                mWifiNetworkFactory.removeLocalOnlyConnectionStatusListener(listener, packageName),
+                TAG + "#removeLocalOnlyConnectionStatusListener");
     }
 
     @Override
@@ -7009,7 +7046,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mWifiConnectivityManager.setPnoScanEnabledByFramework(enabled,
                     enablePnoScanAfterWifiToggle);
-        });
+        }, TAG + "#setPnoScanEnabled");
     }
 
     /**
@@ -7058,7 +7095,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#setExternalPnoScanRequest");
     }
 
     /**
@@ -7075,7 +7112,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() -> {
             mWifiConnectivityManager.clearExternalPnoScanRequest(uid);
-        });
+        }, TAG + "#clearExternalPnoScanRequest");
     }
 
     /**
@@ -7111,7 +7148,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getLastCallerInfoForApi");
     }
 
     /**
@@ -7157,7 +7194,8 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("clearWifiConnectedNetworkScorer uid=%").c(Binder.getCallingUid()).flush();
         }
         // Post operation to handler thread
-        mWifiThreadRunner.post(() -> mActiveModeWarden.clearWifiConnectedNetworkScorer());
+        mWifiThreadRunner.post(() -> mActiveModeWarden.clearWifiConnectedNetworkScorer(),
+                TAG + "#clearWifiConnectedNetworkScorer");
     }
 
     /**
@@ -7285,7 +7323,8 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("addSuggestionUserApprovalStatusListener uid=%").c(uid).flush();
         }
         mWifiThreadRunner.post(() -> mWifiNetworkSuggestionsManager
-                .addSuggestionUserApprovalStatusListener(listener, packageName, uid));
+                .addSuggestionUserApprovalStatusListener(listener, packageName, uid),
+                TAG + "#addSuggestionUserApprovalStatusListener");
     }
 
     /**
@@ -7314,7 +7353,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() ->
                 mWifiNetworkSuggestionsManager
-                        .removeSuggestionUserApprovalStatusListener(listener, packageName, uid));
+                        .removeSuggestionUserApprovalStatusListener(listener, packageName, uid),
+                TAG + "#removeSuggestionUserApprovalStatusListener");
     }
 
     /**
@@ -7338,7 +7378,7 @@ public class WifiServiceImpl extends BaseWifiService {
 
         mWifiThreadRunner.post(() -> {
             removeAppStateInternal(targetAppUid, targetAppPackageName);
-        });
+        }, TAG + "#removeAppState");
     }
 
     /**
@@ -7472,7 +7512,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     android.Manifest.permission.NETWORK_MANAGED_PROVISIONING,
                     android.Manifest.permission.NETWORK_CARRIER_PROVISIONING);
         }
-        mWifiThreadRunner.post(mPasspointManager::clearAnqpRequestsAndFlushCache);
+        mWifiThreadRunner.post(mPasspointManager::clearAnqpRequestsAndFlushCache,
+                TAG + "#flushPasspointAnqpCache");
     }
 
     /**
@@ -7507,8 +7548,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
 
         // Post operation to handler thread
-        mWifiThreadRunner.post(() ->
-                mPasspointManager.setWifiPasspointEnabled(enabled)
+        mWifiThreadRunner.post(() -> mPasspointManager.setWifiPasspointEnabled(enabled),
+                TAG + "#setWifiPasspointEnabled"
         );
     }
 
@@ -7618,7 +7659,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     continue;
                 }
             }
-        });
+        }, TAG + "#notifyMinimumRequiredWifiSecurityLevelChanged");
     }
 
     /**
@@ -7659,7 +7700,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     continue;
                 }
             }
-        });
+        }, TAG + "#notifyWifiSsidPolicyChanged");
     }
 
     /**
@@ -7675,8 +7716,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     .c(uid).c(pid).c(dialogId).c(reply)
                     .flush();
         }
-        mWifiThreadRunner.post(() ->
-                mWifiDialogManager.replyToSimpleDialog(dialogId, reply));
+        mWifiThreadRunner.post(() -> mWifiDialogManager.replyToSimpleDialog(dialogId, reply),
+                TAG + "#replyToSimpleDialog");
     }
 
     /**
@@ -7694,9 +7735,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     .c(uid).c(pid).c(dialogId).c(accepted).c(optionalPin)
                     .flush();
         }
-        mWifiThreadRunner.post(() ->
-                mWifiDialogManager.replyToP2pInvitationReceivedDialog(
-                        dialogId, accepted, optionalPin)
+        mWifiThreadRunner.post(() -> mWifiDialogManager.replyToP2pInvitationReceivedDialog(
+                dialogId, accepted, optionalPin), TAG + "#replyToP2pInvitationReceivedDialog"
         );
     }
 
@@ -7708,7 +7748,8 @@ public class WifiServiceImpl extends BaseWifiService {
             @NonNull List<DhcpOption> options) {
         enforceAnyPermissionOf(android.Manifest.permission.NETWORK_SETTINGS,
                 android.Manifest.permission.OVERRIDE_WIFI_CONFIG);
-        mWifiThreadRunner.post(() -> mWifiConfigManager.addCustomDhcpOptions(ssid, oui, options));
+        mWifiThreadRunner.post(() -> mWifiConfigManager.addCustomDhcpOptions(ssid, oui, options),
+                TAG + "#addCustomDhcpOptions");
     }
 
     /**
@@ -7718,7 +7759,8 @@ public class WifiServiceImpl extends BaseWifiService {
     public void removeCustomDhcpOptions(@NonNull WifiSsid ssid, @NonNull byte[] oui) {
         enforceAnyPermissionOf(android.Manifest.permission.NETWORK_SETTINGS,
                 android.Manifest.permission.OVERRIDE_WIFI_CONFIG);
-        mWifiThreadRunner.post(() -> mWifiConfigManager.removeCustomDhcpOptions(ssid, oui));
+        mWifiThreadRunner.post(() -> mWifiConfigManager.removeCustomDhcpOptions(ssid, oui),
+                TAG + "#removeCustomDhcpOptions");
     }
 
     /**
@@ -7804,7 +7846,7 @@ public class WifiServiceImpl extends BaseWifiService {
                 Log.e(TAG,
                         "Failed calling back with results of isItPossibleToCreateInterface - " + e);
             }
-        });
+        }, TAG + "#reportCreateInterfaceImpact");
     }
     @Override
     public int getMaxNumberOfChannelsPerRequest() {
@@ -7898,7 +7940,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mApplicationQosPolicyRequestHandler.queueAddRequest(
                     policyParamsList, listener, binder, uid);
-        });
+        }, TAG + "#addQosPolicies");
     }
 
     /**
@@ -7929,7 +7971,7 @@ public class WifiServiceImpl extends BaseWifiService {
         List<Integer> policyIdList = Arrays.stream(policyIds).boxed().toList();
         mWifiThreadRunner.post(() -> {
             mApplicationQosPolicyRequestHandler.queueRemoveRequest(policyIdList, uid);
-        });
+        }, TAG + "#removeQosPolicies");
     }
 
     /**
@@ -7953,7 +7995,7 @@ public class WifiServiceImpl extends BaseWifiService {
 
         mWifiThreadRunner.post(() -> {
             mApplicationQosPolicyRequestHandler.queueRemoveAllRequest(uid);
-        });
+        }, TAG + "#removeAllQosPolicies");
     }
 
     /**
@@ -7969,7 +8011,8 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new IllegalArgumentException("intervalMs should not be smaller than 0");
         }
         mWifiThreadRunner.post(() -> mActiveModeWarden.getPrimaryClientModeManager()
-                    .setLinkLayerStatsPollingInterval(intervalMs));
+                    .setLinkLayerStatsPollingInterval(intervalMs),
+                TAG + "#setLinkLayerStatsPollingInterval");
     }
 
     /**
@@ -7990,7 +8033,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getLinkLayerStatsPollingInterval");
     }
 
     /**
@@ -8020,7 +8063,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#setMloMode");
     }
 
     /**
@@ -8047,7 +8090,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getMloMode");
     }
 
     /**
@@ -8069,7 +8112,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() -> {
             mWifiLockManager.addWifiLowLatencyLockListener(listener);
-        });
+        }, TAG + "#addWifiLowLatencyLockListener");
     }
 
     /**
@@ -8085,7 +8128,7 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mWifiThreadRunner.post(() -> {
             mWifiLockManager.removeWifiLowLatencyLockListener(listener);
-        });
+        }, TAG + "#removeWifiLowLatencyLockListener");
     }
 
     private String getPackageName(Bundle extras) {
@@ -8130,7 +8173,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getMaxMloAssociationLinkCount");
     }
 
     /**
@@ -8162,7 +8205,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getMaxMloStrLinkCount");
     }
 
     /**
@@ -8207,7 +8250,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getSupportedSimultaneousBandCombinations");
     }
 
     /**
@@ -8248,7 +8291,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mSettingsConfigStore.put(WIFI_WEP_ALLOWED, isAllowed);
             handleWepAllowedChanged(isAllowed);
-        });
+        }, TAG + "#setWepAllowed");
     }
 
     private void handleWepAllowedChanged(boolean isAllowed) {
@@ -8288,7 +8331,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#setWepAllowed");
     }
 
     /**
@@ -8308,7 +8351,7 @@ public class WifiServiceImpl extends BaseWifiService {
             for (ClientModeManager cmm : clientModeManagers) {
                 mWifiNative.enableMscs(mscsParams, cmm.getInterfaceName());
             }
-        });
+        }, TAG + "#enableMscs");
     }
 
     /**
@@ -8327,7 +8370,7 @@ public class WifiServiceImpl extends BaseWifiService {
             for (ClientModeManager cmm : clientModeManagers) {
                 mWifiNative.disableMscs(cmm.getInterfaceName());
             }
-        });
+        }, TAG + "#disableMscs");
     }
 
     /**
@@ -8352,7 +8395,8 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new SecurityException("Uid " + callingUid
                     + " is not allowed to query the global dhcp hostname restriction");
         }
-        mWifiThreadRunner.post(() -> mWifiGlobals.setSendDhcpHostnameRestriction(restriction));
+        mWifiThreadRunner.post(() -> mWifiGlobals.setSendDhcpHostnameRestriction(restriction),
+                TAG + "#setSendDhcpHostnameRestriction");
     }
 
     /**
@@ -8381,7 +8425,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#querySendDhcpHostnameRestriction");
     }
 
     /**
@@ -8429,7 +8473,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mWifiInjector.getWifiRoamingModeManager().setPerSsidRoamingMode(ssid,
                     roamingMode, isDeviceOwner);
-        });
+        }, TAG + "#setPerSsidRoamingMode");
     }
 
     /**
@@ -8460,7 +8504,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mWifiInjector.getWifiRoamingModeManager().removePerSsidRoamingMode(
                     ssid, isDeviceOwner);
-        });
+        }, TAG + "#removePerSsidRoamingMode");
     }
 
     /**
@@ -8497,7 +8541,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage());
             }
-        });
+        }, TAG + "#getPerSsidRoamingModes");
     }
 
     /**
@@ -8519,7 +8563,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mTwtManager.getTwtCapabilities(
                     mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(), listener);
-        });
+        }, TAG + "#getTwtCapabilities");
     }
 
     /**
@@ -8556,7 +8600,7 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#setupTwtSession");
     }
 
     /**
@@ -8581,7 +8625,7 @@ public class WifiServiceImpl extends BaseWifiService {
             mTwtManager.getStatsTwtSession(
                     mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(),
                     iTwtStatsListener, sessionId);
-        });
+        }, TAG + "#getStatsTwtSession");
     }
 
     /**
@@ -8600,7 +8644,7 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(() -> {
             mTwtManager.tearDownTwtSession(
                     mActiveModeWarden.getPrimaryClientModeManager().getInterfaceName(), sessionId);
-        });
+        }, TAG + "#teardownTwtSession");
     }
 
     /**
@@ -8615,7 +8659,8 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         mLog.info("setD2dAllowedWhenInfraStaDisabled=% uid=%").c(isAllowed).c(callingUid).flush();
         mWifiThreadRunner.post(
-                () -> mSettingsConfigStore.put(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED, isAllowed));
+                () -> mSettingsConfigStore.put(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED, isAllowed),
+                TAG + "#setD2dAllowedWhenInfraStaDisabled");
     }
 
     /**
@@ -8632,6 +8677,6 @@ public class WifiServiceImpl extends BaseWifiService {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#queryD2dAllowedWhenInfraStaDisabled");
     }
 }

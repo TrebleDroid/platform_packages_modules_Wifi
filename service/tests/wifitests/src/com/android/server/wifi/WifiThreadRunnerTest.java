@@ -18,6 +18,7 @@ package com.android.server.wifi;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
@@ -28,11 +29,14 @@ import static org.mockito.Mockito.verify;
 
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Message;
 
 import androidx.test.filters.SmallTest;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
@@ -48,6 +52,7 @@ public class WifiThreadRunnerTest extends WifiBaseTest {
     private WifiThreadRunner mWifiThreadRunner;
 
     @Mock private Runnable mRunnable;
+    @Captor private ArgumentCaptor<Message> mCaptor;
 
     private Handler mHandler;
 
@@ -120,24 +125,26 @@ public class WifiThreadRunnerTest extends WifiBaseTest {
 
     @Test
     public void postSuccess() {
-        doReturn(true).when(mHandler).post(any());
+        doReturn(true).when(mHandler).sendMessage(any());
 
-        boolean postSuccess = mWifiThreadRunner.post(mRunnable);
+        boolean postSuccess = mWifiThreadRunner.post(mRunnable, "");
 
         assertThat(postSuccess).isTrue();
-        verify(mHandler).post(mRunnable);
+        verify(mHandler).sendMessage(mCaptor.capture());
+        assertEquals(mRunnable, mCaptor.getValue().getCallback());
         // assert that the runnable is not run on the calling thread
         verify(mRunnable, never()).run();
     }
 
     @Test
     public void postFailure() {
-        doReturn(false).when(mHandler).post(any());
+        doReturn(false).when(mHandler).sendMessage(any());
 
-        boolean postSuccess = mWifiThreadRunner.post(mRunnable);
+        boolean postSuccess = mWifiThreadRunner.post(mRunnable, "");
 
         assertThat(postSuccess).isFalse();
-        verify(mHandler).post(mRunnable);
+        verify(mHandler).sendMessage(mCaptor.capture());
+        assertEquals(mRunnable, mCaptor.getValue().getCallback());
         verify(mRunnable, never()).run();
     }
 }

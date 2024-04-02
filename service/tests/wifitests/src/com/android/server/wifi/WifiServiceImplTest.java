@@ -795,7 +795,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mockRunner.call(any(), any())).then(returnsSecondArg());
         when(mockRunner.call(any(), any(int.class))).then(returnsSecondArg());
         when(mockRunner.call(any(), any(boolean.class))).then(returnsSecondArg());
-        when(mockRunner.post(any())).thenReturn(false);
+        when(mockRunner.post(any(), anyString())).thenReturn(false);
 
         when(mWifiInjector.getWifiThreadRunner()).thenReturn(mockRunner);
         // Reset mWifiCountryCode to avoid verify failure in makeWifiServiceImpl.
@@ -2248,7 +2248,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
     /**
      * Verify a SecurityException is thrown when a caller without the correct permission attempts to
-     * call startTetheredHotspotRequest().
+     * call startTetheredHotspot().
      */
     @Test(expected = SecurityException.class)
     public void testStartTetheredHotspotRequestWithoutPermissionThrowsException() throws Exception {
