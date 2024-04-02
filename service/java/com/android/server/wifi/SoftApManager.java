@@ -1321,17 +1321,20 @@ public class SoftApManager implements ActiveModeManager {
                             break;
                         }
 
-                        DeviceWiphyCapabilities capa =
-                                mWifiNative.getDeviceWiphyCapabilities(
-                                        mApInterfaceName, isBridgeRequired());
                         if (SdkLevel.isAtLeastT()
-                                && mCurrentSoftApConfiguration.isIeee80211beEnabled()
-                                && (capa == null || !capa.isWifiStandardSupported(
-                                ScanResult.WIFI_STANDARD_11BE))) {
-                            Log.d(getTag(), "11BE is not supported, removing from configuration");
-                            mCurrentSoftApConfiguration = new SoftApConfiguration.Builder(
-                                    mCurrentSoftApConfiguration).setIeee80211beEnabled(
-                                    false).build();
+                                && mCurrentSoftApConfiguration.isIeee80211beEnabled()) {
+                            DeviceWiphyCapabilities capabilities =
+                                    mWifiNative.getDeviceWiphyCapabilities(
+                                            mApInterfaceName, isBridgeRequired());
+                            if (!ApConfigUtil.is11beAllowedForThisConfiguration(capabilities,
+                                    mContext.getResources(),
+                                    mCurrentSoftApConfiguration, isBridgedMode())) {
+                                Log.d(getTag(), "11BE is not allowed,"
+                                        + " removing from configuration");
+                                mCurrentSoftApConfiguration = new SoftApConfiguration.Builder(
+                                        mCurrentSoftApConfiguration).setIeee80211beEnabled(
+                                        false).build();
+                            }
                         }
 
                         mSoftApNotifier.dismissSoftApShutdownTimeoutExpiredNotification();
