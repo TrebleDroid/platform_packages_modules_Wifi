@@ -1516,11 +1516,18 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         verifyDefaultApConfig(store.getApConfiguration(),
                 TEST_DEFAULT_AP_SSID, false, true, true);
         mLooper.dispatchAll();
+        reset(mWifiConfigManager);
+        mStaticChipInfoListenerCaptor.getValue()
+                .onSettingsChanged(WIFI_STATIC_CHIP_INFO, "new static chip info");
+        mLooper.dispatchAll();
+        // No update since isConcurrencyComboLoadedFromDriver returns false
+        verify(mWifiConfigManager, never()).saveToStore(true);
+        when(mHalDeviceManager.isConcurrencyComboLoadedFromDriver()).thenReturn(true);
         mStaticChipInfoListenerCaptor.getValue()
                 .onSettingsChanged(WIFI_STATIC_CHIP_INFO, "new static chip info");
         mLooper.dispatchAll();
         // Chip didn't support bridged mode, so extra saveToStore for update to default band.
-        verify(mWifiConfigManager, times(2)).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore(true);
         // Verify it changes to default band.
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID, false, true, false);
     }

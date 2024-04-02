@@ -153,14 +153,16 @@ public class WifiApConfigStore {
         mWifiSettingsConfigStore = wifiInjector.getSettingsConfigStore();
         mWifiSettingsConfigStore.registerChangeListener(WIFI_STATIC_CHIP_INFO,
                 (key, value) -> {
-                    if (mPersistentWifiApConfig != null) {
-                        Log.i(TAG, "Chip capability is updated, reset unsupported config");
+                    if (mPersistentWifiApConfig != null
+                            && mHalDeviceManager.isConcurrencyComboLoadedFromDriver()) {
+                        Log.i(TAG, "Chip capability is updated, check config");
                         SoftApConfiguration.Builder configBuilder =
                                 new SoftApConfiguration.Builder(mPersistentWifiApConfig);
                         if (SdkLevel.isAtLeastS()
                                 && mPersistentWifiApConfig.getBands().length > 1) {
                             // Current band setting is dual band, check if device supports it.
                             if (!ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative)) {
+                                Log.i(TAG, "Chip doesn't support bridgedAp, reset to default band");
                                 configBuilder.setBand(generateDefaultBand(mContext));
                                 persistConfigAndTriggerBackupManagerProxy(configBuilder.build());
                             }

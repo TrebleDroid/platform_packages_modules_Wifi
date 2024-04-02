@@ -47,11 +47,13 @@ import android.net.wifi.WifiClient;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.SoftApManager;
 import com.android.server.wifi.WifiNative;
@@ -806,6 +808,56 @@ public class ApConfigUtil {
         }
 
         return builder.build();
+    }
+
+    /**
+     * As per IEEE specification, 11BE mode should be disabled for the following
+     * security types.
+     *   - OPEN
+     *   - WPA2-Personal
+     * Also, disable 11BE in OWE-Transition as SoftAp run in bridged mode with one instance in open
+     * mode.
+     */
+    @VisibleForTesting
+    static boolean is11beDisabledForSecurityType(
+            @SoftApConfiguration.SecurityType int type) {
+        switch(type) {
+            case SoftApConfiguration.SECURITY_TYPE_OPEN:
+            case SoftApConfiguration.SECURITY_TYPE_WPA2_PSK:
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION:
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if IEEE80211BE is allowed for the given softAp configuration.
+     *
+     * @param capabilities capabilities of the device to check support for IEEE80211BE support.
+     * @param resources the resources to get the OEM configuration for support for single link MLO
+     *                  in bridged mode.
+     * @param config The current {@link SoftApConfiguration}.
+     * @param isBridgedMode true if bridged mode is enabled, false otherwise.
+     *
+     * @return true if IEEE80211BE is allowed for the given configuration, false otherwise.
+     */
+    public static boolean is11beAllowedForThisConfiguration(DeviceWiphyCapabilities capabilities,
+            @NonNull Resources resources,
+            SoftApConfiguration config,
+            boolean isBridgedMode) {
+        if (capabilities == null || !capabilities.isWifiStandardSupported(
+                ScanResult.WIFI_STANDARD_11BE)) {
+            return false;
+        }
+        if (isBridgedMode
+                && !resources.getBoolean(
+                        R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported)) {
+            return false;
+        }
+        if (is11beDisabledForSecurityType(config.getSecurityType())) {
+            return false;
+        }
+        return true;
     }
 
     /**
