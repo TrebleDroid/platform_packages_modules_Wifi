@@ -11106,4 +11106,31 @@ public class ClientModeImplTest extends WifiBaseTest {
         testDhcpHostnameSetting(true, WifiManager.FLAG_SEND_DHCP_HOSTNAME_RESTRICTION_SECURE,
                 SECURITY_TYPE_PSK, IIpClient.HOSTNAME_SETTING_DO_NOT_SEND);
     }
+
+    /**
+     * Verify that the connection failure due to expired certificate status code is captured in the
+     * connection result metrics failure specific status code.
+     */
+    @Test
+    public void testConnectionFailureDueToExpiredCertificateStatusCode() throws Exception {
+        initializeAndAddNetworkAndVerifySuccess();
+
+        startConnectSuccess();
+
+        mCmi.sendMessage(WifiMonitor.AUXILIARY_SUPPLICANT_EVENT,
+                new SupplicantEventInfo(7,  MacAddress.fromString(TEST_BSSID_STR),
+                        "TLS: Certificate verification failed"
+                                + ClientModeImpl.X509_CERTIFICATE_EXPIRED_ERROR_STRING));
+
+        mCmi.sendMessage(WifiMonitor.AUTHENTICATION_FAILURE_EVENT,
+                new AuthenticationFailureEventInfo(TEST_SSID, MacAddress.fromString(TEST_BSSID_STR),
+                        WifiManager.ERROR_AUTH_FAILURE_EAP_FAILURE, -1));
+        mLooper.dispatchAll();
+
+        verify(mWifiMetrics).endConnectionEvent(
+                any(), eq(WifiMetrics.ConnectionEvent.FAILURE_AUTHENTICATION_FAILURE),
+                eq(WifiMetricsProto.ConnectionEvent.HLF_NONE),
+                eq(WifiMetricsProto.ConnectionEvent.AUTH_FAILURE_EAP_FAILURE),
+                anyInt(), eq(ClientModeImpl.EAP_FAILURE_CODE_CERTIFICATE_EXPIRED));
+    }
 }
