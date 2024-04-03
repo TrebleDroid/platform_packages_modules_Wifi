@@ -19,6 +19,7 @@ import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.SystemApi;
 import android.text.TextUtils;
+import android.util.Log;
 
 import androidx.annotation.VisibleForTesting;
 
@@ -72,6 +73,8 @@ public class WifiUriParser {
     static final String SECURITY_WEP = "WEP";
     static final String SECURITY_WPA_PSK = "WPA";
     static final String SECURITY_SAE = "SAE";
+
+    private static final String SECURITY_ADB = "ADB";
 
     private WifiUriParser() {}
 
@@ -268,6 +271,11 @@ public class WifiUriParser {
             }
         } else if (security.startsWith(SECURITY_SAE)) {
             wifiConfiguration.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
+            if (preSharedKey.length() != 0) {
+                wifiConfiguration.preSharedKey = addQuotationIfNeeded(preSharedKey);
+            }
+        } else if (security.startsWith(SECURITY_ADB)) {
+            Log.i(TAG, "Specific security key: ADB");
             if (preSharedKey.length() != 0) {
                 wifiConfiguration.preSharedKey = addQuotationIfNeeded(preSharedKey);
             }
