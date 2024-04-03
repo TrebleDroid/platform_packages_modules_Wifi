@@ -16,6 +16,7 @@
 
 package com.android.server.wifi.aware;
 
+import static android.hardware.wifi.NanStatusCode.FOLLOWUP_TX_QUEUE_FULL;
 import static android.hardware.wifi.V1_0.NanRangingIndication.EGRESS_MET_MASK;
 import static android.net.wifi.WifiAvailableChannel.OP_MODE_WIFI_AWARE;
 import static android.net.wifi.aware.Characteristics.WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128;
@@ -1772,6 +1773,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         final String peerMsg = "some message from peer";
         final int messageId = 6948;
         final int messageId2 = 6949;
+        final int messageId3 = 6950;
         final int rangeMin = 0;
         final int rangeMax = 55;
         final int rangedDistance = 30;
@@ -1888,6 +1890,22 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         validateInternalSendMessageQueuesCleanedUp(messageId2);
         verify(mAwareMetricsMock, atLeastOnce()).reportAwareInstantModeEnabled(anyBoolean());
         verifyNoMoreInteractions(mockCallback, mockSessionCallback, mMockNative, mAwareMetricsMock);
+
+        // (6) Send message but FW queue is full
+        mDut.sendMessage(uid, clientId, sessionId.getValue(), peerIdCaptor.getValue(),
+                ssi.getBytes(), messageId3, 0);
+        mMockLooper.dispatchAll();
+        inOrder.verify(mMockNative).sendMessage(transactionId.capture(), eq(subscribeId),
+                eq(requestorId), eq(peerMac), eq(ssi.getBytes()), eq(messageId3));
+        short tid3 = transactionId.getValue();
+        mDut.onMessageSendQueuedFailResponse(tid3, FOLLOWUP_TX_QUEUE_FULL);
+        mMockLooper.dispatchAll();
+        validateInternalSendMessageQueueBlocking(messageId3);
+
+        // (7) App disconnect
+        mDut.disconnect(clientId);
+        mMockLooper.dispatchAll();
+        validateInternalSendMessageQueuesCleanedUp(messageId3);
     }
 
     /**
@@ -5628,6 +5646,11 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
                 "mFwQueuedSendMessages");
         field.setAccessible(true);
         Map<Short, Message> fwQueuedSendMessages = (Map<Short, Message>) field.get(sm);
+        field = WifiAwareStateManager.WifiAwareStateMachine.class.getDeclaredField(
+                "mSendQueueBlocked");
+        field.setAccessible(true);
+        boolean sendQueueBlocked = field.getBoolean(sm);
+        assertFalse(sendQueueBlocked);
 
         for (int i = 0; i < hostQueuedSendMessages.size(); ++i) {
             Message msg = hostQueuedSendMessages.valueAt(i);
@@ -5635,6 +5658,45 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
                 collector.checkThat(
                         "Message not cleared-up from host queue. Message ID=" + messageId, msg,
                         nullValue());
+            }
+        }
+
+        for (Message msg: fwQueuedSendMessages.values()) {
+            if (msg.getData().getInt("message_id") == messageId) {
+                collector.checkThat(
+                        "Message not cleared-up from firmware queue. Message ID=" + messageId, msg,
+                        nullValue());
+            }
+        }
+    }
+
+    private void validateInternalSendMessageQueueBlocking(int messageId) throws Exception {
+        Field field = WifiAwareStateManager.class.getDeclaredField("mSm");
+        field.setAccessible(true);
+        WifiAwareStateManager.WifiAwareStateMachine sm =
+                (WifiAwareStateManager.WifiAwareStateMachine) field.get(mDut);
+
+        field = WifiAwareStateManager.WifiAwareStateMachine.class.getDeclaredField(
+                "mHostQueuedSendMessages");
+        field.setAccessible(true);
+        SparseArray<Message> hostQueuedSendMessages = (SparseArray<Message>) field.get(sm);
+
+        field = WifiAwareStateManager.WifiAwareStateMachine.class.getDeclaredField(
+                "mFwQueuedSendMessages");
+        field.setAccessible(true);
+        Map<Short, Message> fwQueuedSendMessages = (Map<Short, Message>) field.get(sm);
+        field = WifiAwareStateManager.WifiAwareStateMachine.class.getDeclaredField(
+                "mSendQueueBlocked");
+        field.setAccessible(true);
+        boolean sendQueueBlocked = field.getBoolean(sm);
+        assertTrue(sendQueueBlocked);
+
+        for (int i = 0; i < hostQueuedSendMessages.size(); ++i) {
+            Message msg = hostQueuedSendMessages.valueAt(i);
+            if (msg.getData().getInt("message_id") == messageId) {
+                collector.checkThat(
+                        "Message cleared-up from host queue. Message ID=" + messageId, msg,
+                        notNullValue());
             }
         }
 
