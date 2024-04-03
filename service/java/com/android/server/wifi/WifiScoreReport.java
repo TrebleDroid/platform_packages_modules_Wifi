@@ -454,7 +454,8 @@ public class WifiScoreReport {
          */
         @Override
         public void binderDied() {
-            mWifiThreadRunner.post(() -> revertToDefaultConnectedScorer());
+            mWifiThreadRunner.post(() -> revertToDefaultConnectedScorer(),
+                    "WifiConnectedNetworkScorerHolder#binderDied");
         }
 
         /**

@@ -601,7 +601,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         final int carrierId = Integer.parseInt(arg1);
                         mWifiThreadRunner.post(() ->
                                 mWifiCarrierInfoManager.clearImsiPrivacyExemptionForCarrier(
-                                        carrierId));
+                                        carrierId), TAG + "#" + cmd);
                     } catch (NumberFormatException e) {
                         pw.println("Invalid argument to "
                                 + "'imsi-protection-exemption-clear-user-approved-for-carrier' "
@@ -612,7 +612,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 }
                 case "network-requests-remove-user-approved-access-points": {
                     String packageName = getNextArgRequired();
-                    mWifiThreadRunner.post(() -> mWifiNetworkFactory.removeApp(packageName));
+                    mWifiThreadRunner.post(() -> mWifiNetworkFactory.removeApp(packageName),
+                            TAG + "#" + cmd);
                     return 0;
                 }
                 case "clear-user-disabled-networks": {
@@ -1925,7 +1926,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     location.setLongitude(longitude);
                     location.setLatitude(latitude);
                     location.setAltitude(height);
-                    mWifiThreadRunner.post(() -> mAfcManager.onLocationChange(location, true));
+                    mWifiThreadRunner.post(() -> mAfcManager.onLocationChange(location, true),
+                            TAG + "#" + cmd);
                     pw.println("The updated location with longitude of " + longitude + " degrees, "
                             + "latitude of " + latitude + " degrees, and height of " + height
                             + " meters was passed into the Afc Manager onLocationChange method.");
@@ -2048,7 +2050,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                             queue.offer("Setting the allowed AFC channels and frequencies "
                                     + "failed.");
                         }
-                    });
+                    }, TAG + "#" + cmd);
 
                     // block until msg is received, or timed out
                     String msg = queue.poll(3000, TimeUnit.MILLISECONDS);
@@ -2113,7 +2115,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
 
                     mWifiThreadRunner.post(() -> {
                         mAfcManager.setServerUrlAndRequestPropertyPairs(url, requestProperties);
-                    });
+                    }, TAG + "#" + cmd);
 
                     pw.println("The URL is set to " + url);
                     pw.println("The request properties are set to: ");
@@ -2650,7 +2652,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         queue.offer("Link probe failed with reason "
                                 + LinkProbeCallback.failureReasonToString(reason));
                     }
-                }, -1));
+                }, -1), TAG + "#sendLinkProbe");
 
         // block until msg is received, or timed out
         String msg = queue.poll(sendMgmtFrameTimeoutMs + 1000, TimeUnit.MILLISECONDS);

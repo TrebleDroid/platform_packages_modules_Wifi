@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 /** Unit tests for {@link com.android.server.wifi.WifiUriParser}. */
@@ -159,6 +160,15 @@ public class WifiUriParserTest {
                 WifiConfiguration.KeyMgmt.SAE,
                 expectedSecurityParamsList,
                 "\"a\"",
+                false);
+        // Test ADB
+        uri = WifiUriParser.parseUri("WIFI:T:ADB;S:myname;P:mypass;;");
+        verifyZxParsing(
+                uri,
+                "\"myname\"",
+                WifiConfiguration.KeyMgmt.NONE,
+                Collections.emptyList(),
+                "\"mypass\"",
                 false);
     }
 

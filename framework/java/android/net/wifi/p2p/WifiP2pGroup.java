@@ -309,7 +309,7 @@ public class WifiP2pGroup implements Parcelable {
             return;
         }
         for (WifiP2pDevice client : mClients) {
-            if (client.getInterfaceMacAddress().equals(interfaceMacAddress)) {
+            if (interfaceMacAddress.equals(client.getInterfaceMacAddress())) {
                 Log.i("setClientIpAddress", "Update the IP address"
                         + " device: " + client.deviceAddress + " interfaceAddress: "
                         + interfaceMacAddress.toString() + " IP: " + ipAddress.getHostAddress());

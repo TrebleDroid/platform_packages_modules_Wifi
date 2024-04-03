@@ -179,16 +179,6 @@ public class WifiThreadRunner {
     }
 
     /**
-     * Asynchronously runs a Runnable on the main Wifi thread.
-     *
-     * @return true if the runnable was successfully posted <b>(not executed)</b> to the main Wifi
-     * thread, false otherwise
-     */
-    public boolean post(@NonNull Runnable runnable) {
-        return mHandler.post(runnable);
-    }
-
-    /**
      * Asynchronously runs a Runnable on the main Wifi thread. With specified task name for metrics
      * logging
      * @return true if the runnable was successfully posted <b>(not executed)</b> to the main Wifi

@@ -128,7 +128,7 @@ public class MboOceController {
                             Log.d(TAG, "Cell Data: " + dataAvailable);
                         }
                         clientModeManager.setMboCellularDataStatus(dataAvailable);
-                    }
+                    }, TAG + "#onDataConnectionStateChanged"
             );
         }
     };

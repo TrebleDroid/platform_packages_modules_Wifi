@@ -5510,7 +5510,8 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 return;
             }
             mWifiThreadRunner.post(
-                    () -> mRssiMonitor.updateAppThresholdsAndStartMonitor(thresholds));
+                    () -> mRssiMonitor.updateAppThresholdsAndStartMonitor(thresholds),
+                    TAG + "#onSignalStrengthThresholdsUpdated");
         }
 
         @Override

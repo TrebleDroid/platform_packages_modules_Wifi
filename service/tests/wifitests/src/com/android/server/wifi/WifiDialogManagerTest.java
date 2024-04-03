@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
@@ -107,7 +108,7 @@ public class WifiDialogManagerTest extends WifiBaseTest {
 
     private void dispatchMockWifiThreadRunner(WifiThreadRunner wifiThreadRunner) {
         ArgumentCaptor<Runnable> runnableArgumentCaptor = ArgumentCaptor.forClass(Runnable.class);
-        verify(wifiThreadRunner, atLeastOnce()).post(runnableArgumentCaptor.capture());
+        verify(wifiThreadRunner, atLeastOnce()).post(runnableArgumentCaptor.capture(), anyString());
         runnableArgumentCaptor.getValue().run();
     }
 
@@ -124,7 +125,8 @@ public class WifiDialogManagerTest extends WifiBaseTest {
         dialogHandle.launchDialog(timeoutMs);
         ArgumentCaptor<Runnable> launchRunnableArgumentCaptor =
                 ArgumentCaptor.forClass(Runnable.class);
-        verify(wifiThreadRunner, atLeastOnce()).post(launchRunnableArgumentCaptor.capture());
+        verify(wifiThreadRunner, atLeastOnce()).post(launchRunnableArgumentCaptor.capture(),
+                anyString());
         launchRunnableArgumentCaptor.getValue().run();
     }
 
@@ -139,7 +141,8 @@ public class WifiDialogManagerTest extends WifiBaseTest {
         dialogHandle.dismissDialog();
         ArgumentCaptor<Runnable> dismissRunnableArgumentCaptor =
                 ArgumentCaptor.forClass(Runnable.class);
-        verify(wifiThreadRunner, atLeastOnce()).post(dismissRunnableArgumentCaptor.capture());
+        verify(wifiThreadRunner, atLeastOnce()).post(dismissRunnableArgumentCaptor.capture(),
+                anyString());
         dismissRunnableArgumentCaptor.getValue().run();
     }
 
@@ -338,7 +341,7 @@ public class WifiDialogManagerTest extends WifiBaseTest {
 
         // A reply to the same dialog id should not trigger callback
         mDialogManager.replyToSimpleDialog(dialogId, WifiManager.DIALOG_REPLY_POSITIVE);
-        verify(callbackThreadRunner, never()).post(any());
+        verify(callbackThreadRunner, never()).post(any(), anyString());
         verify(callback, times(0)).onPositiveButtonClicked();
 
         // Another call to dismiss should not send another dismiss intent.
@@ -991,7 +994,7 @@ public class WifiDialogManagerTest extends WifiBaseTest {
 
         // A reply to the same dialog id should not trigger callback
         mDialogManager.replyToP2pInvitationReceivedDialog(dialogId, true, null);
-        verify(callbackThreadRunner, never()).post(any());
+        verify(callbackThreadRunner, never()).post(any(), anyString());
         verify(callback, times(0)).onAccepted(null);
 
         // Another call to dismiss should not send another dismiss intent.

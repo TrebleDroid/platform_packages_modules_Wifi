@@ -3867,6 +3867,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             mCurrentIdentityNotification = false;
             mInstantCommModeClientRequest = INSTANT_MODE_DISABLED;
             mAwareMetrics.reportAwareInstantModeEnabled(false);
+            mSm.onAwareDownCleanupSendQueueState();
             deferDisableAware(true);
             return false;
         }
