@@ -1436,7 +1436,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mWifiInjector.getWifiP2pMetrics()).thenReturn(mWifiP2pMetrics);
         when(mWifiInjector.getWifiP2pMonitor()).thenReturn(mWifiMonitor);
         when(mWifiInjector.getWifiP2pNative()).thenReturn(mWifiNative);
-        when(mWifiInjector.getWifiP2pServiceHandlerThread()).thenReturn(mHandlerThread);
+        when(mWifiInjector.getWifiHandlerThread()).thenReturn(mHandlerThread);
         when(mWifiInjector.getWifiPermissionsUtil()).thenReturn(mWifiPermissionsUtil);
         when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
         when(mWifiInjector.getCoexManager()).thenReturn(mCoexManager);

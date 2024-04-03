@@ -47,7 +47,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -66,7 +65,6 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.WorkSource;
 import android.os.test.TestLooper;
 import android.util.Log;
@@ -193,8 +191,6 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         when(mWorkSourceHelper2.getWorkSource()).thenReturn(TEST_WORKSOURCE_2);
         when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
-        when(mDeviceConfigFacade.getFeatureFlags()).thenReturn(mFeatureFlags);
-        when(mFeatureFlags.singleWifiThread()).thenReturn(true);
         when(mConcreteClientModeManager.getRole()).thenReturn(
                 ClientModeManager.ROLE_CLIENT_PRIMARY);
 
@@ -1206,83 +1202,12 @@ public class HalDeviceManagerTest extends WifiBaseTest {
     }
 
     /**
-     * Verify that when the thread that caused an iface to get destroyed is not the thread the
-     * onDestroy callback is intended to be invoked on, then onDestroy is will get posted to the
-     * correct thread.
-     */
-    @Test
-    public void testOnDestroyedWithHandlerTriggeredOnDifferentThread() throws Exception {
-        when(mFeatureFlags.singleWifiThread()).thenReturn(false);
-        long currentThreadId = 983757; // arbitrary current thread ID
-        when(mWifiInjector.getCurrentThreadId()).thenReturn(currentThreadId);
-        // RETURNS_DEEP_STUBS allows mocking nested method calls
-        Handler staIfaceOnDestroyedHandler = mock(Handler.class, Mockito.RETURNS_DEEP_STUBS);
-        // Configure the handler to be on a different thread as the current thread.
-        when(staIfaceOnDestroyedHandler.getLooper().getThread().getId())
-                .thenReturn(currentThreadId + 1);
-        InterfaceDestroyedListener staIdl = mock(InterfaceDestroyedListener.class);
-        ArgumentCaptor<Runnable> lambdaCaptor = ArgumentCaptor.forClass(Runnable.class);
-
-        // simulate adding a STA iface and then stopping wifi
-        simulateStartAndStopWifi(staIdl, staIfaceOnDestroyedHandler);
-
-        // Verify a runnable is posted because current thread is different than the intended thread
-        // for running "onDestroyed"
-        verify(staIfaceOnDestroyedHandler).postAtFrontOfQueue(lambdaCaptor.capture());
-
-        // Verify onDestroyed is only run after the posted runnable is dispatched
-        verify(staIdl, never()).onDestroyed("wlan0");
-        lambdaCaptor.getValue().run();
-        verify(staIdl).onDestroyed("wlan0");
-    }
-
-    /**
-     * Verify that when the thread that caused an interface to get destroyed is not the thread the
-     * onDestroy callback is intended to be invoked on, dispatchDestroyedListeners will block till
-     * onDestroy callback is done, provided the overlay config_wifiWaitForDestroyedListeners is
-     * True.
-     */
-    @Test
-    public void testOnDestroyedWaitingWithHandlerTriggeredOnDifferentThread() throws Exception {
-        when(mFeatureFlags.singleWifiThread()).thenReturn(false);
-        // Enable waiting for destroy listeners
-        mWaitForDestroyedListeners = true;
-        // Setup a separate thread for destroy
-        HandlerThread mHandlerThread = new HandlerThread("DestroyListener");
-        mHandlerThread.start();
-        Handler staIfaceOnDestroyedHandler = spy(mHandlerThread.getThreadHandler());
-        InterfaceDestroyedListener staIdl = mock(InterfaceDestroyedListener.class);
-        // Setup Wi-Fi
-        TestChipV1 chipMock = new TestChipV1();
-        chipMock.initialize();
-        mInOrder = inOrder(mWifiMock, staIdl, chipMock.chip);
-        // Start Wi-Fi
-        assertTrue(mDut.start());
-        // Create STA Iface.
-        WifiStaIface staIface = mock(WifiStaIface.class);
-        when(staIface.getName()).thenReturn("wlan0");
-        doAnswer(new CreateStaIfaceAnswer(chipMock, true, staIface))
-                .when(chipMock.chip).createStaIface();
-        assertEquals(staIface, mDut.createStaIface(staIdl, staIfaceOnDestroyedHandler,
-                TEST_WORKSOURCE_0, mConcreteClientModeManager));
-        // Remove STA interface
-        mDut.removeIface(staIface);
-        // Dispatch
-        mTestLooper.startAutoDispatch();
-        mTestLooper.dispatchAll();
-        // Validate OnDestroyed is called before removing interface.
-        mInOrder.verify(staIdl).onDestroyed("wlan0");
-        mInOrder.verify(chipMock.chip).removeStaIface("wlan0");
-    }
-
-    /**
      * Verify that when the thread that caused an iface to get destroyed is already the thread the
      * onDestroy callback is intended to be invoked on, then onDestroy is invoked directly.
      */
     @Test
     public void testOnDestroyedWithHandlerTriggeredOnSameThread() throws Exception {
         long currentThreadId = 983757; // arbitrary current thread ID
-        when(mWifiInjector.getCurrentThreadId()).thenReturn(currentThreadId);
         // RETURNS_DEEP_STUBS allows mocking nested method calls
         Handler staIfaceOnDestroyedHandler = mock(Handler.class, Mockito.RETURNS_DEEP_STUBS);
         // Configure the handler thread ID so it's the same as the current thread.
@@ -1330,10 +1255,6 @@ public class HalDeviceManagerTest extends WifiBaseTest {
      */
     @Test
     public void testCreateApWithStaIfaceUpTestChipV1UsingHandlerListeners() throws Exception {
-        // Make the creation and InterfaceDestroyListener running on the same thread to verify the
-        // order in the real scenario.
-        when(mWifiInjector.getCurrentThreadId())
-                .thenReturn(mTestLooper.getLooper().getThread().getId());
 
         TestChipV1 chipMock = new TestChipV1();
         chipMock.initialize();
@@ -1403,11 +1324,6 @@ public class HalDeviceManagerTest extends WifiBaseTest {
     @Test
     public void testCreateLowerPriorityApWithStaIfaceUpTestChipV1UsingHandlerListeners()
             throws Exception {
-        // Make the creation and InterfaceDestroyListener running on the same thread to verify the
-        // order in the real scenario.
-        when(mWifiInjector.getCurrentThreadId())
-                .thenReturn(mTestLooper.getLooper().getThread().getId());
-
         TestChipV1 chipMock = new TestChipV1();
         chipMock.initialize();
 
