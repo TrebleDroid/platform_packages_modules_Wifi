@@ -95,12 +95,16 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
     private Context mContext;
     private SsidTranslator mSsidTranslator;
 
+    private final boolean mWifiLinkLayerAllRadiosStatsAggregationEnabled;
+
     public WifiStaIfaceAidlImpl(@NonNull android.hardware.wifi.IWifiStaIface staIface,
             @NonNull Context context, @NonNull SsidTranslator ssidTranslator) {
         mWifiStaIface = staIface;
         mContext = context;
         mSsidTranslator = ssidTranslator;
         mHalCallback = new StaIfaceEventCallback();
+        mWifiLinkLayerAllRadiosStatsAggregationEnabled = mContext.getResources()
+                .getBoolean(R.bool.config_wifiLinkLayerAllRadiosStatsAggregationEnabled);
     }
 
     /**
@@ -1485,9 +1489,7 @@ public class WifiStaIfaceAidlImpl implements IWifiStaIface {
 
     private void aggregateFrameworkRadioStatsFromAidl(int radioIndex,
             WifiLinkLayerStats stats, StaLinkLayerRadioStats aidlRadioStats) {
-        if (!mContext.getResources()
-                .getBoolean(R.bool.config_wifiLinkLayerAllRadiosStatsAggregationEnabled)
-                && radioIndex > 0) {
+        if (!mWifiLinkLayerAllRadiosStatsAggregationEnabled && radioIndex > 0) {
             return;
         }
         // Aggregate the radio stats from all the radios
