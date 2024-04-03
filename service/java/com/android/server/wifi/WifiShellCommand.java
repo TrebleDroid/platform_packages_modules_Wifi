@@ -151,6 +151,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
     private static final String[] NON_PRIVILEGED_COMMANDS = {
             "add-suggestion",
             "forget-network",
+            "connect-network",
+            "add-network",
             "get-country-code",
             "help",
             "-h",
@@ -1009,9 +1011,6 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     WifiConfiguration config = buildWifiConfiguration(pw);
                     mWifiService.connect(config, -1, actionListener, SHELL_PACKAGE_NAME,
                             new Bundle());
-                    // wait for status.
-                    countDownLatch.await(500, TimeUnit.MILLISECONDS);
-                    setAutoJoin(pw, config.SSID, config.allowAutojoin);
                     return 0;
                 }
                 case "add-network": {
@@ -1031,9 +1030,6 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     };
                     WifiConfiguration config = buildWifiConfiguration(pw);
                     mWifiService.save(config, actionListener, SHELL_PACKAGE_NAME);
-                    // wait for status.
-                    countDownLatch.await(500, TimeUnit.MILLISECONDS);
-                    setAutoJoin(pw, config.SSID, config.allowAutojoin);
                     return 0;
                 }
                 case "forget-network": {
@@ -2611,28 +2607,6 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         return cellChannels;
     }
 
-    private void setAutoJoin(PrintWriter pw, String ssid, boolean allowAutojoin) {
-        // For suggestions, this will work only if the config has already been added
-        // to WifiConfigManager.
-        Bundle extras = new Bundle();
-        if (SdkLevel.isAtLeastS()) {
-            extras.putParcelable(WifiManager.EXTRA_PARAM_KEY_ATTRIBUTION_SOURCE,
-                    mContext.getAttributionSource());
-        }
-        WifiConfiguration retrievedConfig =
-                mWifiService.getPrivilegedConfiguredNetworks(SHELL_PACKAGE_NAME, null, extras)
-                        .getList()
-                        .stream()
-                        .filter(n -> n.SSID.equals(ssid))
-                        .findAny()
-                        .orElse(null);
-        if (retrievedConfig == null) {
-            pw.println("Cannot retrieve config, autojoin setting skipped.");
-            return;
-        }
-        mWifiService.allowAutojoin(retrievedConfig.networkId, allowAutojoin);
-    }
-
     private int sendLinkProbe(PrintWriter pw) throws InterruptedException {
         // Note: should match WifiNl80211Manager#SEND_MGMT_FRAME_TIMEOUT_MS
         final int sendMgmtFrameTimeoutMs = 1000;
@@ -2775,6 +2749,48 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("    Enables/disables Wifi on this device.");
         pw.println("  set-scan-always-available enabled|disabled");
         pw.println("    Sets whether scanning should be available even when wifi is off.");
+        pw.println("  connect-network <ssid> open|owe|wpa2|wpa3|wep [<passphrase>] [-x] [-m] "
+                + "[-d] [-b <bssid>] [-r auto|none|persistent|non_persistent]");
+        pw.println("    Connect to a network with provided params and add to saved networks list");
+        pw.println("    <ssid> - SSID of the network");
+        pw.println("    open|owe|wpa2|wpa3|wep - Security type of the network.");
+        pw.println("        - Use 'open' or 'owe' for networks with no passphrase");
+        pw.println("           - 'open' - Open networks (Most prevalent)");
+        pw.println("           - 'owe' - Enhanced open networks");
+        pw.println("        - Use 'wpa2' or 'wpa3' or 'wep' for networks with passphrase");
+        pw.println("           - 'wpa2' - WPA-2 PSK networks (Most prevalent)");
+        pw.println("           - 'wpa3' - WPA-3 PSK networks");
+        pw.println("           - 'wep'  - WEP network. Passphrase should be bytes in hex or encoded"
+                + " into String using UTF-8");
+        pw.println("    -x - Specifies the SSID as hex digits instead of plain text");
+        pw.println("    -m - Mark the network metered.");
+        pw.println("    -d - Mark the network autojoin disabled.");
+        pw.println("    -h - Mark the network hidden.");
+        pw.println("    -p - Mark the network private (not shared).");
+        pw.println("    -b <bssid> - Set specific BSSID.");
+        pw.println("    -r auto|none|persistent|non_persistent - MAC randomization scheme for the"
+                + " network");
+        pw.println("  add-network <ssid> open|owe|wpa2|wpa3|wep [<passphrase>] [-x] [-m] [-d] "
+                + "[-b <bssid>] [-r auto|none|persistent|non_persistent]");
+        pw.println("    Add/update saved network with provided params");
+        pw.println("    <ssid> - SSID of the network");
+        pw.println("    open|owe|wpa2|wpa3|wep - Security type of the network.");
+        pw.println("        - Use 'open' or 'owe' for networks with no passphrase");
+        pw.println("           - 'open' - Open networks (Most prevalent)");
+        pw.println("           - 'owe' - Enhanced open networks");
+        pw.println("        - Use 'wpa2' or 'wpa3' for networks with passphrase");
+        pw.println("           - 'wpa2' - WPA-2 PSK networks (Most prevalent)");
+        pw.println("           - 'wpa3' - WPA-3 PSK networks");
+        pw.println("           - 'wep'  - WEP network. Passphrase should be bytes in hex or encoded"
+                + " into String using UTF-8");
+        pw.println("    -x - Specifies the SSID as hex digits instead of plain text");
+        pw.println("    -m - Mark the network metered.");
+        pw.println("    -d - Mark the network autojoin disabled.");
+        pw.println("    -h - Mark the network hidden.");
+        pw.println("    -p - Mark the network private (not shared).");
+        pw.println("    -b <bssid> - Set specific BSSID.");
+        pw.println("    -r auto|none|persistent|non_persistent - MAC randomization scheme for the"
+                + " network");
         pw.println("  list-scan-results");
         pw.println("    Lists the latest scan results");
         pw.println("  start-scan");
@@ -2991,48 +3007,6 @@ public class WifiShellCommand extends BasicShellCommandHandler {
     }
 
     private void onHelpPrivileged(PrintWriter pw) {
-        pw.println("  connect-network <ssid> open|owe|wpa2|wpa3|wep [<passphrase>] [-x] [-m] "
-                + "[-d] [-b <bssid>] [-r auto|none|persistent|non_persistent]");
-        pw.println("    Connect to a network with provided params and add to saved networks list");
-        pw.println("    <ssid> - SSID of the network");
-        pw.println("    open|owe|wpa2|wpa3|wep - Security type of the network.");
-        pw.println("        - Use 'open' or 'owe' for networks with no passphrase");
-        pw.println("           - 'open' - Open networks (Most prevalent)");
-        pw.println("           - 'owe' - Enhanced open networks");
-        pw.println("        - Use 'wpa2' or 'wpa3' or 'wep' for networks with passphrase");
-        pw.println("           - 'wpa2' - WPA-2 PSK networks (Most prevalent)");
-        pw.println("           - 'wpa3' - WPA-3 PSK networks");
-        pw.println("           - 'wep'  - WEP network. Passphrase should be bytes in hex or encoded"
-                + " into String using UTF-8");
-        pw.println("    -x - Specifies the SSID as hex digits instead of plain text");
-        pw.println("    -m - Mark the network metered.");
-        pw.println("    -d - Mark the network autojoin disabled.");
-        pw.println("    -h - Mark the network hidden.");
-        pw.println("    -p - Mark the network private (not shared).");
-        pw.println("    -b <bssid> - Set specific BSSID.");
-        pw.println("    -r auto|none|persistent|non_persistent - MAC randomization scheme for the"
-                + " network");
-        pw.println("  add-network <ssid> open|owe|wpa2|wpa3|wep [<passphrase>] [-x] [-m] [-d] "
-                + "[-b <bssid>] [-r auto|none|persistent|non_persistent]");
-        pw.println("    Add/update saved network with provided params");
-        pw.println("    <ssid> - SSID of the network");
-        pw.println("    open|owe|wpa2|wpa3|wep - Security type of the network.");
-        pw.println("        - Use 'open' or 'owe' for networks with no passphrase");
-        pw.println("           - 'open' - Open networks (Most prevalent)");
-        pw.println("           - 'owe' - Enhanced open networks");
-        pw.println("        - Use 'wpa2' or 'wpa3' for networks with passphrase");
-        pw.println("           - 'wpa2' - WPA-2 PSK networks (Most prevalent)");
-        pw.println("           - 'wpa3' - WPA-3 PSK networks");
-        pw.println("           - 'wep'  - WEP network. Passphrase should be bytes in hex or encoded"
-                + " into String using UTF-8");
-        pw.println("    -x - Specifies the SSID as hex digits instead of plain text");
-        pw.println("    -m - Mark the network metered.");
-        pw.println("    -d - Mark the network autojoin disabled.");
-        pw.println("    -h - Mark the network hidden.");
-        pw.println("    -p - Mark the network private (not shared).");
-        pw.println("    -b <bssid> - Set specific BSSID.");
-        pw.println("    -r auto|none|persistent|non_persistent - MAC randomization scheme for the"
-                + " network");
         pw.println("  set-poll-rssi-interval-msecs <int>");
         pw.println("    Sets the interval between RSSI polls to <int> milliseconds.");
         pw.println("  get-poll-rssi-interval-msecs");
