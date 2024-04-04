@@ -20,6 +20,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_OWE;
 
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_NAN;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_P2P;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_NATIVE_SUPPORTED_FEATURES;
@@ -3772,6 +3773,19 @@ public class WifiNative {
                     new SparseArray<Integer>() {{
                             put(HDM_CREATE_IFACE_STA, 1);
                             put(HDM_CREATE_IFACE_P2P, 1);
+                    }});
+        }
+    }
+
+    /**
+     * Returns whether Nan + STA concurrency is supported or not.
+     */
+    public boolean isNanStaConcurrencySupported() {
+        synchronized (mLock) {
+            return mWifiVendorHal.canDeviceSupportCreateTypeCombo(
+                    new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_STA, 1);
+                            put(HDM_CREATE_IFACE_NAN, 1);
                     }});
         }
     }
