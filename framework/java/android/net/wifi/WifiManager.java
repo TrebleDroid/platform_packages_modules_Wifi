@@ -6631,7 +6631,8 @@ public class WifiManager {
          * <p>
          * This provides the same state and failure reason as {@link #onStateChanged(int, int)}, but
          * also provides extra information such as interface name and TetheringRequest in order to
-         * replace usage of the WIFI_AP_STATE_CHANGED_ACTION broadcast.
+         * replace usage of the WIFI_AP_STATE_CHANGED_ACTION broadcast. If this method is overridden
+         * then {@link #onStateChanged(int, int)} will no longer be called.
          *
          * @param state the new state.
          */
@@ -6783,7 +6784,6 @@ public class WifiManager {
             Binder.clearCallingIdentity();
             mExecutor.execute(() -> {
                 mCallback.onStateChanged(state);
-                mCallback.onStateChanged(state.getState(), state.getFailureReasonInternal());
             });
         }
 
