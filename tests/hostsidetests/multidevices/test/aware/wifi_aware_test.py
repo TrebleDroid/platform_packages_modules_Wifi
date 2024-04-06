@@ -94,7 +94,7 @@ class WifiAwareTest(base_test.BaseTestClass):
         self.publisher.wifi_aware_snippet.publish(is_unsolicited, is_ranging_required, True)
         self.subscriber.wifi_aware_snippet.subscribe(is_unsolicited, is_ranging_required, True)
         self.subscriber.wifi_aware_snippet.initiatePairingSetup(True, True)
-        self.subscriber.wifi_aware_snippet.respondToPairingSetup(True, True)
+        self.publisher.wifi_aware_snippet.respondToPairingSetup(True, True)
 
     def test_aware_pairing_reject_test_case(self):
         is_pairing_supported = self.publisher.wifi_aware_snippet.checkIfPairingSupported() and \
@@ -109,7 +109,7 @@ class WifiAwareTest(base_test.BaseTestClass):
         self.publisher.wifi_aware_snippet.publish(is_unsolicited, is_ranging_required, True)
         self.subscriber.wifi_aware_snippet.subscribe(is_unsolicited, is_ranging_required, True)
         self.subscriber.wifi_aware_snippet.initiatePairingSetup(True, False)
-        self.subscriber.wifi_aware_snippet.respondToPairingSetup(True, False)
+        self.publisher.wifi_aware_snippet.respondToPairingSetup(True, False)
 
 
 if __name__ == '__main__':
