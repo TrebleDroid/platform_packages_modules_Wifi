@@ -57,6 +57,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.HalDeviceManager.InterfaceDestroyedListener;
 import com.android.server.wifi.WifiNative.SupplicantDeathEventHandler;
 import com.android.server.wifi.WifiNative.VendorHalDeathEventHandler;
+import com.android.server.wifi.hal.WifiNanIface;
 import com.android.server.wifi.p2p.WifiP2pNative;
 import com.android.server.wifi.util.NetdWrapper;
 import com.android.server.wifi.util.NetdWrapper.NetdEventObserver;
@@ -116,17 +117,19 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
     @Mock private WifiNative.InterfaceCallback mIfaceCallback0;
     @Mock private WifiNative.InterfaceCallback mIfaceCallback1;
     @Mock private WifiNative.InterfaceEventCallback mIfaceEventCallback0;
-    @Mock private HalDeviceManager.InterfaceDestroyedListener mP2pInterfaceDestroyedListener;
-    @Mock private Handler mP2pEventHandler;
+    @Mock private HalDeviceManager.InterfaceDestroyedListener mTestInterfaceDestroyedListener;
+    @Mock private Handler mCreateIfaceEventHandler;
 
     @Mock private WifiSettingsConfigStore mWifiSettingsConfigStore;
     @Mock private WifiGlobals mWifiGlobals;
     @Mock private ConcreteClientModeManager mConcreteClientModeManager;
     @Mock private SoftApManager mSoftApManager;
+    @Mock private WifiNanIface mActiveWifiNanIface;
     @Mock DeviceConfigFacade mDeviceConfigFacade;
 
     private TestLooper mLooper;
     private WifiNative.Iface mActiveP2pIface;
+    private WifiNative.Iface mActiveNanIface;
 
     private ArgumentCaptor<VendorHalDeathEventHandler> mWifiVendorHalDeathHandlerCaptor =
             ArgumentCaptor.forClass(VendorHalDeathEventHandler.class);
@@ -251,6 +254,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
         mInOrder.verify(mWificondControl).tearDownInterfaces();
         mInOrder.verify(mWifiVendorHal).registerRadioModeChangeHandler(any());
         mActiveP2pIface = null;
+        mActiveNanIface = null;
     }
 
     @After
@@ -1487,17 +1491,78 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
                 return P2P_IFACE_NAME;
             }
         }).when(mHalDeviceManager).createP2pIface(any(), any(), any());
-        mActiveP2pIface = mWifiNative.createP2pIface(mP2pInterfaceDestroyedListener,
-                    mP2pEventHandler, TEST_WORKSOURCE);
+        mActiveP2pIface = mWifiNative.createP2pIface(mTestInterfaceDestroyedListener,
+                    mCreateIfaceEventHandler, TEST_WORKSOURCE);
         assertEquals(P2P_IFACE_NAME, mActiveP2pIface.name);
         // Creation of P2P interface should trigger the STA interface destroy
         verify(mWifiVendorHal, atLeastOnce()).isVendorHalSupported();
         verify(mWifiVendorHal, atLeastOnce()).isVendorHalReady();
         validateOnDestroyedClientInterface(false, false, true,
                 IFACE_NAME_0, mIfaceCallback0, mNetworkObserverCaptor0.getValue());
-        validateCreateP2pInterface(true, false, false, P2P_IFACE_NAME, true, 0);
+        validateCreateP2pInterface(true, false, false, true, 0);
         executeAndValidateTeardownP2pInterface(false, false, false, false, false,
                 mActiveP2pIface, true);
+    }
+
+    @Test
+    public void testSetupNanInterfaceAndTeardownNan() throws Exception {
+        executeAndValidateCreateNanInterface(false, false, false, false, true);
+        executeAndValidateTeardownNanInterface(false, false, false, false, mActiveNanIface);
+    }
+
+
+    /**
+     * Verifies the setup of a single client interface and teardown by Nan on.
+     */
+    @Test
+    public void testSetupClientInterfaceAndTeardownNan() throws Exception {
+        executeAndValidateCreateNanInterface(false, false, false, false, true);
+        // Trigger the Nan interface teardown when STA interface is created.
+        doAnswer(new MockAnswerUtil.AnswerWithArguments() {
+            public String answer(InterfaceDestroyedListener destroyedListener, WorkSource ws,
+                    ConcreteClientModeManager concreteClientModeManager) {
+                mWifiNative.teardownNanIface(mActiveNanIface.id);
+                return IFACE_NAME_0;
+            }
+        }).when(mWifiVendorHal).createStaIface(any(), any(), eq(mConcreteClientModeManager));
+
+        assertEquals(IFACE_NAME_0,
+                mWifiNative.setupInterfaceForClientInScanMode(mIfaceCallback0, TEST_WORKSOURCE,
+                        mConcreteClientModeManager));
+        assertEquals(Set.of(IFACE_NAME_0), mWifiNative.getClientInterfaceNames());
+        validateSetupClientInterfaceForScan(
+                true, false, false, false, IFACE_NAME_0, mIfaceDestroyedListenerCaptor0,
+                mNetworkObserverCaptor0, true, 0);
+        validateStartHal(true, true);
+        validateOnDestroyedNanInterface(true, false, false, false);
+    }
+
+    /**
+     * Verifies the setup of a single client interface (for scan) and teardown by Nan on.
+     */
+    @Test
+    public void testCreateNanIfaceAndTeardownClientIface() throws Exception {
+        executeAndValidateSetupClientInterface(
+                false, false, false, false, IFACE_NAME_0, mIfaceCallback0,
+                mIfaceDestroyedListenerCaptor0, mNetworkObserverCaptor0, true, 0);
+        assertEquals(Set.of(IFACE_NAME_0), mWifiNative.getClientInterfaceNames());
+        // Trigger the STA interface teardown when P2p interface is created.
+        // The iface name will remain the same.
+        doAnswer(new MockAnswerUtil.AnswerWithArguments() {
+            public WifiNanIface answer(
+                    HalDeviceManager.InterfaceDestroyedListener interfaceDestroyedListener,
+                    Handler handler, WorkSource requestorWs) {
+                mIfaceDestroyedListenerCaptor0.getValue().onDestroyed(IFACE_NAME_0);
+                return mActiveWifiNanIface;
+            }
+        }).when(mHalDeviceManager).createNanIface(any(), any(), any());
+        executeAndValidateCreateNanInterface(true, false, false, false, false);
+        // Creation of Nan interface should trigger the STA interface destroy
+        verify(mWifiVendorHal, atLeastOnce()).isVendorHalSupported();
+        verify(mWifiVendorHal, atLeastOnce()).isVendorHalReady();
+        validateOnDestroyedClientInterface(false, false, false, true,
+                IFACE_NAME_0, mIfaceCallback0, mNetworkObserverCaptor0.getValue());
+        executeAndValidateTeardownNanInterface(false, false, false, false, mActiveNanIface);
     }
 
     private void executeAndValidateSetupClientInterface(
@@ -1527,12 +1592,24 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
             ArgumentCaptor<NetdEventObserver> networkObserverCaptor, boolean vendorHalSupported,
             int failureCode) throws Exception {
+        executeAndValidateSetupClientInterface(hasStaIface, hasApIface, hasP2pIface, false,
+                ifaceName, callback, destroyedListenerCaptor,
+                networkObserverCaptor, vendorHalSupported, failureCode);
+    }
+
+    private void executeAndValidateSetupClientInterface(
+            boolean hasStaIface, boolean hasApIface, boolean hasP2pIface, boolean hasNanIface,
+            String ifaceName, @Mock WifiNative.InterfaceCallback callback,
+            ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
+            ArgumentCaptor<NetdEventObserver> networkObserverCaptor, boolean vendorHalSupported,
+            int failureCode) throws Exception {
         when(mWifiVendorHal.createStaIface(any(), any(), eq(mConcreteClientModeManager)))
                 .thenReturn(ifaceName);
         executeAndValidateSetupClientInterfaceForScan(
-                hasStaIface, hasApIface, hasP2pIface, ifaceName, callback, destroyedListenerCaptor,
-                networkObserverCaptor, vendorHalSupported, failureCode);
-        executeAndValidateSwitchClientInterfaceToConnectivityMode(hasStaIface, hasApIface,
+                hasStaIface, hasApIface, hasP2pIface, hasNanIface, ifaceName, callback,
+                destroyedListenerCaptor, networkObserverCaptor, vendorHalSupported, failureCode);
+        executeAndValidateSwitchClientInterfaceToConnectivityMode(
+                hasStaIface, hasApIface,
                 ifaceName, TEST_WORKSOURCE, vendorHalSupported, failureCode);
     }
 
@@ -1551,6 +1628,16 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             String ifaceName, @Mock WifiNative.InterfaceCallback callback,
             InterfaceDestroyedListener destroyedListener,
             NetdEventObserver networkObserver) throws Exception {
+        executeAndValidateTeardownClientInterface(anyOtherStaIface, anyOtherApIface,
+                anyOtherP2pIface, false /* anyOtherNanIface */, ifaceName, callback,
+                destroyedListener, networkObserver);
+    }
+
+    private void executeAndValidateTeardownClientInterface(
+            boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
+            boolean anyOtherNanIface, String ifaceName, @Mock WifiNative.InterfaceCallback callback,
+            InterfaceDestroyedListener destroyedListener,
+            NetdEventObserver networkObserver) throws Exception {
         mWifiNative.teardownInterface(ifaceName);
 
         mInOrder.verify(mWifiVendorHal).isVendorHalSupported();
@@ -1560,7 +1647,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
         destroyedListener.onDestroyed(ifaceName);
 
         validateOnDestroyedClientInterface(
-                anyOtherStaIface, anyOtherApIface, anyOtherP2pIface,
+                anyOtherStaIface, anyOtherApIface, anyOtherP2pIface, anyOtherNanIface,
                 ifaceName, callback, networkObserver);
     }
 
@@ -1576,6 +1663,15 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
     private void validateOnDestroyedClientInterface(
             boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
             String ifaceName, @Mock WifiNative.InterfaceCallback callback,
+            NetdEventObserver networkObserver) throws Exception {
+        validateOnDestroyedClientInterface(
+                anyOtherStaIface, anyOtherApIface, anyOtherP2pIface, false /* anyOtherNanIface */,
+                ifaceName, callback, networkObserver);
+    }
+
+    private void validateOnDestroyedClientInterface(
+            boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
+            boolean anyOtherNanIface, String ifaceName, @Mock WifiNative.InterfaceCallback callback,
             NetdEventObserver networkObserver) throws Exception {
         mInOrder.verify(mWifiMonitor).stopMonitoring(ifaceName);
         if (networkObserver != null) {
@@ -1593,7 +1689,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             }
             when(mSupplicantStaIfaceHal.isInitializationStarted()).thenReturn(false);
         }
-        if (!anyOtherStaIface && !anyOtherApIface && !anyOtherP2pIface) {
+        if (!anyOtherStaIface && !anyOtherApIface && !anyOtherP2pIface && !anyOtherNanIface) {
             mInOrder.verify(mWificondControl).tearDownInterfaces();
             mInOrder.verify(mWifiVendorHal).isVendorHalSupported();
             mInOrder.verify(mWifiVendorHal).stopVendorHal();
@@ -1628,6 +1724,17 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
             ArgumentCaptor<NetdEventObserver> networkObserverCaptor,
             boolean vendorHalSupported, int failureCode) throws Exception {
+        executeAndValidateSetupClientInterfaceForScan(hasStaIface, hasApIface,
+                hasP2pIface, false /* hasNanIface */, ifaceName, callback,
+                destroyedListenerCaptor, networkObserverCaptor, vendorHalSupported, failureCode);
+    }
+
+    private void executeAndValidateSetupClientInterfaceForScan(
+            boolean hasStaIface, boolean hasApIface, boolean hasP2pIface, boolean hasNanIface,
+            String ifaceName, @Mock WifiNative.InterfaceCallback callback,
+            ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
+            ArgumentCaptor<NetdEventObserver> networkObserverCaptor,
+            boolean vendorHalSupported, int failureCode) throws Exception {
         if (failureCode != STA_FAILURE_CODE_CREAT_IFACE) {
             when(mWifiVendorHal.createStaIface(any(), any(), eq(mConcreteClientModeManager)))
                     .thenReturn(ifaceName);
@@ -1637,8 +1744,8 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
                         mConcreteClientModeManager));
 
         validateSetupClientInterfaceForScan(
-                hasStaIface, hasApIface, hasP2pIface, ifaceName, destroyedListenerCaptor,
-                networkObserverCaptor, vendorHalSupported, failureCode);
+                hasStaIface, hasApIface, hasP2pIface, hasNanIface, ifaceName,
+                destroyedListenerCaptor, networkObserverCaptor, vendorHalSupported, failureCode);
     }
 
     private void validateStartHal(boolean hasAnyIface, boolean vendorHalSupported) {
@@ -1672,7 +1779,18 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             String ifaceName, ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
             ArgumentCaptor<NetdEventObserver> networkObserverCaptor, boolean vendorHalSupported,
             int failureCode) throws Exception {
-        validateStartHal(hasStaIface || hasApIface || hasP2pIface, vendorHalSupported);
+        validateSetupClientInterfaceForScan(hasStaIface, hasApIface, hasP2pIface,
+                false /* hasNanIfacd */, ifaceName, destroyedListenerCaptor, networkObserverCaptor,
+                vendorHalSupported, failureCode);
+    }
+
+    private void validateSetupClientInterfaceForScan(
+            boolean hasStaIface, boolean hasApIface, boolean hasP2pIface, boolean hasNanIface,
+            String ifaceName, ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
+            ArgumentCaptor<NetdEventObserver> networkObserverCaptor, boolean vendorHalSupported,
+            int failureCode) throws Exception {
+        validateStartHal(hasStaIface || hasApIface || hasP2pIface || hasNanIface,
+                vendorHalSupported);
         if (vendorHalSupported) {
             mInOrder.verify(mWifiVendorHal).createStaIface(
                     destroyedListenerCaptor.capture(), eq(TEST_WORKSOURCE),
@@ -1730,6 +1848,16 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             String ifaceName, @Mock WifiNative.InterfaceCallback callback,
             InterfaceDestroyedListener destroyedListener,
             NetdEventObserver networkObserver) throws Exception {
+        executeAndValidateTeardownClientInterfaceForScan(anyOtherStaIface, anyOtherApIface,
+                anyOtherP2pIface, false /* anyOtherNanIface */, ifaceName, callback,
+                destroyedListener, networkObserver);
+    }
+
+    private void executeAndValidateTeardownClientInterfaceForScan(
+            boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
+            boolean anyOtherNanIface, String ifaceName, @Mock WifiNative.InterfaceCallback callback,
+            InterfaceDestroyedListener destroyedListener,
+            NetdEventObserver networkObserver) throws Exception {
         mWifiNative.teardownInterface(ifaceName);
 
         mInOrder.verify(mWifiVendorHal).isVendorHalSupported();
@@ -1739,7 +1867,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
         destroyedListener.onDestroyed(ifaceName);
 
         validateOnDestroyedClientInterfaceForScan(
-                anyOtherStaIface, anyOtherApIface, anyOtherP2pIface,
+                anyOtherStaIface, anyOtherApIface, anyOtherP2pIface, anyOtherNanIface,
                 ifaceName, callback, networkObserver);
     }
 
@@ -1756,13 +1884,21 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
             String ifaceName, @Mock WifiNative.InterfaceCallback callback,
             NetdEventObserver networkObserver) throws Exception {
+        validateOnDestroyedClientInterfaceForScan(
+                anyOtherStaIface, anyOtherApIface, anyOtherP2pIface,
+                false /* anyOtherNanIface */, ifaceName, callback, networkObserver);
+    }
+    private void validateOnDestroyedClientInterfaceForScan(
+            boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
+            boolean anyOtherNanIface, String ifaceName, @Mock WifiNative.InterfaceCallback callback,
+            NetdEventObserver networkObserver) throws Exception {
         mInOrder.verify(mWifiMonitor).stopMonitoring(ifaceName);
         if (networkObserver != null) {
             mInOrder.verify(mNetdWrapper).unregisterObserver(networkObserver);
         }
         mInOrder.verify(mWificondControl).tearDownClientInterface(ifaceName);
 
-        if (!anyOtherStaIface && !anyOtherApIface && !anyOtherP2pIface) {
+        if (!anyOtherStaIface && !anyOtherApIface && !anyOtherP2pIface && !anyOtherNanIface) {
             mInOrder.verify(mWificondControl).tearDownInterfaces();
             mInOrder.verify(mWifiVendorHal).isVendorHalSupported();
             mInOrder.verify(mWifiVendorHal).stopVendorHal();
@@ -1797,6 +1933,17 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
             ArgumentCaptor<NetdEventObserver> networkObserverCaptor, boolean isBridged,
             boolean vendorHalSupported, int failureCode) throws Exception {
+        executeAndValidateSetupSoftApInterface(hasStaIface, hasApIface, hasP2pIface,
+                false /* hasNanIface */, ifaceName, callback, destroyedListenerCaptor,
+                networkObserverCaptor, isBridged, vendorHalSupported, failureCode);
+    }
+
+    private void executeAndValidateSetupSoftApInterface(
+            boolean hasStaIface, boolean hasApIface, boolean hasP2pIface, boolean hasNanIface,
+            String ifaceName, @Mock WifiNative.InterfaceCallback callback,
+            ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
+            ArgumentCaptor<NetdEventObserver> networkObserverCaptor, boolean isBridged,
+            boolean vendorHalSupported, int failureCode) throws Exception {
         when(mWifiVendorHal.createApIface(any(), any(), anyInt(), eq(isBridged), any(), anyList()))
                 .thenReturn(ifaceName);
         assertEquals(failureCode == 0 ? ifaceName : null, mWifiNative.setupInterfaceForSoftApMode(
@@ -1804,8 +1951,9 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
                 mSoftApManager, new ArrayList<>()));
 
         validateSetupSoftApInterface(
-                hasStaIface, hasApIface, ifaceName, destroyedListenerCaptor,
-                networkObserverCaptor, isBridged, vendorHalSupported, failureCode);
+                hasStaIface, hasApIface, hasP2pIface, hasNanIface, ifaceName,
+                destroyedListenerCaptor, networkObserverCaptor, isBridged,
+                vendorHalSupported, failureCode);
     }
 
     private void validateSetupSoftApInterface(
@@ -1823,7 +1971,18 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             String ifaceName, ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
             ArgumentCaptor<NetdEventObserver> networkObserverCaptor, boolean isBridged,
             boolean vendorHalSupported, int failureCode) throws Exception {
-        validateStartHal(hasStaIface || hasApIface || hasP2pIface, vendorHalSupported);
+        validateSetupSoftApInterface(hasStaIface, hasApIface, hasP2pIface, false /* hasNanIface */,
+                ifaceName, destroyedListenerCaptor,
+                networkObserverCaptor, isBridged, vendorHalSupported, failureCode);
+    }
+
+    private void validateSetupSoftApInterface(
+            boolean hasStaIface, boolean hasApIface, boolean hasP2pIface, boolean hasNanIface,
+            String ifaceName, ArgumentCaptor<InterfaceDestroyedListener> destroyedListenerCaptor,
+            ArgumentCaptor<NetdEventObserver> networkObserverCaptor, boolean isBridged,
+            boolean vendorHalSupported, int failureCode) throws Exception {
+        validateStartHal(hasStaIface || hasApIface || hasP2pIface || hasNanIface,
+                vendorHalSupported);
         if (!hasApIface) {
             mInOrder.verify(mHostapdHal).isInitializationStarted();
             mInOrder.verify(mHostapdHal).initialize();
@@ -1920,6 +2079,15 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
             String ifaceName, @Mock WifiNative.InterfaceCallback callback,
             NetdEventObserver networkObserver) throws Exception {
+        validateOnDestroyedSoftApInterface(
+                anyOtherStaIface, anyOtherApIface, anyOtherP2pIface,
+                false /* anyOtherNanIface */, ifaceName, callback, networkObserver);
+    }
+
+    private void validateOnDestroyedSoftApInterface(
+            boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
+            boolean anyOtherNanIface, String ifaceName, @Mock WifiNative.InterfaceCallback callback,
+            NetdEventObserver networkObserver) throws Exception {
         if (networkObserver != null) {
             mInOrder.verify(mNetdWrapper).unregisterObserver(networkObserver);
         }
@@ -1930,7 +2098,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             mInOrder.verify(mHostapdHal).deregisterDeathHandler();
             mInOrder.verify(mHostapdHal).terminate();
         }
-        if (!anyOtherStaIface && !anyOtherApIface && !anyOtherP2pIface) {
+        if (!anyOtherStaIface && !anyOtherApIface && !anyOtherP2pIface && !anyOtherNanIface) {
             mInOrder.verify(mWificondControl).tearDownInterfaces();
             mInOrder.verify(mWifiVendorHal).isVendorHalSupported();
             mInOrder.verify(mWifiVendorHal).stopVendorHal();
@@ -1957,6 +2125,13 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
     private void executeAndValidateCreateP2pInterface(
             boolean hasStaIface, boolean hasApIface, boolean hasP2pIface,
             String ifaceName, boolean vendorHalSupported, int failureCode) throws Exception {
+        executeAndValidateCreateP2pInterface(hasStaIface, hasApIface, hasP2pIface, false,
+                ifaceName, vendorHalSupported, failureCode);
+    }
+
+    private void executeAndValidateCreateP2pInterface(
+            boolean hasStaIface, boolean hasApIface, boolean hasP2pIface, boolean hasNanIface,
+            String ifaceName, boolean vendorHalSupported, int failureCode) throws Exception {
         if (failureCode != P2P_FAILURE_CODE_CREATE_INTERFACE) {
             if (vendorHalSupported) {
                 when(mHalDeviceManager.createP2pIface(any(), any(), any()))
@@ -1966,25 +2141,33 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
                         .thenReturn(ifaceName);
             }
         }
-        mActiveP2pIface = mWifiNative.createP2pIface(mP2pInterfaceDestroyedListener,
-                    mP2pEventHandler, TEST_WORKSOURCE);
+        mActiveP2pIface = mWifiNative.createP2pIface(mTestInterfaceDestroyedListener,
+                    mCreateIfaceEventHandler, TEST_WORKSOURCE);
         if (failureCode == 0) {
             assertNotNull(mActiveP2pIface);
             assertEquals(mActiveP2pIface.name, ifaceName);
         } else {
             assertNull(mActiveP2pIface);
         }
-        validateCreateP2pInterface(hasStaIface, hasApIface, hasP2pIface,
-                ifaceName, vendorHalSupported, failureCode);
+        validateCreateP2pInterface(hasStaIface, hasApIface, hasP2pIface, hasNanIface,
+                vendorHalSupported, failureCode);
     }
 
     private void validateCreateP2pInterface(
             boolean hasStaIface, boolean hasApIface, boolean hasP2pIface,
-            String ifaceName, boolean vendorHalSupported, int failureCode) throws Exception {
-        validateStartHal(hasStaIface || hasApIface || hasP2pIface, vendorHalSupported);
+            boolean vendorHalSupported, int failureCode) throws Exception {
+        validateCreateP2pInterface(hasStaIface, hasApIface, hasP2pIface, false,
+                vendorHalSupported, failureCode);
+    }
+
+    private void validateCreateP2pInterface(
+            boolean hasStaIface, boolean hasApIface, boolean hasP2pIface, boolean hasNanIface,
+            boolean vendorHalSupported, int failureCode) throws Exception {
+        validateStartHal(hasStaIface || hasApIface || hasP2pIface || hasNanIface,
+                vendorHalSupported);
         if (vendorHalSupported) {
-            verify(mHalDeviceManager).createP2pIface(eq(mP2pInterfaceDestroyedListener),
-                    eq(mP2pEventHandler), eq(TEST_WORKSOURCE));
+            verify(mHalDeviceManager).createP2pIface(eq(mTestInterfaceDestroyedListener),
+                    eq(mCreateIfaceEventHandler), eq(TEST_WORKSOURCE));
             if (failureCode == P2P_FAILURE_CODE_CREATE_INTERFACE) {
                 verify(mWifiMetrics).incrementNumSetupP2pInterfaceFailureDueToHal();
             }
@@ -1998,18 +2181,31 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
             boolean isSupplicantStartedBefore, boolean anyOtherApIface,
             boolean anyOtherP2pIface, WifiNative.Iface iface, boolean vendorHalSupported)
             throws Exception {
+        executeAndValidateTeardownP2pInterface(anyOtherStaIface, anyOtherConnectivityStaIface,
+                isSupplicantStartedBefore, anyOtherApIface, anyOtherP2pIface, false,
+                iface, vendorHalSupported);
+    }
+
+    private void executeAndValidateTeardownP2pInterface(
+            boolean anyOtherStaIface, boolean anyOtherConnectivityStaIface,
+            boolean isSupplicantStartedBefore, boolean anyOtherApIface,
+            boolean anyOtherP2pIface, boolean anyOtherNanIface,
+            WifiNative.Iface iface, boolean vendorHalSupported)
+            throws Exception {
         mWifiNative.teardownP2pIface(iface.id);
 
         validateOnDestroyedP2pInterface(anyOtherStaIface, anyOtherConnectivityStaIface,
                 isSupplicantStartedBefore, anyOtherApIface,
-                anyOtherP2pIface, vendorHalSupported);
+                anyOtherP2pIface, anyOtherNanIface, vendorHalSupported);
     }
 
     private void validateOnDestroyedP2pInterface(
             boolean anyOtherStaIface, boolean anyOtherConnectivityStaIface,
             boolean isSupplicantStartedBefore, boolean anyOtherApIface,
-            boolean anyOtherP2pIface, boolean vendorHalSupported) throws Exception {
-        if (vendorHalSupported && !anyOtherStaIface && !anyOtherApIface && !anyOtherP2pIface) {
+            boolean anyOtherP2pIface, boolean anyOtherNanIface,
+            boolean vendorHalSupported) throws Exception {
+        if (vendorHalSupported && !anyOtherStaIface && !anyOtherApIface
+                && !anyOtherP2pIface && !anyOtherNanIface) {
             mInOrder.verify(mWificondControl).tearDownInterfaces();
             mInOrder.verify(mWifiVendorHal).isVendorHalSupported();
             mInOrder.verify(mWifiVendorHal).stopVendorHal();
@@ -2024,6 +2220,39 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
                     mInOrder.verify(mWifiP2pNative).stopP2pSupplicantIfNecessary();
                 }
             }
+        }
+    }
+
+    // Nan
+    private void executeAndValidateCreateNanInterface(
+            boolean hasStaIface, boolean hasApIface, boolean hasP2pIface, boolean hasNanIface,
+            boolean isNeedToMockCreateNan) throws Exception {
+        if (isNeedToMockCreateNan) {
+            when(mHalDeviceManager.createNanIface(any(), any(), any()))
+                    .thenReturn(mActiveWifiNanIface);
+        }
+        mActiveNanIface = mWifiNative.createNanIface(mTestInterfaceDestroyedListener,
+                    mCreateIfaceEventHandler, TEST_WORKSOURCE);
+        validateStartHal(hasStaIface || hasApIface || hasP2pIface || hasNanIface, true);
+        assertNotNull(mActiveNanIface);
+        assertEquals(mActiveNanIface.iface, mActiveWifiNanIface);
+    }
+
+    private void executeAndValidateTeardownNanInterface(
+            boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
+            boolean anyOtherNanIface, WifiNative.Iface iface) throws Exception {
+        mWifiNative.teardownNanIface(iface.id);
+        validateOnDestroyedNanInterface(anyOtherStaIface, anyOtherApIface,
+                anyOtherP2pIface, anyOtherNanIface);
+    }
+
+    private void validateOnDestroyedNanInterface(
+            boolean anyOtherStaIface, boolean anyOtherApIface, boolean anyOtherP2pIface,
+            boolean anyOtherNanIface) throws Exception {
+        if (!anyOtherStaIface && !anyOtherApIface && !anyOtherP2pIface && !anyOtherNanIface) {
+            mInOrder.verify(mWificondControl).tearDownInterfaces();
+            mInOrder.verify(mWifiVendorHal).isVendorHalSupported();
+            mInOrder.verify(mWifiVendorHal).stopVendorHal();
         }
     }
 }

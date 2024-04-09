@@ -21,6 +21,7 @@ import static android.hardware.wifi.V1_0.NanRangingIndication.EGRESS_MET_MASK;
 import static android.net.wifi.WifiAvailableChannel.OP_MODE_WIFI_AWARE;
 import static android.net.wifi.aware.Characteristics.WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128;
 
+import static com.android.server.wifi.WifiSettingsConfigStore.D2D_ALLOWED_WHEN_INFRA_STA_DISABLED;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_AWARE_CAPABILITIES;
 
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -106,12 +107,15 @@ import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.Clock;
+import com.android.server.wifi.DeviceConfigFacade;
 import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.InterfaceConflictManager;
 import com.android.server.wifi.MockResources;
 import com.android.server.wifi.WifiBaseTest;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.WifiNative;
+import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.WifiThreadRunner;
 import com.android.server.wifi.hal.WifiNanIface.NanRangingIndication;
 import com.android.server.wifi.hal.WifiNanIface.NanStatusCode;
@@ -120,6 +124,7 @@ import com.android.server.wifi.util.NetdWrapper;
 import com.android.server.wifi.util.WaitingState;
 import com.android.server.wifi.util.WifiPermissionsUtil;
 import com.android.server.wifi.util.WifiPermissionsWrapper;
+import com.android.wifi.flags.FeatureFlags;
 import com.android.wifi.resources.R;
 
 import org.junit.After;
@@ -177,6 +182,13 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
     @Mock private WifiInjector mWifiInjector;
     @Mock private PairingConfigManager mPairingConfigManager;
     @Mock private StatsManager mStatsManager;
+    @Mock private DeviceConfigFacade mDeviceConfigFacade;
+    @Mock private FeatureFlags mFeatureFlags;
+    @Mock private WifiSettingsConfigStore mWifiSettingsConfigStore;
+    @Mock private WifiGlobals mWifiGlobals;
+    final ArgumentCaptor<WifiSettingsConfigStore.OnSettingsChangedListener>
+            mD2dAllowedSettingChangedListenerCaptor =
+            ArgumentCaptor.forClass(WifiSettingsConfigStore.OnSettingsChangedListener.class);
 
     @Rule
     public ErrorCollector collector = new ErrorCollector();
@@ -253,6 +265,11 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         WifiThreadRunner wifiThreadRunner = new WifiThreadRunner(wifiHandler);
         when(mWifiInjector.getWifiNative()).thenReturn(mWifiNative);
         when(mWifiInjector.getWifiThreadRunner()).thenReturn(wifiThreadRunner);
+        when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
+        when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
+        when(mWifiInjector.getWifiGlobals()).thenReturn(mWifiGlobals);
+        when(mDeviceConfigFacade.getFeatureFlags()).thenReturn(mFeatureFlags);
+        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(true);
         mDut = new WifiAwareStateManager(mWifiInjector, mPairingConfigManager);
         mDut.setNative(mMockNativeManager, mMockNative);
         mDut.start(mMockContext, mMockLooper.getLooper(), mAwareMetricsMock,
@@ -277,6 +294,10 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         mPowerBcastReceiver = bcastRxCaptor.getAllValues().get(0);
         mLocationModeReceiver = bcastRxCaptor.getAllValues().get(1);
         mWifiStateChangedReceiver = bcastRxCaptor.getAllValues().get(2);
+        verify(mWifiSettingsConfigStore).registerChangeListener(
+                eq(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED),
+                mD2dAllowedSettingChangedListenerCaptor.capture(),
+                any(Handler.class));
         installMocksInStateManager(mDut, mMockAwareDataPathStatemanager);
 
         ArgumentCaptor<Short> transactionId = ArgumentCaptor.forClass(Short.class);
@@ -3869,6 +3890,12 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         mMockLooper.dispatchAll();
 
         // and same for other gating changes -> no changes
+        simulateD2dAllowedChange(false);
+        mMockLooper.dispatchAll();
+        simulateD2dAllowedChange(true);
+        mMockLooper.dispatchAll();
+
+        // and same for other gating changes -> no changes
         simulateLocationModeChange(true);
         simulateWifiStateChange(true);
         mMockLooper.dispatchAll();
@@ -3936,6 +3963,12 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         // disable other gating feature -> no change
         simulatePowerStateChangeDoze(true);
         simulateWifiStateChange(false);
+        mMockLooper.dispatchAll();
+
+        // and same for other gating changes -> no changes
+        simulateD2dAllowedChange(false);
+        mMockLooper.dispatchAll();
+        simulateD2dAllowedChange(true);
         mMockLooper.dispatchAll();
 
         // enable other gating feature -> no change
@@ -4055,7 +4088,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         assertTrue(mDut.isDeviceAttached());
         inOrder.verify(mockCallback).onConnectSuccess(clientId);
 
-        // (3) wifi state change: disable
+        // (3) wifi state change: disable & D2d disallowed
+        simulateD2dAllowedChange(false);
         simulateWifiStateChange(false);
         mMockLooper.dispatchAll();
         inOrder.verify(mockCallback).onAttachTerminate();
@@ -4077,7 +4111,24 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         simulateLocationModeChange(true);
         mMockLooper.dispatchAll();
 
-        // (4) wifi state change: enable
+        // (4) wifi state change: disable & D2d allowed
+        simulateD2dAllowedChange(true);
+        mMockLooper.dispatchAll();
+        collector.checkThat("usage enabled", mDut.isUsageEnabled(), equalTo(true));
+        validateCorrectAwareStatusChangeBroadcast(inOrder);
+
+        // (5) wifi state change: disable & D2d disallowed
+        simulateD2dAllowedChange(false);
+        mMockLooper.dispatchAll();
+        validateCorrectAwareStatusChangeBroadcast(inOrder);
+        inOrder.verify(mMockNative).disable(transactionId.capture());
+        mDut.onDisableResponse(transactionId.getValue(), NanStatusCode.SUCCESS);
+        mMockLooper.dispatchAll();
+        inOrder.verify(mMockNativeManager).releaseAware();
+        assertFalse(mDut.isDeviceAttached());
+        collector.checkThat("usage disabled", mDut.isUsageEnabled(), equalTo(false));
+
+        // (6) wifi state change: enable
         simulateWifiStateChange(true);
         mMockLooper.dispatchAll();
         collector.checkThat("usage enabled", mDut.isUsageEnabled(), equalTo(true));
@@ -5754,6 +5805,14 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         intent.putExtra(WifiManager.EXTRA_WIFI_STATE,
                 isWifiOn ? WifiManager.WIFI_STATE_ENABLED : WifiManager.WIFI_STATE_DISABLED);
         mWifiStateChangedReceiver.onReceive(mMockContext, intent);
+    }
+
+    private void simulateD2dAllowedChange(boolean isD2dAllowed) {
+        when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
+        when(mWifiSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED))
+                .thenReturn(isD2dAllowed);
+        mD2dAllowedSettingChangedListenerCaptor.getValue()
+                .onSettingsChanged(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED, isD2dAllowed);
     }
 
     private static Capabilities getCapabilities() {
