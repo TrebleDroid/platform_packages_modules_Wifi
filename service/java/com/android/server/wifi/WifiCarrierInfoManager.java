@@ -2174,7 +2174,7 @@ public class WifiCarrierInfoManager {
         // Set the flag to let WifiConfigStore that we have new data to write.
         mHasNewUserDataToSerialize = true;
         mHasNewSharedDataToSerialize = true;
-        if (!mWifiInjector.getWifiConfigManager().saveToStore(true)) {
+        if (!mWifiInjector.getWifiConfigManager().saveToStore()) {
             Log.w(TAG, "Failed to save to store");
         }
     }

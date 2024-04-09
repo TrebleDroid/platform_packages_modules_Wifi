@@ -204,7 +204,7 @@ public class WakeupOnboardingTest extends WifiBaseTest {
     public void setOnboardedSavesToStore() {
         setOnboardedStatus(false);
         mWakeupOnboarding.setOnboarded();
-        verify(mWifiConfigManager).saveToStore(false /* forceWrite */);
+        verify(mWifiConfigManager).saveToStore();
         assertTrue(mWakeupOnboarding.isOnboarded());
     }
 
@@ -216,7 +216,7 @@ public class WakeupOnboardingTest extends WifiBaseTest {
         setOnboardedStatus(false);
         setNotificationsShown(0);
         mWakeupOnboarding.maybeShowNotification();
-        verify(mWifiConfigManager).saveToStore(false /* forceWrite */);
+        verify(mWifiConfigManager).saveToStore();
     }
 
     /**

@@ -379,7 +379,7 @@ public class WifiInjector {
         mKeyStore = keyStore;
         mWifiKeyStore = new WifiKeyStore(mContext, mKeyStore, mFrameworkFacade);
         // New config store
-        mWifiConfigStore = new WifiConfigStore(mContext, wifiHandler, mClock, mWifiMetrics,
+        mWifiConfigStore = new WifiConfigStore(mClock, mWifiMetrics,
                 WifiConfigStore.createSharedFiles(mFrameworkFacade.isNiapModeOn(mContext)));
         mWifiPseudonymManager =
                 new WifiPseudonymManager(

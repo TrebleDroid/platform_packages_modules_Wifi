@@ -211,7 +211,7 @@ public class WakeupController {
         if (mIsActive != isActive) {
             Log.d(TAG, "Setting active to " + isActive);
             mIsActive = isActive;
-            mWifiConfigManager.saveToStore(false /* forceWrite */);
+            mWifiConfigManager.saveToStore();
         }
     }
 

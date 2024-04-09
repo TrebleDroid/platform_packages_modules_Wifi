@@ -79,7 +79,7 @@ public class WakeupLock {
 
         Log.d(TAG, "Lock set. Number of networks: " + mLockedNetworks.size());
 
-        mWifiConfigManager.saveToStore(false /* forceWrite */);
+        mWifiConfigManager.saveToStore();
     }
 
     /**
@@ -160,7 +160,7 @@ public class WakeupLock {
         }
 
         if (hasChanged) {
-            mWifiConfigManager.saveToStore(false /* forceWrite */);
+            mWifiConfigManager.saveToStore();
         }
 
         // Set initialized if the lock has handled enough scans, and log the event
@@ -206,7 +206,7 @@ public class WakeupLock {
         }
 
         if (hasChanged) {
-            mWifiConfigManager.saveToStore(false /* forceWrite */);
+            mWifiConfigManager.saveToStore();
         }
 
         if (isUnlocked()) {

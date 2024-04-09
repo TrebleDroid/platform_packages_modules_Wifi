@@ -8653,7 +8653,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             return false;
         }
 
-        return mWifiConfigManager.saveToStore(true);
+        return mWifiConfigManager.saveToStore();
     }
 
     /**
