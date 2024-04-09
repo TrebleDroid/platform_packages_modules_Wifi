@@ -5062,10 +5062,29 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         mClientListener.onStopped(mClientModeManager);
         mLooper.dispatchAll();
         assertInDisabledState();
+        verify(mLastCallerInfoManager).put(eq(WifiManager.API_WIFI_ENABLED), anyInt(),
+                anyInt(), anyInt(), any(), eq(false));
     }
 
     @Test
-    public void testSatelliteModeOffEnableWifi() throws Exception {
+    public void testSatelliteModeOffNoOp() throws Exception {
+        // Wifi is enabled
+        enterClientModeActiveState();
+        assertInEnabledState();
+
+        // Satellite mode is off
+        when(mSettingsStore.isSatelliteModeOn()).thenReturn(false);
+        mActiveModeWarden.handleSatelliteModeChange();
+
+        mLooper.dispatchAll();
+        assertInEnabledState();
+        // Should not enable wifi again since wifi is already on
+        verify(mLastCallerInfoManager, never()).put(eq(WifiManager.API_WIFI_ENABLED), anyInt(),
+                anyInt(), anyInt(), any(), eq(true));
+    }
+
+    @Test
+    public void testSatelliteModeOnAndThenOffEnableWifi() throws Exception {
         // Wifi is enabled
         enterClientModeActiveState();
         assertInEnabledState();
@@ -5079,12 +5098,16 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         mClientListener.onStopped(mClientModeManager);
         mLooper.dispatchAll();
         assertInDisabledState();
+        verify(mLastCallerInfoManager).put(eq(WifiManager.API_WIFI_ENABLED), anyInt(),
+                anyInt(), anyInt(), any(), eq(false));
 
         // Satellite mode is off, enable Wifi
         when(mSettingsStore.isSatelliteModeOn()).thenReturn(false);
         mActiveModeWarden.handleSatelliteModeChange();
         mLooper.dispatchAll();
         assertInEnabledState();
+        verify(mLastCallerInfoManager).put(eq(WifiManager.API_WIFI_ENABLED), anyInt(),
+                anyInt(), anyInt(), any(), eq(true));
     }
 
 
