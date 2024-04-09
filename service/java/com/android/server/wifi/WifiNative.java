@@ -20,6 +20,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_OWE;
 
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
+import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_NAN;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_P2P;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_NATIVE_SUPPORTED_FEATURES;
@@ -75,6 +76,8 @@ import com.android.internal.util.HexDump;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.SupplicantStaIfaceHal.QosPolicyStatus;
 import com.android.server.wifi.hal.WifiChip;
+import com.android.server.wifi.hal.WifiHal;
+import com.android.server.wifi.hal.WifiNanIface;
 import com.android.server.wifi.hotspot2.NetworkDetail;
 import com.android.server.wifi.mockwifi.MockWifiServiceUtil;
 import com.android.server.wifi.proto.WifiStatsLog;
@@ -368,9 +371,10 @@ public class WifiNative {
         public static final int IFACE_TYPE_STA_FOR_CONNECTIVITY = 1;
         public static final int IFACE_TYPE_STA_FOR_SCAN = 2;
         public static final int IFACE_TYPE_P2P = 3;
+        public static final int IFACE_TYPE_NAN = 4;
 
         @IntDef({IFACE_TYPE_AP, IFACE_TYPE_STA_FOR_CONNECTIVITY, IFACE_TYPE_STA_FOR_SCAN,
-                IFACE_TYPE_P2P})
+                IFACE_TYPE_P2P, IFACE_TYPE_NAN})
         @Retention(RetentionPolicy.SOURCE)
         public @interface IfaceType{}
 
@@ -390,6 +394,7 @@ public class WifiNative {
         public long featureSet;
         public int bandsSupported;
         public DeviceWiphyCapabilities phyCapabilities;
+        public WifiHal.WifiInterface iface;
 
         Iface(int id, @Iface.IfaceType int type) {
             this.id = id;
@@ -1288,6 +1293,46 @@ public class WifiNative {
             mIfaceMgr.removeIface(interfaceId);
             stopHalAndWificondIfNecessary();
             stopSupplicantIfNecessary();
+        }
+    }
+
+    /**
+     * Helper function to handle creation of Nan iface.
+     */
+    public Iface createNanIface(
+            HalDeviceManager.InterfaceDestroyedListener nanInterfaceDestroyedListener,
+            Handler handler, WorkSource requestorWs) {
+        synchronized (mLock) {
+            // Make sure HAL is started for Nan
+            if (!startHal()) {
+                Log.e(TAG, "Failed to start Hal");
+                return null;
+            }
+            // maintain iface status in WifiNative
+            Iface iface = mIfaceMgr.allocateIface(Iface.IFACE_TYPE_NAN);
+            if (iface != null) {
+                WifiNanIface nanIface = mWifiInjector.getHalDeviceManager().createNanIface(
+                        nanInterfaceDestroyedListener, handler, requestorWs);
+                if (nanIface != null) {
+                    iface.iface = nanIface;
+                    return iface;
+                }
+            }
+            Log.e(TAG, "Failed to allocate new Nan iface");
+            stopHalAndWificondIfNecessary();
+            return null;
+        }
+    }
+
+    /**
+     * Teardown Nan iface with input interface Id which was returned by createP2pIface.
+     *
+     * @param interfaceId the interface identify which was gerenated when creating P2p iface.
+     */
+    public void teardownNanIface(int interfaceId) {
+        synchronized (mLock) {
+            mIfaceMgr.removeIface(interfaceId);
+            stopHalAndWificondIfNecessary();
         }
     }
 
@@ -3772,6 +3817,19 @@ public class WifiNative {
                     new SparseArray<Integer>() {{
                             put(HDM_CREATE_IFACE_STA, 1);
                             put(HDM_CREATE_IFACE_P2P, 1);
+                    }});
+        }
+    }
+
+    /**
+     * Returns whether Nan + STA concurrency is supported or not.
+     */
+    public boolean isNanStaConcurrencySupported() {
+        synchronized (mLock) {
+            return mWifiVendorHal.canDeviceSupportCreateTypeCombo(
+                    new SparseArray<Integer>() {{
+                            put(HDM_CREATE_IFACE_STA, 1);
+                            put(HDM_CREATE_IFACE_NAN, 1);
                     }});
         }
     }

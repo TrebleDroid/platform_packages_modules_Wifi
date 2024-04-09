@@ -27,6 +27,7 @@ import static android.net.wifi.aware.WifiAwareManager.WIFI_AWARE_SUSPEND_INTERNA
 import static android.net.wifi.aware.WifiAwareManager.WIFI_AWARE_SUSPEND_INVALID_SESSION;
 import static android.net.wifi.aware.WifiAwareManager.WIFI_AWARE_SUSPEND_REDUNDANT_REQUEST;
 
+import static com.android.server.wifi.WifiSettingsConfigStore.D2D_ALLOWED_WHEN_INFRA_STA_DISABLED;
 import static com.android.server.wifi.aware.WifiAwareMetrics.convertNanStatusCodeToWifiStatsLogEnum;
 import static com.android.server.wifi.hal.WifiNanIface.NanStatusCode.NOT_SUPPORTED;
 import static com.android.server.wifi.hal.WifiNanIface.NanStatusCode.NO_CONNECTION;
@@ -117,7 +118,9 @@ import com.android.server.wifi.Clock;
 import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.InterfaceConflictManager;
 import com.android.server.wifi.RunnerState;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiInjector;
+import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.aware.PairingConfigManager.PairingSecurityAssociationInfo;
 import com.android.server.wifi.hal.WifiNanIface.NanStatusCode;
 import com.android.server.wifi.proto.WifiStatsLog;
@@ -125,6 +128,7 @@ import com.android.server.wifi.util.NetdWrapper;
 import com.android.server.wifi.util.WaitingState;
 import com.android.server.wifi.util.WifiPermissionsUtil;
 import com.android.server.wifi.util.WifiPermissionsWrapper;
+import com.android.wifi.flags.FeatureFlags;
 import com.android.wifi.resources.R;
 
 import org.json.JSONException;
@@ -374,6 +378,9 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     private Handler mHandler;
     private final WifiInjector mWifiInjector;
     private final PairingConfigManager mPairingConfigManager;
+    private final WifiSettingsConfigStore mSettingsConfigStore;
+    private final WifiGlobals mWifiGlobals;
+    private final FeatureFlags mFeatureFlags;
 
     private final SparseArray<WifiAwareClientState> mClients = new SparseArray<>();
     private ConfigRequest mCurrentAwareConfiguration = null;
@@ -437,6 +444,9 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             PairingConfigManager pairingConfigManager) {
         mWifiInjector = wifiInjector;
         mPairingConfigManager = pairingConfigManager;
+        mWifiGlobals =  mWifiInjector.getWifiGlobals();
+        mFeatureFlags = mWifiInjector.getDeviceConfigFacade().getFeatureFlags();
+        mSettingsConfigStore = mWifiInjector.getSettingsConfigStore();
         onReset();
     }
 
@@ -759,13 +769,38 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                         if (isEnabled) {
                             enableUsage();
                         } else {
-                            disableUsage(false);
+                            if (!isD2dAllowedWhenStaDisabled()) {
+                                disableUsage(false);
+                            }
                         }
                     }
                 },
                 intentFilter,
                 null,
                 mHandler);
+        if (mFeatureFlags.d2dWhenInfraStaOff()) {
+            mSettingsConfigStore.registerChangeListener(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED,
+                    (key, value) -> {
+                        // Check setting & wifi enabled status only when feature is supported.
+                        if (mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()) {
+                            if (mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)) {
+                                enableUsage();
+                            } else if (mWifiManager.getWifiState()
+                                    != WifiManager.WIFI_STATE_ENABLED) {
+                                disableUsage(false);
+                            }
+                        }
+                    }, mHandler);
+        }
+        if (isD2dAllowedWhenStaDisabled()) {
+            enableUsage();
+        }
+    }
+
+    public boolean isD2dAllowedWhenStaDisabled() {
+        return mFeatureFlags.d2dWhenInfraStaOff()
+                && mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()
+                        && mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED);
     }
 
     private class CountryCodeChangeCallback implements
@@ -1432,10 +1467,13 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             return;
         }
         if (mWifiManager.getWifiState() != WifiManager.WIFI_STATE_ENABLED) {
-            if (mVerboseLoggingEnabled) {
-                Log.d(TAG, "enableUsage(): while Wi-Fi is disabled - ignoring");
+            if (!isD2dAllowedWhenStaDisabled()) {
+                if (mVerboseLoggingEnabled) {
+                    Log.d(TAG, "enableUsage(): while Wi-Fi is disabled"
+                            + " & D2D isn't allowed - ignoring");
+                }
+                return;
             }
-            return;
         }
         Message msg = mSm.obtainMessage(MESSAGE_TYPE_COMMAND);
         msg.arg1 = COMMAND_TYPE_ENABLE_USAGE;
