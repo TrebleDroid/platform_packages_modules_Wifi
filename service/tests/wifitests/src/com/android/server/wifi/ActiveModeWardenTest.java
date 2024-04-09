@@ -276,7 +276,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         verify(mWifiMetrics).noteWifiEnabledDuringBoot(false);
-
+        verify(mWifiGlobals).setD2dStaConcurrencySupported(false);
         verify(mWifiNative).registerStatusListener(mStatusListenerCaptor.capture());
         verify(mWifiNative).initialize();
         mWifiNativeStatusListener = mStatusListenerCaptor.getValue();
@@ -1156,6 +1156,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mWifiNative).isStaApConcurrencySupported();
         verify(mWifiNative).isStaStaConcurrencySupported();
         verify(mWifiNative).isP2pStaConcurrencySupported();
+        verify(mWifiNative).isNanStaConcurrencySupported();
         verifyZeroInteractions(mWifiNative);
     }
 
@@ -5348,11 +5349,25 @@ public class ActiveModeWardenTest extends WifiBaseTest {
     }
 
     @Test
-    public void testD2dSupportedWhenInfraStaDisabled() throws Exception {
+    public void testD2dSupportedWhenInfraStaDisabledWhenP2pStaConcurrencySupported()
+            throws Exception {
         when(mWifiNative.isP2pStaConcurrencySupported()).thenReturn(true);
         when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
         mActiveModeWarden = createActiveModeWarden();
         mActiveModeWarden.start();
+        mLooper.dispatchAll();
+        verify(mWifiGlobals).setD2dStaConcurrencySupported(true);
+        verify(mWifiGlobals, atLeastOnce()).isD2dSupportedWhenInfraStaDisabled();
+    }
+
+    @Test
+    public void testD2dSupportedWhenInfraStaDisabledWhenNanStaConcurrencySupported()
+            throws Exception {
+        when(mWifiNative.isNanStaConcurrencySupported()).thenReturn(true);
+        when(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()).thenReturn(true);
+        mActiveModeWarden = createActiveModeWarden();
+        mActiveModeWarden.start();
+        mLooper.dispatchAll();
         verify(mWifiGlobals).setD2dStaConcurrencySupported(true);
         verify(mWifiGlobals, atLeastOnce()).isD2dSupportedWhenInfraStaDisabled();
     }
