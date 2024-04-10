@@ -18,6 +18,7 @@ package com.android.server.wifi.p2p;
 
 import static android.os.Process.SYSTEM_UID;
 
+import android.annotation.Nullable;
 import android.content.Context;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -230,6 +231,8 @@ public class WifiP2pMetrics {
                 sb.append(event.staFrequencyMhz);
                 sb.append(", uid=");
                 sb.append(event.uid);
+                sb.append(", attributionTag=");
+                sb.append(event.attributionTag);
                 sb.append(", connectivityLevelFailureCode=").append(
                         getConnectivityLevelFailureCodeToString(
                                 event.connectivityLevelFailureCode));
@@ -381,10 +384,15 @@ public class WifiP2pMetrics {
      * @param connectionType indicate this connection is fresh or reinvoke.
      * @param config configuration used for this connection.
      * @param groupRole groupRole used for this connection.
+     * @param uid uid of caller app
+     * @param attributionTag attributionTag of caller app
      */
     public void startConnectionEvent(int connectionType, WifiP2pConfig config, int groupRole,
-            int uid) {
+            int uid, @Nullable String attributionTag) {
         synchronized (mLock) {
+            if (attributionTag == null) {
+                attributionTag = "";
+            }
             StringBuilder stringBuilder = new StringBuilder("Start connection event");
             if (mCurrentConnectionEvent == null) {
                 stringBuilder.append(", mCurrentConnectionEvent:null");
@@ -394,6 +402,7 @@ public class WifiP2pMetrics {
                         .append(", curGroupRole:")
                         .append(getGroupRoleToString(mCurrentConnectionEvent.groupRole))
                         .append(", curUid:").append(mCurrentConnectionEvent.uid)
+                        .append(", attributionTag:").append(mCurrentConnectionEvent.attributionTag)
                         .append(", curConnectivityLevelFailureCode:")
                         .append(getConnectivityLevelFailureCodeToString(
                                 mCurrentConnectionEvent.connectivityLevelFailureCode));
@@ -401,7 +410,8 @@ public class WifiP2pMetrics {
             stringBuilder.append(", startConnectionType:")
                     .append(getconnectionTypeToString(connectionType))
                     .append(", startGroupRole:").append(getGroupRoleToString(groupRole))
-                    .append(", startUid:").append(uid);
+                    .append(", startUid:").append(uid)
+                    .append(", startAttributionTag:").append(attributionTag);
             Log.d(TAG, stringBuilder.toString());
             // handle overlapping connection event first.
             if (mCurrentConnectionEvent != null) {
@@ -426,6 +436,7 @@ public class WifiP2pMetrics {
             }
             mCurrentConnectionEvent.staFrequencyMhz = getWifiStaFrequency();
             mCurrentConnectionEvent.uid = uid;
+            mCurrentConnectionEvent.attributionTag = attributionTag;
             if (mLastConnectionEventUid == uid && mCurrentConnectionEventStartTime < (
                     mLastConnectionEventStartTime + MAX_CONNECTION_ATTEMPT_TIME_INTERVAL_MS)) {
                 mLastConnectionTryCount += 1;
@@ -464,6 +475,7 @@ public class WifiP2pMetrics {
                         .append(getGroupRoleToString(mCurrentConnectionEvent.groupRole))
                         .append(", curUid:")
                         .append(mCurrentConnectionEvent.uid)
+                        .append(", attributionTag:").append(mCurrentConnectionEvent.attributionTag)
                         .append(", curConnectivityLevelFailureCode:")
                         .append(getConnectivityLevelFailureCodeToString(
                                 mCurrentConnectionEvent.connectivityLevelFailureCode));
@@ -474,9 +486,9 @@ public class WifiP2pMetrics {
             if (mCurrentConnectionEvent == null) {
                 // Reinvoking a group with invitation will be handled in supplicant.
                 // There won't be a connection starting event in framework.
-                // THe framework only get the connection ending event in GroupStarted state.
+                // The framework only gets the connection ending event in GroupStarted state.
                 startConnectionEvent(P2pConnectionEvent.CONNECTION_REINVOKE, null,
-                        GroupEvent.GROUP_UNKNOWN, SYSTEM_UID);
+                        GroupEvent.GROUP_UNKNOWN, SYSTEM_UID, null);
             }
 
             mCurrentConnectionEvent.durationTakenToConnectMillis = (int)
@@ -497,7 +509,8 @@ public class WifiP2pMetrics {
                     mCurrentConnectionEvent.uid,
                     mIsCountryCodeWorldMode,
                     mCurrentConnectionEvent.fallbackToNegotiationOnInviteStatusInfoUnavailable,
-                    mCurrentConnectionEvent.tryCount);
+                    mCurrentConnectionEvent.tryCount,
+                    mCurrentConnectionEvent.attributionTag);
             mCurrentConnectionEvent = null;
             if (P2pConnectionEvent.CLF_NONE == failure) {
                 mLastConnectionTryCount = 0;
