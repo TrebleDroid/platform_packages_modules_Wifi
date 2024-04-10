@@ -18,5 +18,10 @@
     {
       "name": "FrameworksWifiTests[com.google.android.wifi.apex]"
     }
+  ],
+  "wifi-mainline-presubmit": [
+    {
+      "name": "FrameworksWifiTests"
+    }
   ]
 }
