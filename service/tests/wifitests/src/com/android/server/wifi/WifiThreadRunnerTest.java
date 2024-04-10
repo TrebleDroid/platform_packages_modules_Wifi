@@ -82,7 +82,7 @@ public class WifiThreadRunnerTest extends WifiBaseTest {
             return true;
         }).when(mHandler).runWithScissors(any(), anyLong());
 
-        Integer result = mWifiThreadRunner.call(mSupplier, VALUE_ON_TIMEOUT);
+        Integer result = mWifiThreadRunner.call(mSupplier, VALUE_ON_TIMEOUT, "taskName");
 
         assertThat(result).isEqualTo(RESULT);
         verify(mSupplier).get();
@@ -90,9 +90,9 @@ public class WifiThreadRunnerTest extends WifiBaseTest {
 
     @Test
     public void callFailure_returnValueOnTimeout() {
-        doReturn(false).when(mHandler).post(any());
+        doReturn(false).when(mHandler).sendMessage(any());
 
-        Integer result = mWifiThreadRunner.call(mSupplier, VALUE_ON_TIMEOUT);
+        Integer result = mWifiThreadRunner.call(mSupplier, VALUE_ON_TIMEOUT, "taskName");
 
         assertThat(result).isEqualTo(VALUE_ON_TIMEOUT);
         verify(mSupplier, never()).get();
@@ -107,7 +107,7 @@ public class WifiThreadRunnerTest extends WifiBaseTest {
             return true;
         }).when(mHandler).runWithScissors(any(), anyLong());
 
-        boolean result = mWifiThreadRunner.run(mRunnable);
+        boolean result = mWifiThreadRunner.run(mRunnable, "taskName");
 
         assertThat(result).isTrue();
         verify(mRunnable).run();
@@ -115,9 +115,9 @@ public class WifiThreadRunnerTest extends WifiBaseTest {
 
     @Test
     public void runFailure() {
-        doReturn(false).when(mHandler).post(any());
+        doReturn(false).when(mHandler).sendMessage(any());
 
-        boolean runSuccess = mWifiThreadRunner.run(mRunnable);
+        boolean runSuccess = mWifiThreadRunner.run(mRunnable, "taskName");
 
         assertThat(runSuccess).isFalse();
         verify(mRunnable, never()).run();

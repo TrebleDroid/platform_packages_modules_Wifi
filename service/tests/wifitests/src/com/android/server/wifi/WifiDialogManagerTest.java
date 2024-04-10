@@ -455,7 +455,7 @@ public class WifiDialogManagerTest extends WifiBaseTest {
         verify(builder).setNeutralButton(eq(TEST_NEUTRAL_BUTTON_TEXT),
                 neutralButtonListenerCaptor.capture());
         verify(builder).setOnCancelListener(cancelListenerCaptor.capture());
-        verify(mWifiThreadRunner, never()).postDelayed(any(Runnable.class), anyInt());
+        verify(mWifiThreadRunner, never()).postDelayed(any(Runnable.class), anyInt(), anyString());
 
         // Positive
         positiveButtonListenerCaptor.getValue().onClick(dialog, DialogInterface.BUTTON_POSITIVE);
@@ -508,7 +508,8 @@ public class WifiDialogManagerTest extends WifiBaseTest {
         // Verify the timeout runnable was posted and run it.
         ArgumentCaptor<Runnable> runnableArgumentCaptor = ArgumentCaptor.forClass(Runnable.class);
         verify(mWifiThreadRunner, times(1))
-                .postDelayed(runnableArgumentCaptor.capture(), eq((long) TIMEOUT_MILLIS));
+                .postDelayed(runnableArgumentCaptor.capture(), eq((long) TIMEOUT_MILLIS),
+                        anyString());
         runnableArgumentCaptor.getValue().run();
 
         // Verify that the dialog was cancelled.
@@ -546,7 +547,8 @@ public class WifiDialogManagerTest extends WifiBaseTest {
         // Verify the timeout runnable was posted.
         ArgumentCaptor<Runnable> runnableArgumentCaptor = ArgumentCaptor.forClass(Runnable.class);
         verify(mWifiThreadRunner, times(1))
-                .postDelayed(runnableArgumentCaptor.capture(), eq((long) TIMEOUT_MILLIS));
+                .postDelayed(runnableArgumentCaptor.capture(), eq((long) TIMEOUT_MILLIS),
+                        anyString());
         runnableArgumentCaptor.getValue().run();
 
         // Dismiss the dialog before the timeout runnable executes.
@@ -626,7 +628,7 @@ public class WifiDialogManagerTest extends WifiBaseTest {
         verify(builder).setNeutralButton(eq(TEST_NEUTRAL_BUTTON_TEXT),
                 neutralButtonListenerCaptor.capture());
         verify(builder).setOnCancelListener(cancelListenerCaptor.capture());
-        verify(mWifiThreadRunner, never()).postDelayed(any(Runnable.class), anyInt());
+        verify(mWifiThreadRunner, never()).postDelayed(any(Runnable.class), anyInt(), anyString());
 
         // Positive
         positiveButtonListenerCaptor.getValue().onClick(dialog, DialogInterface.BUTTON_POSITIVE);
@@ -679,7 +681,8 @@ public class WifiDialogManagerTest extends WifiBaseTest {
         // Verify the timeout runnable was posted and run it.
         ArgumentCaptor<Runnable> runnableArgumentCaptor = ArgumentCaptor.forClass(Runnable.class);
         verify(mWifiThreadRunner, times(1))
-                .postDelayed(runnableArgumentCaptor.capture(), eq((long) TIMEOUT_MILLIS));
+                .postDelayed(runnableArgumentCaptor.capture(), eq((long) TIMEOUT_MILLIS),
+                        anyString());
         runnableArgumentCaptor.getValue().run();
 
         // Verify that the dialog was cancelled.
@@ -717,7 +720,8 @@ public class WifiDialogManagerTest extends WifiBaseTest {
         // Verify the timeout runnable was posted.
         ArgumentCaptor<Runnable> runnableArgumentCaptor = ArgumentCaptor.forClass(Runnable.class);
         verify(mWifiThreadRunner, times(1))
-                .postDelayed(runnableArgumentCaptor.capture(), eq((long) TIMEOUT_MILLIS));
+                .postDelayed(runnableArgumentCaptor.capture(), eq((long) TIMEOUT_MILLIS),
+                        anyString());
         runnableArgumentCaptor.getValue().run();
 
         // Dismiss the dialog before the timeout runnable executes.

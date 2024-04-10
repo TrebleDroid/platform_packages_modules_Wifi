@@ -158,7 +158,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             if (mChannelHelper == null) return new ChannelSpec[0][0];
             mChannelHelper.updateChannels();
             return mChannelHelper.getAvailableScanChannels(band);
-        }, new ChannelSpec[0][0]);
+        }, new ChannelSpec[0][0], TAG + "#getAvailableChannels");
         if (channelSpecs == null) {
             channelSpecs = new ChannelSpec[0][0];
         }
@@ -455,7 +455,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             return new ArrayList<>();
         }
         return mWifiThreadRunner.call(() -> mSingleScanStateMachine.filterCachedScanResultsByAge(),
-                new ArrayList<ScanResult>());
+                new ArrayList<ScanResult>(), TAG + "#getSingleScanResults");
     }
 
 
