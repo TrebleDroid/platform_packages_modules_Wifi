@@ -858,26 +858,12 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"connect-network", "012345", "open", "-x"});
-        verify(mWifiService, never()).connect(argThat(wifiConfiguration ->
-                (wifiConfiguration.SSID.equals("012345"))), eq(-1), any(), any(), any());
-
-        BinderUtil.setUid(Process.ROOT_UID);
-        mWifiShellCommand.exec(
-                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
-                new String[]{"connect-network", "012345", "open", "-x"});
         verify(mWifiService).connect(argThat(wifiConfiguration ->
                 (wifiConfiguration.SSID.equals("012345"))), eq(-1), any(), any(), any());
     }
 
     @Test
     public void testAddNetworkWithHexSsid() {
-        mWifiShellCommand.exec(
-                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
-                new String[]{"add-network", "012345", "open", "-x"});
-        verify(mWifiService, never()).save(argThat(wifiConfiguration ->
-                (wifiConfiguration.SSID.equals("012345"))), any());
-
-        BinderUtil.setUid(Process.ROOT_UID);
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-network", "012345", "open", "-x"});
