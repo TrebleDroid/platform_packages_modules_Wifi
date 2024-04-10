@@ -21,6 +21,8 @@ import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSI
 import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_SAE;
 import static android.net.wifi.SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION;
 
+import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_STATIC_CHIP_INFO;
+
 import android.annotation.NonNull;
 import android.app.compat.CompatChanges;
 import android.content.Context;
@@ -86,6 +88,8 @@ public class WifiApConfigStore {
     private final WifiConfigManager mWifiConfigManager;
     private final ActiveModeWarden mActiveModeWarden;
     private final WifiNative mWifiNative;
+    private final HalDeviceManager mHalDeviceManager;
+    private final WifiSettingsConfigStore mWifiSettingsConfigStore;
     private boolean mHasNewDataToSerialize = false;
     private boolean mForceApChannel = false;
     private int mForcedApBand;
@@ -146,6 +150,26 @@ public class WifiApConfigStore {
         mMacAddressUtil = wifiInjector.getMacAddressUtil();
         mIsAutoAppendLowerBandEnabled = mContext.getResources().getBoolean(
                 R.bool.config_wifiSoftapAutoAppendLowerBandsToBandConfigurationEnabled);
+        mHalDeviceManager = wifiInjector.getHalDeviceManager();
+        mWifiSettingsConfigStore = wifiInjector.getSettingsConfigStore();
+        mWifiSettingsConfigStore.registerChangeListener(WIFI_STATIC_CHIP_INFO,
+                (key, value) -> {
+                    if (mPersistentWifiApConfig != null
+                            && mHalDeviceManager.isConcurrencyComboLoadedFromDriver()) {
+                        Log.i(TAG, "Chip capability is updated, check config");
+                        SoftApConfiguration.Builder configBuilder =
+                                new SoftApConfiguration.Builder(mPersistentWifiApConfig);
+                        if (SdkLevel.isAtLeastS()
+                                && mPersistentWifiApConfig.getBands().length > 1) {
+                            // Current band setting is dual band, check if device supports it.
+                            if (!ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative)) {
+                                Log.i(TAG, "Chip doesn't support bridgedAp, reset to default band");
+                                configBuilder.setBand(generateDefaultBand(mContext));
+                                persistConfigAndTriggerBackupManagerProxy(configBuilder.build());
+                            }
+                        }
+                    }
+                }, mHandler);
     }
 
     /**
@@ -419,8 +443,11 @@ public class WifiApConfigStore {
 
         // It is new overlay configuration, it should always false in R. Add SdkLevel.isAtLeastS for
         // lint check
-        if (ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative)) {
-            if (SdkLevel.isAtLeastS()) {
+        if (SdkLevel.isAtLeastS()) {
+            boolean isBridgedModeSupported = mHalDeviceManager.isConcurrencyComboLoadedFromDriver()
+                    ? ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative)
+                            : ApConfigUtil.isBridgedModeSupportedInConfig(mContext);
+            if (isBridgedModeSupported) {
                 int[] dual_bands = new int[] {
                         SoftApConfiguration.BAND_2GHZ,
                         SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ};
