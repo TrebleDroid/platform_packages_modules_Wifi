@@ -287,7 +287,7 @@ public class WifiSettingsConfigStore {
     private void triggerSaveToStoreAndInvokeAllListeners() {
         mHandler.post(() -> {
             mHasNewDataToSerialize = true;
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
 
             invokeAllListeners();
         });
@@ -299,7 +299,7 @@ public class WifiSettingsConfigStore {
     private <T> void triggerSaveToStoreAndInvokeListeners(@NonNull Key<T> key) {
         mHandler.post(() -> {
             mHasNewDataToSerialize = true;
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
 
             invokeListeners(key);
         });

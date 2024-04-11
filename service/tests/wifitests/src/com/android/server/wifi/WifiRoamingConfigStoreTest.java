@@ -90,7 +90,7 @@ public class WifiRoamingConfigStoreTest extends WifiBaseTest {
         assertTrue(mWifiRoamingConfigStore.getRoamingMode(TEST_SSID) == TEST_DEFAULT_ROAMING_MODE);
         assertTrue(mWifiRoamingConfigStore.getPerSsidRoamingModes(true).isEmpty());
 
-        verify(mWifiConfigManager, times(2)).saveToStore(true);
+        verify(mWifiConfigManager, times(2)).saveToStore();
     }
 
     @Test
@@ -107,7 +107,7 @@ public class WifiRoamingConfigStoreTest extends WifiBaseTest {
         assertTrue(mWifiRoamingConfigStore.getRoamingMode(TEST_SSID) == TEST_DEFAULT_ROAMING_MODE);
         assertTrue(mWifiRoamingConfigStore.getPerSsidRoamingModes(false).isEmpty());
 
-        verify(mWifiConfigManager, times(2)).saveToStore(true);
+        verify(mWifiConfigManager, times(2)).saveToStore();
     }
 
     @Test

@@ -9299,7 +9299,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 SecurityParams.createSecurityParamsBySecurityType(
                         WifiConfiguration.SECURITY_TYPE_PSK));
         when(mWifiConfigManager.setNetworkDefaultGwMacAddress(anyInt(), any())).thenReturn(true);
-        when(mWifiConfigManager.saveToStore(anyBoolean())).thenReturn(true);
+        when(mWifiConfigManager.saveToStore()).thenReturn(true);
         WifiConfiguration linkedConfig = WifiConfigurationTestUtil.createPskNetwork("\"ssid2\"");
         linkedConfig.networkId = connectedConfig.networkId + 1;
         Map<String, WifiConfiguration> linkedNetworks = new HashMap<>();
@@ -9368,7 +9368,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 SecurityParams.createSecurityParamsBySecurityType(
                         WifiConfiguration.SECURITY_TYPE_SAE));
         when(mWifiConfigManager.setNetworkDefaultGwMacAddress(anyInt(), any())).thenReturn(true);
-        when(mWifiConfigManager.saveToStore(anyBoolean())).thenReturn(true);
+        when(mWifiConfigManager.saveToStore()).thenReturn(true);
         mWifiNetworkAgentCallbackCaptor.getValue().onValidationStatus(
                 NetworkAgent.VALIDATION_STATUS_VALID, null /* captivePortalUrl */);
         mLooper.dispatchAll();
@@ -9421,7 +9421,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 SecurityParams.createSecurityParamsBySecurityType(
                         WifiConfiguration.SECURITY_TYPE_PSK));
         when(mWifiConfigManager.setNetworkDefaultGwMacAddress(anyInt(), any())).thenReturn(true);
-        when(mWifiConfigManager.saveToStore(anyBoolean())).thenReturn(true);
+        when(mWifiConfigManager.saveToStore()).thenReturn(true);
 
         // FT/PSK scan, do not update linked networks
         ScanResult ftPskScan = new ScanResult();
@@ -9501,7 +9501,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 SecurityParams.createSecurityParamsBySecurityType(
                         WifiConfiguration.SECURITY_TYPE_PSK));
         when(mWifiConfigManager.setNetworkDefaultGwMacAddress(anyInt(), any())).thenReturn(true);
-        when(mWifiConfigManager.saveToStore(anyBoolean())).thenReturn(true);
+        when(mWifiConfigManager.saveToStore()).thenReturn(true);
         WifiConfiguration linkedConfig = WifiConfigurationTestUtil.createPskNetwork("\"ssid2\"");
         linkedConfig.networkId = connectedConfig.networkId + 1;
         linkedConfig.allowAutojoin = false;

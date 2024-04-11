@@ -157,7 +157,6 @@ public class WifiInjector {
     private final FeatureFlags mFeatureFlags;
     private final UserManager mUserManager;
     private final HandlerThread mWifiHandlerThread;
-    private final HandlerThread mWifiP2pServiceHandlerThread;
     private final HandlerThread mPasspointProvisionerHandlerThread;
     private final HandlerThread mWifiDiagnosticsHandlerThread;
     private final WifiTrafficPoller mWifiTrafficPoller;
@@ -207,8 +206,6 @@ public class WifiInjector {
     private final WifiPermissionsWrapper mWifiPermissionsWrapper;
     private final WifiPermissionsUtil mWifiPermissionsUtil;
     private final PasspointManager mPasspointManager;
-    private HandlerThread mWifiAwareHandlerThread;
-    private HandlerThread mRttHandlerThread;
     private final HalDeviceManager mHalDeviceManager;
     private final WifiStateTracker mWifiStateTracker;
     private final SelfRecovery mSelfRecovery;
@@ -331,8 +328,6 @@ public class WifiInjector {
         mWifiDialogManager = new WifiDialogManager(mContext, mWifiThreadRunner, mFrameworkFacade,
                 this);
         mSsidTranslator = new SsidTranslator(mContext, wifiHandler);
-        mWifiP2pServiceHandlerThread = new HandlerThread("WifiP2pService");
-        mWifiP2pServiceHandlerThread.start();
         mPasspointProvisionerHandlerThread =
                 new HandlerThread("PasspointProvisionerHandlerThread");
         mPasspointProvisionerHandlerThread.start();
@@ -384,7 +379,7 @@ public class WifiInjector {
         mKeyStore = keyStore;
         mWifiKeyStore = new WifiKeyStore(mContext, mKeyStore, mFrameworkFacade);
         // New config store
-        mWifiConfigStore = new WifiConfigStore(mContext, wifiHandler, mClock, mWifiMetrics,
+        mWifiConfigStore = new WifiConfigStore(mClock, mWifiMetrics,
                 WifiConfigStore.createSharedFiles(mFrameworkFacade.isNiapModeOn(mContext)));
         mWifiPseudonymManager =
                 new WifiPseudonymManager(
@@ -715,13 +710,6 @@ public class WifiInjector {
         return mFrameworkFacade;
     }
 
-    public HandlerThread getWifiP2pServiceHandlerThread() {
-        if (mFeatureFlags.singleWifiThread()) {
-            return mWifiHandlerThread;
-        }
-        return mWifiP2pServiceHandlerThread;
-    }
-
     public HandlerThread getPasspointProvisionerHandlerThread() {
         return mPasspointProvisionerHandlerThread;
     }
@@ -736,13 +724,6 @@ public class WifiInjector {
 
     public void setMockWifiServiceUtil(MockWifiServiceUtil mockWifiServiceUtil) {
         mMockWifiModem = mockWifiServiceUtil;
-    }
-
-    /**
-     * Wrapper method for getting the current native Java Thread ID of the current thread.
-     */
-    public long getCurrentThreadId() {
-        return Thread.currentThread().getId();
     }
 
     public WifiTrafficPoller getWifiTrafficPoller() {
@@ -1013,38 +994,6 @@ public class WifiInjector {
 
     public WifiPermissionsWrapper getWifiPermissionsWrapper() {
         return mWifiPermissionsWrapper;
-    }
-
-    /**
-     * Returns a singleton instance of a HandlerThread for injection. Uses lazy initialization.
-     *
-     * TODO: share worker thread with other Wi-Fi handlers (b/27924886)
-     */
-    public HandlerThread getWifiAwareHandlerThread() {
-        if (mFeatureFlags.singleWifiThread()) {
-            return mWifiHandlerThread;
-        }
-        if (mWifiAwareHandlerThread == null) { // lazy initialization
-            mWifiAwareHandlerThread = new HandlerThread("wifiAwareService");
-            mWifiAwareHandlerThread.start();
-        }
-        return mWifiAwareHandlerThread;
-    }
-
-    /**
-     * Returns a singleton instance of a HandlerThread for injection. Uses lazy initialization.
-     *
-     * TODO: share worker thread with other Wi-Fi handlers (b/27924886)
-     */
-    public HandlerThread getRttHandlerThread() {
-        if (mFeatureFlags.singleWifiThread()) {
-            return mWifiHandlerThread;
-        }
-        if (mRttHandlerThread == null) { // lazy initialization
-            mRttHandlerThread = new HandlerThread("wifiRttService");
-            mRttHandlerThread.start();
-        }
-        return mRttHandlerThread;
     }
 
     public MacAddressUtil getMacAddressUtil() {

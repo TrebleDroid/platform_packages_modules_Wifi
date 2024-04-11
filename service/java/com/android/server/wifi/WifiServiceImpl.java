@@ -5879,54 +5879,6 @@ public class WifiServiceImpl extends BaseWifiService {
         return backupData;
     }
 
-    private final class NetworkUpdater implements Runnable {
-        private final int mCallingUid;
-        private final List<WifiConfiguration> mConfigurations;
-        private final int mStartIdx;
-        private final int mBatchNum;
-
-        NetworkUpdater(int callingUid, List<WifiConfiguration> configurations, int startIdx,
-                int batchNum) {
-            mCallingUid = callingUid;
-            mConfigurations = configurations;
-            mStartIdx = startIdx;
-            mBatchNum = batchNum;
-        }
-
-        @Override
-        public void run() {
-            final int nextStartIdx = Math.min(mStartIdx + mBatchNum, mConfigurations.size());
-            for (int i = mStartIdx; i < nextStartIdx; i++) {
-                WifiConfiguration configuration = mConfigurations.get(i);
-                int networkId;
-                if (CompatChanges.isChangeEnabled(NOT_OVERRIDE_EXISTING_NETWORKS_ON_RESTORE,
-                        mCallingUid)) {
-                    networkId = mWifiConfigManager.addNetwork(configuration, mCallingUid)
-                            .getNetworkId();
-                } else {
-                    networkId = mWifiConfigManager.addOrUpdateNetwork(configuration, mCallingUid)
-                            .getNetworkId();
-                }
-                if (networkId == WifiConfiguration.INVALID_NETWORK_ID) {
-                    Log.e(TAG, "Restore network failed: "
-                            + configuration.getProfileKey() + ", network might already exist in the"
-                            + " database");
-                } else {
-                    // Enable all networks restored.
-                    mWifiConfigManager.enableNetwork(networkId, false, mCallingUid, null);
-                    // Restore auto-join param.
-                    mWifiConfigManager.allowAutojoin(networkId, configuration.allowAutojoin);
-                }
-            }
-            if (nextStartIdx < mConfigurations.size()) {
-                mWifiThreadRunner.post(new NetworkUpdater(mCallingUid, mConfigurations,
-                        nextStartIdx, mBatchNum), TAG + "#restoreNetworks");
-            }
-            Log.d(TAG, "Restored backup data index " + nextStartIdx + " of total "
-                    + mConfigurations.size() + " configs ");
-        }
-    }
-
     /**
      * Helper method to restore networks retrieved from backup data.
      *
@@ -5940,19 +5892,30 @@ public class WifiServiceImpl extends BaseWifiService {
         }
         int callingUid = Binder.getCallingUid();
         if (configurations.isEmpty()) return;
-        final int batchNum =
-                mDeviceConfigFacade.getFeatureFlags().delaySaveToStore()
-                        ? 0
-                        : mContext.getResources()
-                                .getInteger(
-                                        R.integer.config_wifiConfigurationRestoreNetworksBatchNum);
-        mWifiThreadRunner.post(
-                new NetworkUpdater(
-                        callingUid,
-                        configurations,
-                        0,
-                        batchNum > 0 ? batchNum : configurations.size()),
-                TAG + "#restoreNetworks");
+        mWifiThreadRunner.post(() -> {
+            boolean notOverrideExisting = CompatChanges
+                    .isChangeEnabled(NOT_OVERRIDE_EXISTING_NETWORKS_ON_RESTORE, callingUid);
+            int networkId;
+            for (WifiConfiguration configuration : configurations) {
+                if (notOverrideExisting) {
+                    networkId = mWifiConfigManager.addNetwork(configuration, callingUid)
+                            .getNetworkId();
+                } else {
+                    networkId = mWifiConfigManager.addOrUpdateNetwork(configuration, callingUid)
+                            .getNetworkId();
+                }
+                if (networkId == WifiConfiguration.INVALID_NETWORK_ID) {
+                    Log.e(TAG, "Restore network failed: "
+                            + configuration.getProfileKey() + ", network might already exist in the"
+                            + " database");
+                } else {
+                    // Enable all networks restored.
+                    mWifiConfigManager.enableNetwork(networkId, false, callingUid, null);
+                    // Restore auto-join param.
+                    mWifiConfigManager.allowAutojoin(networkId, configuration.allowAutojoin);
+                }
+            }
+        }, TAG + "#restoreNetworks");
     }
 
     /**
