@@ -412,7 +412,7 @@ public class WifiApConfigStore {
             mLastConfiguredPassphrase = config.getPassphrase();
         }
         mHasNewDataToSerialize = true;
-        mHandler.post(() -> mWifiConfigManager.saveToStore(true));
+        mHandler.post(() -> mWifiConfigManager.saveToStore());
         mBackupManagerProxy.notifyDataChanged();
     }
 

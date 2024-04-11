@@ -18,8 +18,9 @@ package com.android.server.wifi;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
@@ -148,7 +149,7 @@ public class WakeupLockTest extends WifiBaseTest {
         mWakeupLock.update(networks);
 
         // want 2 invocations, once for setLock(), once for addToLock
-        verify(mWifiConfigManager, times(2)).saveToStore(false);
+        verify(mWifiConfigManager, times(2)).saveToStore();
     }
 
     /**
@@ -251,7 +252,7 @@ public class WakeupLockTest extends WifiBaseTest {
     @Test
     public void initializeShouldSaveSsidsToStore() {
         setLockAndInitializeByTimeout(Collections.singletonList(mNetwork1));
-        verify(mWifiConfigManager).saveToStore(eq(false));
+        verify(mWifiConfigManager).saveToStore();
     }
 
     /**
@@ -263,7 +264,7 @@ public class WakeupLockTest extends WifiBaseTest {
         updateEnoughTimesToEvictWithoutAsserts(Collections.emptyList());
 
         // need exactly 2 invocations: 1 for initialize, 1 for successful update
-        verify(mWifiConfigManager, times(2)).saveToStore(eq(false));
+        verify(mWifiConfigManager, times(2)).saveToStore();
     }
 
     /**
@@ -273,7 +274,7 @@ public class WakeupLockTest extends WifiBaseTest {
     public void updateShouldNotSaveIfLockDoesNotChange() {
         List<ScanResultMatchInfo> networks = Collections.singletonList(mNetwork1);
         setLockAndInitializeByTimeout(networks);
-        verify(mWifiConfigManager, times(1)).saveToStore(anyBoolean());
+        verify(mWifiConfigManager, times(1)).saveToStore();
         mWakeupLock.update(networks);
     }
 

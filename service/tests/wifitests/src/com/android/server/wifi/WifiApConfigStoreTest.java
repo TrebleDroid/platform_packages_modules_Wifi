@@ -328,7 +328,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
     }
 
 
@@ -357,7 +357,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         verifyDefaultApConfig(mDataStoreSource.toSerialize(), TEST_DEFAULT_AP_SSID);
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
         verify(mBackupManagerProxy).notifyDataChanged();
         assertFalse(store.getApConfiguration().isUserConfigurationInternal());
         assertNotEquals(lassPassphrase, store.getLastConfiguredTetheredApPassphraseSinceBoot());
@@ -376,7 +376,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         assertFalse(store.getApConfiguration().isUserConfigurationInternal());
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
 
         /* Update with a valid configuration. */
         SoftApConfiguration expectedConfig = setupApConfig(
@@ -393,7 +393,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 .getPersistentRandomizedMacAddress());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
         mLooper.dispatchAll();
-        verify(mWifiConfigManager, times(2)).saveToStore(true);
+        verify(mWifiConfigManager, times(2)).saveToStore();
         verify(mBackupManagerProxy, times(2)).notifyDataChanged();
         assertTrue(store.getApConfiguration().isUserConfigurationInternal());
     }
@@ -409,7 +409,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
 
         /* Update with a valid configuration. */
         SoftApConfiguration providedConfig = setupApConfig(
@@ -432,7 +432,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         verifyApConfig(expectedConfig, store.getApConfiguration());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
         mLooper.dispatchAll();
-        verify(mWifiConfigManager, times(2)).saveToStore(true);
+        verify(mWifiConfigManager, times(2)).saveToStore();
         verify(mBackupManagerProxy, times(2)).notifyDataChanged();
     }
 
@@ -447,7 +447,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
 
         /* Update with a valid configuration. */
         SoftApConfiguration expectedConfig = setupApConfig(
@@ -461,7 +461,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         verifyApConfig(expectedConfig, store.getApConfiguration());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
         mLooper.dispatchAll();
-        verify(mWifiConfigManager, times(2)).saveToStore(true);
+        verify(mWifiConfigManager, times(2)).saveToStore();
         verify(mBackupManagerProxy, times(2)).notifyDataChanged();
     }
 
@@ -475,7 +475,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
 
         /* Update with a valid configuration. */
         SoftApConfiguration expectedConfig = setupApConfig(
@@ -489,7 +489,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         verifyApConfig(expectedConfig, store.getApConfiguration());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
         mLooper.dispatchAll();
-        verify(mWifiConfigManager, times(2)).saveToStore(true);
+        verify(mWifiConfigManager, times(2)).saveToStore();
         verify(mBackupManagerProxy, times(2)).notifyDataChanged();
     }
 
@@ -520,7 +520,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         verifyApConfig(expectedConfig, store.getApConfiguration());
         verifyApConfig(expectedConfig, mDataStoreSource.toSerialize());
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
         verify(mBackupManagerProxy).notifyDataChanged();
     }
 
@@ -544,7 +544,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         mDataStoreSource.fromDeserialized(persistedConfig);
         verifyApConfig(persistedConfig, store.getApConfiguration());
         mLooper.dispatchAll();
-        verify(mWifiConfigManager, never()).saveToStore(true);
+        verify(mWifiConfigManager, never()).saveToStore();
         verify(mBackupManagerProxy, never()).notifyDataChanged();
     }
 
@@ -1374,7 +1374,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         WifiApConfigStore store = createWifiApConfigStore();
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID);
         mLooper.dispatchAll();
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
 
         // Test to enable forced AP band
         store.enableForceSoftApBandOrChannel(testBand, 0, SoftApInfo.CHANNEL_WIDTH_AUTO);
@@ -1500,7 +1500,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 .onSettingsChanged(WIFI_STATIC_CHIP_INFO, "new static chip info");
         mLooper.dispatchAll();
         // Chip supports bridged mode, so no extra saveToStore when chip info is updated.
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
     }
 
     @Test
@@ -1521,13 +1521,13 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
                 .onSettingsChanged(WIFI_STATIC_CHIP_INFO, "new static chip info");
         mLooper.dispatchAll();
         // No update since isConcurrencyComboLoadedFromDriver returns false
-        verify(mWifiConfigManager, never()).saveToStore(true);
+        verify(mWifiConfigManager, never()).saveToStore();
         when(mHalDeviceManager.isConcurrencyComboLoadedFromDriver()).thenReturn(true);
         mStaticChipInfoListenerCaptor.getValue()
                 .onSettingsChanged(WIFI_STATIC_CHIP_INFO, "new static chip info");
         mLooper.dispatchAll();
         // Chip didn't support bridged mode, so extra saveToStore for update to default band.
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
         // Verify it changes to default band.
         verifyDefaultApConfig(store.getApConfiguration(), TEST_DEFAULT_AP_SSID, false, true, false);
     }

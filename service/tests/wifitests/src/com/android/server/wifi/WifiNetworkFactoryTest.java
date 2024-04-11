@@ -3218,7 +3218,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         sendNetworkRequestAndSetupForConnectionStatus(TEST_SSID_1);
 
         // Verify config store interactions.
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
         assertTrue(mDataSource.hasNewDataToSerialize());
 
         Map<String, Set<AccessPoint>> approvedAccessPointsMapToWrite = mDataSource.toSerialize();

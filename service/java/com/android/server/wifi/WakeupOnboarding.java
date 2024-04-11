@@ -146,7 +146,7 @@ public class WakeupOnboarding {
         if (mTotalNotificationsShown >= NOTIFICATIONS_UNTIL_ONBOARDED) {
             setOnboarded();
         } else {
-            mWifiConfigManager.saveToStore(false /* forceWrite */);
+            mWifiConfigManager.saveToStore();
         }
     }
 
@@ -185,7 +185,7 @@ public class WakeupOnboarding {
         }
         Log.d(TAG, "Setting user as onboarded.");
         mIsOnboarded = true;
-        mWifiConfigManager.saveToStore(false /* forceWrite */);
+        mWifiConfigManager.saveToStore();
     }
 
     /** Returns the {@link WakeupConfigStoreData.DataSource} for the onboarded status. */
