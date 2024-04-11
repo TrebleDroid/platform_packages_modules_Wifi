@@ -185,6 +185,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
             "get-mock-wifimodem-service",
             "set-mock-wifimodem-methods",
             "force-overlay-config-value",
+            "get-softap-supported-features",
     };
 
     private static final Map<String, Pair<NetworkRequest, ConnectivityManager.NetworkCallback>>
@@ -3006,6 +3007,12 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 + "values per overlay.");
         pw.println("    enabled|disabled: enable the override or disable it and revert to using "
                 + "the built-in value.");
+        pw.println("  get-softap-supported-features");
+        pw.println("    Gets softap supported features. Will print 'wifi_softap_acs_supported'");
+        pw.println("    and/or 'wifi_softap_wpa3_sae_supported',");
+        pw.println("    and/or 'wifi_softap_bridged_ap_supported',");
+        pw.println("    and/or 'wifi_softap_bridged_ap_with_sta_supported',");
+        pw.println("    each on a separate line.");
     }
 
     private void onHelpPrivileged(PrintWriter pw) {
@@ -3048,12 +3055,6 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("    Sets whether wifi watchdog should trigger recovery");
         pw.println("  get-wifi-watchdog");
         pw.println("    Gets setting of wifi watchdog trigger recovery.");
-        pw.println("  get-softap-supported-features");
-        pw.println("    Gets softap supported features. Will print 'wifi_softap_acs_supported'");
-        pw.println("    and/or 'wifi_softap_wpa3_sae_supported',");
-        pw.println("    and/or 'wifi_softap_bridged_ap_supported',");
-        pw.println("    and/or 'wifi_softap_bridged_ap_with_sta_supported',");
-        pw.println("    each on a separate line.");
         pw.println("  settings-reset");
         pw.println("    Initiates wifi settings reset");
         pw.println("  allow-root-to-get-local-only-cmm enabled|disabled");
