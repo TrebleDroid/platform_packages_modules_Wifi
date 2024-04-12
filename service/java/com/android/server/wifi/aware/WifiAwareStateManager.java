@@ -585,7 +585,8 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                 List<WifiAvailableChannel> channels = mWifiInjector.getWifiThreadRunner().call(
                         () -> mWifiInjector.getWifiNative().getUsableChannels(band,
                                 OP_MODE_WIFI_AWARE,
-                                WifiAvailableChannel.FILTER_NAN_INSTANT_MODE), null);
+                                WifiAvailableChannel.FILTER_NAN_INSTANT_MODE), null,
+                        TAG + "#get_instant_communication_channel");
                 StringBuilder out = new StringBuilder();
                 for (WifiAvailableChannel channel : channels) {
                     out.append(channel.toString());
@@ -5734,7 +5735,8 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         }
         List<WifiAvailableChannel> channels = mWifiInjector.getWifiThreadRunner().call(
                 () -> mWifiInjector.getWifiNative().getUsableChannels(WifiScanner.WIFI_BAND_5_GHZ,
-                        OP_MODE_WIFI_AWARE, WifiAvailableChannel.FILTER_NAN_INSTANT_MODE), null);
+                        OP_MODE_WIFI_AWARE, WifiAvailableChannel.FILTER_NAN_INSTANT_MODE), null,
+                TAG + "#getAwareInstantCommunicationChannel");
         if (channels == null || channels.isEmpty()) {
             if (mVerboseLoggingEnabled) {
                 Log.v(TAG, "No available instant communication mode channel");
