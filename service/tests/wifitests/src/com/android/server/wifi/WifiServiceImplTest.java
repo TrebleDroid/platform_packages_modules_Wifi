@@ -792,9 +792,9 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
     private WifiServiceImpl makeWifiServiceImplWithMockRunnerWhichTimesOut() {
         WifiThreadRunner mockRunner = mock(WifiThreadRunner.class);
-        when(mockRunner.call(any(), any())).then(returnsSecondArg());
-        when(mockRunner.call(any(), any(int.class))).then(returnsSecondArg());
-        when(mockRunner.call(any(), any(boolean.class))).then(returnsSecondArg());
+        when(mockRunner.call(any(), any(), anyString())).then(returnsSecondArg());
+        when(mockRunner.call(any(), any(int.class), anyString())).then(returnsSecondArg());
+        when(mockRunner.call(any(), any(boolean.class), anyString())).then(returnsSecondArg());
         when(mockRunner.post(any(), anyString())).thenReturn(false);
 
         when(mWifiInjector.getWifiThreadRunner()).thenReturn(mockRunner);

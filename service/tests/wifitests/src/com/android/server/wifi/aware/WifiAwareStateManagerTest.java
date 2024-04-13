@@ -275,6 +275,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         mDut.start(mMockContext, mMockLooper.getLooper(), mAwareMetricsMock,
                 mWifiPermissionsUtil, mPermissionsWrapperMock, new Clock(),
                 mock(NetdWrapper.class), mInterfaceConflictManager);
+        verify(mMockContext, never()).registerReceiver(any(), any(IntentFilter.class), isNull(),
+                any(Handler.class));
         mDut.startLate();
         mDut.enableVerboseLogging(true, true, true);
         mMockLooper.dispatchAll();

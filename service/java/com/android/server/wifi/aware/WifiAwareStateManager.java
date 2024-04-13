@@ -585,7 +585,8 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                 List<WifiAvailableChannel> channels = mWifiInjector.getWifiThreadRunner().call(
                         () -> mWifiInjector.getWifiNative().getUsableChannels(band,
                                 OP_MODE_WIFI_AWARE,
-                                WifiAvailableChannel.FILTER_NAN_INSTANT_MODE), null);
+                                WifiAvailableChannel.FILTER_NAN_INSTANT_MODE), null,
+                        TAG + "#get_instant_communication_channel");
                 StringBuilder out = new StringBuilder();
                 for (WifiAvailableChannel channel : channels) {
                     out.append(channel.toString());
@@ -692,7 +693,13 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
 
         mPowerManager = mContext.getSystemService(PowerManager.class);
         mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
+    }
 
+    /**
+     * Initialize the late-initialization sub-services: depend on other services already existing.
+     */
+    public void startLate() {
+        delayedInitialization();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(Intent.ACTION_SCREEN_ON);
         intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
@@ -737,7 +744,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                         if (mVerboseLoggingEnabled) {
                             Log.v(TAG, "onReceive: MODE_CHANGED_ACTION: intent=" + intent);
                         }
-                        if (wifiPermissionsUtil.isLocationModeEnabled()) {
+                        if (mWifiPermissionsUtil.isLocationModeEnabled()) {
                             enableUsage();
                         } else {
                             if (SdkLevel.isAtLeastT()) {
@@ -763,8 +770,8 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                         }
                         boolean isEnabled =
                                 intent.getIntExtra(
-                                                WifiManager.EXTRA_WIFI_STATE,
-                                                WifiManager.WIFI_STATE_UNKNOWN)
+                                        WifiManager.EXTRA_WIFI_STATE,
+                                        WifiManager.WIFI_STATE_UNKNOWN)
                                         == WifiManager.WIFI_STATE_ENABLED;
                         if (isEnabled) {
                             enableUsage();
@@ -800,7 +807,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     public boolean isD2dAllowedWhenStaDisabled() {
         return mFeatureFlags.d2dWhenInfraStaOff()
                 && mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()
-                        && mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED);
+                && mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED);
     }
 
     private class CountryCodeChangeCallback implements
@@ -816,13 +823,6 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         public void onCountryCodeInactive() {
             // Ignore.
         }
-    }
-
-    /**
-     * Initialize the late-initialization sub-services: depend on other services already existing.
-     */
-    public void startLate() {
-        delayedInitialization();
     }
 
     /**
@@ -5735,7 +5735,8 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         }
         List<WifiAvailableChannel> channels = mWifiInjector.getWifiThreadRunner().call(
                 () -> mWifiInjector.getWifiNative().getUsableChannels(WifiScanner.WIFI_BAND_5_GHZ,
-                        OP_MODE_WIFI_AWARE, WifiAvailableChannel.FILTER_NAN_INSTANT_MODE), null);
+                        OP_MODE_WIFI_AWARE, WifiAvailableChannel.FILTER_NAN_INSTANT_MODE), null,
+                TAG + "#getAwareInstantCommunicationChannel");
         if (channels == null || channels.isEmpty()) {
             if (mVerboseLoggingEnabled) {
                 Log.v(TAG, "No available instant communication mode channel");

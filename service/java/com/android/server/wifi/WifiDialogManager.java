@@ -611,7 +611,8 @@ public class WifiDialogManager {
             }
             if (mTimeoutMs > 0) {
                 mTimeoutRunnable = mAlertDialog::cancel;
-                mWifiThreadRunner.postDelayed(mTimeoutRunnable, mTimeoutMs);
+                mWifiThreadRunner.postDelayed(mTimeoutRunnable, mTimeoutMs,
+                        TAG + "#cancelDialog");
             }
             mActiveLegacySimpleDialogs.add(this);
         }
