@@ -29,6 +29,7 @@ import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_DEVICE_AD
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_DEVICE_NAME;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_P2P_PENDING_FACTORY_RESET;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_VERBOSE_LOGGING_ENABLED;
+import static com.android.server.wifi.p2p.WifiP2pServiceImpl.IPC_DHCP_RESULTS;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -78,6 +79,7 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
+import android.net.DhcpResultsParcelable;
 import android.net.InetAddresses;
 import android.net.LinkAddress;
 import android.net.MacAddress;
@@ -202,6 +204,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     private static final String thisDeviceName = "thisDeviceName";
     private static final String ANONYMIZED_DEVICE_ADDRESS = "02:00:00:00:00:00";
     private static final String TEST_PACKAGE_NAME = "com.p2p.test";
+    private static final String TEST_PACKAGE2_NAME = "com.p2p.test2";
     private static final String TEST_NETWORK_NAME = "DIRECT-xy-NEW";
     private static final String TEST_ANDROID_ID = "314Deadbeef";
     private static final String[] TEST_REQUIRED_PERMISSIONS_T =
@@ -230,8 +233,10 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     private BroadcastReceiver mTetherStateReceiver;
     private BroadcastReceiver mUserRestrictionReceiver;
     private Handler mClientHandler;
+    private Handler mClient2Handler;
     private Messenger mP2pStateMachineMessenger;
     private Messenger mClientMessenger;
+    private Messenger mClient2Messenger;
     private WifiP2pServiceImpl mWifiP2pServiceImpl;
     private TestLooper mClientHanderLooper;
     private TestLooper mLooper;
@@ -252,6 +257,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     private TetheringManager.TetheringEventCallback mTetheringEventCallback;
     private Bundle mExtras = new Bundle();
     private IWifiP2pListener mP2pListener = mock(IWifiP2pListener.class);
+    private IWifiP2pListener mP2pListener2 = mock(IWifiP2pListener.class);
     private ArgumentCaptor<WifiSettingsConfigStore.OnSettingsChangedListener>
             mD2DAllowedSettingsCallbackCaptor =
             ArgumentCaptor.forClass(WifiSettingsConfigStore.OnSettingsChangedListener.class);
@@ -652,9 +658,10 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     /**
      * Send WifiP2pMonitor.P2P_GROUP_REMOVED_EVENT.
      */
-    private void sendGroupRemovedMsg() throws Exception {
+    private void sendGroupRemovedMsg(WifiP2pGroup group) throws Exception {
         Message msg = Message.obtain();
         msg.what = WifiP2pMonitor.P2P_GROUP_REMOVED_EVENT;
+        msg.obj = group;
         mP2pStateMachineMessenger.send(Message.obtain(msg));
         mLooper.dispatchAll();
     }
@@ -1383,7 +1390,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         generatorTestData();
         mClientHanderLooper = new TestLooper();
         mClientHandler = spy(new Handler(mClientHanderLooper.getLooper()));
+        mClient2Handler = spy(new Handler(mClientHanderLooper.getLooper()));
         mClientMessenger =  new Messenger(mClientHandler);
+        mClient2Messenger =  new Messenger(mClient2Handler);
         mLooper = new TestLooper();
 
         when(mContext.getSystemService(Context.ALARM_SERVICE))
@@ -1517,6 +1526,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         when(mDeviceConfigFacade.isP2pFailureBugreportEnabled()).thenReturn(false);
         when(mContext.getSystemService(TetheringManager.class)).thenReturn(mTetheringManager);
         when(mP2pListener.asBinder()).thenReturn(mock(IBinder.class));
+        when(mP2pListener2.asBinder()).thenReturn(mock(IBinder.class));
 
         mWifiP2pServiceImpl = new WifiP2pServiceImpl(mContext, mWifiInjector);
         if (supported) {
@@ -1579,6 +1589,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         mWifiP2pServiceImpl.handleBootCompleted();
         if (SdkLevel.isAtLeastT()) {
             mWifiP2pServiceImpl.registerWifiP2pListener(mP2pListener, TEST_PACKAGE_NAME, mExtras);
+            mWifiP2pServiceImpl.registerWifiP2pListener(mP2pListener2, TEST_PACKAGE2_NAME, mExtras);
         }
     }
 
@@ -2956,6 +2967,407 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 anyInt(), anyInt(), anyString(), eq(true));
     }
 
+    /**
+     * Sets up the environment for P2P Ownership test where Client1 is the group owner.
+     */
+    private void groupOwnershipConfigTestSetup() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mFeatureFlags.p2pOwnership()).thenReturn(true);
+        forceP2pEnabled(mClient1);
+        sendChannelInfoUpdateMsg(TEST_PACKAGE2_NAME, "testFeature", mClient2, mClient2Messenger);
+
+        // group created by client1
+        when(mWifiNative.p2pGroupAdd(any(), eq(false))).thenReturn(true);
+        sendCreateGroupMsgWithConfigValidAsGroup(mClientMessenger);
+        verify(mWifiNative).p2pGroupAdd(any(), eq(false));
+        assertTrue(mClientHandler.hasMessages(WifiP2pManager.CREATE_GROUP_SUCCEEDED));
+        assertFalse(mClient2Handler.hasMessages(WifiP2pManager.CREATE_GROUP_SUCCEEDED));
+
+        WifiP2pGroup group = new WifiP2pGroup();
+        group.setNetworkName("DIRECT-test");
+        group.setOwner(new WifiP2pDevice("thisDeviceMac"));
+        group.setIsGroupOwner(true);
+        group.setInterface(IFACE_NAME_P2P);
+        sendGroupStartedMsg(group);
+        simulateTetherReady();
+        reset(mClientHandler);
+    }
+
+    /**
+     * Sets up the environment for P2P Ownership test with WPS group.
+     */
+    private void groupOwnershipWpsTestSetup() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        mWifiP2pServiceImpl.registerWifiP2pListener(mP2pListener2, TEST_PACKAGE2_NAME, mExtras);
+        forceP2pEnabled(mClient1);
+        sendChannelInfoUpdateMsg(TEST_PACKAGE2_NAME, "testFeature", mClient2, mClient2Messenger);
+
+        // WPS group created
+        WifiP2pGroup group = new WifiP2pGroup();
+        group.setNetworkId(WifiP2pGroup.NETWORK_ID_PERSISTENT);
+        group.setNetworkName(TEST_NETWORK_NAME);
+        group.setOwner(new WifiP2pDevice("thisDeviceMac"));
+        group.setIsGroupOwner(true);
+        group.setInterface(IFACE_NAME_P2P);
+        sendGroupStartedMsg(group);
+        simulateTetherReady();
+    }
+
+    /** Verify that only the group owner can send an invitation connection */
+    @Test
+    public void testGroupOwnershipConfigJoinInvite() throws Exception {
+        groupOwnershipConfigTestSetup();
+
+        // client2 cannot send an invitation to join
+        sendConnectMsg(mClient2Messenger, mTestWifiP2pPeerConfig);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CONNECT_FAILED, message.what);
+        assertEquals(WifiP2pManager.BUSY, message.arg1);
+
+        // client1 can send an invitation to join
+        when(mWifiNative.p2pInvite(any(), any())).thenReturn(true);
+        mockPeersList();
+        sendConnectMsg(mClientMessenger, mTestWifiP2pPeerConfig);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CONNECT_SUCCEEDED, message.what);
+    }
+
+    /** Verify that any client can send an invitation connection */
+    @Test
+    public void testGroupOwnershipWpsJoinInvite() throws Exception {
+        groupOwnershipWpsTestSetup();
+
+        // client1 can send an invitation to join
+        when(mWifiNative.p2pInvite(any(), any())).thenReturn(true);
+        mockPeersList();
+        sendConnectMsg(mClientMessenger, mTestWifiP2pPeerConfig);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CONNECT_SUCCEEDED, message.what);
+
+        // client2 can send an invitation to join
+        sendConnectMsg(mClient2Messenger, mTestWifiP2pPeerConfig);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CONNECT_SUCCEEDED, message.what);
+    }
+
+    /** Verify that only the group owner can cancel an invitation connection */
+    @Test
+    public void testGroupOwnershipConfigCancelInvitationConnect() throws Exception {
+        groupOwnershipConfigTestSetup();
+
+        // client2 cannot cancel invitation connection
+        sendSimpleMsg(mClient2Messenger, WifiP2pManager.CANCEL_CONNECT);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CANCEL_CONNECT_FAILED, message.what);
+        assertEquals(WifiP2pManager.BUSY, message.arg1);
+
+        // client1 can cancel invitation connection
+        sendSimpleMsg(mClientMessenger, WifiP2pManager.CANCEL_CONNECT);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CANCEL_CONNECT_SUCCEEDED, message.what);
+    }
+
+    /** Verify that any client can cancel an invitation connection */
+    @Test
+    public void testGroupOwnershipWpsCancelInvitationConnect() throws Exception {
+        groupOwnershipWpsTestSetup();
+
+        // client1 can cancel invitation connection
+        sendSimpleMsg(mClientMessenger, WifiP2pManager.CANCEL_CONNECT);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CANCEL_CONNECT_SUCCEEDED, message.what);
+
+        // client2 can cancel invitation connection
+        sendSimpleMsg(mClient2Messenger, WifiP2pManager.CANCEL_CONNECT);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CANCEL_CONNECT_SUCCEEDED, message.what);
+    }
+
+    /** Verify that only the client that initiated the connection can cancel it */
+    @Test
+    public void testGroupOwnershipConfigCancelConnect() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mFeatureFlags.p2pOwnership()).thenReturn(true);
+        forceP2pEnabled(mClient1);
+        sendChannelInfoUpdateMsg(TEST_PACKAGE2_NAME, "testFeature", mClient2, mClient2Messenger);
+
+        // group created by client1
+        when(mWifiNative.p2pGroupAdd(any(), eq(false))).thenReturn(true);
+        sendCreateGroupMsgWithConfigValidAsGroup(mClientMessenger);
+        verify(mWifiNative).p2pGroupAdd(any(), eq(false));
+        reset(mClientHandler);
+
+        // client2 cannot cancel connection
+        sendSimpleMsg(mClient2Messenger, WifiP2pManager.CANCEL_CONNECT);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CANCEL_CONNECT_FAILED, message.what);
+        assertEquals(WifiP2pManager.BUSY, message.arg1);
+
+        // client1 can cancel connection
+        sendSimpleMsg(mClientMessenger, WifiP2pManager.CANCEL_CONNECT);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CANCEL_CONNECT_SUCCEEDED, message.what);
+    }
+
+    /** Verify that any client can cancel an ongoing WPS connection */
+    @Test
+    public void testGroupOwnershipWpsCancelConnect() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mFeatureFlags.p2pOwnership()).thenReturn(true);
+        forceP2pEnabled(mClient1);
+        sendChannelInfoUpdateMsg(TEST_PACKAGE2_NAME, "testFeature", mClient2, mClient2Messenger);
+
+        // connection initiated by client1
+        when(mWifiNative.p2pGroupAdd(anyBoolean())).thenReturn(true);
+        mockEnterGroupNegotiationState();
+
+        // client2 can cancel connection
+        sendSimpleMsg(mClient2Messenger, WifiP2pManager.CANCEL_CONNECT);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.CANCEL_CONNECT_SUCCEEDED, message.what);
+    }
+
+    /** Verify that only the group owner can remove the group */
+    @Test
+    public void testGroupOwnershipConfigRemoveGroup() throws Exception {
+        groupOwnershipConfigTestSetup();
+
+        // client2 cannot remove group
+        sendSimpleMsg(mClient2Messenger, WifiP2pManager.REMOVE_GROUP);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.REMOVE_GROUP_FAILED, message.what);
+        assertEquals(WifiP2pManager.BUSY, message.arg1);
+
+        // client1 can remove group
+        when(mWifiNative.p2pGroupRemove(eq(IFACE_NAME_P2P))).thenReturn(true);
+        sendSimpleMsg(mClientMessenger, WifiP2pManager.REMOVE_GROUP);
+        verify(mWifiNative).p2pGroupRemove(eq(IFACE_NAME_P2P));
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.REMOVE_GROUP_SUCCEEDED, message.what);
+    }
+
+    /** Verify that any client can remove the group */
+    @Test
+    public void testGroupOwnershipWpsRemoveGroup() throws Exception {
+        groupOwnershipWpsTestSetup();
+
+        // client2 can remove group
+        when(mWifiNative.p2pGroupRemove(eq(IFACE_NAME_P2P))).thenReturn(true);
+        sendSimpleMsg(mClient2Messenger, WifiP2pManager.REMOVE_GROUP);
+        verify(mWifiNative).p2pGroupRemove(eq(IFACE_NAME_P2P));
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        assertEquals(WifiP2pManager.REMOVE_GROUP_SUCCEEDED, message.what);
+    }
+
+    /** Verify that only the group owner can get group info */
+    @Test
+    public void testGroupOwnershipConfigGetGroupInformation() throws Exception {
+        groupOwnershipConfigTestSetup();
+
+        // client2 cannot get P2P group info
+        sendRequestGroupInfoMsg(mClient2Messenger);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        assertEquals(WifiP2pManager.RESPONSE_GROUP_INFO, mMessageCaptor.getValue().what);
+        WifiP2pGroup wifiP2pGroup = (WifiP2pGroup) mMessageCaptor.getValue().obj;
+        assertNull(wifiP2pGroup);
+
+        // client1 can get P2P group info
+        sendRequestGroupInfoMsg(mClientMessenger);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        assertEquals(WifiP2pManager.RESPONSE_GROUP_INFO, mMessageCaptor.getValue().what);
+        wifiP2pGroup = (WifiP2pGroup) mMessageCaptor.getValue().obj;
+        assertNotNull(wifiP2pGroup);
+    }
+
+    /** Verify that any client can get group info */
+    @Test
+    public void testGroupOwnershipWpsGetGroupInformation() throws Exception {
+        groupOwnershipWpsTestSetup();
+
+        // client1 can get P2P group info
+        sendRequestGroupInfoMsg(mClientMessenger);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        assertEquals(WifiP2pManager.RESPONSE_GROUP_INFO, mMessageCaptor.getValue().what);
+        WifiP2pGroup wifiP2pGroup = (WifiP2pGroup) mMessageCaptor.getValue().obj;
+        assertNotNull(wifiP2pGroup);
+
+        // client2 can get P2P group info
+        sendRequestGroupInfoMsg(mClient2Messenger);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        assertEquals(WifiP2pManager.RESPONSE_GROUP_INFO, mMessageCaptor.getValue().what);
+        wifiP2pGroup = (WifiP2pGroup) mMessageCaptor.getValue().obj;
+        assertNotNull(wifiP2pGroup);
+    }
+
+    /** Verify that only the group owner can get connection info */
+    @Test
+    public void testGroupOwnershipConfigGetConnectionInfo() throws Exception {
+        groupOwnershipConfigTestSetup();
+
+        // client2 cannot get P2P connection info
+        sendSimpleMsg(mClient2Messenger, WifiP2pManager.REQUEST_CONNECTION_INFO);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        WifiP2pInfo info = (WifiP2pInfo) message.obj;
+        assertEquals(WifiP2pManager.RESPONSE_CONNECTION_INFO, message.what);
+        assertEquals((new WifiP2pInfo()).toString(), info.toString());
+
+        // client1 can get P2P connection info
+        sendSimpleMsg(mClientMessenger, WifiP2pManager.REQUEST_CONNECTION_INFO);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        message = mMessageCaptor.getValue();
+        info = (WifiP2pInfo) message.obj;
+        assertEquals(WifiP2pManager.RESPONSE_CONNECTION_INFO, mMessageCaptor.getValue().what);
+        assertTrue(info.groupFormed);
+    }
+
+    /** Verify that any client can get connection info */
+    @Test
+    public void testGroupOwnershipWpsGetConnectionInfo() throws Exception {
+        groupOwnershipWpsTestSetup();
+
+        // client1 can get P2P connection info
+        sendSimpleMsg(mClientMessenger, WifiP2pManager.REQUEST_CONNECTION_INFO);
+        verify(mClientHandler).sendMessage(mMessageCaptor.capture());
+        Message message = mMessageCaptor.getValue();
+        WifiP2pInfo info = (WifiP2pInfo) message.obj;
+        assertEquals(WifiP2pManager.RESPONSE_CONNECTION_INFO, mMessageCaptor.getValue().what);
+        assertTrue(info.groupFormed);
+
+        // client2 can get P2P connection info
+        sendSimpleMsg(mClient2Messenger, WifiP2pManager.REQUEST_CONNECTION_INFO);
+        verify(mClient2Handler).sendMessage(mMessageCaptor.capture());
+        message = mMessageCaptor.getValue();
+        info = (WifiP2pInfo) message.obj;
+        assertEquals(WifiP2pManager.RESPONSE_CONNECTION_INFO, mMessageCaptor.getValue().what);
+        assertTrue(info.groupFormed);
+    }
+
+    /** Verify that only the group owner receives the connection changed broadcast */
+    @Test
+    public void testGroupOwnershipConfigBroadcast() throws Exception {
+        groupOwnershipConfigTestSetup();
+
+        ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+        verify(mContext, atLeastOnce()).sendBroadcast(intentCaptor.capture(), any(), any());
+
+        ArrayList<Intent> intentArrayList = new ArrayList<>();
+        for (int i = 0; i < intentCaptor.getAllValues().size(); i++) {
+            Intent intent = intentCaptor.getAllValues().get(i);
+            if (intent.getAction().equals(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)) {
+                intentArrayList.add(intent);
+            }
+        }
+        // Connection changed broadcast is sent 3 times:
+        // 1. Entering P2pEnabledState
+        // 2. Entering GroupCreatingState
+        // 3. Entering GroupCreatedState
+        // Each time, sendBroadcast is called twice (refer sendBroadcastWithExcludedPermissions)
+        // Verify group created broadcast only sent to client1
+        Intent intent = intentArrayList.get(4);
+        assertEquals(TEST_PACKAGE_NAME, intent.getPackage());
+        // Verify broadcast sent to NEARBY_WIFI_DEVICES apps do not have the package name set
+        intent = intentArrayList.get(5);
+        assertNull(intent.getPackage());
+    }
+
+    /** Verify that all clients receive the connection changed broadcast */
+    @Test
+    public void testGroupOwnershipWpsBroadcast() throws Exception {
+        groupOwnershipWpsTestSetup();
+
+        WifiP2pDevice connectedClientDevice = new WifiP2pDevice(mTestWifiP2pDevice);
+        connectedClientDevice.setInterfaceMacAddress(MacAddress.fromString(PEER_INTERFACE_ADDRESS));
+        sendApStaConnectedEvent(connectedClientDevice);
+        ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+        verify(mContext, atLeastOnce()).sendBroadcast(intentCaptor.capture(), any(), any());
+
+        ArrayList<Intent> intentArrayList = new ArrayList<>();
+        for (int i = 0; i < intentCaptor.getAllValues().size(); i++) {
+            Intent intent = intentCaptor.getAllValues().get(i);
+            if (intent.getAction().equals(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)) {
+                intentArrayList.add(intent);
+            }
+        }
+        // Connection changed broadcast is sent 3 times:
+        // 1. Entering P2pEnabledState
+        // 2. Entering GroupCreatingState
+        // 3. Peer connection in GroupCreatedState
+        // Each time, sendBroadcast is called twice (refer sendBroadcastWithExcludedPermissions)
+        // Verify group created broadcast sent to all clients
+        Intent intent = intentArrayList.get(4);
+        assertNull(intent.getPackage());
+    }
+
+    /** Verify that only the group owner receives the group related callback */
+    @Test
+    public void testGroupOwnershipConfigP2pListener() throws Exception {
+        groupOwnershipConfigTestSetup();
+
+        verify(mP2pListener).onGroupCreated(any(), any());
+        verify(mP2pListener2, never()).onGroupCreated(any(), any());
+
+        WifiP2pDevice peerClientDevice = new WifiP2pDevice();
+        peerClientDevice.deviceName = "peerClientDeviceName";
+        peerClientDevice.deviceAddress = "11:22:33:aa:bb:cc";
+        peerClientDevice.setInterfaceMacAddress(MacAddress.fromString(PEER_INTERFACE_ADDRESS));
+        sendSimpleMsg(null, WifiP2pMonitor.AP_STA_CONNECTED_EVENT, peerClientDevice);
+        verify(mP2pListener).onPeerClientJoined(any(), any());
+        verify(mP2pListener2, never()).onPeerClientJoined(any(), any());
+
+        sendSimpleMsg(null, WifiP2pMonitor.AP_STA_DISCONNECTED_EVENT, peerClientDevice);
+        verify(mP2pListener).onPeerClientDisconnected(any(), any());
+        verify(mP2pListener2, never()).onPeerClientDisconnected(any(), any());
+
+        sendSimpleMsg(null, WifiP2pMonitor.P2P_FREQUENCY_CHANGED_EVENT, TEST_GROUP_FREQUENCY);
+        verify(mP2pListener).onFrequencyChanged(any(), any());
+        verify(mP2pListener2, never()).onFrequencyChanged(any(), any());
+    }
+
+    /** Verify that all clients receive the group related callback */
+    @Test
+    public void testGroupOwnershipWpsP2pListener() throws Exception {
+        groupOwnershipWpsTestSetup();
+
+        DhcpResultsParcelable dhcpResults = new DhcpResultsParcelable();
+        dhcpResults.serverAddress = P2P_GO_IP;
+        sendSimpleMsg(mClientMessenger, IPC_DHCP_RESULTS, dhcpResults);
+        verify(mP2pListener).onGroupCreated(any(), any());
+        verify(mP2pListener2).onGroupCreated(any(), any());
+
+        WifiP2pDevice connectedClientDevice = new WifiP2pDevice(mTestWifiP2pDevice);
+        connectedClientDevice.setInterfaceMacAddress(MacAddress.fromString(PEER_INTERFACE_ADDRESS));
+        sendApStaConnectedEvent(connectedClientDevice);
+        verify(mP2pListener).onPeerClientJoined(any(), any());
+        verify(mP2pListener2).onPeerClientJoined(any(), any());
+
+        // Need to connect a second peer device before testing disconnect to avoid removing group
+        WifiP2pDevice secondPeerDevice = new WifiP2pDevice(connectedClientDevice);
+        secondPeerDevice.deviceAddress = "11:22:33:aa:bb:cc";
+        sendApStaConnectedEvent(secondPeerDevice);
+        sendSimpleMsg(null, WifiP2pMonitor.AP_STA_DISCONNECTED_EVENT, connectedClientDevice);
+        verify(mP2pListener).onPeerClientDisconnected(any(), any());
+        verify(mP2pListener2).onPeerClientDisconnected(any(), any());
+
+        sendSimpleMsg(null, WifiP2pMonitor.P2P_FREQUENCY_CHANGED_EVENT, TEST_GROUP_FREQUENCY);
+        verify(mP2pListener).onFrequencyChanged(any(), any());
+        verify(mP2pListener2).onFrequencyChanged(any(), any());
+    }
+
     /** Verify the p2p randomized MAC feature is enabled if OEM supports it. */
     @Test
     public void testP2pRandomMacWithOemSupport() throws Exception {
@@ -3168,7 +3580,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         WifiP2pGroup groupCaptured = groupCaptor.getValue();
         assertEquals(mTestWifiP2pNewPersistentGoGroup.toString(), groupCaptured.toString());
 
-        sendGroupRemovedMsg();
+        sendGroupRemovedMsg(groupCaptured);
         verify(mWifiP2pMetrics).endGroupEvent();
     }
 
@@ -7785,7 +8197,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         verify(mWifiP2pMetrics).startGroupEvent(group);
         verify(mWifiNative).p2pStopFind();
         verify(mWifiNative).p2pExtListen(eq(false), anyInt(), anyInt(), eq(null));
-        sendGroupRemovedMsg();
+        sendGroupRemovedMsg(group);
 
         //force to back disabled state
         mockEnterDisabledState();
@@ -8125,7 +8537,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 p2pGroupCaptor.capture());
         assertEquals(TEST_GROUP_FREQUENCY, p2pGroupCaptor.getValue().getFrequency());
 
-        sendGroupRemovedMsg();
+        sendGroupRemovedMsg(p2pGroup);
         mockEnterDisabledState();
         mLooper.dispatchAll();
         verify(mP2pListener).onGroupRemoved();
