@@ -4509,7 +4509,8 @@ public class WifiServiceImpl extends BaseWifiService {
      * @return the list of results
      */
     @Override
-    public List<ScanResult> getScanResults(String callingPackage, String callingFeatureId) {
+    @Nullable public ParceledListSlice<ScanResult> getScanResults(String callingPackage,
+            String callingFeatureId) {
         enforceAccessPermission();
         int uid = Binder.getCallingUid();
         long ident = Binder.clearCallingIdentity();
@@ -4525,11 +4526,11 @@ public class WifiServiceImpl extends BaseWifiService {
             if (scanResults.size() > 200) {
                 Log.i(TAG, "too many scan results, may break binder transaction");
             }
-            return scanResults;
+            return new ParceledListSlice<>(scanResults);
         } catch (SecurityException e) {
             Log.w(TAG, "Permission violation - getScanResults not allowed for uid="
                     + uid + ", packageName=" + callingPackage + ", reason=" + e);
-            return new ArrayList<>();
+            return null;
         } finally {
             Binder.restoreCallingIdentity(ident);
         }
