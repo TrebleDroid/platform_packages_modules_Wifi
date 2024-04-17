@@ -1292,13 +1292,19 @@ public class WifiServiceImpl extends BaseWifiService {
             return false;
         }
 
-        // If user restriction is set, only DO/PO is allowed to toggle wifi
-        if (SdkLevel.isAtLeastT() && mUserManager.hasUserRestrictionForUser(
-                UserManager.DISALLOW_CHANGE_WIFI_STATE,
-                UserHandle.getUserHandleForUid(callingUid))
-                && !isDeviceOrProfileOwner(callingUid, packageName)) {
-            mLog.err("setWifiEnabled with user restriction: only DO/PO can toggle wifi").flush();
-            return false;
+        long ident = Binder.clearCallingIdentity();
+        try {
+            // If user restriction is set, only DO/PO is allowed to toggle wifi
+            if (SdkLevel.isAtLeastT() && mUserManager.hasUserRestrictionForUser(
+                    UserManager.DISALLOW_CHANGE_WIFI_STATE,
+                    UserHandle.getUserHandleForUid(callingUid))
+                    && !isDeviceOrProfileOwner(callingUid, packageName)) {
+                mLog.err(
+                        "setWifiEnabled with user restriction: only DO/PO can toggle wifi").flush();
+                return false;
+            }
+        }  finally {
+            Binder.restoreCallingIdentity(ident);
         }
 
         // Show a user-confirmation dialog for legacy third-party apps targeting less than Q.
@@ -2760,19 +2766,18 @@ public class WifiServiceImpl extends BaseWifiService {
             }
         }
 
-        // verify that tethering is not disabled
-        if (mUserManager.hasUserRestrictionForUser(
-                UserManager.DISALLOW_CONFIG_TETHERING, UserHandle.getUserHandleForUid(uid))) {
-            return LocalOnlyHotspotCallback.ERROR_TETHERING_DISALLOWED;
-        }
-
-        mLastCallerInfoManager.put(WifiManager.API_START_LOCAL_ONLY_HOTSPOT, Process.myTid(),
-                uid, Binder.getCallingPid(), packageName, true);
-
         final WorkSource requestorWs = new WorkSource(uid, packageName);
         // the app should be in the foreground
         long ident = Binder.clearCallingIdentity();
         try {
+            // verify that tethering is not disabled
+            if (mUserManager.hasUserRestrictionForUser(
+                    UserManager.DISALLOW_CONFIG_TETHERING, UserHandle.getUserHandleForUid(uid))) {
+                return LocalOnlyHotspotCallback.ERROR_TETHERING_DISALLOWED;
+            }
+
+            mLastCallerInfoManager.put(WifiManager.API_START_LOCAL_ONLY_HOTSPOT, Process.myTid(),
+                    uid, Binder.getCallingPid(), packageName, true);
             // also need to verify that Locations services are enabled.
             // bypass shell with root uid
             if (uid != Process.ROOT_UID
@@ -3882,27 +3887,38 @@ public class WifiServiceImpl extends BaseWifiService {
             mLog.info("addOrUpdateNetwork not allowed for uid=%").c(callingUid).flush();
             return -1;
         }
-        if (mUserManager.hasUserRestrictionForUser(UserManager.DISALLOW_CONFIG_WIFI,
-                UserHandle.of(mWifiPermissionsUtil.getCurrentUser()))
-                && isCamera && !isAdmin) {
-            mLog.info("addOrUpdateNetwork not allowed for the camera apps and therefore the user "
-                    + "when DISALLOW_CONFIG_WIFI user restriction is set").flush();
-            return -1;
-        }
-        if (SdkLevel.isAtLeastT() && mUserManager.hasUserRestrictionForUser(
-                UserManager.DISALLOW_ADD_WIFI_CONFIG, UserHandle.getUserHandleForUid(callingUid))) {
-            if (mWifiPermissionsUtil.isTargetSdkLessThan(
-                    packageName, Build.VERSION_CODES.Q, callingUid)
-                    && !(isPrivileged || isAdmin || isSystem)) {
-                mLog.info("addOrUpdateNetwork not allowed for normal apps targeting SDK less than "
-                        + "Q when the DISALLOW_ADD_WIFI_CONFIG user restriction is set").flush();
+        long ident = Binder.clearCallingIdentity();
+        try {
+            if (mUserManager.hasUserRestrictionForUser(UserManager.DISALLOW_CONFIG_WIFI,
+                    UserHandle.of(mWifiPermissionsUtil.getCurrentUser()))
+                    && isCamera && !isAdmin) {
+                mLog.info(
+                        "addOrUpdateNetwork not allowed for the camera apps and therefore the "
+                                + "user when DISALLOW_CONFIG_WIFI user restriction is set").flush();
                 return -1;
             }
-            if (isCamera && !isAdmin) {
-                mLog.info("addOrUpdateNetwork not allowed for camera apps and therefore the user "
-                        + "when the DISALLOW_ADD_WIFI_CONFIG user restriction is set").flush();
-                return -1;
+            if (SdkLevel.isAtLeastT() && mUserManager.hasUserRestrictionForUser(
+                    UserManager.DISALLOW_ADD_WIFI_CONFIG,
+                    UserHandle.getUserHandleForUid(callingUid))) {
+                if (mWifiPermissionsUtil.isTargetSdkLessThan(
+                        packageName, Build.VERSION_CODES.Q, callingUid)
+                        && !(isPrivileged || isAdmin || isSystem)) {
+                    mLog.info(
+                            "addOrUpdateNetwork not allowed for normal apps targeting "
+                                    + "SDK less than Q when the DISALLOW_ADD_WIFI_CONFIG "
+                                    + "user restriction is set").flush();
+                    return -1;
+                }
+                if (isCamera && !isAdmin) {
+                    mLog.info(
+                            "addOrUpdateNetwork not allowed for camera apps and therefore the "
+                                    + "user when the DISALLOW_ADD_WIFI_CONFIG "
+                                    + "user restriction is set").flush();
+                    return -1;
+                }
             }
+        } finally {
+            Binder.restoreCallingIdentity(ident);
         }
 
         mLog.info("addOrUpdateNetwork uid=%").c(callingUid).flush();
@@ -4642,12 +4658,18 @@ public class WifiServiceImpl extends BaseWifiService {
                     .c(callingUid).flush();
             return false;
         }
-        if (SdkLevel.isAtLeastT() && mUserManager.hasUserRestrictionForUser(
-                UserManager.DISALLOW_ADD_WIFI_CONFIG, UserHandle.getUserHandleForUid(callingUid))
-                && !mWifiPermissionsUtil.isAdmin(callingUid, packageName)) {
-            mLog.info("addOrUpdatePasspointConfiguration only allowed for admin"
-                    + "when the DISALLOW_ADD_WIFI_CONFIG user restriction is set").flush();
-            return false;
+        long ident = Binder.clearCallingIdentity();
+        try {
+            if (SdkLevel.isAtLeastT() && mUserManager.hasUserRestrictionForUser(
+                    UserManager.DISALLOW_ADD_WIFI_CONFIG,
+                    UserHandle.getUserHandleForUid(callingUid))
+                    && !mWifiPermissionsUtil.isAdmin(callingUid, packageName)) {
+                mLog.info("addOrUpdatePasspointConfiguration only allowed for admin"
+                        + "when the DISALLOW_ADD_WIFI_CONFIG user restriction is set").flush();
+                return false;
+            }
+        } finally {
+            Binder.restoreCallingIdentity(ident);
         }
         mLog.info("addorUpdatePasspointConfiguration uid=%").c(callingUid).flush();
         return mWifiThreadRunner.call(
@@ -5729,22 +5751,26 @@ public class WifiServiceImpl extends BaseWifiService {
         int callingUid = Binder.getCallingUid();
         mWifiPermissionsUtil.checkPackage(callingUid, packageName);
         mLog.info("factoryReset uid=%").c(callingUid).flush();
-        if (mUserManager.hasUserRestrictionForUser(
-                UserManager.DISALLOW_NETWORK_RESET,
-                UserHandle.getUserHandleForUid(callingUid))) {
-            return;
-        }
-        if (!mUserManager.hasUserRestrictionForUser(
-                UserManager.DISALLOW_CONFIG_TETHERING,
-                UserHandle.getUserHandleForUid(callingUid))) {
-            // Turn mobile hotspot off
-            stopSoftApInternal(WifiManager.IFACE_IP_MODE_UNSPECIFIED);
-        }
-
-        if (mUserManager.hasUserRestrictionForUser(
-                UserManager.DISALLOW_CONFIG_WIFI,
-                UserHandle.getUserHandleForUid(callingUid))) {
-            return;
+        long ident = Binder.clearCallingIdentity();
+        try {
+            if (mUserManager.hasUserRestrictionForUser(
+                    UserManager.DISALLOW_NETWORK_RESET,
+                    UserHandle.getUserHandleForUid(callingUid))) {
+                return;
+            }
+            if (!mUserManager.hasUserRestrictionForUser(
+                    UserManager.DISALLOW_CONFIG_TETHERING,
+                    UserHandle.getUserHandleForUid(callingUid))) {
+                // Turn mobile hotspot off
+                stopSoftApInternal(WifiManager.IFACE_IP_MODE_UNSPECIFIED);
+            }
+            if (mUserManager.hasUserRestrictionForUser(
+                    UserManager.DISALLOW_CONFIG_WIFI,
+                    UserHandle.getUserHandleForUid(callingUid))) {
+                return;
+            }
+        } finally {
+            Binder.restoreCallingIdentity(ident);
         }
         // Delete all Wifi SSIDs
         mWifiThreadRunner.run(() -> {
@@ -6146,21 +6172,26 @@ public class WifiServiceImpl extends BaseWifiService {
         int callingUid = Binder.getCallingUid();
         int callingPid = Binder.getCallingPid();
 
-        if (SdkLevel.isAtLeastT()) {
-            boolean isUserRestrictionSet = mUserManager.hasUserRestrictionForUser(
-                    UserManager.DISALLOW_ADD_WIFI_CONFIG,
-                    UserHandle.getUserHandleForUid(callingUid));
-            boolean isCarrierApp = mWifiInjector.makeTelephonyManager()
-                    .checkCarrierPrivilegesForPackageAnyPhone(callingPackageName)
-                    == TelephonyManager.CARRIER_PRIVILEGE_STATUS_HAS_ACCESS;
-            boolean hasPermission = !isUserRestrictionSet
-                    || isCarrierApp
-                    || isPrivileged(callingPid, callingUid)
-                    || mWifiPermissionsUtil.isSystem(callingPackageName, callingUid)
-                    || mWifiPermissionsUtil.isAdmin(callingUid, callingPackageName);
-            if (!hasPermission) {
-                return WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_RESTRICTED_BY_ADMIN;
+        long ident = Binder.clearCallingIdentity();
+        try {
+            if (SdkLevel.isAtLeastT()) {
+                boolean isUserRestrictionSet = mUserManager.hasUserRestrictionForUser(
+                        UserManager.DISALLOW_ADD_WIFI_CONFIG,
+                        UserHandle.getUserHandleForUid(callingUid));
+                boolean isCarrierApp = mWifiInjector.makeTelephonyManager()
+                        .checkCarrierPrivilegesForPackageAnyPhone(callingPackageName)
+                        == TelephonyManager.CARRIER_PRIVILEGE_STATUS_HAS_ACCESS;
+                boolean hasPermission = !isUserRestrictionSet
+                        || isCarrierApp
+                        || isPrivileged(callingPid, callingUid)
+                        || mWifiPermissionsUtil.isSystem(callingPackageName, callingUid)
+                        || mWifiPermissionsUtil.isAdmin(callingUid, callingPackageName);
+                if (!hasPermission) {
+                    return WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_RESTRICTED_BY_ADMIN;
+                }
             }
+        } finally {
+            Binder.restoreCallingIdentity(ident);
         }
 
         if (mVerboseLoggingEnabled) {
