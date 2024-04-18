@@ -6612,7 +6612,7 @@ public class WifiMetricsTest extends WifiBaseTest {
                 eq((int) wifiDisconnectTimeMs / 1000),
                 eq((int) (wifiDisconnectTimeMs - connectionEndTimeMs) / 1000),
                 eq(WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_PRIMARY),
-                anyInt(), anyInt(), anyInt(), anyInt()));
+                anyInt(), anyInt(), anyInt(), anyInt(), anyInt()));
     }
 
     @Test
@@ -6640,7 +6640,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         ExtendedMockito.verify(() -> WifiStatsLog.write(
                 eq(WifiStatsLog.WIFI_DISCONNECT_REPORTED),
                 anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(),
-                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()),
+                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()),
                 times(0));
     }
 
@@ -6651,7 +6651,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         ExtendedMockito.verify(() -> WifiStatsLog.write(
                 eq(WifiStatsLog.WIFI_DISCONNECT_REPORTED),
                 anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(),
-                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()),
+                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()),
                 times(0));
     }
 
