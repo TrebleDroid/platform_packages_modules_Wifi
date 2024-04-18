@@ -785,28 +785,25 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                 intentFilter,
                 null,
                 mHandler);
-        if (mFeatureFlags.d2dWhenInfraStaOff()) {
-            mSettingsConfigStore.registerChangeListener(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED,
-                    (key, value) -> {
-                        // Check setting & wifi enabled status only when feature is supported.
-                        if (mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()) {
-                            if (mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)) {
-                                enableUsage();
-                            } else if (mWifiManager.getWifiState()
-                                    != WifiManager.WIFI_STATE_ENABLED) {
-                                disableUsage(false);
-                            }
+        mSettingsConfigStore.registerChangeListener(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED,
+                (key, value) -> {
+                    // Check setting & wifi enabled status only when feature is supported.
+                    if (mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()) {
+                        if (mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED)) {
+                            enableUsage();
+                        } else if (mWifiManager.getWifiState()
+                                != WifiManager.WIFI_STATE_ENABLED) {
+                            disableUsage(false);
                         }
-                    }, mHandler);
-        }
+                    }
+                }, mHandler);
         if (isD2dAllowedWhenStaDisabled()) {
             enableUsage();
         }
     }
 
     public boolean isD2dAllowedWhenStaDisabled() {
-        return mFeatureFlags.d2dWhenInfraStaOff()
-                && mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()
+        return mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()
                 && mSettingsConfigStore.get(D2D_ALLOWED_WHEN_INFRA_STA_DISABLED);
     }
 

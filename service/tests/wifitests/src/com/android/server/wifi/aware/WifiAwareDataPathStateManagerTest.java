@@ -95,7 +95,9 @@ import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.InterfaceConflictManager;
 import com.android.server.wifi.MockResources;
 import com.android.server.wifi.WifiBaseTest;
+import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiInjector;
+import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.aware.WifiAwareDataPathStateManager.WifiAwareNetworkAgent;
 import com.android.server.wifi.hal.WifiNanIface.NanDataPathChannelCfg;
 import com.android.server.wifi.hal.WifiNanIface.NanStatusCode;
@@ -163,6 +165,8 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
     @Mock private StatsManager mStatsManager;
     @Mock private DeviceConfigFacade mDeviceConfigFacade;
     @Mock private FeatureFlags mFeatureFlags;
+    @Mock private WifiSettingsConfigStore mWifiSettingsConfigStore;
+    @Mock private WifiGlobals mWifiGlobals;
 
     @Rule
     public ErrorCollector collector = new ErrorCollector();
@@ -213,6 +217,8 @@ public class WifiAwareDataPathStateManagerTest extends WifiBaseTest {
         }
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
         when(mDeviceConfigFacade.getFeatureFlags()).thenReturn(mFeatureFlags);
+        when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
+        when(mWifiInjector.getWifiGlobals()).thenReturn(mWifiGlobals);
         mDut = new WifiAwareStateManager(mWifiInjector, mPairingConfigManager);
         mDut.setNative(mMockNativeManager, mMockNative);
         mDut.start(mMockContext, mMockLooper.getLooper(), mAwareMetricsMock,
