@@ -96,7 +96,6 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
         mInOrder.verify(mHalDeviceManager).initialize();
         mInOrder.verify(mHalDeviceManager).registerStatusListener(
                 mManagerStatusListenerCaptor.capture(), any());
-        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(true);
         mWifiNativeNanIfaceMock.iface = mWifiNanIfaceMock;
     }
 
@@ -113,13 +112,7 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
      */
     @Test
     public void testControlFlowWithoutInterface() {
-        testControlFlowWithoutInterface(true);
-        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
-        testControlFlowWithoutInterface(false);
-    }
-
-    private void testControlFlowWithoutInterface(boolean isD2dEnabled) {
-        when(mWifiAwareStateManagerMock.isD2dAllowedWhenStaDisabled()).thenReturn(isD2dEnabled);
+        when(mWifiAwareStateManagerMock.isD2dAllowedWhenStaDisabled()).thenReturn(true);
         // configure HalDeviceManager as ready/wifi started (and to return an interface if
         // requested)
         when(mHalDeviceManager.isStarted()).thenReturn(true);
@@ -133,17 +126,13 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
         mManagerStatusListenerCaptor.getValue().onStatusChanged();
         mInOrder.verify(mWifiAwareStateManagerMock).isD2dAllowedWhenStaDisabled();
 
-        mInOrder.verify(mWifiAwareStateManagerMock).disableUsage(isD2dEnabled);
+        mInOrder.verify(mWifiAwareStateManagerMock).disableUsage(true);
 
         // 3. onStatusChange (ready/started) + available -> enableUsage
         when(mHalDeviceManager.isStarted()).thenReturn(true);
         mManagerStatusListenerCaptor.getValue().onStatusChanged();
         mInOrder.verify(mWifiAwareStateManagerMock).tryToGetAwareCapability();
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative, never()).createNanIface(any(), any(), any());
-        } else {
-            mInOrder.verify(mHalDeviceManager, never()).createNanIface(any(), any(), any());
-        }
+        mInOrder.verify(mWifiNative, never()).createNanIface(any(), any(), any());
         verifyNoMoreInteractions(mWifiAwareStateManagerMock, mWifiNanIfaceMock);
         assertNull("Interface non-null!", mDut.getWifiNanIface());
     }
@@ -154,22 +143,11 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
      */
     @Test
     public void testReferenceCounting() throws Exception {
-        testReferenceCounting(true);
-        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
-        testReferenceCounting(false);
-    }
-
-    private void testReferenceCounting(boolean isD2dEnabled) throws Exception {
         // configure HalDeviceManager as ready/wifi started (and to return an interface if
         // requested)
         when(mHalDeviceManager.isStarted()).thenReturn(true);
-        if (isD2dEnabled) {
-            when(mWifiNative.createNanIface(any(), any(), any()))
-                    .thenReturn(mWifiNativeNanIfaceMock);
-        } else {
-            when(mHalDeviceManager.createNanIface(any(), any(), any()))
-                    .thenReturn(mWifiNanIfaceMock);
-        }
+        when(mWifiNative.createNanIface(any(), any(), any()))
+                .thenReturn(mWifiNativeNanIfaceMock);
 
         // 1. onStatusChange (ready/started)
         mManagerStatusListenerCaptor.getValue().onStatusChanged();
@@ -178,13 +156,8 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
 
         // 2. request (interface obtained)
         mDut.tryToGetAware(TEST_WS);
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative).createNanIface(mDestroyedListenerCaptor.capture(),
-                    any(), eq(TEST_WS));
-        } else {
-            mInOrder.verify(mHalDeviceManager).createNanIface(mDestroyedListenerCaptor.capture(),
-                    any(), eq(TEST_WS));
-        }
+        mInOrder.verify(mWifiNative).createNanIface(mDestroyedListenerCaptor.capture(),
+                any(), eq(TEST_WS));
         mInOrder.verify(mWifiNanIfaceMock).registerFrameworkCallback(any());
         mInOrder.verify(mWifiNanIfaceMock).enableVerboseLogging(anyBoolean());
         assertEquals("Interface mismatch", mWifiNanIfaceMock, mDut.getWifiNanIface());
@@ -192,22 +165,15 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
         // 3. release (interface released)
         mDut.releaseAware();
         mInOrder.verify(mHalDeviceManager).removeIface(mWifiNanIfaceMock);
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative).teardownNanIface(anyInt());
-        }
+        mInOrder.verify(mWifiNative).teardownNanIface(anyInt());
         assertNull("Interface non-null!", mDut.getWifiNanIface());
 
         mDestroyedListenerCaptor.getValue().onDestroyed("nan0");
 
         // 4. request (interface obtained)
         mDut.tryToGetAware(TEST_WS);
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative).createNanIface(mDestroyedListenerCaptor.capture(),
-                    any(), eq(TEST_WS));
-        } else {
-            mInOrder.verify(mHalDeviceManager).createNanIface(mDestroyedListenerCaptor.capture(),
-                    any(), eq(TEST_WS));
-        }
+        mInOrder.verify(mWifiNative).createNanIface(mDestroyedListenerCaptor.capture(),
+                any(), eq(TEST_WS));
         mInOrder.verify(mWifiNanIfaceMock).registerFrameworkCallback(any());
         mInOrder.verify(mWifiNanIfaceMock).enableVerboseLogging(anyBoolean());
         assertEquals("Interface mismatch", mWifiNanIfaceMock, mDut.getWifiNanIface());
@@ -223,21 +189,13 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
         // 7. release (interface released)
         mDut.releaseAware();
         mInOrder.verify(mHalDeviceManager).removeIface(mWifiNanIfaceMock);
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative).teardownNanIface(anyInt());
-        }
+        mInOrder.verify(mWifiNative).teardownNanIface(anyInt());
         assertNull("Interface non-null!", mDut.getWifiNanIface());
 
         mDestroyedListenerCaptor.getValue().onDestroyed("nan0");
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative, never()).createNanIface(any(), any(), any());
-        } else {
-            mInOrder.verify(mHalDeviceManager, never()).createNanIface(any(), any(), any());
-        }
+        mInOrder.verify(mWifiNative, never()).createNanIface(any(), any(), any());
         mInOrder.verify(mHalDeviceManager, never()).removeIface(any());
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative, never()).teardownNanIface(anyInt());
-        }
+        mInOrder.verify(mWifiNative, never()).teardownNanIface(anyInt());
         verifyNoMoreInteractions(mWifiAwareStateManagerMock, mWifiNanIfaceMock);
     }
 
@@ -246,22 +204,11 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
      */
     @Test
     public void testRequestFlowWithAsyncDeletes() throws Exception {
-        testRequestFlowWithAsyncDeletes(true);
-        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
-        testRequestFlowWithAsyncDeletes(false);
-    }
-
-    private void testRequestFlowWithAsyncDeletes(boolean isD2dEnabled) throws Exception {
         // configure HalDeviceManager as ready/wifi started (and to return an interface if
         // requested)
         when(mHalDeviceManager.isStarted()).thenReturn(true);
-        if (isD2dEnabled) {
-            when(mWifiNative.createNanIface(any(), any(), any()))
-                    .thenReturn(mWifiNativeNanIfaceMock);
-        } else {
-            when(mHalDeviceManager.createNanIface(any(), any(), any()))
-                    .thenReturn(mWifiNanIfaceMock);
-        }
+        when(mWifiNative.createNanIface(any(), any(), any()))
+                .thenReturn(mWifiNativeNanIfaceMock);
 
         // 1. onStatusChange (ready/started)
         mManagerStatusListenerCaptor.getValue().onStatusChanged();
@@ -270,13 +217,8 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
 
         // 2. request (interface obtained)
         mDut.tryToGetAware(TEST_WS);
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative).createNanIface(mDestroyedListenerCaptor.capture(),
-                    any(), eq(TEST_WS));
-        } else {
-            mInOrder.verify(mHalDeviceManager).createNanIface(mDestroyedListenerCaptor.capture(),
-                    any(), eq(TEST_WS));
-        }
+        mInOrder.verify(mWifiNative).createNanIface(mDestroyedListenerCaptor.capture(),
+                any(), eq(TEST_WS));
         mInOrder.verify(mWifiNanIfaceMock).registerFrameworkCallback(any());
         mInOrder.verify(mWifiNanIfaceMock).enableVerboseLogging(anyBoolean());
         assertEquals("Interface mismatch", mWifiNanIfaceMock, mDut.getWifiNanIface());
@@ -290,15 +232,9 @@ public class WifiAwareNativeManagerTest extends WifiBaseTest {
         // 4. a release doesn't do much
         mDut.releaseAware();
 
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative, never()).createNanIface(any(), any(), any());
-        } else {
-            mInOrder.verify(mHalDeviceManager, never()).createNanIface(any(), any(), any());
-        }
+        mInOrder.verify(mWifiNative, never()).createNanIface(any(), any(), any());
         mInOrder.verify(mHalDeviceManager, never()).removeIface(any());
-        if (isD2dEnabled) {
-            mInOrder.verify(mWifiNative, never()).teardownNanIface(anyInt());
-        }
+        mInOrder.verify(mWifiNative, never()).teardownNanIface(anyInt());
         verifyNoMoreInteractions(mWifiAwareStateManagerMock, mWifiNanIfaceMock);
     }
 }

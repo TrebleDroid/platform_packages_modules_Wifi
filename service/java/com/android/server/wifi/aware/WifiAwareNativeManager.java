@@ -132,15 +132,10 @@ public class WifiAwareNativeManager {
             }
 
             mInterfaceDestroyedListener = new InterfaceDestroyedListener();
-            if (mFeatureFlags.d2dWhenInfraStaOff()) {
-                mNanIface = mWifiNative.createNanIface(mInterfaceDestroyedListener,
-                        mHandler, requestorWs);
-                if (mNanIface != null) {
-                    mWifiNanIface = (WifiNanIface) mNanIface.iface;
-                }
-            } else {
-                mWifiNanIface = mHalDeviceManager.createNanIface(mInterfaceDestroyedListener,
+            mNanIface = mWifiNative.createNanIface(mInterfaceDestroyedListener,
                     mHandler, requestorWs);
+            if (mNanIface != null) {
+                mWifiNanIface = (WifiNanIface) mNanIface.iface;
             }
             if (mWifiNanIface == null) {
                 Log.e(TAG, "Was not able to obtain a WifiNanIface (even though enabled!?)");
