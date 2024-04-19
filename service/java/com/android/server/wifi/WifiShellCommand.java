@@ -170,9 +170,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
             "set-passpoint-enabled",
             "set-multi-internet-state",
             "start-scan",
-            "start-softap",
             "status",
-            "stop-softap",
             "query-interface",
             "interface-priority-interactive-mode",
             "set-one-shot-screen-on-delay-ms",
@@ -2884,45 +2882,6 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("  reset-connected-score");
         pw.println("    Turns on the default connected scorer.");
         pw.println("    Note: Will clear any external scorer set.");
-        pw.println(
-                "  start-softap <ssid> (open|wpa2|wpa3|wpa3_transition|owe|owe_transition)"
-                        + " <passphrase> [-b 2|5|6|any|bridged|bridged_2_5|bridged_2_6|bridged_5_6]"
-                        + " [-x] [-w 20|40|80|160|320] [-f <int> [<int>]]");
-        pw.println("    Start softap with provided params");
-        pw.println("    Note that the shell command doesn't activate internet tethering. In some "
-                + "devices, internet sharing is possible when Wi-Fi STA is also enabled and is"
-                + "associated to another AP with internet access.");
-        pw.println("    <ssid> - SSID of the network");
-        pw.println("    open|wpa2|wpa3|wpa3_transition|owe|owe_transition - Security type of the "
-                + "network.");
-        pw.println("        - Use 'open', 'owe', 'owe_transition' for networks with no passphrase");
-        pw.println("        - Use 'wpa2', 'wpa3', 'wpa3_transition' for networks with passphrase");
-        pw.println("    -b 2|5|6|any|bridged|bridged_2_5|bridged_2_6|bridged_5_6 - select the"
-                + " preferred bands.");
-        pw.println("        - Use '2' to select 2.4GHz band as the preferred band");
-        pw.println("        - Use '5' to select 5GHz band as the preferred band");
-        pw.println("        - Use '6' to select 6GHz band as the preferred band");
-        pw.println("        - Use 'any' to indicate no band preference");
-        pw.println("        - Use 'bridged' to indicate bridged AP which enables APs on both "
-                + "2.4G + 5G");
-        pw.println("        - Use 'bridged_2_5' to indicate bridged AP which enables APs on both "
-                + "2.4G + 5G");
-        pw.println("        - Use 'bridged_2_6' to indicate bridged AP which enables APs on both "
-                + "2.4G + 6G");
-        pw.println("        - Use 'bridged_5_6' to indicate bridged AP which enables APs on both "
-                + "5G + 6G");
-        pw.println("    Note: If the band option is not provided, 2.4GHz is the preferred band.");
-        pw.println("          The exact channel is auto-selected by FW unless overridden by "
-                + "force-softap-channel command or '-f <int> <int>' option");
-        pw.println("    -f <int> <int> - force exact channel frequency for operation channel");
-        pw.println("    Note: -f <int> <int> - must be the last option");
-        pw.println("          For example:");
-        pw.println("          Use '-f 2412' to enable single Soft Ap on 2412");
-        pw.println("          Use '-f 2412 5745' to enable bridged dual Soft Ap on 2412 and 5745");
-        pw.println("    -x - Specifies the SSID as hex digits instead of plain text (T and above)");
-        pw.println("    -w 20|40|80|160|320 - select the maximum channel bandwidth (MHz)");
-        pw.println("  stop-softap");
-        pw.println("    Stop softap (hotspot)");
         pw.println("  pmksa-flush <networkId>");
         pw.println("        - Flush the local PMKSA cache associated with the network id."
                 + " Use list-networks to retrieve <networkId> for the network");
@@ -3040,6 +2999,45 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("    Clears the user disabled networks list.");
         pw.println("  send-link-probe");
         pw.println("    Manually triggers a link probe.");
+        pw.println(
+                "  start-softap <ssid> (open|wpa2|wpa3|wpa3_transition|owe|owe_transition)"
+                        + " <passphrase> [-b 2|5|6|any|bridged|bridged_2_5|bridged_2_6|bridged_5_6]"
+                        + " [-x] [-w 20|40|80|160|320] [-f <int> [<int>]]");
+        pw.println("    Start softap with provided params");
+        pw.println("    Note that the shell command doesn't activate internet tethering. In some "
+                + "devices, internet sharing is possible when Wi-Fi STA is also enabled and is"
+                + "associated to another AP with internet access.");
+        pw.println("    <ssid> - SSID of the network");
+        pw.println("    open|wpa2|wpa3|wpa3_transition|owe|owe_transition - Security type of the "
+                + "network.");
+        pw.println("        - Use 'open', 'owe', 'owe_transition' for networks with no passphrase");
+        pw.println("        - Use 'wpa2', 'wpa3', 'wpa3_transition' for networks with passphrase");
+        pw.println("    -b 2|5|6|any|bridged|bridged_2_5|bridged_2_6|bridged_5_6 - select the"
+                + " preferred bands.");
+        pw.println("        - Use '2' to select 2.4GHz band as the preferred band");
+        pw.println("        - Use '5' to select 5GHz band as the preferred band");
+        pw.println("        - Use '6' to select 6GHz band as the preferred band");
+        pw.println("        - Use 'any' to indicate no band preference");
+        pw.println("        - Use 'bridged' to indicate bridged AP which enables APs on both "
+                + "2.4G + 5G");
+        pw.println("        - Use 'bridged_2_5' to indicate bridged AP which enables APs on both "
+                + "2.4G + 5G");
+        pw.println("        - Use 'bridged_2_6' to indicate bridged AP which enables APs on both "
+                + "2.4G + 6G");
+        pw.println("        - Use 'bridged_5_6' to indicate bridged AP which enables APs on both "
+                + "5G + 6G");
+        pw.println("    Note: If the band option is not provided, 2.4GHz is the preferred band.");
+        pw.println("          The exact channel is auto-selected by FW unless overridden by "
+                + "force-softap-channel command or '-f <int> <int>' option");
+        pw.println("    -f <int> <int> - force exact channel frequency for operation channel");
+        pw.println("    Note: -f <int> <int> - must be the last option");
+        pw.println("          For example:");
+        pw.println("          Use '-f 2412' to enable single Soft Ap on 2412");
+        pw.println("          Use '-f 2412 5745' to enable bridged dual Soft Ap on 2412 and 5745");
+        pw.println("    -x - Specifies the SSID as hex digits instead of plain text (T and above)");
+        pw.println("    -w 20|40|80|160|320 - select the maximum channel bandwidth (MHz)");
+        pw.println("  stop-softap");
+        pw.println("    Stop softap (hotspot)");
         pw.println("  force-softap-band enabled <int> | disabled");
         pw.println("    Forces soft AP band to 2|5|6");
         pw.println("  force-softap-channel enabled <int> | disabled [-w <maxBandwidth>]");
