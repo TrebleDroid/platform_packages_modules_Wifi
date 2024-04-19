@@ -2407,11 +2407,20 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
                 eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
         validateConnectSequence(false, 2, SUPPLICANT_SSID);
 
-        // Fallback SSID was not found, broadcast the network not found event now.
+        // Fallback SSID was not found, finally broadcast NETWORK_NOT_FOUND and try the first SSID
+        // again.
         mISupplicantStaIfaceCallback.onNetworkNotFound(NativeUtil.byteArrayFromArrayList(
                 NativeUtil.decodeSsid(SUPPLICANT_SSID)));
         verify(mWifiMonitor).broadcastNetworkNotFoundEvent(
                 eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
+        validateConnectSequence(false, 3, TRANSLATED_SUPPLICANT_SSID.toString());
+
+        // First SSID not found, try the fallback without broadcasting NETWORK_NOT_FOUND.
+        mISupplicantStaIfaceCallback.onNetworkNotFound(NativeUtil.byteArrayFromArrayList(
+                NativeUtil.decodeSsid(TRANSLATED_SUPPLICANT_SSID.toString())));
+        verify(mWifiMonitor, times(1)).broadcastNetworkNotFoundEvent(
+                eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
+        validateConnectSequence(false, 4, SUPPLICANT_SSID);
     }
 
     /**
