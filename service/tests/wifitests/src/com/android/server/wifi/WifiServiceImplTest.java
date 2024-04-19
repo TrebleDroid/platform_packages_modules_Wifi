@@ -3344,7 +3344,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         String featureId = "test.com.featureId";
         mLooper.startAutoDispatch();
         List<ScanResult> retrievedScanResultList = mWifiServiceImpl.getScanResults(packageName,
-                featureId);
+                featureId).getList();
         mLooper.stopAutoDispatchAndIgnoreExceptions();
         verify(mScanRequestProxy).getScanResults();
 
@@ -3370,7 +3370,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         String featureId = "test.com.featureId";
         mLooper.startAutoDispatch();
         List<ScanResult> retrievedScanResultList = mWifiServiceImpl.getScanResults(packageName,
-                featureId);
+                featureId).getList();
         mLooper.stopAutoDispatchAndIgnoreExceptions();
         verify(mScanRequestProxy, never()).getScanResults();
 

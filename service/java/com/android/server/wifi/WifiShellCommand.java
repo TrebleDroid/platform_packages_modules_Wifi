@@ -965,7 +965,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     return 0;
                 case "list-scan-results":
                     List<ScanResult> scanResults =
-                            mWifiService.getScanResults(SHELL_PACKAGE_NAME, null);
+                            mScanRequestProxy.getScanResults();
                     if (scanResults.isEmpty()) {
                         pw.println("No scan results");
                     } else {
@@ -2535,7 +2535,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         // So, find scan result with the best rssi level to set in the request.
         if (bssid == null && !nullBssid && !noSsid) {
             ScanResult matchingScanResult =
-                    mWifiService.getScanResults(SHELL_PACKAGE_NAME, null)
+                    mScanRequestProxy.getScanResults()
                             .stream()
                             .filter(s -> s.SSID.equals(ssid))
                             .max(Comparator.comparingInt(s -> s.level))

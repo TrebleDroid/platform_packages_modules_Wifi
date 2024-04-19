@@ -156,7 +156,7 @@ interface IWifiManager
 
     boolean startScan(String packageName, String featureId);
 
-    List<ScanResult> getScanResults(String callingPackage, String callingFeatureId);
+    ParceledListSlice getScanResults(String callingPackage, String callingFeatureId);
 
     void getChannelData(in IListListener listener, String packageName, in Bundle extras);
 

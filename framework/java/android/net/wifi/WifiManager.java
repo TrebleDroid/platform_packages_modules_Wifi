@@ -4532,8 +4532,12 @@ public class WifiManager {
     @RequiresPermission(allOf = {ACCESS_WIFI_STATE, ACCESS_FINE_LOCATION})
     public List<ScanResult> getScanResults() {
         try {
-            return mService.getScanResults(mContext.getOpPackageName(),
-                    mContext.getAttributionTag());
+            ParceledListSlice<ScanResult> parceledList = mService
+                    .getScanResults(mContext.getOpPackageName(), mContext.getAttributionTag());
+            if (parceledList == null) {
+                return Collections.emptyList();
+            }
+            return parceledList.getList();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -7423,7 +7427,7 @@ public class WifiManager {
      * <li> This API will cause reconnect if the current active connection is marked metered.</li>
      *
      * @param networkId the ID of the network as returned by {@link #addNetwork} or {@link
-     *        getConfiguredNetworks}.
+     *        #getConfiguredNetworks()}.
      * @param listener for callbacks on success or failure. Can be null.
      * @throws IllegalStateException if the WifiManager instance needs to be
      * initialized again

@@ -247,7 +247,7 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public List<ScanResult> getScanResults(String callingPackage, String callingFeatureId) {
+    public ParceledListSlice getScanResults(String callingPackage, String callingFeatureId) {
         throw new UnsupportedOperationException();
     }
 
