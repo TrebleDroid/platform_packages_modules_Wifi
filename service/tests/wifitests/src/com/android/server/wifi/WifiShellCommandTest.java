@@ -74,6 +74,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.FileDescriptor;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -131,6 +132,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         when(mWifiInjector.getWifiDiagnostics()).thenReturn(mWifiDiagnostics);
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfig);
         when(mContext.getSystemService(WifiScanner.class)).thenReturn(mWifiScanner);
+        when(mScanRequestProxy.getScanResults()).thenReturn(new ArrayList<>());
 
         mWifiShellCommand = new WifiShellCommand(mWifiInjector, mWifiService, mContext,
                 mWifiGlobals, mWifiThreadRunner);
@@ -908,12 +910,12 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setSsid(testSsid)
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // OWE
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
-                new String[]{"add-request", testSsid, "owe", testPassphrase});
+                new String[]{"add-request", testSsid, "owe"});
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -923,7 +925,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setIsEnhancedOpen(true)
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // WPA2
         mWifiShellCommand.exec(
@@ -938,7 +940,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setWpa2Passphrase(testPassphrase)
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // WPA3
         mWifiShellCommand.exec(
@@ -953,7 +955,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setWpa3Passphrase(testPassphrase)
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // Test bssid flag
         mWifiShellCommand.exec(
@@ -968,7 +970,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setBssid(MacAddress.fromString(testBssid))
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // Test glob flag
         mWifiShellCommand.exec(
@@ -983,7 +985,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                         testSsid, PatternMatcher.PATTERN_ADVANCED_GLOB))
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
     }
 
     @Test

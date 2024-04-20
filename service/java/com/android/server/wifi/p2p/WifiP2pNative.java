@@ -96,8 +96,7 @@ public class WifiP2pNative {
 
         public void teardownAndInvalidate(@Nullable String ifaceName) {
             synchronized (mLock) {
-                if (mFeatureFlags.d2dWhenInfraStaOff()
-                        && !mSupplicantP2pIfaceHal.deregisterDeathHandler()) {
+                if (!mSupplicantP2pIfaceHal.deregisterDeathHandler()) {
                     Log.i(TAG, "Failed to deregister p2p supplicant death handler");
                 }
                 if (!TextUtils.isEmpty(ifaceName)) {
@@ -186,8 +185,7 @@ public class WifiP2pNative {
      * Close supplicant connection.
      */
     public void stopP2pSupplicantIfNecessary() {
-        if (mFeatureFlags.d2dWhenInfraStaOff()
-                && mSupplicantP2pIfaceHal.isInitializationStarted()) {
+        if (mSupplicantP2pIfaceHal.isInitializationStarted()) {
             mSupplicantP2pIfaceHal.terminate();
         }
     }
@@ -238,14 +236,10 @@ public class WifiP2pNative {
                 mInterfaceDestroyedListener = (null == destroyedListener)
                         ? null
                         : new InterfaceDestroyedListenerInternal(destroyedListener);
-                if (mFeatureFlags.d2dWhenInfraStaOff()) {
-                    mP2pIface = mWifiNative.createP2pIface(mInterfaceDestroyedListener, handler,
-                        requestorWs);
-                    if (mP2pIface != null) {
-                        mP2pIfaceName = mP2pIface.name;
-                    }
-                } else {
-                    mP2pIfaceName = createP2pIface(handler, requestorWs);
+                mP2pIface = mWifiNative.createP2pIface(mInterfaceDestroyedListener, handler,
+                    requestorWs);
+                if (mP2pIface != null) {
+                    mP2pIfaceName = mP2pIface.name;
                 }
                 if (mP2pIfaceName == null) {
                     Log.e(TAG, "Failed to create P2p iface");
@@ -267,8 +261,7 @@ public class WifiP2pNative {
                     mWifiMetrics.incrementNumSetupP2pInterfaceFailureDueToSupplicant();
                     return null;
                 }
-                if (mFeatureFlags.d2dWhenInfraStaOff()
-                        && !mSupplicantP2pIfaceHal.registerDeathHandler(
+                if (!mSupplicantP2pIfaceHal.registerDeathHandler(
                                 new SupplicantDeathHandlerInternal())) {
                     Log.e(TAG, "Failed to register supplicant death handler"
                             + "(because hidl supplicant?)");
@@ -297,11 +290,6 @@ public class WifiP2pNative {
                 if (mP2pIfaceName != null) {
                     mHalDeviceManager.removeP2pIface(mP2pIfaceName);
                     Log.i(TAG, "P2P interface teardown completed");
-                    if (!mFeatureFlags.d2dWhenInfraStaOff()) {
-                        if (null != mInterfaceDestroyedListener) {
-                            mInterfaceDestroyedListener.teardownAndInvalidate(mP2pIfaceName);
-                        }
-                    }
                 }
             } else {
                 Log.i(TAG, "HAL is not supported. Destroy listener for the interface.");
