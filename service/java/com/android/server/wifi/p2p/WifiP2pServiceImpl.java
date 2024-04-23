@@ -2392,6 +2392,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         mGroup = (WifiP2pGroup) message.obj;
                         loge("Unexpected group creation, remove " + mGroup);
                         mWifiNative.p2pGroupRemove(mGroup.getInterface());
+                        mGroup = null;
                         break;
                     case WifiP2pMonitor.P2P_GROUP_FORMATION_FAILURE_EVENT:
                         // A group formation failure is always followed by
@@ -3873,6 +3874,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         } else {
                             loge("Unexpected group creation, remove " + mGroup);
                             mWifiNative.p2pGroupRemove(mGroup.getInterface());
+                            mGroup = null;
                         }
                         break;
                     case WifiP2pManager.START_LISTEN:

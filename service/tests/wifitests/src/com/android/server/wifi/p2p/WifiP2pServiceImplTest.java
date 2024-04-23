@@ -2718,9 +2718,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Test
     public void testRequestGroupInfoSuccess() throws Exception {
         setTargetSdkGreaterThanT();
-        mTestWifiP2pGroup.setOwner(mTestThisDevice);
+        mTestWifiP2pNewPersistentGoGroup.setOwner(mTestThisDevice);
         forceP2pEnabled(mClient1);
-        sendGroupStartedMsg(mTestWifiP2pGroup);
+        sendGroupStartedMsg(mTestWifiP2pNewPersistentGoGroup);
         simulateTetherReady();
         when(mWifiPermissionsUtil.checkLocalMacAddressPermission(anyInt())).thenReturn(false);
         sendRequestGroupInfoMsg(mClientMessenger);
@@ -2736,7 +2736,7 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
         }
         assertEquals(WifiP2pManager.RESPONSE_GROUP_INFO, mMessageCaptor.getValue().what);
         WifiP2pGroup wifiP2pGroup = (WifiP2pGroup) mMessageCaptor.getValue().obj;
-        assertEquals(mTestWifiP2pGroup.getNetworkName(), wifiP2pGroup.getNetworkName());
+        assertEquals(TEST_NETWORK_NAME, wifiP2pGroup.getNetworkName());
         // Ensure that our own MAC address is anonymized if we're the group owner.
         assertEquals(ANONYMIZED_DEVICE_ADDRESS, wifiP2pGroup.getOwner().deviceAddress);
     }
@@ -2748,9 +2748,9 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
     @Test
     public void testRequestGroupInfoIncludesMacForNetworkSettingsApp() throws Exception {
         setTargetSdkGreaterThanT();
-        mTestWifiP2pGroup.setOwner(mTestThisDevice);
+        mTestWifiP2pNewPersistentGoGroup.setOwner(mTestThisDevice);
         forceP2pEnabled(mClient1);
-        sendGroupStartedMsg(mTestWifiP2pGroup);
+        sendGroupStartedMsg(mTestWifiP2pNewPersistentGoGroup);
         simulateTetherReady();
         when(mWifiPermissionsUtil.checkLocalMacAddressPermission(anyInt())).thenReturn(true);
         sendRequestGroupInfoMsg(mClientMessenger);
