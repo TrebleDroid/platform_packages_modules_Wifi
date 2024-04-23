@@ -272,7 +272,7 @@ public class WifiEnterpriseConfig implements Parcelable {
      * Each entry includes the supported field's key and its maximum allowed length.
      */
     private static final Map<String, Integer> SUPPORTED_FIELDS = new HashMap<>() {{
-            put(ALTSUBJECT_MATCH_KEY, 256);
+            put(ALTSUBJECT_MATCH_KEY, 1024);
             put(ANON_IDENTITY_KEY, 1024);
             put(CA_CERT_KEY, CERTIFICATE_MAX_LENGTH);
             put(CA_PATH_KEY, 4096);
