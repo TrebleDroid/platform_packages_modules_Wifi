@@ -2741,7 +2741,8 @@ public class WifiMetrics {
                         toMetricEapType(mCurrentSession.mConnectionEvent.mEapType),
                         toMetricPhase2Method(mCurrentSession.mConnectionEvent.mPhase2Method),
                         mCurrentSession.mConnectionEvent.mPasspointRoamingType,
-                        mCurrentSession.mConnectionEvent.mCarrierId);
+                        mCurrentSession.mConnectionEvent.mCarrierId,
+                        mCurrentSession.mConnectionEvent.mUid);
 
                 mPreviousSession = mCurrentSession;
                 mCurrentSession = null;
