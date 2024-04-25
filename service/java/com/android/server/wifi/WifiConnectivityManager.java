@@ -1514,6 +1514,11 @@ public class WifiConnectivityManager {
                 clientModeManager.getConnectedBssid());
         ScanResult scanResultCandidate =
                 candidate.getNetworkSelectionStatus().getCandidate();
+        if (scanResultCandidate == null) {
+            localLog("isClientModeManagerConnectedOrConnectingToCandidate(" + clientModeManager
+                    + "): bad candidate - " + candidate.SSID + " scanResult is null!");
+            return connectingOrConnectedToTarget;
+        }
         String targetBssid = scanResultCandidate.BSSID;
         return connectingOrConnectedToTarget
                 && Objects.equals(targetBssid, connectedOrConnectingBssid);
