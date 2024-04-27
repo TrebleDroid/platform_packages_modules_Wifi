@@ -527,6 +527,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
 
     @Test
     public void testStartSoftAp() {
+        BinderUtil.setUid(Process.ROOT_UID);
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"start-softap", "ap1", "wpa2", "xyzabc321", "-b", "5"});
@@ -544,6 +545,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
 
     @Test
     public void testStopSoftAp() {
+        BinderUtil.setUid(Process.ROOT_UID);
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"stop-softap"});
