@@ -21,6 +21,7 @@ package {
 aconfig_declarations {
     name: "wifi_aconfig_flags",
     package: "com.android.wifi.flags",
+    container: "com.android.wifi",
     srcs: ["wifi_flags.aconfig"],
 }
 
