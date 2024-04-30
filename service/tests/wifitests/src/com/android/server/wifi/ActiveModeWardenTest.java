@@ -379,6 +379,8 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         when(mSettingsStore.isWifiToggleEnabled()).thenReturn(true);
         mActiveModeWarden.wifiToggled(TEST_WORKSOURCE);
         mLooper.dispatchAll();
+        assertNull(mActiveModeWarden.getCurrentNetwork());
+
         when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
         when(mClientModeManager.getCurrentNetwork()).thenReturn(mNetwork);
         when(mWifiNative.getSupportedFeatureSet(WIFI_IFACE_NAME)).thenReturn(testFeatureSet);
@@ -406,6 +408,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mScanRequestProxy, times(4)).enableScanning(true, true);
         assertEquals(mClientModeManager, mActiveModeWarden.getPrimaryClientModeManager());
         verify(mModeChangeCallback).onActiveModeManagerRoleChanged(mClientModeManager);
+        assertEquals(mNetwork, mActiveModeWarden.getCurrentNetwork());
     }
 
     private void enterScanOnlyModeActiveState() throws Exception {
@@ -2692,7 +2695,6 @@ public class ActiveModeWardenTest extends WifiBaseTest {
 
         verify(mClientModeManager, atLeastOnce()).getInterfaceName();
         verify(mClientModeManager, atLeastOnce()).getPreviousRole();
-        verifyNoMoreInteractions(mClientModeManager, mSoftApManager);
     }
 
     /**

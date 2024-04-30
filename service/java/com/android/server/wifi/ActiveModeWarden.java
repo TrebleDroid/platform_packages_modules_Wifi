@@ -1663,6 +1663,7 @@ public class ActiveModeWarden {
                 invokeOnPrimaryClientModeManagerChangedCallbacks(
                         mLastPrimaryClientModeManager, clientModeManager);
                 mLastPrimaryClientModeManager = clientModeManager;
+                setCurrentNetwork(clientModeManager.getCurrentNetwork());
             }
             setSupportedFeatureSet(
                     // If primary doesn't exist, DefaultClientModeManager getInterfaceName name
