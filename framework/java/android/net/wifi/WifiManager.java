@@ -5631,21 +5631,10 @@ public class WifiManager {
      * Start Soft AP (hotspot) mode for tethering purposes with the specified TetheringRequest.
      * Note that starting Soft AP mode may disable station mode operation if the device does not
      * support concurrency.
-     * </p>
-     * This will fail and return {@code false} under the following circumstances:
-     * <ul>
-     *     <li>No interfaces are currently available for hotspot. See
-     *     {@link #reportCreateInterfaceImpact(int, boolean, Executor, BiConsumer)}. </li>
-     *     <li>TetheringRequest is misconfigured.</li>
-     *     <li>Wi-Fi tethering is disallowed for the current user.</li>
-     * </ul>
      *
-     * @param request A valid TetheringRequest specifying the configuration of the SAP.
-     *
-     * @return {@code true} if the start operation was successfully posted, {@code false} otherwise.
-     *         If {@code true} was returned, then the success/failure of the request will be
-     *         conveyed afterwards via SoftApCallback.
-     *
+     * @param request  A valid TetheringRequest specifying the configuration of the SAP.
+     * @param executor Executor to run the callback on.
+     * @param callback Callback to listen on state changes for this specific request.
      * @hide
      */
     @FlaggedApi("com.android.wifi.flags.android_v_wifi_api")
@@ -5654,7 +5643,8 @@ public class WifiManager {
             android.Manifest.permission.NETWORK_STACK,
             NetworkStack.PERMISSION_MAINLINE_NETWORK_STACK
     })
-    public boolean startTetheredHotspotRequest(@NonNull TetheringManager.TetheringRequest request) {
+    public void startTetheredHotspot(@NonNull TetheringManager.TetheringRequest request,
+            @NonNull @CallbackExecutor Executor executor, @NonNull SoftApCallback callback) {
         throw new UnsupportedOperationException("Not supported before API 35");
     }
 
