@@ -269,6 +269,7 @@ public class WifiInjector {
     @NonNull private final ApplicationQosPolicyRequestHandler mApplicationQosPolicyRequestHandler;
     private final WifiRoamingModeManager mWifiRoamingModeManager;
     private final TwtManager mTwtManager;
+    private final WifiVoipDetector mWifiVoipDetector;
 
     public WifiInjector(WifiContext context) {
         if (context == null) {
@@ -624,6 +625,11 @@ public class WifiInjector {
         mTwtManager = new TwtManager(this, mCmiMonitor, mWifiNative, wifiHandler, mClock,
                 WifiTwtSession.MAX_TWT_SESSIONS, 1);
         mBackupRestoreController = new BackupRestoreController(mWifiSettingsBackupRestore, mClock);
+        if (mFeatureFlags.voipDetection() && SdkLevel.isAtLeastV()) {
+            mWifiVoipDetector = new WifiVoipDetector(mContext, wifiHandler, this);
+        } else {
+            mWifiVoipDetector = null;
+        }
     }
 
     /**
@@ -1289,5 +1295,10 @@ public class WifiInjector {
     @NonNull
     public BackupRestoreController getBackupRestoreController() {
         return mBackupRestoreController;
+    }
+
+    @Nullable
+    public WifiVoipDetector getWifiVoipDetector() {
+        return mWifiVoipDetector;
     }
 }

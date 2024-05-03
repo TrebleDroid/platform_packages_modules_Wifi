@@ -7348,10 +7348,16 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             updateCurrentConnectionInfo();
             sendConnectedState();
             // Set the roaming policy for the currently connected network
-            if (isPrimary() && getClientRoleForMetrics(config)
+            if (getClientRoleForMetrics(config)
                     != WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_LOCAL_ONLY) {
-                mWifiInjector.getWifiRoamingModeManager().applyWifiRoamingMode(
-                        mInterfaceName, mWifiInfo.getSSID());
+                if (isPrimary()) {
+                    mWifiInjector.getWifiRoamingModeManager().applyWifiRoamingMode(
+                            mInterfaceName, mWifiInfo.getSSID());
+                }
+                if (SdkLevel.isAtLeastV() && mWifiInjector.getWifiVoipDetector() != null) {
+                    mWifiInjector.getWifiVoipDetector().notifyWifiConnected(true,
+                            isPrimary(), mInterfaceName);
+                }
             }
         }
 
@@ -7609,6 +7615,11 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                      WifiConnectivityManager.WIFI_STATE_TRANSITIONING);
 
             mWifiLastResortWatchdog.connectedStateTransition(false);
+            // Always notify Voip detector module.
+            if (SdkLevel.isAtLeastV() && mWifiInjector.getWifiVoipDetector() != null) {
+                mWifiInjector.getWifiVoipDetector().notifyWifiConnected(false,
+                        isPrimary(), mInterfaceName);
+            }
         }
     }
 

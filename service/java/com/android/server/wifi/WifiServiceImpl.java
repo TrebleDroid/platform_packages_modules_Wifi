@@ -5546,6 +5546,10 @@ public class WifiServiceImpl extends BaseWifiService {
                 mWifiNative.dump(pw);
                 pw.println();
                 mWifiInjector.getWifiRoamingModeManager().dump(fd, pw, args);
+                if (SdkLevel.isAtLeastV() && mWifiInjector.getWifiVoipDetector() != null) {
+                    pw.println();
+                    mWifiInjector.getWifiVoipDetector().dump(fd, pw, args);
+                }
             }
         }, TAG + "#dump");
     }
@@ -5723,6 +5727,9 @@ public class WifiServiceImpl extends BaseWifiService {
         mApplicationQosPolicyRequestHandler.enableVerboseLogging(mVerboseLoggingEnabled);
         mWifiSettingsBackupRestore.enableVerboseLogging(mVerboseLoggingEnabled);
         mBackupRestoreController.enableVerboseLogging(mVerboseLoggingEnabled);
+        if (SdkLevel.isAtLeastV() && mWifiInjector.getWifiVoipDetector() != null) {
+            mWifiInjector.getWifiVoipDetector().enableVerboseLogging(mVerboseLoggingEnabled);
+        }
     }
 
     @Override

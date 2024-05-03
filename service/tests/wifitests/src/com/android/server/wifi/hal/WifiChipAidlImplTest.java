@@ -29,11 +29,13 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.hardware.wifi.AfcChannelAllowance;
 import android.hardware.wifi.IWifiChip;
+import android.hardware.wifi.IWifiChip.FeatureSetMask;
 import android.hardware.wifi.IWifiChip.VoipMode;
 import android.hardware.wifi.WifiDebugHostWakeReasonRxIcmpPacketDetails;
 import android.hardware.wifi.WifiDebugHostWakeReasonRxMulticastPacketDetails;
@@ -459,16 +461,27 @@ public class WifiChipAidlImplTest extends WifiBaseTest {
     @Test
     public void testVoipMode() throws Exception {
         // Old Hal should not execute the call.
+        when(mIWifiChipMock.getFeatureSet()).thenReturn(FeatureSetMask.SET_VOIP_MODE);
         lenient().when(WifiHalAidlImpl.isServiceVersionAtLeast(2))
                 .thenReturn(false);
-        assertFalse(mDut.setVoipMode(WifiChip.WIFI_VOIP_MODE_VOICE));
-        assertFalse(mDut.setVoipMode(WifiChip.WIFI_VOIP_MODE_OFF));
+        // Update feature set to support VOIP.
+        mDut.getCapabilitiesAfterIfacesExist();
+        // Old Hal should not execute the call.
+        assertFalse(mDut.setVoipMode(VoipMode.VOICE));
+        assertFalse(mDut.setVoipMode(VoipMode.OFF));
         verify(mIWifiChipMock, never()).setVoipMode(anyInt());
+        // Call HAL when hal is V2 or above.
         lenient().when(WifiHalAidlImpl.isServiceVersionAtLeast(2))
                 .thenReturn(true);
         assertTrue(mDut.setVoipMode(WifiChip.WIFI_VOIP_MODE_VOICE));
         verify(mIWifiChipMock).setVoipMode(VoipMode.VOICE);
-        assertTrue(mDut.setVoipMode(WifiChip.WIFI_VOIP_MODE_OFF));
-        verify(mIWifiChipMock).setVoipMode(VoipMode.OFF);
+        assertTrue(mDut.setVoipMode(VoipMode.OFF));
+        // Don't call HAL when feature is not supported
+        reset(mIWifiChipMock);
+        // Update feature set
+        mDut.getCapabilitiesAfterIfacesExist();
+        assertFalse(mDut.setVoipMode(VoipMode.VOICE));
+        assertFalse(mDut.setVoipMode(VoipMode.OFF));
+        verify(mIWifiChipMock, never()).setVoipMode(anyInt());
     }
 }
