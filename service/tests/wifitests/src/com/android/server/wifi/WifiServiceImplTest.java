@@ -480,7 +480,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Mock SelfRecovery mSelfRecovery;
     @Mock LastCallerInfoManager mLastCallerInfoManager;
     @Mock BuildProperties mBuildProperties;
-    @Mock LinkProbeManager mLinkProbeManager;
     @Mock IOnWifiDriverCountryCodeChangedListener mIOnWifiDriverCountryCodeChangedListener;
     @Mock WifiShellCommand mWifiShellCommand;
     @Mock AfcManager mAfcManager;
@@ -548,7 +547,6 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiInjector.getMakeBeforeBreakManager()).thenReturn(mMakeBeforeBreakManager);
         when(mWifiInjector.getWifiNotificationManager()).thenReturn(mWifiNotificationManager);
         when(mWifiInjector.getBuildProperties()).thenReturn(mBuildProperties);
-        when(mWifiInjector.getLinkProbeManager()).thenReturn(mLinkProbeManager);
         when(mWifiInjector.makeWifiShellCommand(any())).thenReturn(mWifiShellCommand);
         when(mWifiInjector.getAfcManager()).thenReturn(mAfcManager);
         when(mWifiInjector.getPasspointNetworkNominateHelper())

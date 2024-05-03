@@ -560,7 +560,6 @@ public class ClientModeImplTest extends WifiBaseTest {
     @Mock RestrictedWifiNetworkFactory mRestrictedWifiNetworkFactory;
     @Mock MultiInternetManager mMultiInternetManager;
     @Mock WifiNetworkSuggestionsManager mWifiNetworkSuggestionsManager;
-    @Mock LinkProbeManager mLinkProbeManager;
     @Mock PackageManager mPackageManager;
     @Mock WifiLockManager mWifiLockManager;
     @Mock AsyncChannel mNullAsyncChannel;
@@ -830,7 +829,7 @@ public class ClientModeImplTest extends WifiBaseTest {
                 mUntrustedWifiNetworkFactory, mOemWifiNetworkFactory, mRestrictedWifiNetworkFactory,
                 mMultiInternetManager, mWifiLastResortWatchdog, mWakeupController,
                 mWifiLockManager, mFrameworkFacade, mLooper.getLooper(),
-                mWifiNative, mWrongPasswordNotifier, mWifiTrafficPoller, mLinkProbeManager,
+                mWifiNative, mWrongPasswordNotifier, mWifiTrafficPoller,
                 1, mBatteryStatsManager, mSupplicantStateTracker, mMboOceController,
                 mWifiCarrierInfoManager, mWifiPseudonymManager, mEapFailureNotifier,
                 mSimRequiredNotifier, mWifiScoreReport, mWifiP2pConnection, mWifiGlobals,
@@ -6162,29 +6161,6 @@ public class ClientModeImplTest extends WifiBaseTest {
         connect();
 
         verify(mWifiTrafficPoller).notifyOnDataActivity(anyLong(), anyLong());
-    }
-
-    /**
-     * Verify that LinkProbeManager is updated during RSSI poll
-     */
-    @Test
-    public void verifyRssiPollCallsLinkProbeManager() throws Exception {
-        mCmi.enableRssiPolling(true);
-
-        connect();
-        // reset() should be called when RSSI polling is enabled and entering L2L3ConnectedState
-        verify(mLinkProbeManager).resetOnNewConnection(); // called first time here
-        verify(mLinkProbeManager, never()).resetOnScreenTurnedOn(); // not called
-        verify(mLinkProbeManager).updateConnectionStats(any(), any());
-
-        mCmi.enableRssiPolling(false);
-        mLooper.dispatchAll();
-        // reset() should be called when in L2L3ConnectedState (or child states) and RSSI polling
-        // becomes enabled
-        mCmi.enableRssiPolling(true);
-        mLooper.dispatchAll();
-        verify(mLinkProbeManager, times(1)).resetOnNewConnection(); // verify not called again
-        verify(mLinkProbeManager).resetOnScreenTurnedOn(); // verify called here
     }
 
     /**
