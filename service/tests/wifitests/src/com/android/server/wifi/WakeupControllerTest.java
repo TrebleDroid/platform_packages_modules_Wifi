@@ -265,6 +265,26 @@ public class WakeupControllerTest extends WifiBaseTest {
     }
 
     /**
+     * Verify WakeupController is disabled when the location mode is disabled.
+     */
+    @Test
+    public void verifyDisabledWhenLocationOff() {
+        initializeWakeupController(true /* enabled */);
+        when(mWifiPermissionsUtil.isLocationModeEnabled()).thenReturn(false);
+        assertFalse(mWakeupController.isEnabledAndReady());
+    }
+
+    /**
+     * Verify WakeupController is disabled when scan is disabled.
+     */
+    @Test
+    public void verifyDisabledWhenScanOff() {
+        initializeWakeupController(true /* enabled */);
+        when(mWifiSettingsStore.isScanAlwaysAvailableToggleEnabled()).thenReturn(false);
+        assertFalse(mWakeupController.isEnabledAndReady());
+    }
+
+    /**
      * Verify WakeupController registers its store data with the WifiConfigStore on construction.
      */
     @Test
