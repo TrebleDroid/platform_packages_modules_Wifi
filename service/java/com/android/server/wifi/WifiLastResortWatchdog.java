@@ -850,13 +850,13 @@ public class WifiLastResortWatchdog {
     private void logv(String s) {
         mLocalLog.log(s);
         if (mVerboseLoggingEnabled) {
-            Log.v(TAG, s);
+            Log.v(TAG, s, null);
         }
     }
 
     private void loge(String s) {
         mLocalLog.log(s);
-        Log.e(TAG, s);
+        Log.e(TAG, s, null);
     }
 
     /**

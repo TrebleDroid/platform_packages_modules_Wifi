@@ -53,6 +53,8 @@ public class WifiConfigStoreEncryptionUtil {
     private static final int GCM_TAG_LENGTH = 128;
     private static final int KEY_LENGTH = 256;
     private static final String KEY_STORE = "AndroidKeyStore";
+    private final SecretKey mSecretKeyReference;
+    private Cipher mEncryptCipher;
 
     private final String mDataFileName;
 
@@ -69,6 +71,16 @@ public class WifiConfigStoreEncryptionUtil {
                     + "string");
         }
         mDataFileName = dataFileName;
+        mSecretKeyReference = getOrCreateSecretKey(getKeyAlias());
+        try {
+            mEncryptCipher = Cipher.getInstance(CIPHER_ALGORITHM);
+        } catch (NoSuchAlgorithmException e) {
+            reportException(e, "encrypt could not find the algorithm: " + CIPHER_ALGORITHM);
+        } catch (NoSuchPaddingException e) {
+            reportException(e, "encrypt had a padding exception");
+        } catch (Exception e) {
+            reportException(e, "exception caught");
+        }
     }
 
     private String getKeyAlias() {
@@ -82,27 +94,25 @@ public class WifiConfigStoreEncryptionUtil {
      * @return Instance of {@link EncryptedData} containing the encrypted info.
      */
     public @Nullable EncryptedData encrypt(byte[] data) {
+        if (data == null || data.length == 0) {
+            return null;
+        }
         EncryptedData encryptedData = null;
         try {
-            Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
-            SecretKey secretKeyReference = getOrCreateSecretKey(getKeyAlias());
-            if (secretKeyReference != null) {
-                cipher.init(Cipher.ENCRYPT_MODE, secretKeyReference);
-                encryptedData = new EncryptedData(cipher.doFinal(data), cipher.getIV());
+            if (mSecretKeyReference != null) {
+                mEncryptCipher.init(Cipher.ENCRYPT_MODE, mSecretKeyReference);
+                encryptedData = new EncryptedData(mEncryptCipher.doFinal(data),
+                        mEncryptCipher.getIV());
             } else {
                 reportException(new Exception("secretKeyReference is null."),
                         "secretKeyReference is null.");
             }
-        } catch (NoSuchAlgorithmException e) {
-            reportException(e, "encrypt could not find the algorithm: " + CIPHER_ALGORITHM);
-        } catch (NoSuchPaddingException e) {
-            reportException(e, "encrypt had a padding exception");
-        } catch (InvalidKeyException e) {
-            reportException(e, "encrypt received an invalid key");
         } catch (BadPaddingException e) {
             reportException(e, "encrypt had a padding problem");
         } catch (IllegalBlockSizeException e) {
             reportException(e, "encrypt had an illegal block size");
+        } catch (InvalidKeyException e) {
+            reportException(e, "encrypt received an invalid key");
         } catch (Exception e) {
             reportException(e, "exception caught");
         }
@@ -120,9 +130,8 @@ public class WifiConfigStoreEncryptionUtil {
         try {
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, encryptedData.getIv());
-            SecretKey secretKeyReference = getOrCreateSecretKey(getKeyAlias());
-            if (secretKeyReference != null) {
-                cipher.init(Cipher.DECRYPT_MODE, secretKeyReference, spec);
+            if (mSecretKeyReference != null) {
+                cipher.init(Cipher.DECRYPT_MODE, mSecretKeyReference, spec);
                 decryptedData = cipher.doFinal(encryptedData.getEncryptedData());
             }
         } catch (NoSuchAlgorithmException e) {

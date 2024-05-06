@@ -61,6 +61,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.SoftApState;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiClient;
@@ -232,17 +233,17 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         }
 
         @Override
-        public void onStateChanged(int state, int failureReason) {
-            mPrintWriter.println("onStateChanged with state: " + state
-                    + " failure reason: " + failureReason);
-            mSapState = state;
-            if (state == WifiManager.WIFI_AP_STATE_ENABLED) {
+        public void onStateChanged(SoftApState state) {
+            mPrintWriter.println("onStateChanged with state: " + state);
+
+            mSapState = state.getState();
+            if (mSapState == WifiManager.WIFI_AP_STATE_ENABLED) {
                 mPrintWriter.println(" SAP is enabled successfully");
                 // Skip countDown() and wait for onInfoChanged() which has
                 // the confirmed softAp channel information
-            } else if (state == WifiManager.WIFI_AP_STATE_DISABLED) {
+            } else if (mSapState == WifiManager.WIFI_AP_STATE_DISABLED) {
                 mPrintWriter.println(" SAP is disabled");
-            } else if (state == WifiManager.WIFI_AP_STATE_FAILED) {
+            } else if (mSapState == WifiManager.WIFI_AP_STATE_FAILED) {
                 mPrintWriter.println(" SAP failed to start");
                 mCountDownLatch.countDown();
             }
@@ -596,21 +597,22 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 }
                 case "imsi-protection-exemption-clear-user-approved-for-carrier": {
                     String arg1 = getNextArgRequired();
-                    int carrierId = -1;
                     try {
-                        carrierId = Integer.parseInt(arg1);
+                        final int carrierId = Integer.parseInt(arg1);
+                        mWifiThreadRunner.post(() ->
+                                mWifiCarrierInfoManager.clearImsiPrivacyExemptionForCarrier(
+                                        carrierId));
                     } catch (NumberFormatException e) {
                         pw.println("Invalid argument to "
                                 + "'imsi-protection-exemption-clear-user-approved-for-carrier' "
                                 + "- 'carrierId' must be an Integer");
                         return -1;
                     }
-                    mWifiCarrierInfoManager.clearImsiPrivacyExemptionForCarrier(carrierId);
                     return 0;
                 }
                 case "network-requests-remove-user-approved-access-points": {
                     String packageName = getNextArgRequired();
-                    mWifiNetworkFactory.removeApp(packageName);
+                    mWifiThreadRunner.post(() -> mWifiNetworkFactory.removeApp(packageName));
                     return 0;
                 }
                 case "clear-user-disabled-networks": {
@@ -1005,7 +1007,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         }
                     };
                     WifiConfiguration config = buildWifiConfiguration(pw);
-                    mWifiService.connect(config, -1, actionListener, SHELL_PACKAGE_NAME);
+                    mWifiService.connect(config, -1, actionListener, SHELL_PACKAGE_NAME,
+                            new Bundle());
                     // wait for status.
                     countDownLatch.await(500, TimeUnit.MILLISECONDS);
                     setAutoJoin(pw, config.SSID, config.allowAutojoin);
@@ -2057,6 +2060,19 @@ public class WifiShellCommand extends BasicShellCommandHandler {
 
                     return 0;
                 }
+                case "get-cached-scan-data":
+                    WifiScanner.ScanData scanData =
+                            mWifiNative.getCachedScanResultsFromAllClientIfaces();
+
+                    if (scanData.getResults().length > 0) {
+                        pw.println("Successfully get cached scan data: ");
+                        for (ScanResult scanResult : scanData.getResults()) {
+                            pw.println(scanResult);
+                        }
+                    } else {
+                        pw.println("Cached scan data is empty");
+                    }
+                    return 0;
                 case "configure-afc-server":
                     final String url = getNextArgRequired();
 
@@ -2960,6 +2976,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("       '15' - band 2.4, 5, and 6 GHz with DFS channels");
         pw.println("       '16' - band 60 GHz");
         pw.println("       '31' - band 2.4, 5, 6 and 60 GHz with DFS channels");
+        pw.println("  get-cached-scan-data");
+        pw.println("    Gets scan data cached by the firmware");
         pw.println("  force-overlay-config-value <overlayName> <configString> enabled|disabled");
         pw.println("    Force overlay to a specified value. See below for supported overlays.");
         pw.println("    <overlayName> - name of the overlay whose value is overridden.");

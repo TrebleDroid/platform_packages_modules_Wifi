@@ -19,6 +19,7 @@ package com.android.server.wifi.rtt;
 import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE;
 import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_LCI;
 import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_LCR;
+import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_NTB_INITIATOR;
 import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_ONE_SIDED_RTT;
 import static android.net.wifi.rtt.WifiRttManager.CHARACTERISTICS_KEY_BOOLEAN_STA_RESPONDER;
 
@@ -237,6 +238,8 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                             j.put("lcrSupported", mCapabilities.lcrSupported);
                             j.put("responderSupported", mCapabilities.responderSupported);
                             j.put("mcVersion", mCapabilities.mcVersion);
+                            j.put("ntbInitiatorSupported", mCapabilities.ntbInitiatorSupported);
+                            j.put("ntbResponderSupported", mCapabilities.ntbResponderSupported);
                         } catch (JSONException e) {
                             Log.e(TAG, "onCommand: get_capabilities e=" + e);
                         }
@@ -478,7 +481,27 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
         characteristics.putBoolean(CHARACTERISTICS_KEY_BOOLEAN_LCR, capabilities.lcrSupported);
         characteristics.putBoolean(CHARACTERISTICS_KEY_BOOLEAN_STA_RESPONDER,
                 capabilities.responderSupported);
+        characteristics.putBoolean(CHARACTERISTICS_KEY_BOOLEAN_NTB_INITIATOR,
+                capabilities.ntbInitiatorSupported);
         return characteristics;
+    }
+
+    /**
+     * Override IEEE 802.11az parameters with overlay values.
+     */
+    private void override11azOverlays(RangingRequest rangingRequest) {
+        int minNtbTime = mContext.getResources().getInteger(
+                R.integer.config_wifi80211azMinTimeBetweenNtbMeasurementsMicros);
+        int maxNtbTime = mContext.getResources().getInteger(
+                R.integer.config_wifi80211azMaxTimeBetweenNtbMeasurementsMicros);
+        if (minNtbTime > 0 || maxNtbTime > 0) {
+            for (ResponderConfig peer : rangingRequest.mRttPeers) {
+                if (peer.is80211azNtbSupported()) {
+                    if (maxNtbTime > 0) peer.setNtbMaxTimeBetweenMeasurementsMicros(maxNtbTime);
+                    if (minNtbTime > 0) peer.setNtbMinTimeBetweenMeasurementsMicros(minNtbTime);
+                }
+            }
+        }
     }
 
     /**
@@ -583,6 +606,8 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
             Log.e(TAG, "Error on linkToDeath - " + e);
             return;
         }
+
+        override11azOverlays(request);
 
         mRttServiceSynchronized.mHandler.post(() -> {
             WorkSource sourceToUse = ws;
@@ -1166,11 +1191,24 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                                 + "address for peerId=" + rttPeer.peerHandle.peerId);
                         continue;
                     }
-                    newRequestBuilder.addResponder(new ResponderConfig(
-                            MacAddress.fromBytes(mac),
-                            rttPeer.peerHandle, rttPeer.responderType, rttPeer.supports80211mc,
-                            rttPeer.channelWidth, rttPeer.frequency, rttPeer.centerFreq0,
-                            rttPeer.centerFreq1, rttPeer.preamble));
+                    // To create a ResponderConfig object with both a MAC address and peer
+                    // handler, we're bypassing the standard Builder pattern and directly using
+                    // the constructor. This is because the SDK's Builder.build() method has a
+                    // built-in restriction that prevents setting both properties simultaneously.
+                    // To avoid triggering this exception, we're directly invoking the
+                    // constructor to accommodate both values.
+                    ResponderConfig.Builder responderConfigBuilder = new ResponderConfig.Builder()
+                            .setMacAddress(MacAddress.fromBytes(mac))
+                            .setPeerHandle(rttPeer.peerHandle)
+                            .setResponderType(rttPeer.getResponderType())
+                            .set80211mcSupported(rttPeer.is80211mcSupported())
+                            .set80211azNtbSupported(rttPeer.is80211azNtbSupported())
+                            .setChannelWidth(rttPeer.getChannelWidth())
+                            .setFrequencyMhz(rttPeer.getFrequencyMhz())
+                            .setCenterFreq1Mhz(rttPeer.getCenterFreq1Mhz())
+                            .setCenterFreq0Mhz(rttPeer.getCenterFreq0Mhz())
+                            .setPreamble(rttPeer.getPreamble());
+                    newRequestBuilder.addResponder(new ResponderConfig(responderConfigBuilder));
                 } else {
                     newRequestBuilder.addResponder(rttPeer);
                 }
@@ -1271,32 +1309,15 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                     if (mVerboseLoggingEnabled) {
                         Log.v(TAG, "postProcessResults: missing=" + peer.macAddress);
                     }
-
-                    int errorCode = RangingResult.STATUS_FAIL;
-
+                    RangingResult.Builder builder = new RangingResult.Builder()
+                            .setStatus(RangingResult.STATUS_FAIL);
                     if (peer.peerHandle == null) {
-                        finalResults.add(
-                                new RangingResult(errorCode, peer.macAddress, 0, 0, 0, 0, 0, null,
-                                        null, null, 0, false));
+                        builder.setMacAddress(peer.getMacAddress());
                     } else {
-                        finalResults.add(
-                                new RangingResult(
-                                        errorCode,
-                                        peer.peerHandle,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        null,
-                                        null,
-                                        null,
-                                        0,
-                                        RangingResult.UNSPECIFIED,
-                                        RangingResult.UNSPECIFIED));
+                        builder.setPeerHandle(peer.peerHandle);
                     }
+                    finalResults.add(builder.build());
                 } else {
-                    int status = RangingResult.STATUS_SUCCESS;
 
                     // Clear LCI and LCR data if the location data should not be retransmitted,
                     // has a retention expiration time, contains no useful data, or did not parse,
@@ -1309,40 +1330,46 @@ public class RttServiceImpl extends IWifiRttManager.Stub {
                         lci = null;
                         lcr = null;
                     }
-                    // Create external result with external RangResultStatus, cleared LCI and LCR.
+                    RangingResult.Builder builder = new RangingResult.Builder();
+                    builder.setStatus(RangingResult.STATUS_SUCCESS)
+                            .setDistanceMm(resultForRequest.getDistanceMm())
+                            .setDistanceStdDevMm(resultForRequest.getDistanceStdDevMm())
+                            .setRssi(resultForRequest.getRssi())
+                            .setNumAttemptedMeasurements(
+                                    resultForRequest.getNumAttemptedMeasurements())
+                            .setNumSuccessfulMeasurements(
+                                    resultForRequest.getNumSuccessfulMeasurements())
+                            .setLci(lci)
+                            .setLcr(lcr)
+                            .setUnverifiedResponderLocation(responderLocation)
+                            .setRangingTimestampMillis(resultForRequest.getRangingTimestampMillis())
+                            .set80211mcMeasurement(resultForRequest.is80211mcMeasurement())
+                            .setMeasurementChannelFrequencyMHz(
+                                    resultForRequest.getMeasurementChannelFrequencyMHz())
+                            .setMeasurementBandwidth(resultForRequest.getMeasurementBandwidth())
+                            .set80211azNtbMeasurement(resultForRequest.is80211azNtbMeasurement())
+                            .setMinTimeBetweenNtbMeasurementsMicros(
+                                    resultForRequest.getMinTimeBetweenNtbMeasurementsMicros())
+                            .setMaxTimeBetweenNtbMeasurementsMicros(
+                                    resultForRequest.getMaxTimeBetweenNtbMeasurementsMicros())
+                            .set80211azInitiatorTxLtfRepetitionsCount(
+                                    resultForRequest.get80211azInitiatorTxLtfRepetitionsCount())
+                            .set80211azResponderTxLtfRepetitionsCount(
+                                    resultForRequest.get80211azResponderTxLtfRepetitionsCount())
+                            .set80211azNumberOfTxSpatialStreams(
+                                    resultForRequest.get80211azNumberOfTxSpatialStreams())
+                            .set80211azNumberOfRxSpatialStreams(
+                                    resultForRequest.get80211azNumberOfRxSpatialStreams());
                     if (peer.peerHandle == null) {
-                        finalResults.add(new RangingResult(
-                                status,
-                                peer.macAddress,
-                                resultForRequest.mDistanceMm,
-                                resultForRequest.mDistanceStdDevMm,
-                                resultForRequest.mRssi,
-                                resultForRequest.mNumAttemptedMeasurements,
-                                resultForRequest.mNumSuccessfulMeasurements,
-                                lci,
-                                lcr,
-                                responderLocation,
-                                resultForRequest.mTimestamp,
-                                resultForRequest.mIs80211mcMeasurement,
-                                resultForRequest.mFrequencyMHz,
-                                resultForRequest.mPacketBw));
+                        builder.setMacAddress(peer.getMacAddress());
                     } else {
-                        finalResults.add(
-                                new RangingResult(
-                                        status,
-                                        peer.peerHandle,
-                                        resultForRequest.mDistanceMm,
-                                        resultForRequest.mDistanceStdDevMm,
-                                        resultForRequest.mRssi,
-                                        resultForRequest.mNumAttemptedMeasurements,
-                                        resultForRequest.mNumSuccessfulMeasurements,
-                                        lci,
-                                        lcr,
-                                        responderLocation,
-                                        resultForRequest.mTimestamp,
-                                        resultForRequest.mFrequencyMHz,
-                                        resultForRequest.mPacketBw));
+                        builder.setPeerHandle(peer.peerHandle);
                     }
+                    if (SdkLevel.isAtLeastV() && resultForRequest.getVendorData() != null
+                            && !resultForRequest.getVendorData().isEmpty()) {
+                        builder.setVendorData(resultForRequest.getVendorData());
+                    }
+                    finalResults.add(builder.build());
                 }
             }
             return finalResults;

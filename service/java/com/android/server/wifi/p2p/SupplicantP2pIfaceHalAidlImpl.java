@@ -17,6 +17,7 @@
 package com.android.server.wifi.p2p;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.hardware.wifi.supplicant.DebugLevel;
 import android.hardware.wifi.supplicant.FreqRange;
 import android.hardware.wifi.supplicant.ISupplicant;
@@ -26,7 +27,11 @@ import android.hardware.wifi.supplicant.ISupplicantP2pNetwork;
 import android.hardware.wifi.supplicant.IfaceInfo;
 import android.hardware.wifi.supplicant.IfaceType;
 import android.hardware.wifi.supplicant.MiracastMode;
+import android.hardware.wifi.supplicant.P2pConnectInfo;
+import android.hardware.wifi.supplicant.P2pDiscoveryInfo;
+import android.hardware.wifi.supplicant.P2pExtListenInfo;
 import android.hardware.wifi.supplicant.P2pFrameTypeMask;
+import android.hardware.wifi.supplicant.P2pScanType;
 import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.hardware.wifi.supplicant.WpsProvisionMethod;
 import android.net.wifi.CoexUnsafeChannel;
@@ -34,6 +39,8 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
+import android.net.wifi.p2p.WifiP2pExtListenParams;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -49,8 +56,10 @@ import android.util.Log;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.WifiInjector;
+import com.android.server.wifi.WifiNative;
 import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.util.ArrayUtils;
+import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -60,6 +69,8 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -75,6 +86,7 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
     private boolean mInitializationStarted = false;
     private static final int RESULT_NOT_VALID = -1;
     private static final int DEFAULT_OPERATING_CLASS = 81;
+    public static final long WAIT_FOR_DEATH_TIMEOUT_MS = 50L;
     /**
      * Regex pattern for extracting the wps device type bytes.
      * Matches a strings like the following: "<categ>-<OUI>-<subcateg>";
@@ -83,14 +95,19 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
             Pattern.compile("^(\\d{1,2})-([0-9a-fA-F]{8})-(\\d{1,2})$");
 
     private final Object mLock = new Object();
+    private CountDownLatch mWaitForDeathLatch;
+    private WifiNative.SupplicantDeathEventHandler mDeathEventHandler;
 
     // Supplicant HAL AIDL interface objects
     private ISupplicant mISupplicant = null;
     private ISupplicantP2pIface mISupplicantP2pIface = null;
     private final DeathRecipient mSupplicantDeathRecipient =
             () -> {
-                Log.w(TAG, "ISupplicant/ISupplicantP2pIface died");
+                Log.d(TAG, "ISupplicant/ISupplicantP2pIface died");
                 synchronized (mLock) {
+                    if (mWaitForDeathLatch != null) {
+                        mWaitForDeathLatch.countDown();
+                    }
                     supplicantServiceDiedHandler();
                 }
             };
@@ -205,7 +222,8 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
 
             if (mMonitor != null) {
                 ISupplicantP2pIfaceCallback callback =
-                        new SupplicantP2pIfaceCallbackAidlImpl(ifaceName, mMonitor);
+                        new SupplicantP2pIfaceCallbackAidlImpl(ifaceName, mMonitor,
+                                getCachedServiceVersion());
                 if (!registerCallback(callback)) {
                     Log.e(TAG, "Unable to register callback for iface " + ifaceName);
                     return false;
@@ -270,6 +288,9 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
             mISupplicant = null;
             mISupplicantP2pIface = null;
             mInitializationStarted = false;
+            if (mDeathEventHandler != null) {
+                mDeathEventHandler.onDeath();
+            }
         }
     }
 
@@ -523,6 +544,65 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
         }
     }
 
+    private static int frameworkToHalScanType(@WifiP2pManager.WifiP2pScanType int scanType) {
+        switch (scanType) {
+            case WifiP2pManager.WIFI_P2P_SCAN_FULL:
+                return P2pScanType.FULL;
+            case WifiP2pManager.WIFI_P2P_SCAN_SOCIAL:
+                return P2pScanType.SOCIAL;
+            case WifiP2pManager.WIFI_P2P_SCAN_SINGLE_FREQ:
+                return P2pScanType.SPECIFIC_FREQ;
+            default:
+                Log.e(TAG, "Invalid discovery scan type: " + scanType);
+                return -1;
+        }
+    }
+
+    /**
+     * Initiate P2P device discovery with config params.
+     *
+     * See comments for {@link ISupplicantP2pIfaceHal#findWithParams(WifiP2pDiscoveryConfig, int)}.
+     */
+    public boolean findWithParams(WifiP2pDiscoveryConfig config, int timeout) {
+        synchronized (mLock) {
+            String methodStr = "findWithParams";
+            if (!checkP2pIfaceAndLogFailure(methodStr)) {
+                return false;
+            }
+            if (getCachedServiceVersion() < 3) {
+                // HAL does not support findWithParams before V3.
+                return find(config.getScanType(), config.getFrequencyMhz(), timeout);
+            }
+
+            P2pDiscoveryInfo halInfo = new P2pDiscoveryInfo();
+            halInfo.scanType = frameworkToHalScanType(config.getScanType());
+            halInfo.timeoutInSec = timeout;
+            halInfo.frequencyMhz = config.getFrequencyMhz();
+            if (halInfo.scanType == -1) {
+                return false;
+            }
+            if (halInfo.frequencyMhz < 0) {
+                Log.e(TAG, "Invalid freq value: " +  halInfo.frequencyMhz);
+                return false;
+            }
+
+            if (!config.getVendorData().isEmpty()) {
+                halInfo.vendorData =
+                        HalAidlUtil.frameworkToHalOuiKeyedDataList(config.getVendorData());
+            }
+
+            try {
+                mISupplicantP2pIface.findWithParams(halInfo);
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
     /**
      * Stop an ongoing P2P service discovery.
      *
@@ -694,6 +774,38 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
         }
     }
 
+    private String connectWithParams(boolean joinExistingGroup, byte[] peerAddress,
+            int provisionMethod, String preSelectedPin, boolean persistent, int groupOwnerIntent,
+            WifiP2pConfig config) {
+        synchronized (mLock) {
+            String methodStr = "connectWithParams";
+
+            // Parameters should be pre-validated.
+            P2pConnectInfo info = new P2pConnectInfo();
+            info.joinExistingGroup = joinExistingGroup;
+            info.peerAddress = peerAddress;
+            info.provisionMethod = provisionMethod;
+            info.preSelectedPin = preSelectedPin;
+            info.persistent = persistent;
+            info.goIntent = groupOwnerIntent;
+
+            if (SdkLevel.isAtLeastV() && config.getVendorData() != null
+                    && !config.getVendorData().isEmpty()) {
+                info.vendorData =
+                        HalAidlUtil.frameworkToHalOuiKeyedDataList(config.getVendorData());
+            }
+
+            try {
+                return mISupplicantP2pIface.connectWithParams(info);
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return null;
+        }
+    }
+
     /**
      * Start P2P group formation with a discovered P2P peer. This includes
      * optional group owner negotiation, group interface setup, provisioning,
@@ -710,7 +822,8 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
      */
     public String connect(WifiP2pConfig config, boolean joinExistingGroup) {
         synchronized (mLock) {
-            String methodStr = "setSsidPostfix";
+            String methodStr = "connect";
+
             if (!checkP2pIfaceAndLogFailure(methodStr)) {
                 return null;
             }
@@ -747,6 +860,11 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
             if (config.groupOwnerIntent < 0 || config.groupOwnerIntent > 15) {
                 Log.e(TAG, "Invalid group owner intent: " + config.groupOwnerIntent);
                 return null;
+            }
+
+            if (getCachedServiceVersion() >= 3) {
+                return connectWithParams(joinExistingGroup, peerAddress, provisionMethod,
+                        preSelectedPin, persistent, config.groupOwnerIntent, config);
             }
 
             try {
@@ -1209,21 +1327,13 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
     }
 
     /**
-     * Configure Extended Listen Timing.
-     *
-     * If enabled, listen state must be entered every |intervalInMillis| for at
-     * least |periodInMillis|. Both values have acceptable range of 1-65535
-     * (with interval obviously having to be larger than or equal to duration).
-     * If the P2P module is not idle at the time the Extended Listen Timing
-     * timeout occurs, the Listen State operation must be skipped.
-     *
-     * @param enable Enables or disables listening.
-     * @param periodInMillis Period in milliseconds.
-     * @param intervalInMillis Interval in milliseconds.
+     * Configure Extended Listen Timing. See comments for
+     * {@link ISupplicantP2pIfaceHal#configureExtListen(boolean, int, int, WifiP2pExtListenParams)}
      *
      * @return true, if operation was successful.
      */
-    public boolean configureExtListen(boolean enable, int periodInMillis, int intervalInMillis) {
+    public boolean configureExtListen(boolean enable, int periodInMillis, int intervalInMillis,
+            @Nullable WifiP2pExtListenParams extListenParams) {
         synchronized (mLock) {
             String methodStr = "configureExtListen";
             if (!checkP2pIfaceAndLogFailure(methodStr)) {
@@ -1247,6 +1357,11 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
                 return false;
             }
 
+            if (getCachedServiceVersion() >= 3) {
+                return configureExtListenWithParams(
+                        periodInMillis, intervalInMillis, extListenParams);
+            }
+
             try {
                 mISupplicantP2pIface.configureExtListen(periodInMillis, intervalInMillis);
                 return true;
@@ -1257,6 +1372,32 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
             }
             return false;
         }
+    }
+
+    private boolean configureExtListenWithParams(int periodInMillis, int intervalInMillis,
+            @Nullable WifiP2pExtListenParams extListenParams) {
+        String methodStr = "configureExtListenWithParams";
+
+        // Expect that these parameters are already validated.
+        P2pExtListenInfo extListenInfo = new P2pExtListenInfo();
+        extListenInfo.periodMs = periodInMillis;
+        extListenInfo.intervalMs = intervalInMillis;
+
+        if (SdkLevel.isAtLeastV() && extListenParams != null
+                && extListenParams.getVendorData() != null) {
+            extListenInfo.vendorData =
+                    HalAidlUtil.frameworkToHalOuiKeyedDataList(extListenParams.getVendorData());
+        }
+
+        try {
+            mISupplicantP2pIface.configureExtListenWithParams(extListenInfo);
+            return true;
+        } catch (RemoteException e) {
+            handleRemoteException(e, methodStr);
+        } catch (ServiceSpecificException e) {
+            handleServiceSpecificException(e, methodStr);
+        }
+        return false;
     }
 
     /**
@@ -2559,4 +2700,64 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
                         "Invalid WPS config method: " + configMethod);
         }
     }
+
+    /**
+     * Terminate the supplicant daemon & wait for its death.
+     */
+    public void terminate() {
+        synchronized (mLock) {
+            final String methodStr = "terminate";
+            if (!checkSupplicantAndLogFailure(methodStr)) {
+                return;
+            }
+            Log.i(TAG, "Terminate supplicant service");
+            try {
+                mWaitForDeathLatch = new CountDownLatch(1);
+                mISupplicant.terminate();
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            }
+        }
+
+        // Wait for death recipient to confirm the service death.
+        try {
+            if (!mWaitForDeathLatch.await(WAIT_FOR_DEATH_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                Log.w(TAG, "Timed out waiting for confirmation of supplicant death");
+                supplicantServiceDiedHandler();
+            } else {
+                Log.d(TAG, "Got service death confirmation");
+            }
+        } catch (InterruptedException e) {
+            Log.w(TAG, "Failed to wait for supplicant death");
+        }
+    }
+
+    /**
+     * Registers a death notification for supplicant.
+     * @return Returns true on success.
+     */
+    public boolean registerDeathHandler(@NonNull WifiNative.SupplicantDeathEventHandler handler) {
+        synchronized (mLock) {
+            if (mDeathEventHandler != null) {
+                Log.e(TAG, "Death handler already present");
+            }
+            mDeathEventHandler = handler;
+            return true;
+        }
+    }
+
+    /**
+     * Deregisters a death notification for supplicant.
+     * @return Returns true on success.
+     */
+    public boolean deregisterDeathHandler() {
+        synchronized (mLock) {
+            if (mDeathEventHandler == null) {
+                Log.e(TAG, "No Death handler present");
+            }
+            mDeathEventHandler = null;
+            return true;
+        }
+    }
+
 }

@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.net.wifi.IListListener;
+import android.net.wifi.QosCharacteristics;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.WifiManager;
 import android.os.HandlerThread;
@@ -118,10 +120,26 @@ public class ApplicationQosPolicyRequestHandlerTest {
                 .build();
     }
 
+    private QosPolicyParams createUplinkPolicy(int policyId) {
+        QosCharacteristics mockQosCharacteristics = mock(QosCharacteristics.class);
+        when(mockQosCharacteristics.validate()).thenReturn(true);
+        return new QosPolicyParams.Builder(policyId, QosPolicyParams.DIRECTION_UPLINK)
+                .setQosCharacteristics(mockQosCharacteristics)
+                .build();
+    }
+
     private List<QosPolicyParams> createDownlinkPolicyList(int size, int basePolicyId) {
         List<QosPolicyParams> policies = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             policies.add(createDownlinkPolicy(basePolicyId + i));
+        }
+        return policies;
+    }
+
+    private List<QosPolicyParams> createUplinkPolicyList(int size, int basePolicyId) {
+        List<QosPolicyParams> policies = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            policies.add(createUplinkPolicy(basePolicyId + i));
         }
         return policies;
     }
@@ -618,7 +636,7 @@ public class ApplicationQosPolicyRequestHandlerTest {
         addPoliciesToTable(policyList);
 
         // Expect that the request is divided into two batches of size 16 and 2, respectively.
-        mDut.queueAllPoliciesOnIface(TEST_IFACE_NAME_1);
+        mDut.queueAllPoliciesOnIface(TEST_IFACE_NAME_1, false);
         verify(mWifiNative).addQosPolicyRequestForScs(
                 eq(TEST_IFACE_NAME_1), mPolicyListCaptor.capture());
         assertEquals(16, mPolicyListCaptor.getValue().size());
@@ -630,5 +648,37 @@ public class ApplicationQosPolicyRequestHandlerTest {
         verify(mWifiNative, times(2)).addQosPolicyRequestForScs(
                 eq(TEST_IFACE_NAME_1), mPolicyListCaptor.capture());
         assertEquals(2, mPolicyListCaptor.getValue().size());
+    }
+
+    /**
+     * Tests that uplink policies are only included in the queueAllPolicies request
+     * if the includeUplink parameter is true.
+     */
+    @Test
+    public void testQueueAllPoliciesRequest_mixedDirection() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mActiveModeWarden.getInternetConnectivityClientModeManagers())
+                .thenReturn(Arrays.asList(mClientModeManager0));
+        int numDownlinkPolicies = 10;
+        int numUplinkPolicies = 5;
+        addPoliciesToTable(createDownlinkPolicyList(numDownlinkPolicies, TEST_POLICY_ID_START));
+        addPoliciesToTable(createUplinkPolicyList(numUplinkPolicies,
+                TEST_POLICY_ID_START + numDownlinkPolicies));
+
+        // Only downlink policies.
+        mDut.queueAllPoliciesOnIface(TEST_IFACE_NAME_0, false);
+        verify(mWifiNative, atLeastOnce()).addQosPolicyRequestForScs(
+                eq(TEST_IFACE_NAME_0), mPolicyListCaptor.capture());
+        assertEquals(numDownlinkPolicies, mPolicyListCaptor.getValue().size());
+
+        // Trigger AP callback to complete the current request.
+        triggerAndVerifyApCallback(TEST_IFACE_NAME_0, mPolicyListCaptor.getValue(),
+                SupplicantStaIfaceHal.QOS_POLICY_SCS_RESPONSE_STATUS_SUCCESS);
+
+        // Both uplink and downlink policies included in the request.
+        mDut.queueAllPoliciesOnIface(TEST_IFACE_NAME_0, true);
+        verify(mWifiNative, atLeastOnce()).addQosPolicyRequestForScs(
+                eq(TEST_IFACE_NAME_0), mPolicyListCaptor.capture());
+        assertEquals(numDownlinkPolicies + numUplinkPolicies, mPolicyListCaptor.getValue().size());
     }
 }

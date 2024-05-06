@@ -55,6 +55,7 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.util.ArraySet;
 import android.util.Base64;
 import android.util.Log;
 import android.util.Pair;
@@ -499,11 +500,33 @@ public class WifiCarrierInfoManager {
                 ACTION_USER_DISALLOWED_CARRIER, mIsLastUserApprovalUiDialog);
     }
 
+    private void updateSubIdsInNetworkFactoryFilters(List<SubscriptionInfo> activeSubInfos) {
+        if (activeSubInfos == null || activeSubInfos.isEmpty()) {
+            return;
+        }
+        Set<Integer> subIds = new ArraySet<>();
+        for (SubscriptionInfo subInfo : activeSubInfos) {
+            if (subInfo.getSubscriptionId() != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                subIds.add(subInfo.getSubscriptionId());
+            }
+        }
+        if (mWifiInjector.getWifiNetworkFactory() != null) {
+            mWifiInjector.getWifiNetworkFactory().updateSubIdsInCapabilitiesFilter(subIds);
+        }
+        if (mWifiInjector.getUntrustedWifiNetworkFactory() != null) {
+            mWifiInjector.getUntrustedWifiNetworkFactory().updateSubIdsInCapabilitiesFilter(subIds);
+        }
+        if (mWifiInjector.getRestrictedWifiNetworkFactory() != null) {
+            mWifiInjector.getRestrictedWifiNetworkFactory()
+                    .updateSubIdsInCapabilitiesFilter(subIds);
+        }
+    }
     private class SubscriptionChangeListener extends
             SubscriptionManager.OnSubscriptionsChangedListener {
         @Override
         public void onSubscriptionsChanged() {
             mActiveSubInfos = mSubscriptionManager.getCompleteActiveSubscriptionInfoList();
+            updateSubIdsInNetworkFactoryFilters(mActiveSubInfos);
             mSubIdToSimInfoSparseArray.clear();
             mSubscriptionGroupMap.clear();
             if (mVerboseLogEnabled) {
@@ -1768,7 +1791,7 @@ public class WifiCarrierInfoManager {
             return;
         }
 
-        Log.d(TAG, msg);
+        Log.d(TAG, msg, null);
     }
 
     /** Dump state. */

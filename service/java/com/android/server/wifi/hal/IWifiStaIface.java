@@ -17,8 +17,13 @@
 package com.android.server.wifi.hal;
 
 import android.annotation.Nullable;
+import android.hardware.wifi.WifiStatusCode;
 import android.net.MacAddress;
 import android.net.apf.ApfCapabilities;
+import android.net.wifi.WifiManager.RoamingMode;
+import android.net.wifi.WifiScanner;
+import android.net.wifi.twt.TwtRequest;
+import android.os.Bundle;
 
 import com.android.server.wifi.WifiLinkLayerStats;
 import com.android.server.wifi.WifiLoggerHal;
@@ -121,6 +126,14 @@ public interface IWifiStaIface {
      */
     @Nullable
     MacAddress getFactoryMacAddress();
+
+    /**
+     * Retrieve the cached scan data.
+     *
+     * @return Instance of {@link ScanData}, or null on error.
+     */
+    @Nullable
+    WifiScanner.ScanData getCachedScanData();
 
     /**
      * Retrieve the latest link layer stats.
@@ -256,4 +269,54 @@ public interface IWifiStaIface {
      * @return true if successful, false otherwise.
      */
     boolean setDtimMultiplier(int multiplier);
+
+    /**
+     * Set the roaming mode.
+     *
+     * @param roamingMode {@link android.net.wifi.WifiManager.RoamingMode}.
+     * @return {@link WifiStatusCode#SUCCESS} if success, otherwise error code.
+     */
+    @WifiStatusCode int setRoamingMode(@RoamingMode int roamingMode);
+
+    /**
+     * Get target wake time (TWT) capabilities.
+     *
+     * @return TWT capabilities as Bundle
+     */
+    default Bundle getTwtCapabilities() {
+        return null;
+    }
+
+    /**
+     * Set up a TWT session
+     *
+     * @param cmdId Command ID to use for this invocation.
+     * @param twtRequest TWT request configuration to setup TWT session
+     * @return true if successful, false otherwise.
+     */
+    default boolean setupTwtSession(int cmdId, TwtRequest twtRequest) {
+        return false;
+    }
+
+    /**
+     * Teardown a TWT session.
+     *
+     * @param cmdId Command ID to use for this invocation.
+     * @param sessionId TWT session identifier
+     * @return true if successful, false otherwise.
+     */
+    default boolean tearDownTwtSession(int cmdId, int sessionId) {
+        return false;
+    }
+
+    /**
+     * Get stats for the TWT session.
+     *
+     * @param cmdId Command ID to use for this invocation.
+     * @param sessionId TWT session identifier
+     * @return true if successful, false otherwise.
+     */
+    default boolean getStatsTwtSession(int cmdId, int sessionId) {
+        return false;
+    }
 }

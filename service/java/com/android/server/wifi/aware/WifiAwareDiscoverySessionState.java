@@ -24,6 +24,8 @@ import static com.android.server.wifi.aware.WifiAwareStateManager.INSTANT_MODE_D
 import static com.android.server.wifi.aware.WifiAwareStateManager.NAN_PAIRING_REQUEST_TYPE_SETUP;
 import static com.android.server.wifi.aware.WifiAwareStateManager.NAN_PAIRING_REQUEST_TYPE_VERIFICATION;
 
+import android.annotation.NonNull;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.aware.AwarePairingConfig;
 import android.net.wifi.aware.IWifiAwareDiscoverySessionCallback;
@@ -41,6 +43,7 @@ import com.android.server.wifi.hal.WifiNanIface.NanStatusCode;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Manages the state of a single Aware discovery session (publish or subscribe).
@@ -512,10 +515,11 @@ public class WifiAwareDiscoverySessionState {
      * @param peerId        ID of the peer. Obtained through previous communication (a
      *                      match indication).
      * @param method        proposed bootstrapping method
+     * @param isComeBack    If the request is for a previous comeback response
      * @return True if the request send succeed.
      */
     public boolean initiateBootstrapping(short transactionId,
-            int peerId, int method, byte[] cookie) {
+            int peerId, int method, byte[] cookie, boolean isComeBack) {
         PeerInfo peerInfo = mPeerInfoByRequestorInstanceId.get(peerId);
         if (peerInfo == null) {
             Log.e(TAG, "initiateBootstrapping: attempting to send pairing request to an address"
@@ -529,7 +533,7 @@ public class WifiAwareDiscoverySessionState {
         }
 
         boolean success = mWifiAwareNativeApi.initiateBootstrapping(transactionId,
-                peerInfo.mInstanceId, peerInfo.mMac, method, cookie);
+                peerInfo.mInstanceId, peerInfo.mMac, method, cookie, mPubSubId, isComeBack);
         if (!success) {
             try {
                 mCallback.onBootstrappingVerificationConfirmed(peerId, false, method);
@@ -563,7 +567,7 @@ public class WifiAwareDiscoverySessionState {
         }
 
         boolean success = mWifiAwareNativeApi.respondToBootstrappingRequest(transactionId,
-                bootstrappingId, accept);
+                bootstrappingId, accept, mPubSubId);
         return success;
     }
 
@@ -585,16 +589,21 @@ public class WifiAwareDiscoverySessionState {
     public int onMatch(int requestorInstanceId, byte[] peerMac, byte[] serviceSpecificInfo,
             byte[] matchFilter, int rangingIndication, int rangeMm, int peerCipherSuite,
             byte[] scid, String pairingAlias,
-            AwarePairingConfig pairingConfig) {
+            AwarePairingConfig pairingConfig, @NonNull List<OuiKeyedData> vendorDataList) {
         int peerId = getPeerIdOrAddIfNew(requestorInstanceId, peerMac);
+        OuiKeyedData[] vendorDataArray = null;
+        if (!vendorDataList.isEmpty()) {
+            vendorDataArray = new OuiKeyedData[vendorDataList.size()];
+            vendorDataList.toArray(vendorDataArray);
+        }
 
         try {
             if (rangingIndication == 0) {
                 mCallback.onMatch(peerId, serviceSpecificInfo, matchFilter, peerCipherSuite, scid,
-                        pairingAlias, pairingConfig);
+                        pairingAlias, pairingConfig, vendorDataArray);
             } else {
                 mCallback.onMatchWithDistance(peerId, serviceSpecificInfo, matchFilter, rangeMm,
-                        peerCipherSuite, scid, pairingAlias, pairingConfig);
+                        peerCipherSuite, scid, pairingAlias, pairingConfig, vendorDataArray);
             }
         } catch (RemoteException e) {
             Log.w(TAG, "onMatch: RemoteException (FYI): " + e);

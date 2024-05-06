@@ -17,6 +17,7 @@
 package android.net.wifi.aware;
 
 import android.net.wifi.aware.AwarePairingConfig;
+import android.net.wifi.OuiKeyedData;
 
 /**
  * Callback interface that WifiAwareManager implements
@@ -36,10 +37,10 @@ oneway interface IWifiAwareDiscoverySessionCallback
 
     void onMatch(int peerId, in byte[] serviceSpecificInfo, in byte[] matchFilter,
             int peerCipherSuite, in byte[] scid, String pairingAlias,
-            in AwarePairingConfig pairingConfig);
+            in AwarePairingConfig pairingConfig, in OuiKeyedData[] vendorData);
     void onMatchWithDistance(int peerId, in byte[] serviceSpecificInfo, in byte[] matchFilter,
             int distanceMm, int peerCipherSuite, in byte[] scid, String pairingAlias,
-            in AwarePairingConfig pairingConfig);
+            in AwarePairingConfig pairingConfig, in OuiKeyedData[] vendorData);
 
     void onMessageSendSuccess(int messageId);
     void onMessageSendFail(int messageId, int reason);

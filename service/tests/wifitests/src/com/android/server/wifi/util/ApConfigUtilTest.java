@@ -839,7 +839,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
         when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_5_GHZ))
                 .thenReturn(ALLOWED_5G_FREQS); // ch# 149, 153
         mCapability = ApConfigUtil.updateSoftApCapabilityWithAvailableChannelList(mCapability,
-                mContext, mWifiNative);
+                mContext, mWifiNative, null);
         assertEquals(SoftApManager.START_RESULT_SUCCESS,
                 ApConfigUtil.updateApChannelConfig(mWifiNative, mCoexManager, mResources,
                         TEST_COUNTRY_CODE, configBuilder, configBuilder.build(),

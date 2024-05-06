@@ -65,6 +65,7 @@ import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.aware.Capabilities;
+import com.android.server.wifi.util.HalAidlUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -173,7 +174,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
 
     /**
      * See comments for {@link IWifiNanIface#enableAndConfigure(short, ConfigRequest, boolean,
-     *                         boolean, boolean, boolean, int, int, WifiNanIface.PowerParameters)}
+     * boolean, boolean, boolean, int, int, int, WifiNanIface.PowerParameters)}
      */
     @Override
     public boolean enableAndConfigure(short transactionId, ConfigRequest configRequest,
@@ -512,10 +513,10 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
 
     @Override
     public boolean initiateNanBootstrappingRequest(short transactionId, int peerId, MacAddress peer,
-            int method, byte[] cookie) {
+            int method, byte[] cookie, byte pubSubId, boolean isComeBack) {
         String methodStr = "initiateNanBootstrappingRequest";
         NanBootstrappingRequest request = createNanBootstrappingRequest(peerId, peer, method,
-                cookie);
+                cookie, pubSubId, isComeBack);
         synchronized (mLock) {
             try {
                 if (!checkIfaceAndLogFailure(methodStr)) return false;
@@ -532,9 +533,10 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
 
     @Override
     public boolean respondToNanBootstrappingRequest(short transactionId, int bootstrappingId,
-            boolean accept) {
+            boolean accept, byte pubSubId) {
         String methodStr = "respondToNanBootstrappingRequest";
-        NanBootstrappingResponse request = createNanBootstrappingResponse(bootstrappingId, accept);
+        NanBootstrappingResponse request = createNanBootstrappingResponse(bootstrappingId, accept,
+                pubSubId);
         synchronized (mLock) {
             try {
                 if (!checkIfaceAndLogFailure(methodStr)) return false;
@@ -587,20 +589,23 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
     // Utilities
 
     private static NanBootstrappingResponse createNanBootstrappingResponse(int bootstrappingId,
-            boolean accept) {
+            boolean accept, byte pubSubId) {
         NanBootstrappingResponse request = new NanBootstrappingResponse();
         request.acceptRequest = accept;
         request.bootstrappingInstanceId = bootstrappingId;
+        request.discoverySessionId = pubSubId;
         return request;
     }
 
     private static NanBootstrappingRequest createNanBootstrappingRequest(int peerId,
-            MacAddress peer, int method, byte[] cookie) {
+            MacAddress peer, int method, byte[] cookie, byte pubSubId, boolean isComeBack) {
         NanBootstrappingRequest request = new NanBootstrappingRequest();
         request.peerId = peerId;
         request.peerDiscMacAddr = peer.toByteArray();
         request.requestBootstrappingMethod = method;
         request.cookie = copyArray(cookie);
+        request.discoverySessionId = pubSubId;
+        request.isComeback = isComeBack;
         return request;
     }
 
@@ -727,6 +732,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.debugConfigs.useSdfInBandVal[NanBandIndex.NAN_BAND_5GHZ] = true;
         req.debugConfigs.useSdfInBandVal[NanBandIndex.NAN_BAND_6GHZ] = true;
         updateConfigForPowerSettings(req.configParams, configSupplemental, powerParameters);
+        updateConfigRequestVendorData(req.configParams, configRequest);
         return req;
     }
 
@@ -754,6 +760,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.bandSpecificConfig[NanBandIndex.NAN_BAND_5GHZ] = nanBandSpecificConfigs[1];
         req.bandSpecificConfig[NanBandIndex.NAN_BAND_6GHZ] = nanBandSpecificConfigs[2];
         updateConfigForPowerSettings(req, configSupplemental, powerParameters);
+        updateConfigRequestVendorData(req, configRequest);
         return req;
     }
 
@@ -782,6 +789,15 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         if (override != -1) {
             cfg.validDiscoveryWindowIntervalVal = true;
             cfg.discoveryWindowIntervalVal = (byte) override;
+        }
+    }
+
+    private static void updateConfigRequestVendorData(
+            NanConfigRequest halReq, ConfigRequest frameworkReq) {
+        if (SdkLevel.isAtLeastV() && WifiHalAidlImpl.isServiceVersionAtLeast(2)
+                && !frameworkReq.getVendorData().isEmpty()) {
+            halReq.vendorData =
+                    HalAidlUtil.frameworkToHalOuiKeyedDataList(frameworkReq.getVendorData());
         }
     }
 
@@ -852,6 +868,12 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.txType = NanTxType.BROADCAST;
         req.pairingConfig = createAidlPairingConfig(publishConfig.getPairingConfig());
         req.identityKey = copyArray(nik, 16);
+
+        if (SdkLevel.isAtLeastV() && !publishConfig.getVendorData().isEmpty()) {
+            req.vendorData =
+                    HalAidlUtil.frameworkToHalOuiKeyedDataList(publishConfig.getVendorData());
+        }
+
         return req;
     }
 
@@ -915,6 +937,12 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.pairingConfig = createAidlPairingConfig(subscribeConfig.getPairingConfig());
         req.identityKey = copyArray(nik, 16);
         req.intfAddr = new android.hardware.wifi.MacAddress[0];
+
+        if (SdkLevel.isAtLeastV() && !subscribeConfig.getVendorData().isEmpty()) {
+            req.vendorData =
+                    HalAidlUtil.frameworkToHalOuiKeyedDataList(subscribeConfig.getVendorData());
+        }
+
         return req;
     }
 

@@ -44,8 +44,16 @@ public class ScanResultUtilTest {
     @Test
     public void testNetworkCreationFromScanResult() {
         final String ssid = "Another SSid";
-        ScanResult scanResult = new ScanResult(ssid, "ab:cd:01:ef:45:89", 1245, 0, "",
-                -78, 2450, 1025, 22, 33, 20, 0, 0, true);
+        ScanResult scanResult = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
         scanResult.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
         };
@@ -137,22 +145,16 @@ public class ScanResultUtilTest {
     @Test
     public void testGenerateSecurityParamsListFromScanResult() {
         final String ssid = "Another SSid";
-        ScanResult scanResult =
-                new ScanResult(
-                        ssid,
-                        "ab:cd:01:ef:45:89",
-                        1245,
-                        0,
-                        "",
-                        -78,
-                        2450,
-                        1025,
-                        22,
-                        33,
-                        20,
-                        0,
-                        0,
-                        true);
+        ScanResult scanResult = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
         scanResult.informationElements =
                 new InformationElement[] {
                     createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -314,9 +316,17 @@ public class ScanResultUtilTest {
         final String ssid = "WPA3-Transition";
         String caps = "[WPA2-FT/PSK-CCMP][RSN-FT/PSK+PSK-SHA256+SAE+FT/SAE-CCMP][ESS][WPS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -333,9 +343,17 @@ public class ScanResultUtilTest {
         final String ssid = "WPA3-Transition";
         String caps = "[WPA2-FT/PSK+PSK+SAE+FT/SAE-CCMP][ESS][WPS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -352,9 +370,17 @@ public class ScanResultUtilTest {
         final String ssid = "WPA2-Network";
         String caps = "[WPA2-FT/PSK+PSK][ESS][WPS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -371,9 +397,17 @@ public class ScanResultUtilTest {
         final String ssid = "WPA3-Network";
         String caps = "[WPA2-FT/SAE+SAE][ESS][WPS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -390,9 +424,17 @@ public class ScanResultUtilTest {
         final String ssid = "WPA3-AP";
         String caps = "[RSN-SAE_EXT_KEY-CCMP][ESS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -409,9 +451,17 @@ public class ScanResultUtilTest {
         final String ssid = "FT-EAP-AP";
         String caps = " [WPA2-FT/EAP-CCMP][RSN-FT/EAP-CCMP][ESS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -429,9 +479,17 @@ public class ScanResultUtilTest {
         String caps = "[WPA2-EAP-FILS-SHA256-CCMP]"
                 + "[RSN-EAP-FILS-SHA256-CCMP][ESS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -450,9 +508,17 @@ public class ScanResultUtilTest {
         String caps = "[WPA2-EAP-FILS-SHA384-CCMP]"
                 + "[RSN-EAP-FILS-SHA384-CCMP][ESS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -470,9 +536,17 @@ public class ScanResultUtilTest {
         final String ssid = "EAP-NETWORK";
         String caps = "[EAP/SHA1][ESS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -488,9 +562,18 @@ public class ScanResultUtilTest {
             boolean isR1R2Network, boolean isR3Network) {
         final String ssid = "PASSPOINT-NETWORK";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
+
         if (isPasspoint) {
             input.setFlag(ScanResult.FLAG_PASSPOINT_NETWORK);
         }
@@ -545,9 +628,17 @@ public class ScanResultUtilTest {
         final String ssid = "UnknownAkm-Network";
         String caps = "[RSN-?-TKIP+CCMP][ESS][WPS]";
 
-        ScanResult input = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
 
         input.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
@@ -558,9 +649,19 @@ public class ScanResultUtilTest {
 
     private ScanResult makeScanResult(String caps) {
         final String ssid = "TestSsid";
-        ScanResult r = new ScanResult(WifiSsid.fromUtf8Text(ssid), ssid,
-                "ab:cd:01:ef:45:89", 1245, 0, caps, -78, 2450, 1025, 22, 33, 20, 0,
-                0, true);
+
+        ScanResult r = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
+
         return r;
     }
 
@@ -645,8 +746,17 @@ public class ScanResultUtilTest {
     @Test
     public void testUnknownAkmForSecurityParamsGeneration() {
         final String ssid = "Another SSid";
-        ScanResult scanResult = new ScanResult(ssid, "ab:cd:01:ef:45:89", 1245, 0, "",
-                -78, 2450, 1025, 22, 33, 20, 0, 0, true);
+        ScanResult scanResult = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
+
         scanResult.informationElements = new InformationElement[] {
                 createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
         };

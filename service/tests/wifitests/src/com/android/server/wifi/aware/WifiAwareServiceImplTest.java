@@ -18,9 +18,11 @@ package com.android.server.wifi.aware;
 
 import static android.net.wifi.aware.Characteristics.WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128;
 
+import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_AWARE_VERBOSE_LOGGING_ENABLED;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
@@ -31,6 +33,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -39,7 +42,7 @@ import static org.mockito.Mockito.when;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.aware.Characteristics;
 import android.net.wifi.aware.ConfigRequest;
@@ -54,24 +57,30 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.os.test.TestLooper;
+import android.util.LocalLog;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.dx.mockito.inline.extended.StaticMockitoSession;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.DeviceConfigFacade;
 import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.InterfaceConflictManager;
+import com.android.server.wifi.MockResources;
 import com.android.server.wifi.WifiBaseTest;
+import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.WifiSettingsConfigStore;
 import com.android.server.wifi.util.NetdWrapper;
 import com.android.server.wifi.util.WifiPermissionsUtil;
 import com.android.server.wifi.util.WifiPermissionsWrapper;
 import com.android.wifi.resources.R;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -80,6 +89,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 
 /**
@@ -118,6 +130,9 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
     @Mock private WifiSettingsConfigStore mWifiSettingsConfigStore;
     @Mock private InterfaceConflictManager mInterfaceConflictManager;
     @Mock private DeviceConfigFacade mDeviceConfigFacade;
+    @Mock private WifiInjector mWifiInjector;
+    @Mock private LocalLog mLocalLog;
+    private StaticMockitoSession mStaticMockSession;
 
     /**
      * Using instead of spy to avoid native crash failures - possibly due to
@@ -146,6 +161,11 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
+        mStaticMockSession = mockitoSession()
+                .mockStatic(WifiInjector.class)
+                .startMocking();
+        lenient().when(WifiInjector.getInstance()).thenReturn(mWifiInjector);
+        when(mWifiInjector.getWifiHandlerLocalLog()).thenReturn(mLocalLog);
         mMockLooper = new TestLooper();
 
         when(mHandlerThreadMock.getLooper()).thenReturn(mMockLooper.getLooper());
@@ -170,10 +190,11 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
                 .thenReturn(InterfaceConflictManager.ICM_EXECUTE_COMMAND);
 
         mDut = new WifiAwareServiceImplSpy(mContextMock);
-        Resources resources = mock(Resources.class);
+        MockResources resources = new MockResources();
+        resources.setInteger(R.integer.config_wifiVerboseLoggingAlwaysOnLevel, 0);
+        resources.setInteger(R.integer.config_wifiConfigurationWifiRunnerThresholdInMs, 4000);
         when(mContextMock.getResources()).thenReturn(resources);
-        when(resources.getInteger(
-                        R.integer.config_wifiVerboseLoggingAlwaysOnLevel)).thenReturn(0);
+
         mDut.fakeUid = mDefaultUid;
         mDut.start(mHandlerThreadMock, mAwareStateManagerMock, mWifiAwareShellCommandMock,
                 mAwareMetricsMock, mWifiPermissionsUtil, mPermissionsWrapperMock,
@@ -185,6 +206,11 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
         verify(mAwareStateManagerMock).start(eq(mContextMock), any(), eq(mAwareMetricsMock),
                 eq(mWifiPermissionsUtil), eq(mPermissionsWrapperMock), any(), any(),
                 eq(mInterfaceConflictManager));
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        mStaticMockSession.finishMocking();
     }
 
     /**
@@ -237,15 +263,69 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testConnectWithConfig() {
-        ConfigRequest configRequest = new ConfigRequest.Builder().setMasterPreference(55).build();
+        int clusterLow = 15;
+        ConfigRequest configRequest = new ConfigRequest.Builder()
+                .setClusterLow(clusterLow)
+                .build();
         String callingPackage = "com.google.somePackage";
         String callingFeatureId = "com.google.someFeature";
         mDut.connect(mBinderMock, callingPackage, callingFeatureId, mCallbackMock,
                 configRequest, false, mExtras, false);
 
+        ArgumentCaptor<ConfigRequest> configRequestCaptor =
+                ArgumentCaptor.forClass(ConfigRequest.class);
         verify(mAwareStateManagerMock).connect(anyInt(), anyInt(), anyInt(), eq(callingPackage),
-                eq(callingFeatureId), eq(mCallbackMock), eq(configRequest), eq(false), any(),
-                eq(false));
+                eq(callingFeatureId), eq(mCallbackMock), configRequestCaptor.capture(), eq(false),
+                any(), eq(false));
+
+        // Since the caller has the network stack permission,
+        // the provided ConfigRequest should be unmodified
+        assertEquals(clusterLow, configRequestCaptor.getValue().mClusterLow);
+    }
+
+    /**
+     * Validate connect() when a non-null config is passed and the caller has the
+     * manage network selection permission.
+     */
+    @Test
+    public void testConnectWithManageNetworkSelectionPermission() {
+        // Caller has none of the permissions required to include a ConfigRequest
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(false);
+        when(mContextMock.checkCallingOrSelfPermission(anyString()))
+                .thenReturn(PackageManager.PERMISSION_DENIED);
+
+        int clusterLow = 15;
+        OuiKeyedData vendorDataElement =
+                new OuiKeyedData.Builder(0x00aabbcc, new PersistableBundle()).build();
+        List<OuiKeyedData> vendorData = Arrays.asList(vendorDataElement);
+        ConfigRequest configRequest = new ConfigRequest.Builder()
+                .setClusterLow(clusterLow)
+                .setVendorData(vendorData)
+                .build();
+
+        String callingPackage = "com.google.somePackage";
+        String callingFeatureId = "com.google.someFeature";
+        assertThrows(SecurityException.class, () ->
+                mDut.connect(mBinderMock, callingPackage, callingFeatureId, mCallbackMock,
+                        configRequest, false, mExtras, false));
+
+        // Caller has the manage network selection permission
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(true);
+        ArgumentCaptor<ConfigRequest> configRequestCaptor =
+                ArgumentCaptor.forClass(ConfigRequest.class);
+        mDut.connect(mBinderMock, callingPackage, callingFeatureId, mCallbackMock,
+                configRequest, false, mExtras, false);
+        verify(mAwareStateManagerMock).connect(anyInt(), anyInt(), anyInt(), eq(callingPackage),
+                eq(callingFeatureId), eq(mCallbackMock), configRequestCaptor.capture(),
+                eq(false), any(), eq(false));
+
+        // Since the caller does not have the network stack permission, all ConfigRequest fields
+        // except the vendor data should be reset to a default value
+        assertEquals(vendorData, configRequestCaptor.getValue().getVendorData());
+        assertNotEquals(clusterLow, configRequestCaptor.getValue().mClusterLow);
     }
 
     /**
@@ -984,7 +1064,7 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
         // constructed configs.
         PublishConfig publishConfig = new PublishConfig(serviceName.getBytes(), ssi, matchFilter,
                 PublishConfig.PUBLISH_TYPE_UNSOLICITED, 0, true, false, false,
-                WifiScanner.WIFI_BAND_24_GHZ, null, null, false);
+                WifiScanner.WIFI_BAND_24_GHZ, null, null, false, Collections.emptyList());
         int clientId = doConnect();
         IWifiAwareDiscoverySessionCallback mockCallback = mock(
                 IWifiAwareDiscoverySessionCallback.class);
@@ -1001,7 +1081,7 @@ public class WifiAwareServiceImplTest extends WifiBaseTest {
         // constructed configs.
         SubscribeConfig subscribeConfig = new SubscribeConfig(serviceName.getBytes(), ssi,
                 matchFilter, SubscribeConfig.SUBSCRIBE_TYPE_PASSIVE, 0, true, false, 0, false, 0,
-                false, WifiScanner.WIFI_BAND_24_GHZ, null, false);
+                false, WifiScanner.WIFI_BAND_24_GHZ, null, false, Collections.emptyList());
         int clientId = doConnect();
         IWifiAwareDiscoverySessionCallback mockCallback = mock(
                 IWifiAwareDiscoverySessionCallback.class);

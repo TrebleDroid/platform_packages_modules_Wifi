@@ -1501,6 +1501,73 @@ public class SupplicantStaIfaceHalHidlImplTest extends WifiBaseTest {
     }
 
     /**
+     * Tests that association rejection due to timeout doesn't broadcast authentication failure
+     * with reason code ERROR_AUTH_FAILURE_WRONG_PSWD.
+     * Driver/Supplicant sets the timedOut field when there is no ACK or response frame for
+     * Authentication request or Association request frame.
+     */
+    @Test
+    public void testAssociationRejectionDueToTimedOutDoesntNotifyWrongPassword() throws Exception {
+        executeAndValidateInitializationSequence();
+        assertNotNull(mISupplicantStaIfaceCallback);
+
+        executeAndValidateConnectSequenceWithKeyMgmt(
+                SUPPLICANT_NETWORK_ID, false, TRANSLATED_SUPPLICANT_SSID.toString(),
+                WifiConfiguration.SECURITY_TYPE_SAE, null, true);
+        mISupplicantStaIfaceCallback.onStateChanged(
+                ISupplicantStaIfaceCallback.State.ASSOCIATING,
+                NativeUtil.macAddressToByteArray(BSSID),
+                SUPPLICANT_NETWORK_ID,
+                NativeUtil.decodeSsid(SUPPLICANT_SSID));
+        mISupplicantStaIfaceCallback.onAssociationRejected(
+                NativeUtil.macAddressToByteArray(BSSID),
+                ISupplicantStaIfaceCallback.StatusCode.UNSPECIFIED_FAILURE, true);
+        verify(mWifiMonitor, never()).broadcastAuthenticationFailureEvent(eq(WLAN0_IFACE_NAME),
+                anyInt(), anyInt(), any(), any());
+        ArgumentCaptor<AssocRejectEventInfo> assocRejectEventInfoCaptor =
+                ArgumentCaptor.forClass(AssocRejectEventInfo.class);
+        verify(mWifiMonitor).broadcastAssociationRejectionEvent(
+                eq(WLAN0_IFACE_NAME), assocRejectEventInfoCaptor.capture());
+        AssocRejectEventInfo assocRejectEventInfo =
+                (AssocRejectEventInfo) assocRejectEventInfoCaptor.getValue();
+        assertNotNull(assocRejectEventInfo);
+        assertTrue(assocRejectEventInfo.timedOut);
+    }
+
+    /**
+     * Tests the handling of authentication failure for WPA3-Personal networks with
+     * status code = 15 (CHALLENGE_FAIL)
+     */
+    @Test
+    public void testWpa3AuthRejectionDueToChallengeFail() throws Exception {
+        executeAndValidateInitializationSequence();
+        assertNotNull(mISupplicantStaIfaceCallback);
+
+        executeAndValidateConnectSequenceWithKeyMgmt(
+                SUPPLICANT_NETWORK_ID, false, TRANSLATED_SUPPLICANT_SSID.toString(),
+                WifiConfiguration.SECURITY_TYPE_SAE, null, true);
+        mISupplicantStaIfaceCallback.onStateChanged(
+                ISupplicantStaIfaceCallback.State.ASSOCIATING,
+                NativeUtil.macAddressToByteArray(BSSID),
+                SUPPLICANT_NETWORK_ID,
+                NativeUtil.decodeSsid(SUPPLICANT_SSID));
+        int statusCode = ISupplicantStaIfaceCallback.StatusCode.CHALLENGE_FAIL;
+        mISupplicantStaIfaceCallback.onAssociationRejected(
+                NativeUtil.macAddressToByteArray(BSSID), statusCode, false);
+        verify(mWifiMonitor).broadcastAuthenticationFailureEvent(eq(WLAN0_IFACE_NAME),
+                eq(WifiManager.ERROR_AUTH_FAILURE_WRONG_PSWD), eq(-1),
+                eq(TRANSLATED_SUPPLICANT_SSID.toString()), eq(MacAddress.fromString(BSSID)));
+        ArgumentCaptor<AssocRejectEventInfo> assocRejectEventInfoCaptor =
+                ArgumentCaptor.forClass(AssocRejectEventInfo.class);
+        verify(mWifiMonitor).broadcastAssociationRejectionEvent(
+                eq(WLAN0_IFACE_NAME), assocRejectEventInfoCaptor.capture());
+        AssocRejectEventInfo assocRejectEventInfo =
+                (AssocRejectEventInfo) assocRejectEventInfoCaptor.getValue();
+        assertNotNull(assocRejectEventInfo);
+        assertEquals(statusCode, assocRejectEventInfo.statusCode);
+    }
+
+    /**
      * Tests the handling of incorrect network passwords for WEP networks.
      */
     @Test
@@ -1582,6 +1649,30 @@ public class SupplicantStaIfaceHalHidlImplTest extends WifiBaseTest {
         mISupplicantStaIfaceCallback.onDisconnected(
                 NativeUtil.macAddressToByteArray(BSSID), true, reasonCode);
         verify(mWifiMonitor, times(0)).broadcastAuthenticationFailureEvent(any(), anyInt(),
+                anyInt(), any(), any());
+    }
+
+    /**
+     * Tests the handling of incorrect network password for AP_BUSY error code
+     *
+     * If the disconnect reason is "NO_MORE_STAS - Disassociated because AP is unable
+     * to handle all currently associated STAs", do not call it a password mismatch.
+     */
+    @Test
+    public void testApBusy() throws Exception {
+        executeAndValidateInitializationSequence();
+        assertNotNull(mISupplicantStaIfaceCallback);
+
+        int reasonCode = ISupplicantStaIfaceCallback.ReasonCode.DISASSOC_AP_BUSY;
+
+        mISupplicantStaIfaceCallback.onStateChanged(
+                ISupplicantStaIfaceCallback.State.FOURWAY_HANDSHAKE,
+                NativeUtil.macAddressToByteArray(BSSID),
+                SUPPLICANT_NETWORK_ID,
+                NativeUtil.decodeSsid(SUPPLICANT_SSID));
+        mISupplicantStaIfaceCallback.onDisconnected(
+                NativeUtil.macAddressToByteArray(BSSID), true, reasonCode);
+        verify(mWifiMonitor, never()).broadcastAuthenticationFailureEvent(any(), anyInt(),
                 anyInt(), any(), any());
     }
 

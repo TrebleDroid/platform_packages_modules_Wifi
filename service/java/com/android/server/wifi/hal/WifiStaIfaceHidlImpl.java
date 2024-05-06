@@ -191,6 +191,15 @@ public class WifiStaIfaceHidlImpl implements IWifiStaIface {
     }
 
     /**
+     * See comments for {@link IWifiStaIface#getCachedScanData()}
+     */
+    @Nullable
+    public WifiScanner.ScanData getCachedScanData() {
+        Log.d(TAG, "getCachedScanData is not implemented by HIDL");
+        return null;
+    }
+
+    /**
      * See comments for {@link IWifiStaIface#getLinkLayerStats()}
      */
     @Nullable
@@ -331,6 +340,14 @@ public class WifiStaIfaceHidlImpl implements IWifiStaIface {
     public boolean setDtimMultiplier(int multiplier) {
         Log.d(TAG, "setDtimMultiplier is not implemented by HIDL");
         return false;
+    }
+
+    /**
+     * See comments for {@link IWifiStaIface#setRoamingMode(int)}
+     */
+    public int setRoamingMode(int roamingMode) {
+        Log.d(TAG, "setRoamingMode is not implemented by HIDL");
+        return 0;
     }
 
     // Internal Implementations

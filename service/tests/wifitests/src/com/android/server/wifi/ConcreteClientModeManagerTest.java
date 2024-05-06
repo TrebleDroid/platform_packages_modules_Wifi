@@ -61,9 +61,10 @@ import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.ims.ImsMmTelManager;
 import android.telephony.ims.RegistrationManager;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.util.LocalLog;
 import android.util.Log;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.server.wifi.ClientModeManagerBroadcastQueue.QueuedBroadcast;
 import com.android.wifi.resources.R;
@@ -776,6 +777,33 @@ public class ConcreteClientModeManagerTest extends WifiBaseTest {
         when(mCarrierConfigBundle
                 .getInt(eq(CarrierConfigManager.Ims.KEY_WIFI_OFF_DEFERRING_TIME_MILLIS_INT)))
                 .thenReturn(wifiOffDeferringTimeMs);
+    }
+
+    /**
+     * Secondary CMM will stop without deferring.
+     */
+    @Test
+    public void clientModeStopWithWifiOffDeferringTimeWithWifiCallingOnSecondaryTransient()
+            throws Exception {
+        setUpVoWifiTest(true,
+                TEST_WIFI_OFF_DEFERRING_TIME_MS);
+        startClientInConnectModeAndVerifyEnabled();
+        reset(mContext, mListener);
+        setUpSystemServiceForContext();
+
+        // Make sure CMM is not primary
+        mClientModeManager.setRole(ROLE_CLIENT_SECONDARY_TRANSIENT, TEST_WORKSOURCE);
+        mLooper.dispatchAll();
+
+        // Stop CMM and verify the Defer stop code is skipped
+        mClientModeManager.stop();
+        mLooper.dispatchAll();
+        when(mClientModeImpl.hasQuit()).thenReturn(true);
+        mClientModeManager.onClientModeImplQuit();
+        verify(mListener).onStopped(mClientModeManager);
+        verify(mImsMmTelManager, never()).registerImsRegistrationCallback(any(), any());
+        verify(mImsMmTelManager, never()).unregisterImsRegistrationCallback(any());
+        verify(mWifiMetrics).noteWifiOff(eq(false), eq(false), anyInt());
     }
 
     /**

@@ -396,14 +396,21 @@ public class WifiRttControllerHidlImpl implements IWifiRttController {
                 }
                 rttResult.distanceSdInMm = 0;
             }
-            rangingResults.add(new RangingResult(
-                    convertHalStatusToFrameworkStatus(rttResult.status),
-                    MacAddress.fromBytes(rttResult.addr),
-                    rttResult.distanceInMm, rttResult.distanceSdInMm,
-                    rttResult.rssi / -2, rttResult.numberPerBurstPeer,
-                    rttResult.successNumber, lci, lcr, responderLocation,
-                    rttResult.timeStampInUs / WifiRttController.CONVERSION_US_TO_MS,
-                    rttResult.type == RttType.TWO_SIDED));
+            rangingResults.add(new RangingResult.Builder()
+                    .setStatus(convertHalStatusToFrameworkStatus(rttResult.status))
+                    .setMacAddress(MacAddress.fromBytes(rttResult.addr))
+                    .setDistanceMm(rttResult.distanceInMm)
+                    .setDistanceStdDevMm(rttResult.distanceSdInMm)
+                    .setRssi(rttResult.rssi / -2)
+                    .setNumAttemptedMeasurements(rttResult.numberPerBurstPeer)
+                    .setNumSuccessfulMeasurements(rttResult.successNumber)
+                    .setLci(lci)
+                    .setLcr(lcr)
+                    .setUnverifiedResponderLocation(responderLocation)
+                    .setRangingTimestampMillis(
+                            rttResult.timeStampInUs / WifiRttController.CONVERSION_US_TO_MS)
+                    .set80211mcMeasurement(rttResult.type == RttType.TWO_SIDED)
+                    .build());
         }
         return rangingResults;
     }
@@ -432,14 +439,21 @@ public class WifiRttControllerHidlImpl implements IWifiRttController {
                 }
                 rttResult.distanceSdInMm = 0;
             }
-            rangingResults.add(new RangingResult(
-                    convertHalStatusToFrameworkStatus(rttResult.status),
-                    MacAddress.fromBytes(rttResult.addr),
-                    rttResult.distanceInMm, rttResult.distanceSdInMm,
-                    rttResult.rssi / -2, rttResult.numberPerBurstPeer,
-                    rttResult.successNumber, lci, lcr, responderLocation,
-                    rttResult.timeStampInUs / WifiRttController.CONVERSION_US_TO_MS,
-                    rttResult.type == RttType.TWO_SIDED));
+            rangingResults.add(new RangingResult.Builder()
+                    .setStatus(convertHalStatusToFrameworkStatus(rttResult.status))
+                    .setMacAddress(MacAddress.fromBytes(rttResult.addr))
+                    .setDistanceMm(rttResult.distanceInMm)
+                    .setDistanceStdDevMm(rttResult.distanceSdInMm)
+                    .setRssi(rttResult.rssi / -2)
+                    .setNumAttemptedMeasurements(rttResult.numberPerBurstPeer)
+                    .setNumSuccessfulMeasurements(rttResult.successNumber)
+                    .setLci(lci)
+                    .setLcr(lcr)
+                    .setUnverifiedResponderLocation(responderLocation)
+                    .setRangingTimestampMillis(
+                            rttResult.timeStampInUs / WifiRttController.CONVERSION_US_TO_MS)
+                    .set80211mcMeasurement(rttResult.type == RttType.TWO_SIDED)
+                    .build());
         }
         return rangingResults;
     }
@@ -468,14 +482,21 @@ public class WifiRttControllerHidlImpl implements IWifiRttController {
                 }
                 rttResult.distanceSdInMm = 0;
             }
-            rangingResults.add(new RangingResult(
-                    convertHalStatusToFrameworkStatus(rttResult.status),
-                    MacAddress.fromBytes(rttResult.addr),
-                    rttResult.distanceInMm, rttResult.distanceSdInMm,
-                    rttResult.rssi / -2, rttResult.numberPerBurstPeer,
-                    rttResult.successNumber, lci, lcr, responderLocation,
-                    rttResult.timeStampInUs /  WifiRttController.CONVERSION_US_TO_MS,
-                    rttResult.type == RttType.TWO_SIDED));
+            rangingResults.add(new RangingResult.Builder()
+                    .setStatus(convertHalStatusToFrameworkStatus(rttResult.status))
+                    .setMacAddress(MacAddress.fromBytes(rttResult.addr))
+                    .setDistanceMm(rttResult.distanceInMm)
+                    .setDistanceStdDevMm(rttResult.distanceSdInMm)
+                    .setRssi(rttResult.rssi / -2)
+                    .setNumAttemptedMeasurements(rttResult.numberPerBurstPeer)
+                    .setNumSuccessfulMeasurements(rttResult.successNumber)
+                    .setLci(lci)
+                    .setLcr(lcr)
+                    .setUnverifiedResponderLocation(responderLocation)
+                    .setRangingTimestampMillis(
+                            rttResult.timeStampInUs / WifiRttController.CONVERSION_US_TO_MS)
+                    .set80211mcMeasurement(rttResult.type == RttType.TWO_SIDED)
+                    .build());
         }
         return rangingResults;
     }

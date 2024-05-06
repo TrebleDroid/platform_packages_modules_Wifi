@@ -523,7 +523,7 @@ public class InterfaceConflictManager {
     private void localLog(String log) {
         mLocalLog.log(log);
         if (mVerboseLoggingEnabled) {
-            Log.d(TAG, log);
+            Log.d(TAG, log, null);
         }
     }
 

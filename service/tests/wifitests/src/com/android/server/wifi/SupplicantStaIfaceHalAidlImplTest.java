@@ -35,6 +35,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -77,10 +78,13 @@ import android.hardware.wifi.supplicant.KeyMgmtMask;
 import android.hardware.wifi.supplicant.LegacyMode;
 import android.hardware.wifi.supplicant.MloLink;
 import android.hardware.wifi.supplicant.MloLinksInfo;
+import android.hardware.wifi.supplicant.MscsParams.FrameClassifierFields;
+import android.hardware.wifi.supplicant.MsduDeliveryInfo;
 import android.hardware.wifi.supplicant.OceRssiBasedAssocRejectAttr;
 import android.hardware.wifi.supplicant.OsuMethod;
 import android.hardware.wifi.supplicant.PmkSaCacheData;
 import android.hardware.wifi.supplicant.PortRange;
+import android.hardware.wifi.supplicant.QosCharacteristics.QosCharacteristicsMask;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParams;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParamsMask;
 import android.hardware.wifi.supplicant.QosPolicyData;
@@ -101,6 +105,8 @@ import android.hardware.wifi.supplicant.WpsErrorIndication;
 import android.net.DscpPolicy;
 import android.net.MacAddress;
 import android.net.NetworkAgent;
+import android.net.wifi.MscsParams;
+import android.net.wifi.QosCharacteristics;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
@@ -120,6 +126,7 @@ import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.MboOceController.BtmFrameData;
+import com.android.server.wifi.hal.HalTestUtils;
 import com.android.server.wifi.hotspot2.AnqpEvent;
 import com.android.server.wifi.hotspot2.IconEvent;
 import com.android.server.wifi.hotspot2.WnmData;
@@ -1262,6 +1269,74 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
     }
 
     /**
+     * Tests that association rejection due to timeout doesn't broadcast authentication failure
+     * with reason code ERROR_AUTH_FAILURE_WRONG_PSWD.
+     * Driver/Supplicant sets the timedOut field when there is no ACK or response frame for
+     * Authentication request or Association request frame.
+     */
+    @Test
+    public void testAssociationRejectionDueToTimedOutDoesntNotifyWrongPassword() throws Exception {
+        executeAndValidateInitializationSequence();
+        assertNotNull(mISupplicantStaIfaceCallback);
+
+        executeAndValidateConnectSequenceWithKeyMgmt(
+                SUPPLICANT_NETWORK_ID, false, TRANSLATED_SUPPLICANT_SSID.toString(),
+                WifiConfiguration.SECURITY_TYPE_SAE, null, true);
+        mISupplicantStaIfaceCallback.onStateChanged(
+                StaIfaceCallbackState.ASSOCIATING,
+                NativeUtil.macAddressToByteArray(BSSID),
+                SUPPLICANT_NETWORK_ID,
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(SUPPLICANT_SSID)), false);
+        AssociationRejectionData rejectionData = createAssocRejectData(SUPPLICANT_SSID, BSSID,
+                StaIfaceStatusCode.UNSPECIFIED_FAILURE, true);
+        mISupplicantStaIfaceCallback.onAssociationRejected(rejectionData);
+        verify(mWifiMonitor, never()).broadcastAuthenticationFailureEvent(eq(WLAN0_IFACE_NAME),
+                anyInt(), anyInt(), any(), any());
+        ArgumentCaptor<AssocRejectEventInfo> assocRejectEventInfoCaptor =
+                ArgumentCaptor.forClass(AssocRejectEventInfo.class);
+        verify(mWifiMonitor).broadcastAssociationRejectionEvent(
+                eq(WLAN0_IFACE_NAME), assocRejectEventInfoCaptor.capture());
+        AssocRejectEventInfo assocRejectEventInfo = assocRejectEventInfoCaptor.getValue();
+        assertNotNull(assocRejectEventInfo);
+        assertTrue(assocRejectEventInfo.timedOut);
+    }
+
+    /**
+     * Tests the handling of authentication failure for WPA3-Personal networks with
+     * status code = 15 (CHALLENGE_FAIL)
+     */
+    @Test
+    public void testWpa3AuthRejectionDueToChallengeFail() throws Exception {
+        executeAndValidateInitializationSequence();
+        assertNotNull(mISupplicantStaIfaceCallback);
+
+        executeAndValidateConnectSequenceWithKeyMgmt(
+                SUPPLICANT_NETWORK_ID, false, TRANSLATED_SUPPLICANT_SSID.toString(),
+                WifiConfiguration.SECURITY_TYPE_SAE, null, true);
+        mISupplicantStaIfaceCallback.onStateChanged(
+                StaIfaceCallbackState.ASSOCIATING,
+                NativeUtil.macAddressToByteArray(BSSID),
+                SUPPLICANT_NETWORK_ID,
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(SUPPLICANT_SSID)), false);
+        int statusCode = StaIfaceStatusCode.CHALLENGE_FAIL;
+        AssociationRejectionData rejectionData = createAssocRejectData(SUPPLICANT_SSID, BSSID,
+                statusCode, false);
+        mISupplicantStaIfaceCallback.onAssociationRejected(rejectionData);
+        verify(mWifiMonitor).broadcastAuthenticationFailureEvent(eq(WLAN0_IFACE_NAME),
+                eq(WifiManager.ERROR_AUTH_FAILURE_WRONG_PSWD), eq(-1),
+                eq(TRANSLATED_SUPPLICANT_SSID.toString()),
+                eq(MacAddress.fromString(BSSID)));
+        ArgumentCaptor<AssocRejectEventInfo> assocRejectEventInfoCaptor =
+                ArgumentCaptor.forClass(AssocRejectEventInfo.class);
+        verify(mWifiMonitor).broadcastAssociationRejectionEvent(
+                eq(WLAN0_IFACE_NAME), assocRejectEventInfoCaptor.capture());
+        AssocRejectEventInfo assocRejectEventInfo = assocRejectEventInfoCaptor.getValue();
+        assertNotNull(assocRejectEventInfo);
+        assertEquals(SupplicantStaIfaceCallbackAidlImpl.halToFrameworkStatusCode(
+                statusCode), assocRejectEventInfo.statusCode);
+    }
+
+    /**
      * Tests the handling of incorrect network passwords for WEP networks.
      */
     @Test
@@ -1345,6 +1420,30 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         mISupplicantStaIfaceCallback.onDisconnected(
                 NativeUtil.macAddressToByteArray(BSSID), true, reasonCode);
         verify(mWifiMonitor, times(0)).broadcastAuthenticationFailureEvent(any(), anyInt(),
+                anyInt(), any(), any());
+    }
+
+    /**
+     * Tests the handling of incorrect network password for AP_BUSY error code
+     *
+     * If the disconnect reason is "NO_MORE_STAS - Disassociated because AP is unable
+     * to handle all currently associated STAs", do not call it a password mismatch.
+     */
+    @Test
+    public void testApBusy() throws Exception {
+        executeAndValidateInitializationSequence();
+        assertNotNull(mISupplicantStaIfaceCallback);
+
+        int reasonCode = StaIfaceReasonCode.DISASSOC_AP_BUSY;
+
+        mISupplicantStaIfaceCallback.onStateChanged(
+                StaIfaceCallbackState.FOURWAY_HANDSHAKE,
+                NativeUtil.macAddressToByteArray(BSSID),
+                SUPPLICANT_NETWORK_ID,
+                NativeUtil.byteArrayFromArrayList(NativeUtil.decodeSsid(SUPPLICANT_SSID)), false);
+        mISupplicantStaIfaceCallback.onDisconnected(
+                NativeUtil.macAddressToByteArray(BSSID), true, reasonCode);
+        verify(mWifiMonitor, never()).broadcastAuthenticationFailureEvent(any(), anyInt(),
                 anyInt(), any(), any());
     }
 
@@ -2006,6 +2105,9 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         halCap.channelBandwidth = WifiChannelWidthInMhz.WIDTH_20;
         halCap.maxNumberTxSpatialStreams = 1;
         halCap.maxNumberRxSpatialStreams = 1;
+        if (SdkLevel.isAtLeastV()) {
+            halCap.vendorData = HalTestUtils.createHalOuiKeyedDataList(5);
+        }
 
         doReturn(halCap).when(mISupplicantStaIfaceMock).getConnectionCapabilities();
         WifiNative.ConnectionCapabilities expectedCap =
@@ -2015,6 +2117,12 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         assertEquals(testChannelBandwidth, expectedCap.channelBandwidth);
         assertEquals(maxNumberTxSpatialStreams, expectedCap.maxNumberTxSpatialStreams);
         assertEquals(maxNumberRxSpatialStreams, expectedCap.maxNumberRxSpatialStreams);
+        if (SdkLevel.isAtLeastV()) {
+            assertTrue(HalTestUtils.ouiKeyedDataListEquals(
+                    halCap.vendorData, expectedCap.vendorData));
+        } else {
+            assertTrue(expectedCap.vendorData.isEmpty());
+        }
     }
 
     /**
@@ -2428,8 +2536,35 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
                 .setDestinationPort(10)
                 .build();
         frameworkPolicy.setTranslatedPolicyId(translatedPolicyId);
-        QosPolicyScsData halPolicy = SupplicantStaIfaceHalAidlImpl
-                .frameworkToHalQosPolicyScsData(frameworkPolicy);
+        QosPolicyScsData halPolicy = mDut.frameworkToHalQosPolicyScsData(frameworkPolicy);
+        compareQosPolicyParamsToHal(frameworkPolicy, halPolicy);
+    }
+
+    /**
+     * Tests the conversion method
+     * {@link SupplicantStaIfaceHalAidlImpl#frameworkToHalQosPolicyScsData(QosPolicyParams)}
+     * when the instance contains QosCharacteristics.
+     */
+    @Test
+    public void testFrameworkToHalQosPolicyScsDataWithCharacteristics() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        when(mISupplicantMock.getInterfaceVersion()).thenReturn(3);
+        assertTrue(mDut.startDaemon()); // retrieves and caches the interface version
+
+        QosCharacteristics frameworkChars = new QosCharacteristics.Builder(
+                2000, 5000, 500, 2)
+                .setMaxMsduSizeOctets(4)
+                .setServiceStartTimeInfo(250, 0x5)
+                .setMeanDataRateKbps(1500)
+                .setMsduLifetimeMillis(400)
+                .setMsduDeliveryInfo(QosCharacteristics.DELIVERY_RATIO_99, 5)
+                .build();
+        QosPolicyParams frameworkPolicy = new QosPolicyParams.Builder(
+                5 /* policyId */, QosPolicyParams.DIRECTION_UPLINK)
+                .setQosCharacteristics(frameworkChars)
+                .build();
+        frameworkPolicy.setTranslatedPolicyId(15);
+        QosPolicyScsData halPolicy = mDut.frameworkToHalQosPolicyScsData(frameworkPolicy);
         compareQosPolicyParamsToHal(frameworkPolicy, halPolicy);
     }
 
@@ -2540,6 +2675,55 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         return qosPolicyData;
     }
 
+    private static void compareFrameworkQosCharacteristicsToHal(
+            android.net.wifi.QosCharacteristics frameworkChars,
+            android.hardware.wifi.supplicant.QosCharacteristics halChars) {
+        assertEquals(frameworkChars.getMinServiceIntervalMicros(), halChars.minServiceIntervalUs);
+        assertEquals(frameworkChars.getMaxServiceIntervalMicros(), halChars.maxServiceIntervalUs);
+        assertEquals(frameworkChars.getMinDataRateKbps(), halChars.minDataRateKbps);
+        assertEquals(frameworkChars.getDelayBoundMicros(), halChars.delayBoundUs);
+
+        int paramsMask = halChars.optionalFieldMask;
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MAX_MSDU_SIZE)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.MAX_MSDU_SIZE);
+            assertEquals((char) frameworkChars.getMaxMsduSizeOctets(), halChars.maxMsduSizeOctets);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.SERVICE_START_TIME)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.SERVICE_START_TIME);
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.SERVICE_START_TIME_LINK_ID);
+            assertEquals(frameworkChars.getServiceStartTimeMicros(), halChars.serviceStartTimeUs);
+            assertEquals((byte) frameworkChars.getServiceStartTimeLinkId(),
+                    halChars.serviceStartTimeLinkId);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MEAN_DATA_RATE)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.MEAN_DATA_RATE);
+            assertEquals(frameworkChars.getMeanDataRateKbps(), halChars.meanDataRateKbps);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.BURST_SIZE)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.BURST_SIZE);
+            assertEquals(frameworkChars.getBurstSizeOctets(), halChars.burstSizeOctets);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MSDU_LIFETIME)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.MSDU_LIFETIME);
+            assertEquals((char) frameworkChars.getMsduLifetimeMillis(), halChars.msduLifetimeMs);
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MSDU_DELIVERY_INFO)) {
+            assertNotEquals(0, paramsMask & QosCharacteristicsMask.MSDU_DELIVERY_INFO);
+            MsduDeliveryInfo halDeliveryInfo = halChars.msduDeliveryInfo;
+            int convertedFrameworkRatio =
+                    SupplicantStaIfaceHalAidlImpl.frameworkToHalDeliveryRatio(
+                            frameworkChars.getDeliveryRatio());
+            assertEquals(convertedFrameworkRatio, halDeliveryInfo.deliveryRatio);
+            assertEquals((byte) frameworkChars.getCountExponent(), halDeliveryInfo.countExponent);
+        }
+    }
+
     private void compareQosPolicyParamsToHal(QosPolicyParams frameworkPolicy,
             QosPolicyScsData halPolicy) {
         assertEquals((byte) frameworkPolicy.getTranslatedPolicyId(), halPolicy.policyId);
@@ -2575,6 +2759,17 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         if (frameworkPolicy.getDscp() != QosPolicyParams.DSCP_ANY) {
             assertNotEquals(0, paramsMask & QosPolicyClassifierParamsMask.DSCP);
             assertEquals((byte) frameworkPolicy.getDscp(), classifierParams.dscp);
+        }
+
+        if (mDut.isServiceVersionAtLeast(3)) {
+            int convertedFrameworkDirection =
+                    SupplicantStaIfaceHalAidlImpl.frameworkToHalPolicyDirection(
+                            frameworkPolicy.getDirection());
+            assertEquals(convertedFrameworkDirection, halPolicy.direction);
+            if (frameworkPolicy.getQosCharacteristics() != null) {
+                compareFrameworkQosCharacteristicsToHal(
+                        frameworkPolicy.getQosCharacteristics(), halPolicy.QosCharacteristics);
+            }
         }
     }
 
@@ -3121,5 +3316,41 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         reset(mISupplicantMock);
         assertTrue(mDut.startDaemon());
         verify(mISupplicantMock, never()).getInterfaceVersion();
+    }
+
+    /**
+     * Test {@link SupplicantStaIfaceHalAidlImpl#enableMscs(MscsParams, String)} and verify the
+     * conversion from {@link MscsParams} to its HAL equivalent.
+     */
+    @Test
+    public void testEnableMscs() throws Exception {
+        int userPriorityBitmap = (1 << 6) | (1 << 7);
+        int userPriorityLimit = 5;
+        int streamTimeoutUs = 1500;
+        int frameworkFrameClassifierMask =
+                MscsParams.FRAME_CLASSIFIER_IP_VERSION | MscsParams.FRAME_CLASSIFIER_DSCP;
+        byte halFrameClassifierMask =
+                FrameClassifierFields.IP_VERSION | FrameClassifierFields.DSCP;
+
+        ArgumentCaptor<android.hardware.wifi.supplicant.MscsParams> halParamsCaptor =
+                ArgumentCaptor.forClass(android.hardware.wifi.supplicant.MscsParams.class);
+        doNothing().when(mISupplicantStaIfaceMock).configureMscs(any());
+        executeAndValidateInitializationSequence();
+
+        MscsParams frameworkParams = new MscsParams.Builder()
+                .setUserPriorityBitmap(userPriorityBitmap)
+                .setUserPriorityLimit(userPriorityLimit)
+                .setStreamTimeoutUs(streamTimeoutUs)
+                .setFrameClassifierFields(frameworkFrameClassifierMask)
+                .build();
+        mDut.setupIface(WLAN0_IFACE_NAME);
+        mDut.enableMscs(frameworkParams, WLAN0_IFACE_NAME);
+
+        verify(mISupplicantStaIfaceMock).configureMscs(halParamsCaptor.capture());
+        android.hardware.wifi.supplicant.MscsParams halParams = halParamsCaptor.getValue();
+        assertEquals((byte) userPriorityBitmap, halParams.upBitmap);
+        assertEquals((byte) userPriorityLimit, halParams.upLimit);
+        assertEquals(streamTimeoutUs, halParams.streamTimeoutUs);
+        assertEquals(halFrameClassifierMask, halParams.frameClassifierMask);
     }
 }

@@ -16,6 +16,7 @@
 
 package android.net.wifi;
 
+import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.IntRange;
 import android.annotation.NonNull;
@@ -32,6 +33,7 @@ import android.os.Parcelable;
 import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -729,6 +731,11 @@ public final class ScanResult implements Parcelable {
     /** {@hide} */
     public static final long FLAG_80211mc_RESPONDER               = 0x0000000000000002;
 
+    /** @hide */
+    public static final long FLAG_80211az_NTB_RESPONDER           = 0x0000000000000004;
+
+    /** @hide */
+    public static final long FLAG_TWT_RESPONDER                    = 0x0000000000000008;
     /*
      * These flags are specific to the ScanResult class, and are not related to the |flags|
      * field of the per-BSS scan results from WPA supplicant.
@@ -762,8 +769,24 @@ public final class ScanResult implements Parcelable {
         return (flags & FLAG_80211mc_RESPONDER) != 0;
     }
 
+    /**
+     * @return whether AP is a IEEE802.11az Non-Trigger based Ranging Responder.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public boolean is80211azNtbResponder() {
+        return (flags & FLAG_80211az_NTB_RESPONDER) != 0;
+    }
+
     public boolean isPasspointNetwork() {
         return (flags & FLAG_PASSPOINT_NETWORK) != 0;
+    }
+
+    /**
+     * @return whether AP is Target Wake Time (TWT) Responder.
+     */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    public boolean isTwtResponder() {
+        return (flags & FLAG_TWT_RESPONDER) != 0;
     }
 
     /**
@@ -1410,7 +1433,235 @@ public final class ScanResult implements Parcelable {
         return true;
     }
 
-    /** {@hide} */
+    /**
+     * Builder class used to construct {@link ScanResult} objects.
+     *
+     * @hide
+     */
+    public static final class Builder {
+        private WifiSsid mWifiSsid;
+        private String mBssid;
+        private long mHessid = 0;
+        private int mAnqpDomainId = 0;
+        private byte[] mOsuProviders = null;
+        private String mCaps = null;
+        private int mRssi = UNSPECIFIED;
+        private int mFrequency = UNSPECIFIED;
+        private long mTsf = 0;
+        private int mDistanceCm = UNSPECIFIED;
+        private int mDistanceSdCm = UNSPECIFIED;
+        private @ChannelWidth int mChannelWidth = ScanResult.CHANNEL_WIDTH_20MHZ;
+        private int mCenterFreq0 = UNSPECIFIED;
+        private int mCenterFreq1 = UNSPECIFIED;
+        private boolean mIs80211McRTTResponder = false;
+        private boolean mIs80211azNtbRTTResponder = false;
+        private boolean mIsTwtResponder = false;
+        /** @hide */
+        @NonNull
+        public Builder setHessid(long hessid) {
+            mHessid = hessid;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setOsuProviders(@Nullable byte[] osuProviders) {
+            mOsuProviders = osuProviders;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setAnqpDomainId(int anqpDomainId) {
+            mAnqpDomainId = anqpDomainId;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setCaps(@Nullable String caps) {
+            mCaps = caps;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setRssi(int rssi) {
+            mRssi = rssi;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setFrequency(int frequency) {
+            mFrequency = frequency;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setTsf(long tsf) {
+            mTsf = tsf;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setDistanceCm(int distanceCm) {
+            mDistanceCm = distanceCm;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setDistanceSdCm(int distanceSdCm) {
+            mDistanceSdCm = distanceSdCm;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setChannelWidth(@ChannelWidth int channelWidth) {
+            mChannelWidth = channelWidth;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setCenterFreq0(int centerFreq0) {
+            mCenterFreq0 = centerFreq0;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setCenterFreq1(int centerFreq1) {
+            mCenterFreq1 = centerFreq1;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setIs80211McRTTResponder(boolean is80211McRTTResponder) {
+            mIs80211McRTTResponder = is80211McRTTResponder;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setIs80211azNtbRTTResponder(boolean is80211azNtbRTTResponder) {
+            mIs80211azNtbRTTResponder = is80211azNtbRTTResponder;
+            return this;
+        }
+
+        /** @hide */
+        @NonNull
+        public Builder setIsTwtResponder(boolean isTwtResponder) {
+            mIsTwtResponder = isTwtResponder;
+            return this;
+        }
+
+        /** @hide */
+        public Builder(WifiSsid wifiSsid, String bssid) {
+            mWifiSsid = wifiSsid;
+            mBssid = bssid;
+        }
+
+        /**
+         * @hide
+         *
+         */
+        public Builder() {
+
+        }
+
+        /**
+         * @hide
+         */
+        public Builder setWifiSsid(WifiSsid wifiSsid) {
+            mWifiSsid = wifiSsid;
+            return this;
+        }
+
+        /**
+         * @hide
+         */
+        public Builder setBssid(String bssid) {
+            mBssid = bssid;
+            return this;
+        }
+
+        /**
+         * @hide
+         */
+        public void clear() {
+            mWifiSsid = null;
+            mBssid = null;
+            mHessid = 0;
+            mAnqpDomainId = 0;
+            mOsuProviders = null;
+            mCaps = null;
+            mRssi = UNSPECIFIED;
+            mFrequency = UNSPECIFIED;
+            mTsf = 0;
+            mDistanceCm = UNSPECIFIED;
+            mDistanceSdCm = UNSPECIFIED;
+            mChannelWidth = ScanResult.CHANNEL_WIDTH_20MHZ;
+            mCenterFreq0 = UNSPECIFIED;
+            mCenterFreq1 = UNSPECIFIED;
+            mIs80211McRTTResponder = false;
+            mIs80211azNtbRTTResponder = false;
+            mIsTwtResponder = false;
+        }
+
+        /** @hide */
+        public ScanResult build() {
+            return new ScanResult(this);
+        }
+    }
+
+    /**
+     * @hide
+     */
+    private ScanResult(Builder builder) {
+        this.wifiSsid = builder.mWifiSsid;
+        if (wifiSsid != null && isHiddenSsid(wifiSsid)) {
+            // Retain the legacy behavior of setting SSID to "" if the SSID is all zero values.
+            this.SSID = "";
+        } else {
+            final CharSequence utf8Ssid = (wifiSsid != null) ? wifiSsid.getUtf8Text() : null;
+            this.SSID = (utf8Ssid != null) ? utf8Ssid.toString() : WifiManager.UNKNOWN_SSID;
+        }
+        this.BSSID = builder.mBssid;
+        this.hessid = builder.mHessid;
+        this.anqpDomainId = builder.mAnqpDomainId;
+        if (builder.mOsuProviders != null) {
+            this.anqpElements = new AnqpInformationElement[1];
+            this.anqpElements[0] = new AnqpInformationElement(
+                    AnqpInformationElement.HOTSPOT20_VENDOR_ID,
+                    AnqpInformationElement.HS_OSU_PROVIDERS, builder.mOsuProviders);
+        }
+        this.capabilities = builder.mCaps;
+        this.level = builder.mRssi;
+        this.frequency = builder.mFrequency;
+        this.timestamp = builder.mTsf;
+        this.distanceCm = builder.mDistanceCm;
+        this.distanceSdCm = builder.mDistanceSdCm;
+        this.channelWidth = builder.mChannelWidth;
+        this.centerFreq0 = builder.mCenterFreq0;
+        this.centerFreq1 = builder.mCenterFreq1;
+        this.flags = 0;
+        this.flags |= (builder.mIs80211McRTTResponder) ? FLAG_80211mc_RESPONDER : 0;
+        this.flags |= (builder.mIs80211azNtbRTTResponder) ? FLAG_80211az_NTB_RESPONDER : 0;
+        this.flags |= (builder.mIsTwtResponder) ? FLAG_TWT_RESPONDER : 0;
+        this.radioChainInfos = null;
+        this.mApMldMacAddress = null;
+    }
+
+    /**
+     * @hide
+     * @deprecated Use {@link ScanResult.Builder}
+     */
     public ScanResult(WifiSsid wifiSsid, String BSSID, long hessid, int anqpDomainId,
             byte[] osuProviders, String caps, int level, int frequency, long tsf) {
         this.wifiSsid = wifiSsid;
@@ -1444,7 +1695,10 @@ public final class ScanResult implements Parcelable {
         this.mApMldMacAddress = null;
     }
 
-    /** {@hide} */
+    /**
+     * @hide
+     * @deprecated Use {@link ScanResult.Builder}
+     */
     public ScanResult(WifiSsid wifiSsid, String BSSID, String caps, int level, int frequency,
             long tsf, int distCm, int distSdCm) {
         this.wifiSsid = wifiSsid;
@@ -1470,7 +1724,10 @@ public final class ScanResult implements Parcelable {
         this.mApMldMacAddress = null;
     }
 
-    /** {@hide} */
+    /**
+     * @hide
+     * @deprecated Use {@link ScanResult.Builder}
+     */
     public ScanResult(String Ssid, String BSSID, long hessid, int anqpDomainId, String caps,
             int level, int frequency,
             long tsf, int distCm, int distSdCm, int channelWidth, int centerFreq0, int centerFreq1,
@@ -1497,7 +1754,10 @@ public final class ScanResult implements Parcelable {
         this.mApMldMacAddress = null;
     }
 
-    /** {@hide} */
+    /**
+     * @hide
+     * @deprecated Use {@link ScanResult.Builder}
+     */
     public ScanResult(WifiSsid wifiSsid, String Ssid, String BSSID, long hessid, int anqpDomainId,
                   String caps, int level,
                   int frequency, long tsf, int distCm, int distSdCm, int channelWidth,
@@ -1576,6 +1836,11 @@ public final class ScanResult implements Parcelable {
         sb.append(", standard: ").append(wifiStandardToString(mWifiStandard));
         sb.append(", 80211mcResponder: ");
         sb.append(((flags & FLAG_80211mc_RESPONDER) != 0) ? "is supported" : "is not supported");
+        sb.append(", 80211azNtbResponder: ");
+        sb.append(
+                ((flags & FLAG_80211az_NTB_RESPONDER) != 0) ? "is supported" : "is not supported");
+        sb.append(", TWT Responder: ");
+        sb.append(((flags & FLAG_TWT_RESPONDER) != 0) ? "yes" : "no");
         sb.append(", Radio Chain Infos: ").append(Arrays.toString(radioChainInfos));
         sb.append(", interface name: ").append(ifaceName);
 
@@ -1683,80 +1948,78 @@ public final class ScanResult implements Parcelable {
 
     /** Implement the Parcelable interface */
     public static final @NonNull Creator<ScanResult> CREATOR =
-        new Creator<ScanResult>() {
-            public ScanResult createFromParcel(Parcel in) {
-                WifiSsid wifiSsid = null;
-                if (in.readInt() == 1) {
-                    wifiSsid = WifiSsid.CREATOR.createFromParcel(in);
-                }
-                ScanResult sr = new ScanResult(
-                        wifiSsid,
-                        in.readString(),                    /* SSID  */
-                        in.readString(),                    /* BSSID */
-                        in.readLong(),                      /* HESSID */
-                        in.readInt(),                       /* ANQP Domain ID */
-                        in.readString(),                    /* capabilities */
-                        in.readInt(),                       /* level */
-                        in.readInt(),                       /* frequency */
-                        in.readLong(),                      /* timestamp */
-                        in.readInt(),                       /* distanceCm */
-                        in.readInt(),                       /* distanceSdCm */
-                        in.readInt(),                       /* channelWidth */
-                        in.readInt(),                       /* centerFreq0 */
-                        in.readInt(),                       /* centerFreq1 */
-                        false                               /* rtt responder,
+            new Creator<ScanResult>() {
+                public ScanResult createFromParcel(Parcel in) {
+                    WifiSsid wifiSsid = null;
+                    if (in.readInt() == 1) {
+                        wifiSsid = WifiSsid.CREATOR.createFromParcel(in);
+                    }
+                    ScanResult sr = new ScanResult(
+                            wifiSsid,
+                            in.readString(),                    /* SSID  */
+                            in.readString(),                    /* BSSID */
+                            in.readLong(),                      /* HESSID */
+                            in.readInt(),                       /* ANQP Domain ID */
+                            in.readString(),                    /* capabilities */
+                            in.readInt(),                       /* level */
+                            in.readInt(),                       /* frequency */
+                            in.readLong(),                      /* timestamp */
+                            in.readInt(),                       /* distanceCm */
+                            in.readInt(),                       /* distanceSdCm */
+                            in.readInt(),                       /* channelWidth */
+                            in.readInt(),                       /* centerFreq0 */
+                            in.readInt(),                       /* centerFreq1 */
+                            false                               /* rtt responder,
                                                                fixed with flags below */
-                );
+                    );
 
-                sr.mWifiStandard = in.readInt();
-                sr.seen = in.readLong();
-                sr.untrusted = in.readInt() != 0;
-                sr.numUsage = in.readInt();
-                sr.venueName = in.readString();
-                sr.operatorFriendlyName = in.readString();
-                sr.flags = in.readLong();
-                sr.informationElements = in.createTypedArray(InformationElement.CREATOR);
+                    sr.mWifiStandard = in.readInt();
+                    sr.seen = in.readLong();
+                    sr.untrusted = in.readInt() != 0;
+                    sr.numUsage = in.readInt();
+                    sr.venueName = in.readString();
+                    sr.operatorFriendlyName = in.readString();
+                    sr.flags = in.readLong();
+                    sr.informationElements = in.createTypedArray(InformationElement.CREATOR);
 
-                int n = in.readInt();
-                if (n != 0) {
-                    sr.anqpLines = new ArrayList<String>();
-                    for (int i = 0; i < n; i++) {
-                        sr.anqpLines.add(in.readString());
+                    int n = in.readInt();
+                    if (n != 0) {
+                        sr.anqpLines = new ArrayList<String>();
+                        for (int i = 0; i < n; i++) {
+                            sr.anqpLines.add(in.readString());
+                        }
                     }
-                }
-                n = in.readInt();
-                if (n != 0) {
-                    sr.anqpElements = new AnqpInformationElement[n];
-                    for (int i = 0; i < n; i++) {
-                        int vendorId = in.readInt();
-                        int elementId = in.readInt();
-                        int len = in.readInt();
-                        byte[] payload = new byte[len];
-                        in.readByteArray(payload);
-                        sr.anqpElements[i] =
-                                new AnqpInformationElement(vendorId, elementId, payload);
+                    n = in.readInt();
+                    if (n != 0) {
+                        sr.anqpElements = new AnqpInformationElement[n];
+                        for (int i = 0; i < n; i++) {
+                            int vendorId = in.readInt();
+                            int elementId = in.readInt();
+                            int len = in.readInt();
+                            byte[] payload = new byte[len];
+                            in.readByteArray(payload);
+                            sr.anqpElements[i] =
+                                    new AnqpInformationElement(vendorId, elementId, payload);
+                        }
                     }
-                }
-                n = in.readInt();
-                if (n != 0) {
-                    sr.radioChainInfos = new RadioChainInfo[n];
-                    for (int i = 0; i < n; i++) {
-                        sr.radioChainInfos[i] = new RadioChainInfo();
-                        sr.radioChainInfos[i].id = in.readInt();
-                        sr.radioChainInfos[i].level = in.readInt();
+                    n = in.readInt();
+                    if (n != 0) {
+                        sr.radioChainInfos = new RadioChainInfo[n];
+                        for (int i = 0; i < n; i++) {
+                            sr.radioChainInfos[i] = new RadioChainInfo();
+                            sr.radioChainInfos[i].id = in.readInt();
+                            sr.radioChainInfos[i].level = in.readInt();
+                        }
                     }
+                    sr.ifaceName = in.readString();
+
+                    // Read MLO related attributes
+                    sr.mApMldMacAddress = in.readParcelable(MacAddress.class.getClassLoader());
+                    sr.mApMloLinkId = in.readInt();
+                    sr.mAffiliatedMloLinks = in.createTypedArrayList(MloLink.CREATOR);
+
+                    return sr;
                 }
-                sr.ifaceName = in.readString();
-
-
-                // Read MLO related attributes
-                sr.mApMldMacAddress = in.readParcelable(MacAddress.class.getClassLoader());
-                sr.mApMloLinkId = in.readInt();
-                sr.mAffiliatedMloLinks = in.createTypedArrayList(MloLink.CREATOR);
-
-                return sr;
-            }
-
             public ScanResult[] newArray(int size) {
                 return new ScanResult[size];
             }

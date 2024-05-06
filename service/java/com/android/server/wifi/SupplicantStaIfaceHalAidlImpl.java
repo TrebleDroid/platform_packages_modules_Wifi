@@ -36,7 +36,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
 
 import android.annotation.NonNull;
 import android.content.Context;
-import android.hardware.wifi.V1_6.WifiChannelWidthInMhz;
+import android.hardware.wifi.WifiChannelWidthInMhz;
 import android.hardware.wifi.supplicant.BtCoexistenceMode;
 import android.hardware.wifi.supplicant.ConnectionCapabilities;
 import android.hardware.wifi.supplicant.DebugLevel;
@@ -55,12 +55,18 @@ import android.hardware.wifi.supplicant.IpVersion;
 import android.hardware.wifi.supplicant.KeyMgmtMask;
 import android.hardware.wifi.supplicant.LegacyMode;
 import android.hardware.wifi.supplicant.MloLinksInfo;
+import android.hardware.wifi.supplicant.MscsParams.FrameClassifierFields;
+import android.hardware.wifi.supplicant.MsduDeliveryInfo;
+import android.hardware.wifi.supplicant.MsduDeliveryInfo.DeliveryRatio;
 import android.hardware.wifi.supplicant.PortRange;
+import android.hardware.wifi.supplicant.QosCharacteristics;
+import android.hardware.wifi.supplicant.QosCharacteristics.QosCharacteristicsMask;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParams;
 import android.hardware.wifi.supplicant.QosPolicyClassifierParamsMask;
 import android.hardware.wifi.supplicant.QosPolicyData;
 import android.hardware.wifi.supplicant.QosPolicyRequestType;
 import android.hardware.wifi.supplicant.QosPolicyScsData;
+import android.hardware.wifi.supplicant.QosPolicyScsData.LinkDirection;
 import android.hardware.wifi.supplicant.QosPolicyScsRequestStatus;
 import android.hardware.wifi.supplicant.QosPolicyScsRequestStatusCode;
 import android.hardware.wifi.supplicant.QosPolicyStatus;
@@ -74,6 +80,7 @@ import android.hardware.wifi.supplicant.WpsConfigMethods;
 import android.net.DscpPolicy;
 import android.net.MacAddress;
 import android.net.NetworkAgent;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
@@ -94,6 +101,7 @@ import android.util.Pair;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.mockwifi.MockWifiServiceUtil;
+import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
 
 import java.nio.ByteBuffer;
@@ -2892,11 +2900,107 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
                         hasSrcIp, srcIp, hasDstIp, dstIp, srcPort, dstPortRange, protocol));
     }
 
+    @VisibleForTesting
+    protected static byte frameworkToHalDeliveryRatio(
+            @android.net.wifi.QosCharacteristics.DeliveryRatio int frameworkRatio) {
+        switch (frameworkRatio) {
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_95:
+                return DeliveryRatio.RATIO_95;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_96:
+                return DeliveryRatio.RATIO_96;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_97:
+                return DeliveryRatio.RATIO_97;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_98:
+                return DeliveryRatio.RATIO_98;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99:
+                return DeliveryRatio.RATIO_99;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99_9:
+                return DeliveryRatio.RATIO_99_9;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99_99:
+                return DeliveryRatio.RATIO_99_99;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99_999:
+                return DeliveryRatio.RATIO_99_999;
+            case android.net.wifi.QosCharacteristics.DELIVERY_RATIO_99_9999:
+                return DeliveryRatio.RATIO_99_9999;
+            default:
+                Log.e(TAG, "Invalid delivery ratio received: " + frameworkRatio);
+                return DeliveryRatio.RATIO_95;
+        }
+    }
+
+    @VisibleForTesting
+    protected static byte frameworkToHalPolicyDirection(
+            @QosPolicyParams.Direction int frameworkDirection) {
+        switch (frameworkDirection) {
+            case QosPolicyParams.DIRECTION_UPLINK:
+                return LinkDirection.UPLINK;
+            case QosPolicyParams.DIRECTION_DOWNLINK:
+                return LinkDirection.DOWNLINK;
+            default:
+                Log.e(TAG, "Invalid direction received: " + frameworkDirection);
+                return LinkDirection.DOWNLINK;
+        }
+    }
+
+    /**
+     * Convert from a framework QosCharacteristics to its HAL equivalent.
+     */
+    @VisibleForTesting
+    protected static QosCharacteristics frameworkToHalQosCharacteristics(
+            android.net.wifi.QosCharacteristics frameworkChars) {
+        QosCharacteristics halChars = new QosCharacteristics();
+        halChars.minServiceIntervalUs = frameworkChars.getMinServiceIntervalMicros();
+        halChars.maxServiceIntervalUs = frameworkChars.getMaxServiceIntervalMicros();
+        halChars.minDataRateKbps = frameworkChars.getMinDataRateKbps();
+        halChars.delayBoundUs = frameworkChars.getDelayBoundMicros();
+
+        int optionalFieldMask = 0;
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MAX_MSDU_SIZE)) {
+            optionalFieldMask |= QosCharacteristicsMask.MAX_MSDU_SIZE;
+            halChars.maxMsduSizeOctets = (char) frameworkChars.getMaxMsduSizeOctets();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.SERVICE_START_TIME)) {
+            optionalFieldMask |= QosCharacteristicsMask.SERVICE_START_TIME;
+            optionalFieldMask |= QosCharacteristicsMask.SERVICE_START_TIME_LINK_ID;
+            halChars.serviceStartTimeUs = frameworkChars.getServiceStartTimeMicros();
+            halChars.serviceStartTimeLinkId = (byte) frameworkChars.getServiceStartTimeLinkId();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MEAN_DATA_RATE)) {
+            optionalFieldMask |= QosCharacteristicsMask.MEAN_DATA_RATE;
+            halChars.meanDataRateKbps = frameworkChars.getMeanDataRateKbps();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.BURST_SIZE)) {
+            optionalFieldMask |= QosCharacteristicsMask.BURST_SIZE;
+            halChars.burstSizeOctets = frameworkChars.getBurstSizeOctets();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MSDU_LIFETIME)) {
+            optionalFieldMask |= QosCharacteristicsMask.MSDU_LIFETIME;
+            halChars.msduLifetimeMs = (char) frameworkChars.getMsduLifetimeMillis();
+        }
+        if (frameworkChars.containsOptionalField(
+                android.net.wifi.QosCharacteristics.MSDU_DELIVERY_INFO)) {
+            optionalFieldMask |= QosCharacteristicsMask.MSDU_DELIVERY_INFO;
+            MsduDeliveryInfo deliveryInfo = new MsduDeliveryInfo();
+            deliveryInfo.deliveryRatio =
+                    frameworkToHalDeliveryRatio(frameworkChars.getDeliveryRatio());
+            deliveryInfo.countExponent = (byte) frameworkChars.getCountExponent();
+            halChars.msduDeliveryInfo = deliveryInfo;
+        }
+
+        halChars.optionalFieldMask = optionalFieldMask;
+        return halChars;
+    }
+
     /**
      * Convert from a framework {@link QosPolicyParams} to a HAL QosPolicyScsData object.
      */
     @VisibleForTesting
-    protected static QosPolicyScsData frameworkToHalQosPolicyScsData(QosPolicyParams params) {
+    protected QosPolicyScsData frameworkToHalQosPolicyScsData(QosPolicyParams params) {
         QosPolicyScsData halData = new QosPolicyScsData();
         halData.policyId = (byte) params.getTranslatedPolicyId();
         halData.userPriority = (byte) params.getUserPriority();
@@ -2940,13 +3044,20 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
             paramsMask |= QosPolicyClassifierParamsMask.FLOW_LABEL;
             classifierParams.flowLabelIpv6 = params.getFlowLabel();
         }
+        if (SdkLevel.isAtLeastV() && isServiceVersionAtLeast(3)) {
+            halData.direction = frameworkToHalPolicyDirection(params.getDirection());
+            if (params.getQosCharacteristics() != null) {
+                halData.QosCharacteristics =
+                        frameworkToHalQosCharacteristics(params.getQosCharacteristics());
+            }
+        }
 
         classifierParams.classifierParamMask = paramsMask;
         halData.classifierParams = classifierParams;
         return halData;
     }
 
-    private static QosPolicyScsData[] frameworkToHalQosPolicyScsDataList(
+    private QosPolicyScsData[] frameworkToHalQosPolicyScsDataList(
             List<QosPolicyParams> frameworkPolicies) {
         QosPolicyScsData[] halDataList = new QosPolicyScsData[frameworkPolicies.size()];
         int index = 0;
@@ -3008,6 +3119,9 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
                 capOut.maxNumberTxSpatialStreams = cap.maxNumberTxSpatialStreams;
                 capOut.maxNumberRxSpatialStreams = cap.maxNumberRxSpatialStreams;
                 capOut.apTidToLinkMapNegotiationSupported = cap.apTidToLinkMapNegotiationSupported;
+                if (isServiceVersionAtLeast(3) && cap.vendorData != null) {
+                    capOut.vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(cap.vendorData);
+                }
                 return capOut;
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);
@@ -3752,6 +3866,95 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
             // Update cached config after setting native data successfully.
             currentConfig.enterpriseConfig.setAnonymousIdentity(anonymousIdentity);
             return true;
+        }
+    }
+
+    private static byte frameworkToHalFrameClassifierMask(int frameworkBitmap) {
+        byte halBitmap = 0;
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_IP_VERSION) != 0) {
+            halBitmap |= FrameClassifierFields.IP_VERSION;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_SRC_IP_ADDR) != 0) {
+            halBitmap |= FrameClassifierFields.SRC_IP_ADDR;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_DST_IP_ADDR) != 0) {
+            halBitmap |= FrameClassifierFields.DST_IP_ADDR;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_SRC_PORT) != 0) {
+            halBitmap |= FrameClassifierFields.SRC_PORT;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_DST_PORT) != 0) {
+            halBitmap |= FrameClassifierFields.DST_PORT;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_DSCP) != 0) {
+            halBitmap |= FrameClassifierFields.DSCP;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_PROTOCOL_NEXT_HDR) != 0) {
+            halBitmap |= FrameClassifierFields.PROTOCOL_NEXT_HDR;
+        }
+        if ((frameworkBitmap & MscsParams.FRAME_CLASSIFIER_FLOW_LABEL) != 0) {
+            halBitmap |= FrameClassifierFields.FLOW_LABEL;
+        }
+        return halBitmap;
+    }
+
+    private static android.hardware.wifi.supplicant.MscsParams frameworkToHalMscsParams(
+            MscsParams frameworkParams) {
+        android.hardware.wifi.supplicant.MscsParams halParams =
+                new android.hardware.wifi.supplicant.MscsParams();
+        halParams.upBitmap = (byte) frameworkParams.getUserPriorityBitmap();
+        halParams.upLimit = (byte) frameworkParams.getUserPriorityLimit();
+        halParams.streamTimeoutUs = frameworkParams.getStreamTimeoutUs();
+        halParams.frameClassifierMask =
+                frameworkToHalFrameClassifierMask(frameworkParams.getFrameClassifierFields());
+        return halParams;
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIfaceHal#enableMscs(MscsParams, String)}
+     */
+    @Override
+    public void enableMscs(@NonNull MscsParams mscsParams, String ifaceName) {
+        synchronized (mLock) {
+            if (!isServiceVersionAtLeast(3)) {
+                return;
+            }
+            String methodStr = "enableMscs";
+            ISupplicantStaIface iface = checkStaIfaceAndLogFailure(ifaceName, methodStr);
+            if (iface == null) {
+                return;
+            }
+            try {
+                android.hardware.wifi.supplicant.MscsParams halParams =
+                        frameworkToHalMscsParams(mscsParams);
+                iface.configureMscs(halParams);
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+        }
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIface#disableMscs()}
+     */
+    @Override
+    public void disableMscs(String ifaceName) {
+        if (!isServiceVersionAtLeast(3)) {
+            return;
+        }
+        String methodStr = "disableMscs";
+        ISupplicantStaIface iface = checkStaIfaceAndLogFailure(ifaceName, methodStr);
+        if (iface == null) {
+            return;
+        }
+        try {
+            iface.disableMscs();
+        } catch (RemoteException e) {
+            handleRemoteException(e, methodStr);
+        } catch (ServiceSpecificException e) {
+            handleServiceSpecificException(e, methodStr);
         }
     }
 

@@ -61,6 +61,9 @@ public class WifiCountryCode {
     private static final String BOOT_DEFAULT_WIFI_COUNTRY_CODE = "ro.boot.wificountrycode";
     private static final int PKT_COUNT_HIGH_PKT_PER_SEC = 16;
     private static final int DISCONNECT_WIFI_COUNT_MAX = 1;
+    /* TODO: replace with PackageManager.FEATURE_TELEPHONY_CALLING once
+     * wifi-module-sdk-version-defaults min_sdk_version bumps to API 33. */
+    private static final String FEATURE_TELEPHONY_CALLING = "android.hardware.telephony.calling";
     static final int MIN_COUNTRY_CODE_COUNT_US = 3;
     static final int MIN_COUNTRY_CODE_COUNT_OTHER = 2;
     static final String COUNTRY_CODE_US = "US";
@@ -77,6 +80,7 @@ public class WifiCountryCode {
     private final WifiPermissionsUtil mWifiPermissionsUtil;
     private List<ChangeListener> mListeners = new ArrayList<>();
     private boolean mVerboseLoggingEnabled = false;
+    private boolean mIsCountryCodePendingToUpdateToCmm = true; // default to true for first update.
     /**
      * Map of active ClientModeManager instance to whether it is ready for country code change.
      *
@@ -301,6 +305,15 @@ public class WifiCountryCode {
         mVerboseLoggingEnabled = verbose;
     }
 
+    private boolean hasCalling() {
+        return mContext.getPackageManager().hasSystemFeature(FEATURE_TELEPHONY_CALLING);
+    }
+
+    /**
+     * Check if Wi-Fi calling is available.
+     *
+     * This method can only be called if device has calling feature (see hasCalling()).
+     */
     private boolean isWifiCallingAvailable() {
         SubscriptionManager subscriptionManager =
                 mContext.getSystemService(SubscriptionManager.class);
@@ -364,7 +377,7 @@ public class WifiCountryCode {
      */
     private void evaluateAllCmmStateAndApplyIfAllReady() {
         Log.d(TAG, "evaluateAllCmmStateAndApplyIfAllReady: " + mAmmToReadyForChangeMap);
-        if (isAllCmmReady()) {
+        if (isAllCmmReady() && mIsCountryCodePendingToUpdateToCmm) {
             mAllCmmReadyTimestamp = FORMATTER.format(new Date(mClock.getWallClockMillis()));
             // We are ready to set country code now.
             // We need to post pending country code request.
@@ -534,7 +547,7 @@ public class WifiCountryCode {
     }
 
     private boolean shouldDisconnectWifiToForceUpdate() {
-        if (isWifiCallingAvailable()) {
+        if (!hasCalling() || isWifiCallingAvailable()) {
             return false;
         }
 
@@ -699,8 +712,12 @@ public class WifiCountryCode {
         Log.d(TAG, "setCountryCodeNative: " + country + ", isClientModeOnly: " + isClientModeOnly
                 + " mDriverCountryCode: " + mDriverCountryCode);
         for (ActiveModeManager am : amms) {
-            if (isNeedToUpdateCCToSta && !isConcreteClientModeManagerUpdated
+            if (!isConcreteClientModeManagerUpdated
                     && am instanceof ConcreteClientModeManager) {
+                mIsCountryCodePendingToUpdateToCmm = !isNeedToUpdateCCToSta;
+                if (!isNeedToUpdateCCToSta) {
+                    continue;
+                }
                 // Set the country code using one of the active mode managers. Since
                 // country code is a chip level global setting, it can be set as long
                 // as there is at least one active interface to communicate to Wifi chip
@@ -731,7 +748,7 @@ public class WifiCountryCode {
                     SoftApModeConfiguration modeConfig = sm.getSoftApModeConfiguration();
                     SoftApModeConfiguration newModeConfig = new SoftApModeConfiguration(
                             modeConfig.getTargetMode(), modeConfig.getSoftApConfiguration(),
-                            modeConfig.getCapability(), country);
+                            modeConfig.getCapability(), country, modeConfig.getTetheringRequest());
                     mActiveModeWarden.stopSoftAp(modeConfig.getTargetMode());
                     mActiveModeWarden.startSoftAp(newModeConfig, sm.getRequestorWs());
                 } else {
@@ -768,6 +785,9 @@ public class WifiCountryCode {
         mDriverCountryCode = country;
         mWifiP2pMetrics.setIsCountryCodeWorldMode(isDriverCountryCodeWorldMode());
         notifyListener(country);
+        if (country == null) {
+            mIsCountryCodePendingToUpdateToCmm = true;
+        }
     }
 
     /**

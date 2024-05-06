@@ -77,6 +77,9 @@ public class WifiConfigurationTestUtil {
     public static final String[] TEST_WEP_KEYS =
             {"\"WifiTestWep12\"", "\"WifiTestWep34\"",
                     "45342312ab", "45342312ab45342312ab34ac12"};
+    public static final String[] TEST_WEP_KEYS_WITH_NULL = {
+        "\"WifiTestWep12\"", "\"WifiTestWep34\"", "45342312ab45342312ab34ac12", null
+    };
     public static final String TEST_EAP_PASSWORD = "WifiConfigurationTestUtilEapPassword";
     public static final int TEST_WEP_TX_KEY_INDEX = 1;
     public static final String TEST_FQDN = "WifiConfigurationTestUtilFQDN";

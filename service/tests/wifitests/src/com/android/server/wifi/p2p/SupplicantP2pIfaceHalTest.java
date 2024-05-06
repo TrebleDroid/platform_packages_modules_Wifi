@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -39,6 +40,7 @@ import android.net.wifi.p2p.nsd.WifiP2pServiceInfo;
 import com.android.server.wifi.WifiBaseTest;
 import com.android.server.wifi.WifiGlobals;
 import com.android.server.wifi.WifiInjector;
+import com.android.server.wifi.WifiNative;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -58,6 +60,7 @@ public class SupplicantP2pIfaceHalTest extends WifiBaseTest {
     private SupplicantP2pIfaceHalSpy mDut;
     private @Mock SupplicantP2pIfaceHalHidlImpl mP2pIfaceHalHidlMock;
     private @Mock SupplicantP2pIfaceHalAidlImpl mP2pIfaceHalAidlMock;
+    private @Mock WifiNative.SupplicantDeathEventHandler mSupplicantHalDeathHandler;
     private @Mock WifiP2pMonitor mMonitor;
     private @Mock WifiGlobals mWifiGlobals;
     private @Mock WifiInjector mWifiInjector;
@@ -485,10 +488,11 @@ public class SupplicantP2pIfaceHalTest extends WifiBaseTest {
         initializeWithAidlImpl(true);
         int period = 2;
         int interval = 3;
-        when(mP2pIfaceHalAidlMock.configureExtListen(anyBoolean(), anyInt(), anyInt()))
+        when(mP2pIfaceHalAidlMock.configureExtListen(anyBoolean(), anyInt(), anyInt(), any()))
                 .thenReturn(true);
-        assertTrue(mDut.configureExtListen(ENABLE, period, interval));
-        verify(mP2pIfaceHalAidlMock).configureExtListen(eq(ENABLE), eq(period), eq(interval));
+        assertTrue(mDut.configureExtListen(ENABLE, period, interval, null));
+        verify(mP2pIfaceHalAidlMock).configureExtListen(
+                eq(ENABLE), eq(period), eq(interval), eq(null));
     }
 
     /**
@@ -806,5 +810,39 @@ public class SupplicantP2pIfaceHalTest extends WifiBaseTest {
                 0x00FFFFFF, 0x0501A8C0, 0x0801A8C0));
         verify(mP2pIfaceHalAidlMock).configureEapolIpAddressAllocationParams(eq(0x0101A8C0),
                 eq(0x00FFFFFF), eq(0x0501A8C0), eq(0x0801A8C0));
+    }
+
+    /**
+     * Test that we can call terminate
+     */
+    @Test
+    public void testTerminate() {
+        initializeWithAidlImpl(true);
+        doNothing().when(mP2pIfaceHalAidlMock).terminate();
+        mDut.terminate();
+        verify(mP2pIfaceHalAidlMock).terminate();
+    }
+
+    /**
+     * Test that we can call registerDeathHandler
+     */
+    @Test
+    public void testRegisterDeathHandler() {
+        initializeWithAidlImpl(true);
+        when(mP2pIfaceHalAidlMock.registerDeathHandler(
+                any(WifiNative.SupplicantDeathEventHandler.class))).thenReturn(true);
+        assertTrue(mDut.registerDeathHandler(mSupplicantHalDeathHandler));
+        verify(mP2pIfaceHalAidlMock).registerDeathHandler(eq(mSupplicantHalDeathHandler));
+    }
+
+    /**
+     * Test that we can call deregisterDeathHandler
+     */
+    @Test
+    public void testDeregisterDeathHandler() {
+        initializeWithAidlImpl(true);
+        when(mP2pIfaceHalAidlMock.deregisterDeathHandler()).thenReturn(true);
+        assertTrue(mDut.deregisterDeathHandler());
+        verify(mP2pIfaceHalAidlMock).deregisterDeathHandler();
     }
 }

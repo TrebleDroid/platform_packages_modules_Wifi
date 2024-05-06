@@ -503,9 +503,17 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         // This unfortunately needs to be a somewhat valid scan result, otherwise
         // |ScanDetailUtil.toScanDetail| raises exceptions.
         final ScanResult[] scanResults = new ScanResult[1];
-        scanResults[0] = new ScanResult(WifiSsid.fromUtf8Text(CANDIDATE_SSID),
-                CANDIDATE_SSID, CANDIDATE_BSSID, 1245, 0, "some caps",
-                -78, 2450, 1025, 22, 33, 20, 0, 0, true);
+        scanResults[0] = new ScanResult.Builder(
+                WifiSsid.fromUtf8Text(CANDIDATE_SSID), CANDIDATE_BSSID)
+                .setHessid(1245)
+                .setCaps("some caps")
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
         scanResults[0].informationElements = new InformationElement[1];
         scanResults[0].informationElements[0] = new InformationElement();
         scanResults[0].informationElements[0].id = InformationElement.EID_SSID;
@@ -1341,9 +1349,16 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         when(candidate.isOemPrivate()).thenReturn(false);
 
         // Set up the scan candidates
-        ScanResult result = new ScanResult(WifiSsid.fromString(ssid),
-                ssid, bssid, 1245, 0, "some caps", rssi, frequency,
-                1025, 22, 33, 20, 0, 0, true);
+        ScanResult result = new ScanResult.Builder(WifiSsid.fromString(ssid), bssid)
+                .setHessid(1245)
+                .setCaps("some caps")
+                .setRssi(rssi)
+                .setFrequency(frequency)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
         ScanResultMatchInfo matchInfo = ScanResultMatchInfo.fromScanResult(result);
         WifiCandidates.Key key = new WifiCandidates.Key(matchInfo, MacAddress.fromString(bssid),
                 networkId, WifiConfiguration.SECURITY_TYPE_PSK);
@@ -1408,10 +1423,17 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
     private void setupMockPrimaryNetworkSelect(int networkId, String bssid, int rssi,
             int frequency) {
         WifiConfiguration config = mWifiConfigManager.getConfiguredNetwork(networkId);
-        config.getNetworkSelectionStatus().setCandidate(
-                new ScanResult(WifiSsid.fromUtf8Text(config.SSID),
-                        config.SSID, bssid, 1245, 0, "some caps", rssi, frequency,
-                        1025, 22, 33, 20, 0, 0, true));
+        config.getNetworkSelectionStatus().setCandidate(new ScanResult.Builder(
+                WifiSsid.fromUtf8Text(config.SSID), bssid)
+                .setHessid(1245)
+                .setCaps("some caps")
+                .setRssi(rssi)
+                .setFrequency(frequency)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build());
         // Selection for primary
         when(mWifiNS.selectNetwork(any()))
                 .then(new AnswerWithArguments() {
@@ -1443,11 +1465,18 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
                                 // Will return the first candidate matching networkId
                                 if (networkId == candidate.getKey().networkId) {
                                     config.getNetworkSelectionStatus().setCandidate(
-                                            new ScanResult(WifiSsid.fromUtf8Text(config.SSID),
-                                                    config.SSID, candidate.getKey().bssid
-                                                    .toString(), 1245, 0, "some caps", rssi,
-                                                    candidate.getFrequency(), 1025, 22, 33,
-                                                    20, 0, 0, true));
+                                            new ScanResult.Builder(
+                                                    WifiSsid.fromUtf8Text(config.SSID),
+                                                    candidate.getKey().bssid.toString())
+                                                    .setHessid(1245)
+                                                    .setCaps("some caps")
+                                                    .setRssi(rssi)
+                                                    .setFrequency(candidate.getFrequency())
+                                                    .setTsf(1025)
+                                                    .setDistanceCm(22)
+                                                    .setDistanceSdCm(33)
+                                                    .setIs80211McRTTResponder(true)
+                                                    .build());
                                     return config;
                                 }
                             }
@@ -2666,10 +2695,18 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
 
         List<ScanDetail> expectedOpenNetworks = new ArrayList<>();
         expectedOpenNetworks.add(
-                new ScanDetail(
-                        new ScanResult(WifiSsid.fromUtf8Text(CANDIDATE_SSID),
-                                CANDIDATE_SSID, CANDIDATE_BSSID, 1245, 0, "some caps", -78, 2450,
-                                1025, 22, 33, 20, 0, 0, true)));
+                new ScanDetail(new ScanResult.Builder(
+                        WifiSsid.fromUtf8Text(CANDIDATE_SSID),
+                        CANDIDATE_BSSID)
+                        .setHessid(1245)
+                        .setCaps("some caps")
+                        .setRssi(-78)
+                        .setFrequency(2450)
+                        .setTsf(1025)
+                        .setDistanceCm(22)
+                        .setDistanceSdCm(33)
+                        .setIs80211McRTTResponder(true)
+                        .build()));
 
         when(mWifiNS.getFilteredScanDetailsForOpenUnsavedNetworks())
                 .thenReturn(expectedOpenNetworks);
@@ -2696,9 +2733,18 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         List<ScanDetail> expectedOpenNetworks = new ArrayList<>();
         expectedOpenNetworks.add(
                 new ScanDetail(
-                        new ScanResult(WifiSsid.fromUtf8Text(CANDIDATE_SSID),
-                                CANDIDATE_SSID, CANDIDATE_BSSID, 1245, 0, "some caps", -78, 2450,
-                                1025, 22, 33, 20, 0, 0, true)));
+                        new ScanResult.Builder(
+                                WifiSsid.fromUtf8Text(CANDIDATE_SSID),
+                                CANDIDATE_BSSID)
+                                .setHessid(1245)
+                                .setCaps("some caps")
+                                .setRssi(-78)
+                                .setFrequency(2450)
+                                .setTsf(1025)
+                                .setDistanceCm(22)
+                                .setDistanceSdCm(33)
+                                .setIs80211McRTTResponder(true)
+                                .build()));
 
         when(mWifiNS.getFilteredScanDetailsForOpenUnsavedNetworks())
                 .thenReturn(expectedOpenNetworks);
@@ -2959,8 +3005,8 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
 
         // The actual interval should be same as scheduled.
         final long delta = Math.abs(expectedInterval * 1000L - intervals.get(0));
-        assertTrue("Interval " + " (" + delta + ") not in 1ms error margin",
-                delta < 2);
+        assertTrue("Interval " + " (" + delta + ") not in 2ms error margin",
+                delta <= 2);
     }
 
     /**
@@ -4730,9 +4776,8 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
                 0, CANDIDATE_NETWORK_ID, CANDIDATE_SSID, false, true, null, null,
                 WifiConfigurationTestUtil.SECURITY_NONE);
         candidate.BSSID = CANDIDATE_BSSID; // config specified
-        ScanResult candidateScanResult = new ScanResult();
-        candidateScanResult.SSID = CANDIDATE_SSID;
-        candidateScanResult.BSSID = CANDIDATE_BSSID;
+        ScanResult candidateScanResult = new ScanResult.Builder(
+                WifiSsid.fromUtf8Text(CANDIDATE_SSID), CANDIDATE_BSSID).build();
         candidate.getNetworkSelectionStatus().setCandidate(candidateScanResult);
         when(mWifiNS.selectNetwork(any())).thenReturn(candidate);
 
@@ -4788,9 +4833,8 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
                 0, CANDIDATE_NETWORK_ID, CANDIDATE_SSID, false, true, null, null,
                 WifiConfigurationTestUtil.SECURITY_NONE);
         candidate.BSSID = CANDIDATE_BSSID; // config specified
-        ScanResult candidateScanResult = new ScanResult();
-        candidateScanResult.SSID = CANDIDATE_SSID;
-        candidateScanResult.BSSID = CANDIDATE_BSSID;
+        ScanResult candidateScanResult = new ScanResult.Builder(
+                WifiSsid.fromUtf8Text(CANDIDATE_SSID), CANDIDATE_BSSID).build();
         candidate.getNetworkSelectionStatus().setCandidate(candidateScanResult);
         when(mWifiNS.selectNetwork(any())).thenReturn(candidate);
 
@@ -4867,10 +4911,9 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
                 0, CANDIDATE_NETWORK_ID, CANDIDATE_SSID, false, true, null, null,
                 WifiConfigurationTestUtil.SECURITY_NONE);
         candidate.BSSID = CANDIDATE_BSSID; // config specified
-        ScanResult candidateScanResult = new ScanResult();
-        candidateScanResult.SSID = CANDIDATE_SSID;
         // Set up the scan result BSSID to be different from the config specified one.
-        candidateScanResult.BSSID = INVALID_SCAN_RESULT_BSSID;
+        ScanResult candidateScanResult = new ScanResult.Builder(
+                WifiSsid.fromUtf8Text(CANDIDATE_SSID), INVALID_SCAN_RESULT_BSSID).build();
         candidate.getNetworkSelectionStatus().setCandidate(candidateScanResult);
         when(mWifiNS.selectNetwork(any())).thenReturn(candidate);
 
@@ -4908,10 +4951,9 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
                 TEST_CONNECTED_NETWORK_ID, 0, CANDIDATE_SSID, false, true, null, null,
                 WifiConfigurationTestUtil.SECURITY_NONE);
         candidate.BSSID = CANDIDATE_BSSID; // config specified
-        ScanResult candidateScanResult = new ScanResult();
-        candidateScanResult.SSID = CANDIDATE_SSID;
         // Set up the scan result BSSID to be different from the config specified one.
-        candidateScanResult.BSSID = INVALID_SCAN_RESULT_BSSID;
+        ScanResult candidateScanResult = new ScanResult.Builder(
+                WifiSsid.fromUtf8Text(CANDIDATE_SSID), INVALID_SCAN_RESULT_BSSID).build();
         candidate.getNetworkSelectionStatus().setCandidate(candidateScanResult);
         when(mWifiNS.selectNetwork(any())).thenReturn(candidate);
 

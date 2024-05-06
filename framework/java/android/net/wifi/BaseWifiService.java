@@ -21,9 +21,11 @@ import android.annotation.Nullable;
 import android.net.DhcpInfo;
 import android.net.DhcpOption;
 import android.net.Network;
+import android.net.TetheringManager;
 import android.net.wifi.hotspot2.IProvisioningCallback;
 import android.net.wifi.hotspot2.OsuProvider;
 import android.net.wifi.hotspot2.PasspointConfiguration;
+import android.net.wifi.twt.TwtRequest;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -470,8 +472,20 @@ public class BaseWifiService extends IWifiManager.Stub {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Following method is deprecated with
+     * {@link #startTetheredHotspotRequest(TetheringManager.TetheringRequest, String)}
+     * @deprecated This is no longer supported.
+     */
+    @Deprecated
     @Override
     public boolean startTetheredHotspot(SoftApConfiguration softApConfig, String packageName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void startTetheredHotspotRequest(TetheringManager.TetheringRequest request,
+            ISoftApCallback callback, String packageName) {
         throw new UnsupportedOperationException();
     }
 
@@ -615,6 +629,16 @@ public class BaseWifiService extends IWifiManager.Stub {
 
     @Override
     public Network getCurrentNetwork() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void retrieveWifiBackupData(@NonNull IByteArrayListener  listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void restoreWifiBackupData(byte[] data) {
         throw new UnsupportedOperationException();
     }
 
@@ -774,9 +798,14 @@ public class BaseWifiService extends IWifiManager.Stub {
         throw new UnsupportedOperationException();
     }
 
-    @Override
+    /** TO BE REMOVED */
     public void connect(WifiConfiguration config, int netId, IActionListener callback,
             @NonNull String packageName) {
+        throw new UnsupportedOperationException();
+    }
+    @Override
+    public void connect(WifiConfiguration config, int netId, IActionListener callback,
+            @NonNull String packageName, Bundle extras) {
         throw new UnsupportedOperationException();
     }
 
@@ -1101,6 +1130,80 @@ public class BaseWifiService extends IWifiManager.Stub {
 
     @Override
     public void queryWepAllowed(@NonNull IBooleanListener listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void enableMscs(@NonNull MscsParams mscsParams) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void disableMscs() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setSendDhcpHostnameRestriction(@NonNull String packageName,
+            @WifiManager.SendDhcpHostnameRestriction int restriction) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void querySendDhcpHostnameRestriction(@NonNull String packageName,
+            @NonNull IIntegerListener listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setPerSsidRoamingMode(WifiSsid ssid, @WifiManager.RoamingMode int roamingMode,
+            @NonNull String packageName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void removePerSsidRoamingMode(WifiSsid ssid, @NonNull String packageName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void getPerSsidRoamingModes(@NonNull String packageName, IMapListener listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setupTwtSession(TwtRequest twtRequest, ITwtCallback iTwtCallback, Bundle extras) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void getTwtCapabilities(ITwtCapabilitiesListener listener, Bundle extras) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void getStatsTwtSession(int sessionId, ITwtStatsListener iTwtStatsListener,
+            Bundle extras) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void teardownTwtSession(int sessionId, Bundle extras) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setD2dAllowedWhenInfraStaDisabled(boolean isAllowed) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void queryD2dAllowedWhenInfraStaDisabled(@NonNull IBooleanListener listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isPnoSupported() {
         throw new UnsupportedOperationException();
     }
 }

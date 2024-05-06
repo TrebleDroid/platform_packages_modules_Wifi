@@ -25,6 +25,8 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.PersistableBundle;
 
+import com.android.wifi.flags.Flags;
+
 import java.util.Objects;
 
 /**
@@ -32,7 +34,7 @@ import java.util.Objects;
  *
  * @hide
  */
-@FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
 @SystemApi
 public final class OuiKeyedData implements Parcelable {
     private static final String TAG = "OuiKeyedData";
@@ -52,7 +54,7 @@ public final class OuiKeyedData implements Parcelable {
      *
      * <p>See {@link Builder#Builder(int, PersistableBundle)}}
      */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public int getOui() {
         return mOui;
     }
@@ -62,7 +64,7 @@ public final class OuiKeyedData implements Parcelable {
      *
      * <p>See {@link Builder#Builder(int, PersistableBundle)}}
      */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public @NonNull PersistableBundle getData() {
         return mData;
     }
@@ -82,7 +84,7 @@ public final class OuiKeyedData implements Parcelable {
         return validateOui(mOui) && (getData() != null);
     }
 
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) return true;
@@ -91,25 +93,25 @@ public final class OuiKeyedData implements Parcelable {
         return mOui == that.mOui && PersistableBundleUtils.isEqual(mData, that.mData);
     }
 
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public int hashCode() {
         return Objects.hash(mOui, PersistableBundleUtils.getHashCode(mData));
     }
 
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public String toString() {
         return "{oui=" + Integer.toHexString(mOui) + ", data=" + getData() + "}";
     }
 
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public int describeContents() {
         return 0;
     }
 
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeInt(mOui);
@@ -122,7 +124,7 @@ public final class OuiKeyedData implements Parcelable {
         this.mData = in.readPersistableBundle();
     }
 
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @NonNull
     public static final Parcelable.Creator<OuiKeyedData> CREATOR =
             new Parcelable.Creator<OuiKeyedData>() {
@@ -138,7 +140,7 @@ public final class OuiKeyedData implements Parcelable {
             };
 
     /** Builder for {@link OuiKeyedData}. */
-    @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public static final class Builder {
         private final int mOui;
         private final @NonNull PersistableBundle mData;
@@ -152,14 +154,14 @@ public final class OuiKeyedData implements Parcelable {
          *     should be provided by the vendor, and should be known to both the caller and to the
          *     vendor's implementation of the Wi-Fi HALs.
          */
-        @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         public Builder(int oui, @NonNull PersistableBundle data) {
             mOui = oui;
             mData = data;
         }
 
         /** Construct an OuiKeyedData object with the specified parameters. */
-        @FlaggedApi("com.android.wifi.flags.vendor_parcelable_parameters")
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @NonNull
         public OuiKeyedData build() {
             OuiKeyedData ouiKeyedData = new OuiKeyedData(mOui, mData);

@@ -39,3 +39,15 @@ java_aconfig_library {
         "//cts/tests/tests/wifi:__subpackages__",
     ],
 }
+
+java_aconfig_library {
+    name: "wifi_framework_aconfig_flags_lib",
+    aconfig_declarations: "wifi_aconfig_flags",
+    defaults: ["wifi-framework-aconfig-java-defaults"],
+}
+
+java_defaults {
+    name: "wifi-framework-aconfig-java-defaults",
+    sdk_version: "core_platform",
+    libs: ["fake_device_config"],
+}

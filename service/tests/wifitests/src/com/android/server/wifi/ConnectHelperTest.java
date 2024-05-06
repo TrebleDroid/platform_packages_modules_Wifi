@@ -17,6 +17,7 @@
 package com.android.server.wifi;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -44,6 +45,7 @@ public class ConnectHelperTest extends WifiBaseTest {
     private static final int TEST_NETWORK_ID = 42;
     private static final String TEST_SSID = "TestSSID";
     private static final String TEST_PACKAGE_NAME = "com.test.xxx";
+    private static final String TEST_ATTRIBUTION_TAG = "TEST_ATTRIBUTION_TAG";
 
     private ConnectHelper mConnectHelper;
 
@@ -68,21 +70,30 @@ public class ConnectHelperTest extends WifiBaseTest {
         mWifiConfig.networkId = TEST_NETWORK_ID;
     }
 
-    @Test
-    public void connectToNetwork_success() throws Exception {
+    private void verifyConnectNetworkSuccess(String attributionTag, boolean expectDisableOthers) {
         when(mWifiConfigManager.getConfiguredNetwork(TEST_NETWORK_ID)).thenReturn(mWifiConfig);
 
         NetworkUpdateResult result = new NetworkUpdateResult(TEST_NETWORK_ID);
         mConnectHelper.connectToNetwork(result, mActionListener, TEST_CALLING_UID,
-                TEST_PACKAGE_NAME);
+                TEST_PACKAGE_NAME, attributionTag);
 
         verify(mWifiConfigManager).updateBeforeConnect(TEST_NETWORK_ID, TEST_CALLING_UID,
-                TEST_PACKAGE_NAME);
+                TEST_PACKAGE_NAME, expectDisableOthers);
         verify(mClientModeManager).connectNetwork(eq(result), any(), eq(TEST_CALLING_UID),
-                eq(TEST_PACKAGE_NAME));
+                eq(TEST_PACKAGE_NAME), eq(attributionTag));
         // success is sent by ClientModeManager, not sent by ConnectHelper
         verify(mActionListener, never()).sendSuccess();
         verify(mActionListener, never()).sendFailure(anyInt());
+    }
+
+    @Test
+    public void connectToNetwork_success() throws Exception {
+        verifyConnectNetworkSuccess(TEST_ATTRIBUTION_TAG, true);
+    }
+
+    @Test
+    public void connectToNetwork_successDisallowUserConnectChoice() throws Exception {
+        verifyConnectNetworkSuccess(ClientModeImpl.ATTRIBUTION_TAG_DISALLOW_CONNECT_CHOICE, false);
     }
 
     @Test
@@ -90,11 +101,11 @@ public class ConnectHelperTest extends WifiBaseTest {
         when(mWifiConfigManager.getConfiguredNetwork(TEST_NETWORK_ID)).thenReturn(null);
 
         mConnectHelper.connectToNetwork(new NetworkUpdateResult(TEST_NETWORK_ID), mActionListener,
-                TEST_CALLING_UID, TEST_PACKAGE_NAME);
+                TEST_CALLING_UID, TEST_PACKAGE_NAME, TEST_ATTRIBUTION_TAG);
 
-        verify(mWifiConfigManager, never()).updateBeforeConnect(TEST_NETWORK_ID, TEST_CALLING_UID,
-                TEST_PACKAGE_NAME);
-        verify(mClientModeManager, never()).connectNetwork(any(), any(), anyInt(), any());
+        verify(mWifiConfigManager, never()).updateBeforeConnect(anyInt(), anyInt(),
+                any(), anyBoolean());
+        verify(mClientModeManager, never()).connectNetwork(any(), any(), anyInt(), any(), any());
         verify(mActionListener).sendFailure(WifiManager.ActionListener.FAILURE_INTERNAL_ERROR);
         verify(mActionListener, never()).sendSuccess();
     }

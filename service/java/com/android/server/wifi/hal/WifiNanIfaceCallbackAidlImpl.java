@@ -47,10 +47,8 @@ import android.hardware.wifi.NanStatus;
 import android.hardware.wifi.NanStatusCode;
 import android.hardware.wifi.NanSuspensionModeChangeInd;
 import android.hardware.wifi.NpkSecurityAssociation;
-import android.hardware.wifi.WifiChannelWidthInMhz;
 import android.net.MacAddress;
-import android.net.wifi.ScanResult;
-import android.net.wifi.WifiAnnotations;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.aware.AwarePairingConfig;
 import android.net.wifi.aware.Characteristics;
 import android.net.wifi.aware.WifiAwareChannelInfo;
@@ -61,6 +59,7 @@ import com.android.server.wifi.aware.Capabilities;
 import com.android.server.wifi.aware.PairingConfigManager.PairingSecurityAssociationInfo;
 import com.android.server.wifi.hal.WifiNanIface.NanClusterEventType;
 import com.android.server.wifi.hal.WifiNanIface.NanRangingIndication;
+import com.android.server.wifi.util.HalAidlUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -399,6 +398,10 @@ public class WifiNanIfaceCallbackAidlImpl extends IWifiNanIfaceEventCallback.Stu
             serviceSpecificInfo = event.extendedServiceSpecificInfo;
             isExtendedServiceSpecificInfo = true;
         }
+        List<OuiKeyedData> vendorData = null;
+        if (WifiHalAidlImpl.isServiceVersionAtLeast(2) && event.vendorData != null) {
+            vendorData = HalAidlUtil.halToFrameworkOuiKeyedDataList(event.vendorData);
+        }
         if (mVerboseLoggingEnabled) {
             Log.v(
                     TAG,
@@ -440,7 +443,8 @@ public class WifiNanIfaceCallbackAidlImpl extends IWifiNanIfaceEventCallback.Stu
                         toPublicDataPathCipherSuites(event.peerCipherType),
                         event.peerNira.nonce,
                         event.peerNira.tag,
-                        createPublicPairingConfig(event.peerPairingConfig));
+                        createPublicPairingConfig(event.peerPairingConfig),
+                        vendorData);
     }
 
     private AwarePairingConfig createPublicPairingConfig(NanPairingConfig nativePairingConfig) {
@@ -773,26 +777,6 @@ public class WifiNanIfaceCallbackAidlImpl extends IWifiNanIfaceEventCallback.Stu
         return sb.toString();
     }
 
-    /**
-     * Convert HAL channelBandwidth to framework enum
-     */
-    @WifiAnnotations.ChannelWidth
-    private int getChannelBandwidthFromHal(int channelBandwidth) {
-        switch (channelBandwidth) {
-            case WifiChannelWidthInMhz.WIDTH_40:
-                return ScanResult.CHANNEL_WIDTH_40MHZ;
-            case WifiChannelWidthInMhz.WIDTH_80:
-                return ScanResult.CHANNEL_WIDTH_80MHZ;
-            case WifiChannelWidthInMhz.WIDTH_160:
-                return ScanResult.CHANNEL_WIDTH_160MHZ;
-            case WifiChannelWidthInMhz.WIDTH_80P80:
-                return ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ;
-            case WifiChannelWidthInMhz.WIDTH_320:
-                return ScanResult.CHANNEL_WIDTH_320MHZ;
-            default:
-                return ScanResult.CHANNEL_WIDTH_20MHZ;
-        }
-    }
 
     /**
      * Convert HAL NanDataPathChannelInfo to WifiAwareChannelInfo
@@ -805,7 +789,7 @@ public class WifiNanIfaceCallbackAidlImpl extends IWifiNanIfaceEventCallback.Stu
         }
         for (android.hardware.wifi.NanDataPathChannelInfo channelInfo : channelInfos) {
             wifiAwareChannelInfos.add(new WifiAwareChannelInfo(channelInfo.channelFreq,
-                    getChannelBandwidthFromHal(channelInfo.channelBandwidth),
+                    HalAidlUtil.getChannelBandwidthFromHal(channelInfo.channelBandwidth),
                     channelInfo.numSpatialStreams));
         }
         return wifiAwareChannelInfos;

@@ -21,6 +21,7 @@ import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
+import android.hardware.wifi.common.OuiKeyedData;
 import android.net.wifi.util.PersistableBundleUtils;
 import android.os.PersistableBundle;
 
@@ -54,6 +55,13 @@ public class HalAidlUtilTest {
     private static android.net.wifi.OuiKeyedData createFrameworkOuiKeyedData(int oui) {
         return new android.net.wifi.OuiKeyedData.Builder(
                 oui, createTestPersistableBundle()).build();
+    }
+
+    private static OuiKeyedData createHalOuiKeyedData(int oui) {
+        OuiKeyedData data = new OuiKeyedData();
+        data.oui = oui;
+        data.vendorData = createTestPersistableBundle();
+        return data;
     }
 
     private static boolean frameworkAndHalOuiKeyedDataEqual(
@@ -96,5 +104,40 @@ public class HalAidlUtilTest {
         android.hardware.wifi.common.OuiKeyedData[] halList =
                 HalAidlUtil.frameworkToHalOuiKeyedDataList(frameworkList);
         assertEquals(0, halList.length);
+    }
+
+    /**
+     * Test the conversion of a valid HAL OuiKeyedData list to its framework equivalent.
+     */
+    @Test
+    public void testConvertOuiKeyedDataToFramework() {
+        OuiKeyedData[] halList = new OuiKeyedData[TEST_VENDOR_DATA_LIST_SIZE];
+        for (int i = 0; i < TEST_VENDOR_DATA_LIST_SIZE; i++) {
+            halList[i] = createHalOuiKeyedData(i + 1);
+        }
+
+        List<android.net.wifi.OuiKeyedData> frameworkList =
+                HalAidlUtil.halToFrameworkOuiKeyedDataList(halList);
+        assertEquals(frameworkList.size(), halList.length);
+        for (int i = 0; i < TEST_VENDOR_DATA_LIST_SIZE; i++) {
+            assertTrue(frameworkAndHalOuiKeyedDataEqual(frameworkList.get(i), halList[i]));
+        }
+    }
+
+    /**
+     * Test the conversion of an invalid OuiKeyedData list. Invalid entries should be ignored.
+     */
+    @Test
+    public void testConvertOuiKeyedDataToFramework_invalid() {
+        OuiKeyedData[] halList = new OuiKeyedData[TEST_VENDOR_DATA_LIST_SIZE];
+        for (int i = 0; i < TEST_VENDOR_DATA_LIST_SIZE; i++) {
+            // Fill list with entries that have an invalid OUI.
+            halList[i] = createHalOuiKeyedData(0);
+        }
+
+        // No entries should appear in the converted list.
+        List<android.net.wifi.OuiKeyedData> frameworkList =
+                HalAidlUtil.halToFrameworkOuiKeyedDataList(halList);
+        assertEquals(0, frameworkList.size());
     }
 }

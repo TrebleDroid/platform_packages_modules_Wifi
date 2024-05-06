@@ -15,6 +15,7 @@
  */
 package com.android.server.wifi.util;
 
+import android.hardware.wifi.WifiBand;
 import android.net.MacAddress;
 import android.net.wifi.MloLink;
 import android.net.wifi.ScanResult;
@@ -27,6 +28,7 @@ import android.net.wifi.nl80211.NativeScanResult;
 import android.net.wifi.nl80211.WifiNl80211Manager;
 import android.net.wifi.util.HexEncoding;
 import android.util.Log;
+import android.util.SparseIntArray;
 
 import com.android.server.wifi.ByteBufferReader;
 import com.android.server.wifi.MboOceConstants;
@@ -833,10 +835,21 @@ public class InformationElementUtil {
         private static final int EHT_OPERATION_INFO_START_INDEX = EHT_OPERATION_BASIC_LENGTH;
         private static final int DISABLED_SUBCHANNEL_BITMAP_START_INDEX =
                 EHT_OPERATION_INFO_START_INDEX + 3;
+        private static final int CHANNEL_WIDTH_INDEX = EHT_OPERATION_INFO_START_INDEX + 0;
+        private static final int CHANNEL_WIDTH_MASK = 0xF;
+        private static final int CHANNEL_CENTER_FREQ_SEG0_INDEX =
+                EHT_OPERATION_INFO_START_INDEX + 1;
+        private static final int CHANNEL_CENTER_FREQ_SEG_MASK = 0xFF;
+        private static final int CHANNEL_CENTER_FREQ_SEG1_INDEX =
+                EHT_OPERATION_INFO_START_INDEX + 2;
+
         private boolean mPresent = false;
         private boolean mEhtOperationInfoPresent = false;
         private boolean mDisabledSubchannelBitmapPresent = false;
         private byte[] mDisabledSubchannelBitmap;
+        private int mChannelWidth;
+        private int mCenterFreqSeg0;
+        private int mCenterFreqSeg1;
 
         /**
          * Returns whether the EHT Information Element is present.
@@ -865,6 +878,69 @@ public class InformationElementUtil {
          */
         public byte[] getDisabledSubchannelBitmap() {
             return mDisabledSubchannelBitmap;
+        }
+
+        /**
+         * @return  Channel width if EHT Operation Information Present.
+         */
+        public int getChannelWidth() {
+            /*
+             * Channel width in EHT operation Info is set,
+             *      0 for 20 MHz EHT BSS bandwidth.
+             *      1 for 40 MHz EHT BSS bandwidth.
+             *      2 for 80 MHz EHT BSS bandwidth.
+             *      3 for 160 MHz EHT BSS bandwidth.
+             *      4 for 320 MHz EHT BSS bandwidth.
+             *      Values in the ranges 5 to 7 are reserved.
+             */
+            switch(mChannelWidth) {
+                case 0: return ScanResult.CHANNEL_WIDTH_20MHZ;
+                case 1: return ScanResult.CHANNEL_WIDTH_40MHZ;
+                case 2: return ScanResult.CHANNEL_WIDTH_80MHZ;
+                case 3: return ScanResult.CHANNEL_WIDTH_160MHZ;
+                case 4: return ScanResult.CHANNEL_WIDTH_320MHZ;
+                default:
+                    return  ScanResult.UNSPECIFIED;
+            }
+        }
+
+        /**
+         * Returns Channel Center Frequency Segment 0 (CCFS0).
+         *
+         * - For 20, 40 or 80 MHz BSS bandwidth, indicates the channel center frequency for the
+         *   20, 40 or 80 MHz channel on which the EHT BSS operates.
+         * - For 160 MHz BSS bandwidth, indicates the channel center frequency of the primary 80
+         *   MHz channel.
+         * - For 320 MHz BSS bandwidth, indicates the channel center frequency of the primary 160
+         *   MHz channel.
+         *
+         * @param band Operating band
+         * @return Center frequency.
+         */
+        public int getCenterFreq0(@ScanResult.WifiBand int band) {
+            if (mCenterFreqSeg0 == 0 || band == WifiBand.BAND_UNSPECIFIED) {
+                return ScanResult.UNSPECIFIED;
+            }
+            return ScanResult.convertChannelToFrequencyMhzIfSupported(mCenterFreqSeg0, band);
+        }
+
+        /**
+         * Returns Channel Center Frequency Segment 1 (CCFS1)
+         *
+         * - For a 20, 40 or 80 MHz BSS bandwidth, returns {@link ScanResult#UNSPECIFIED} .
+         * - For a 160 MHz BSS bandwidth, returns the channel center frequency of the 160 MHz
+         *   channel on which the EHT BSS operates.
+         * - For a 320 MHz BSS bandwidth, returns the channel center frequency of the 320 MHz
+         *   channel on which the EHT BSS operates
+         *
+         * @param band Operating band
+         * @return Center frequency.
+         */
+        public int getCenterFreq1(@ScanResult.WifiBand int band) {
+            if (mCenterFreqSeg1 == 0 || band == WifiBand.BAND_UNSPECIFIED) {
+                return ScanResult.UNSPECIFIED;
+            }
+            return ScanResult.convertChannelToFrequencyMhzIfSupported(mCenterFreqSeg1, band);
         }
 
         /**
@@ -898,6 +974,14 @@ public class InformationElementUtil {
                 return;
             }
             mPresent = true;
+
+            if (mEhtOperationInfoPresent) {
+                mChannelWidth = ie.bytes[CHANNEL_WIDTH_INDEX] & CHANNEL_WIDTH_MASK;
+                mCenterFreqSeg0 =
+                        ie.bytes[CHANNEL_CENTER_FREQ_SEG0_INDEX] & CHANNEL_CENTER_FREQ_SEG_MASK;
+                mCenterFreqSeg1 =
+                        ie.bytes[CHANNEL_CENTER_FREQ_SEG1_INDEX] & CHANNEL_CENTER_FREQ_SEG_MASK;
+            }
 
             if (mDisabledSubchannelBitmapPresent) {
                 mDisabledSubchannelBitmap = new byte[2];
@@ -1843,7 +1927,7 @@ public class InformationElementUtil {
         //
         // Note: InformationElement.bytes has 'Element ID' and 'Length'
         //       stripped off already
-        private void parseRsnElement(InformationElement ie) {
+        private void parseRsnElement(InformationElement ie, SparseIntArray unknownAkmMap) {
             ByteBuffer buf = ByteBuffer.wrap(ie.bytes).order(ByteOrder.LITTLE_ENDIAN);
 
             try {
@@ -1924,9 +2008,13 @@ public class InformationElementUtil {
                         case RSN_AKM_DPP:
                             rsnKeyManagement.add(ScanResult.KEY_MGMT_DPP);
                             break;
-                        default:
-                            rsnKeyManagement.add(ScanResult.KEY_MGMT_UNKNOWN);
+                        default: {
+                            int akmScheme =
+                                    getScanResultAkmSchemeOfUnknownAkmIfConfigured(
+                                            akm, unknownAkmMap);
+                            rsnKeyManagement.add(akmScheme);
                             break;
+                        }
                     }
                 }
                 // Default AKM
@@ -1958,6 +2046,27 @@ public class InformationElementUtil {
                 groupManagementCipher.add(parseRsnCipher(buf.getInt()));
             } catch (BufferUnderflowException e) {
                 Log.e("IE_Capabilities", "Couldn't parse RSNE, buffer underflow");
+            }
+        }
+
+        /**
+         * Get the ScanResult security key management scheme (ScanResult.KEY_MGMT_XX) corresponding
+         * to the unknown AKMs configured in overlay config item
+         * config_wifiUnknownAkmToKnownAkmMapping
+         *
+         * @param unknownAkm unknown AKM seen in the received beacon or probe response.
+         * @param unknownAkmMap unknownAkmMap Mapping of unknown AKMs configured in overlay config
+         *     item config_wifiUnknownAkmToKnownAkmMapping to ScanResult security key management
+         *     scheme (ScanResult.KEY_MGMT_XX).
+         * @return A valid ScanResult.KEY_MGMT_XX if unknownAkm is configured in the overlay,
+         *     ScanResult.KEY_MGMT_UNKNOWN otherwise
+         */
+        private int getScanResultAkmSchemeOfUnknownAkmIfConfigured(
+                int unknownAkm, SparseIntArray unknownAkmMap) {
+            if (unknownAkmMap != null) {
+                return unknownAkmMap.get(unknownAkm, ScanResult.KEY_MGMT_UNKNOWN);
+            } else {
+                return ScanResult.KEY_MGMT_UNKNOWN;
             }
         }
 
@@ -2040,7 +2149,7 @@ public class InformationElementUtil {
         // Note: InformationElement.bytes has 'Element ID' and 'Length'
         //       stripped off already
         //
-        private void parseWpaOneElement(InformationElement ie) {
+        private void parseWpaOneElement(InformationElement ie, SparseIntArray unknownAkmMap) {
             ByteBuffer buf = ByteBuffer.wrap(ie.bytes).order(ByteOrder.LITTLE_ENDIAN);
 
             try {
@@ -2085,7 +2194,10 @@ public class InformationElementUtil {
                             wpaKeyManagement.add(ScanResult.KEY_MGMT_PSK);
                             break;
                         default:
-                            wpaKeyManagement.add(ScanResult.KEY_MGMT_UNKNOWN);
+                            int akmScheme =
+                                    getScanResultAkmSchemeOfUnknownAkmIfConfigured(
+                                            akm, unknownAkmMap);
+                            wpaKeyManagement.add(akmScheme);
                             break;
                     }
                 }
@@ -2100,19 +2212,24 @@ public class InformationElementUtil {
         }
 
         /**
-         * Parse the Information Element and the 16-bit Capability Information field
-         * to build the InformationElemmentUtil.capabilities object.
+         * Parse the Information Element and the 16-bit Capability Information field to build the
+         * InformationElemmentUtil.capabilities object.
          *
-         * @param ies            -- Information Element array
-         * @param beaconCap      -- 16-bit Beacon Capability Information field
+         * @param ies -- Information Element array
+         * @param beaconCap -- 16-bit Beacon Capability Information field
          * @param isOweSupported -- Boolean flag to indicate if OWE is supported by the device
-         * @param freq           -- Frequency on which frame/beacon was transmitted.
-         *                          Some parsing may be affected such as DMG parameters in
-         *                          DMG (60GHz) beacon.
+         * @param freq -- Frequency on which frame/beacon was transmitted. Some parsing may be
+         *     affected such as DMG parameters in DMG (60GHz) beacon.
+         * @param unknownAkmMap -- unknown AKM to known AKM mapping (Internally converted to
+         *     security key management scheme(ScanResult.KEY_MGMT_XX)) configured in overlay config
+         *     item config_wifiUnknownAkmToKnownAkmMapping.
          */
-
-        public void from(InformationElement[] ies, int beaconCap, boolean isOweSupported,
-                int freq) {
+        public void from(
+                InformationElement[] ies,
+                int beaconCap,
+                boolean isOweSupported,
+                int freq,
+                SparseIntArray unknownAkmMap) {
             protocol = new ArrayList<>();
             keyManagement = new ArrayList<>();
             groupCipher = new ArrayList<>();
@@ -2148,12 +2265,12 @@ public class InformationElementUtil {
                 }
 
                 if (ie.id == InformationElement.EID_RSN) {
-                    parseRsnElement(ie);
+                    parseRsnElement(ie, unknownAkmMap);
                 }
 
                 if (ie.id == InformationElement.EID_VSA) {
                     if (isWpaOneElement(ie)) {
-                        parseWpaOneElement(ie);
+                        parseWpaOneElement(ie, unknownAkmMap);
                     }
                     if (isWpsElement(ie)) {
                         // TODO(b/62134557): parse WPS IE to provide finer granularity information.
@@ -2184,6 +2301,48 @@ public class InformationElementUtil {
                         keyManagement.add(oweKeyManagement);
                     }
                 }
+            }
+        }
+
+        /** Convert the AKM suite selector to scan result Security key management scheme */
+        public static int akmToScanResultKeyManagementScheme(int akm) {
+            switch (akm) {
+                case RSN_AKM_EAP:
+                case WPA_AKM_EAP:
+                    return ScanResult.KEY_MGMT_EAP;
+                case RSN_AKM_PSK:
+                case WPA_AKM_PSK:
+                    return ScanResult.KEY_MGMT_PSK;
+                case RSN_AKM_FT_EAP:
+                    return ScanResult.KEY_MGMT_FT_EAP;
+                case RSN_AKM_FT_PSK:
+                    return ScanResult.KEY_MGMT_FT_PSK;
+                case RSN_AKM_EAP_SHA256:
+                    return ScanResult.KEY_MGMT_EAP_SHA256;
+                case RSN_AKM_PSK_SHA256:
+                    return ScanResult.KEY_MGMT_PSK_SHA256;
+                case RSN_AKM_SAE:
+                    return ScanResult.KEY_MGMT_SAE;
+                case RSN_AKM_FT_SAE:
+                    return ScanResult.KEY_MGMT_FT_SAE;
+                case RSN_AKM_SAE_EXT_KEY:
+                    return ScanResult.KEY_MGMT_SAE_EXT_KEY;
+                case RSN_AKM_FT_SAE_EXT_KEY:
+                    return ScanResult.KEY_MGMT_FT_SAE_EXT_KEY;
+                case RSN_AKM_OWE:
+                    return ScanResult.KEY_MGMT_OWE;
+                case RSN_AKM_EAP_SUITE_B_192:
+                    return ScanResult.KEY_MGMT_EAP_SUITE_B_192;
+                case RSN_OSEN:
+                    return ScanResult.KEY_MGMT_OSEN;
+                case RSN_AKM_EAP_FILS_SHA256:
+                    return ScanResult.KEY_MGMT_FILS_SHA256;
+                case RSN_AKM_EAP_FILS_SHA384:
+                    return ScanResult.KEY_MGMT_FILS_SHA384;
+                case RSN_AKM_DPP:
+                    return ScanResult.KEY_MGMT_DPP;
+                default:
+                    return ScanResult.KEY_MGMT_UNKNOWN;
             }
         }
 

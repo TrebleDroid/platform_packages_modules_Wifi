@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.os.WorkSource;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.ScanResult;
+import android.net.wifi.IScanDataListener;
 import android.net.wifi.IWifiScannerListener;
 
 /**
@@ -55,6 +56,8 @@ interface IWifiScanner
     void stopScan(in IWifiScannerListener listener, String packageName, String featureId);
 
     List<ScanResult> getSingleScanResults(String packageName, String featureId);
+
+    void getCachedScanData(String packageName, String featureId, in IScanDataListener listener);
 
     void startPnoScan(in IWifiScannerListener listener,
             in WifiScanner.ScanSettings scanSettings,

@@ -39,8 +39,9 @@ import android.net.wifi.WifiNetworkSpecifier;
 import android.os.PatternMatcher;
 import android.os.WorkSource;
 import android.os.test.TestLooper;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.util.LocalLog;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.util.WifiPermissionsUtil;
@@ -50,6 +51,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
 /**
  * Unit tests for {@link com.android.server.wifi.MultiInternetWifiNetworkFactory}.
  */

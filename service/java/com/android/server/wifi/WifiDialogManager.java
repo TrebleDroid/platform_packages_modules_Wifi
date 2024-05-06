@@ -90,17 +90,7 @@ public class WifiDialogManager {
                                 if (mVerboseLoggingEnabled) {
                                     Log.v(TAG, "Received action: " + action);
                                 }
-                                if (Intent.ACTION_SCREEN_OFF.equals(action)) {
-                                    // Change all window types to TYPE_APPLICATION_OVERLAY to
-                                    // prevent the dialogs from appearing over the lock screen when
-                                    // the screen turns on again.
-                                    for (LegacySimpleDialogHandle dialogHandle :
-                                            mActiveLegacySimpleDialogs) {
-                                        dialogHandle.changeWindowType(
-                                                WindowManager.LayoutParams
-                                                        .TYPE_APPLICATION_OVERLAY);
-                                    }
-                                } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
+                                if (Intent.ACTION_USER_PRESENT.equals(action)) {
                                     // Change all window types to TYPE_KEYGUARD_DIALOG to show the
                                     // dialogs over the QuickSettings after the screen is unlocked.
                                     for (LegacySimpleDialogHandle dialogHandle :
@@ -139,12 +129,11 @@ public class WifiDialogManager {
     public WifiDialogManager(
             @NonNull WifiContext context,
             @NonNull WifiThreadRunner wifiThreadRunner,
-            @NonNull FrameworkFacade frameworkFacade) {
+            @NonNull FrameworkFacade frameworkFacade, WifiInjector wifiInjector) {
         mContext = context;
         mWifiThreadRunner = wifiThreadRunner;
         mFrameworkFacade = frameworkFacade;
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
         intentFilter.addAction(Intent.ACTION_USER_PRESENT);
         intentFilter.addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
         int flags = 0;
@@ -152,6 +141,34 @@ public class WifiDialogManager {
             flags = Context.RECEIVER_EXPORTED;
         }
         mContext.registerReceiver(mBroadcastReceiver, intentFilter, flags);
+        wifiInjector.getWifiDeviceStateChangeManager()
+                .registerStateChangeCallback(
+                        new WifiDeviceStateChangeManager.StateChangeCallback() {
+                            @Override
+                            public void onScreenStateChanged(boolean screenOn) {
+                                handleScreenStateChanged(screenOn);
+                            }
+                        });
+    }
+
+    private void handleScreenStateChanged(boolean screenOn) {
+        // Change all window types to TYPE_APPLICATION_OVERLAY to
+        // prevent the dialogs from appearing over the lock screen when
+        // the screen turns on again.
+        if (!screenOn) {
+            if (mVerboseLoggingEnabled) {
+                Log.d(TAG, "onScreenStateChanged: screen off");
+            }
+            // Change all window types to TYPE_APPLICATION_OVERLAY to
+            // prevent the dialogs from appearing over the lock screen when
+            // the screen turns on again.
+            for (LegacySimpleDialogHandle dialogHandle :
+                    mActiveLegacySimpleDialogs) {
+                dialogHandle.changeWindowType(
+                        WindowManager.LayoutParams
+                                .TYPE_APPLICATION_OVERLAY);
+            }
+        }
     }
 
     /**

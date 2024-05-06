@@ -119,7 +119,7 @@ public class WifiScoreCard {
     static final int SUFFICIENT_RECENT_STATS_ONLY = 1;
     static final int SUFFICIENT_RECENT_PREV_STATS = 2;
 
-    private static final int MAX_FREQUENCIES_PER_SSID = 10;
+    private static final int MAX_FREQUENCIES_PER_SSID = 30;
     private static final int MAX_TRAFFIC_STATS_POLL_TIME_DELTA_MS = 6_000;
 
     private final Clock mClock;
@@ -2097,13 +2097,13 @@ public class WifiScoreCard {
 
     private void logd(String string) {
         if (mVerboseLoggingEnabled) {
-            Log.d(TAG, string);
+            Log.d(TAG, string, null);
         }
     }
 
     private void logv(String string) {
         if (mVerboseLoggingEnabled) {
-            Log.v(TAG, string);
+            Log.v(TAG, string, null);
         }
         mLocalLog.log(string);
     }

@@ -42,6 +42,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.net.wifi.WifiNetworkSuggestion;
 import android.net.wifi.WifiSsid;
+import android.os.Process;
 import android.telephony.SubscriptionManager;
 import android.util.LocalLog;
 import android.util.Pair;
@@ -1814,6 +1815,53 @@ public class NetworkSuggestionNominatorTest extends WifiBaseTest {
                 (ScanDetail scanDetail, WifiConfiguration configuration) -> {
                     connectableNetworks.add(Pair.create(scanDetail, configuration));
                 });
+
+        validateConnectableNetworks(connectableNetworks, scanSsids[0]);
+        verify(mWifiMetrics, never())
+                .incrementNetworkSuggestionMoreThanOneSuggestionForSingleScanResult();
+    }
+
+    /**
+     * Ensure that we nominate the one matching network suggestion.
+     * Because the only matched suggestion is restricted and suggested by the SYSTEM_SERVER
+     * Expected connectable Networks: {suggestionSsids[0]}
+     */
+    @Test
+    public void testSelectNetworkSuggestionForOneMatchRestrictedAllowBySystemServer() {
+        String[] scanSsids = {"test1", "test2"};
+        String[] bssids = {"6c:f3:7f:ae:8c:f3", "6c:f3:7f:ae:8c:f4"};
+        int[] freqs = {2470, 2437};
+        String[] caps = {"[WPA2-EAP/SHA1-CCMP][ESS]", "[WPA2-EAP/SHA1-CCMP][ESS]"};
+        int[] levels = {-67, -76};
+        String[] suggestionSsids = {"\"" + scanSsids[0] + "\""};
+        int[] securities = {SECURITY_PSK};
+        boolean[] appInteractions = {true};
+        boolean[] meteredness = {true};
+        int[] priorities = {-1};
+        int[] uids = {Process.SYSTEM_UID};
+        String[] packageNames = {TEST_PACKAGE};
+        boolean[] autojoin = {true};
+        boolean[] shareWithUser = {true};
+        int[] priorityGroup = {0};
+
+        ScanDetail[] scanDetails =
+            buildScanDetails(scanSsids, bssids, freqs, caps, levels, mClock);
+        ExtendedWifiNetworkSuggestion[] suggestions = buildNetworkSuggestions(suggestionSsids,
+            securities, appInteractions, meteredness, priorities, uids,
+            packageNames, autojoin, shareWithUser, priorityGroup);
+        suggestions[0].wns.wifiConfiguration.restricted = true;
+        // Link the scan result with suggestions.
+        linkScanDetailsWithNetworkSuggestions(scanDetails, suggestions);
+
+        setupAddToWifiConfigManager(suggestions[0]);
+
+        List<Pair<ScanDetail, WifiConfiguration>> connectableNetworks = new ArrayList<>();
+        mNetworkSuggestionNominator.nominateNetworks(
+                Arrays.asList(scanDetails), mPasspointCandidates, true, false, false,
+                Collections.emptySet(), // restrictedNetworkAllowedUids is empty
+                (ScanDetail scanDetail, WifiConfiguration configuration) -> {
+                connectableNetworks.add(Pair.create(scanDetail, configuration));
+            });
 
         validateConnectableNetworks(connectableNetworks, scanSsids[0]);
         verify(mWifiMetrics, never())

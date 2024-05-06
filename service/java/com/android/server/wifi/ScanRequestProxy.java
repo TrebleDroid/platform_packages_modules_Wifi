@@ -579,7 +579,8 @@ public class ScanRequestProxy {
      * @param bssid BSSID as string {@link ScanResult#BSSID}.
      * @return ScanResult for the corresponding bssid if found, null otherwise.
      */
-    public @Nullable ScanResult getScanResult(@NonNull String bssid) {
+    public @Nullable ScanResult getScanResult(@Nullable String bssid) {
+        if (bssid == null) return null;
         ScanResult scanResult = mFullScanCache.get(bssid);
         if (scanResult == null) {
             scanResult = mPartialScanCache.get(bssid);

@@ -3306,10 +3306,11 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
      *
      * @param maxMloStrLinkCount - Maximum STR link count supported for the test.
      * @param bandMatrix - Simultaneous band combination matrix for the test.
+     * @param enableWifi7 - Enable Wi-Fi 7 or not
      * @return A list of Wi-Fi candidates.
      */
     private List<WifiCandidates.Candidate> getWifiCandidates(final int maxMloStrLinkCount,
-            Set<List<Integer>> bandMatrix) {
+            Set<List<Integer>> bandMatrix, boolean enableWifi7) {
         // Static configuration for the test.
         String[] ssids = {"\"mlo\"", "\"mlo\"", "\"mlo\"", "\"legacy\""};
         String[] bssids =
@@ -3361,6 +3362,10 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
         when(mWifiNative.getSupportedBandCombinations(anyString())).thenReturn(bandMatrix);
         // Mock interface name
         when(mClientModeManager.getInterfaceName()).thenReturn(TEST_IFACE_NAME);
+        // Enable Wi-Fi 7
+        for (WifiConfiguration config : scanDetailsAndConfigs.getWifiConfigs()) {
+            when(mWifiConfigManager.isWifi7Enabled(config.networkId)).thenReturn(enableWifi7);
+        }
         // Select network.
         List<WifiCandidates.Candidate> candidates = mWifiNetworkSelector.getCandidatesFromScan(
                 scanDetails, blocklist,
@@ -3417,19 +3422,19 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
 
         // Scenario: Chip doesn't support Simultaneous Transmit and Receive (STR).
         // Expectation: no change in multi-link attributes.
-        for (WifiCandidates.Candidate c : getWifiCandidates(-1, bandMatrix)) {
+        for (WifiCandidates.Candidate c : getWifiCandidates(-1, bandMatrix, true)) {
             validateDefaultMultiLinkAttributes(c);
         }
 
         // Scenario: STR link count = 1.
         // Expectation: no change in multi-link attributes.
-        for (WifiCandidates.Candidate c : getWifiCandidates(1, bandMatrix)) {
+        for (WifiCandidates.Candidate c : getWifiCandidates(1, bandMatrix, true)) {
             validateDefaultMultiLinkAttributes(c);
         }
 
         // Scenario: No band combination info.
         // Expectation: no change in multi-link attributes.
-        for (WifiCandidates.Candidate c : getWifiCandidates(2, null)) {
+        for (WifiCandidates.Candidate c : getWifiCandidates(2, null, true)) {
             validateDefaultMultiLinkAttributes(c);
         }
     }
@@ -3456,7 +3461,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                         Arrays.asList(WifiScanner.WIFI_BAND_5_GHZ, WifiScanner.WIFI_BAND_6_GHZ)));
         // Validate multi-link candidates are grouped and predicted multi-link throughput is
         // updated properly for each group.
-        for (WifiCandidates.Candidate c : getWifiCandidates(2, bandMatrix)) {
+        for (WifiCandidates.Candidate c : getWifiCandidates(2, bandMatrix, true)) {
             switch (c.getKey().bssid.toString()) {
                 case CandidateParams.BSSID_1:
                     assertTrue(c.isMultiLinkCapable());
@@ -3504,7 +3509,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                                 WifiScanner.WIFI_BAND_6_GHZ)));
         // Validate multi-link candidates are grouped and predicted multi-link throughput is
         // updated properly for each group.
-        for (WifiCandidates.Candidate c : getWifiCandidates(3, bandMatrix)) {
+        for (WifiCandidates.Candidate c : getWifiCandidates(3, bandMatrix, true)) {
             switch (c.getKey().bssid.toString()) {
                 case CandidateParams.BSSID_1:
                     // fall  through
@@ -3541,20 +3546,20 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
 
         // STR not supported.
         WifiConfiguration candidate;
-        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(-1, bandMatrix));
+        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(-1, bandMatrix, true));
         assertEquals("\"legacy\"", candidate.SSID);
 
         // Max STR link count = 1.
-        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(1, bandMatrix));
+        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(1, bandMatrix, true));
         assertEquals("\"legacy\"", candidate.SSID);
 
         // No band matrix.
-        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(2, null));
+        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(2, null, true));
         assertEquals("\"legacy\"", candidate.SSID);
 
         // Legacy AP is better than MLO.
         CandidateParams.throughput_4 = 300;
-        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(2, bandMatrix));
+        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(2, bandMatrix, true));
         assertEquals("\"legacy\"", candidate.SSID);
         // Revert the throughput change.
         CandidateParams.throughput_4 = 150;
@@ -3581,7 +3586,7 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                         Arrays.asList(WifiScanner.WIFI_BAND_5_GHZ, WifiScanner.WIFI_BAND_6_GHZ)));
 
         WifiConfiguration candidate;
-        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(2, bandMatrix));
+        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(2, bandMatrix, true));
         assertEquals("\"mlo\"", candidate.SSID);
 
     }
@@ -3609,7 +3614,34 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                         Arrays.asList(WifiScanner.WIFI_BAND_24_GHZ, WifiScanner.WIFI_BAND_5_GHZ,
                                 WifiScanner.WIFI_BAND_6_GHZ)));
         WifiConfiguration candidate;
-        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(3, bandMatrix));
+        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(3, bandMatrix, true));
         assertEquals("\"mlo\"", candidate.SSID);
+    }
+
+    /**
+     * Test Network selection with Wi-Fi7 disabled.
+     *
+     * Test scenario:
+     * Band Supported: {{2.4}, {5}, {6}, {2.4, 5}, {2.4, 6}, {5, 6}, {2.4, 5, 6}}
+     * APs: AP1 - {2.4 Ghz, 5 Ghz, 6 Ghz} , AP2 - 5 Ghz
+     * Max STR link count: 3 (tri-band)
+     */
+    @Test
+    public void testNetworkSelectionDisableWifi7() {
+        Set<List<Integer>> bandMatrix = Set.of(
+                new ArrayList(Arrays.asList(WifiScanner.WIFI_BAND_24_GHZ)),
+                new ArrayList(Arrays.asList(WifiScanner.WIFI_BAND_5_GHZ)),
+                new ArrayList(Arrays.asList(WifiScanner.WIFI_BAND_6_GHZ)), new ArrayList(
+                        Arrays.asList(WifiScanner.WIFI_BAND_24_GHZ, WifiScanner.WIFI_BAND_5_GHZ)),
+                new ArrayList(
+                        Arrays.asList(WifiScanner.WIFI_BAND_24_GHZ, WifiScanner.WIFI_BAND_6_GHZ)),
+                new ArrayList(
+                        Arrays.asList(WifiScanner.WIFI_BAND_5_GHZ, WifiScanner.WIFI_BAND_6_GHZ)),
+                new ArrayList(
+                        Arrays.asList(WifiScanner.WIFI_BAND_24_GHZ, WifiScanner.WIFI_BAND_5_GHZ,
+                                WifiScanner.WIFI_BAND_6_GHZ)));
+        WifiConfiguration candidate;
+        candidate = mWifiNetworkSelector.selectNetwork(getWifiCandidates(3, bandMatrix, false));
+        assertEquals("\"legacy\"", candidate.SSID);
     }
 }

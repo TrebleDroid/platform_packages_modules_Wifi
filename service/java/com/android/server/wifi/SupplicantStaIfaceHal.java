@@ -19,6 +19,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.content.Context;
 import android.net.MacAddress;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
@@ -842,16 +843,22 @@ public class SupplicantStaIfaceHal {
     }
 
     /**
+     * Check whether the HAL service is using AIDL.
+     *
+     * @return true if the AIDL service is being used, false otherwise.
+     */
+    public boolean isAidlService() {
+        return mStaIfaceHal != null && mStaIfaceHal instanceof SupplicantStaIfaceHalAidlImpl;
+    }
+
+    /**
      * Check whether the AIDL service is running at least the expected version.
      *
      * @param expectedVersion Version number to check.
      * @return true if the AIDL service is available and >= the expected version, false otherwise.
      */
     public boolean isAidlServiceVersionAtLeast(int expectedVersion) {
-        if (mStaIfaceHal == null || mStaIfaceHal instanceof SupplicantStaIfaceHalHidlImpl) {
-            return false;
-        }
-        return ((SupplicantStaIfaceHalAidlImpl) mStaIfaceHal)
+        return isAidlService() && ((SupplicantStaIfaceHalAidlImpl) mStaIfaceHal)
                 .isServiceVersionAtLeast(expectedVersion);
     }
 
@@ -2361,6 +2368,30 @@ public class SupplicantStaIfaceHal {
         }
         return mStaIfaceHal.setEapAnonymousIdentity(ifaceName, anonymousIdentity,
                 updateToNativeService);
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIfaceHal#enableMscs(MscsParams, String)}
+     */
+    public void enableMscs(@NonNull MscsParams mscsParams, String ifaceName) {
+        String methodStr = "enableMscs";
+        if (mStaIfaceHal == null) {
+            handleNullHal(methodStr);
+            return;
+        }
+        mStaIfaceHal.enableMscs(mscsParams, ifaceName);
+    }
+
+    /**
+     * See comments for {@link ISupplicantStaIfaceHal#disableMscs(String)}
+     */
+    public void disableMscs(String ifaceName) {
+        String methodStr = "disableMscs";
+        if (mStaIfaceHal == null) {
+            handleNullHal(methodStr);
+            return;
+        }
+        mStaIfaceHal.disableMscs(ifaceName);
     }
 
     private boolean handleNullHal(String methodStr) {

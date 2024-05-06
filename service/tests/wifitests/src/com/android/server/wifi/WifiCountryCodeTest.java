@@ -41,6 +41,7 @@ import static org.mockito.Mockito.when;
 
 import android.app.test.MockAnswerUtil.AnswerWithArguments;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -79,6 +80,9 @@ import java.util.Locale;
 public class WifiCountryCodeTest extends WifiBaseTest {
 
     private static final String TAG = "WifiCountryCodeTest";
+    /* TODO: replace with PackageManager.FEATURE_TELEPHONY_CALLING once
+     * wifi-module-sdk-version-defaults min_sdk_version bumps to API 33. */
+    private static final String FEATURE_TELEPHONY_CALLING = "android.hardware.telephony.calling";
     private static final String TEST_COUNTRY_CODE = "JP";
     private static final String TEST_COUNTRY_CODE_2 = "CN";
     private static final int TEST_ACTIVE_SUBSCRIPTION_ID = 1;
@@ -92,9 +96,11 @@ public class WifiCountryCodeTest extends WifiBaseTest {
     // Default assume true since it was a design before R
     private boolean mDriverSupportedNl80211RegChangedEvent = false;
     private boolean mForcedSoftApRestateWhenCountryCodeChanged = false;
+    private boolean mCallingSupported;
     @Mock Context mContext;
     MockResources mResources = new MockResources();
     @Mock TelephonyManager mTelephonyManager;
+    @Mock PackageManager mPackageManager;
     @Mock ActiveModeWarden mActiveModeWarden;
     @Mock ConcreteClientModeManager mClientModeManager;
     @Mock SoftApManager mSoftApManager;
@@ -153,6 +159,9 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         when(mWifiInfo.getSuccessfulRxPacketsPerSecond()).thenReturn(5.0);
         when(mContext.getSystemService(Context.TELEPHONY_SERVICE))
                 .thenReturn(mTelephonyManager);
+        when(mContext.getPackageManager()).thenReturn(mPackageManager);
+
+        setCallingSupported(true);
 
         doAnswer(new AnswerWithArguments() {
             public void answer(WifiSettingsConfigStore.Key<String> key, Object countryCode) {
@@ -178,6 +187,11 @@ public class WifiCountryCodeTest extends WifiBaseTest {
 
         createWifiCountryCode();
         mScanDetails = setupScanDetails(TEST_COUNTRY_CODE);
+    }
+
+    private void setCallingSupported(boolean supported) {
+        mCallingSupported = supported;
+        when(mPackageManager.hasSystemFeature(FEATURE_TELEPHONY_CALLING)).thenReturn(supported);
     }
 
     @After
@@ -293,7 +307,7 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         // Wifi get L2 connected.
         mClientModeImplListenerCaptor.getValue().onConnectionStart(mClientModeManager);
 
-        verify(mClientModeManager, times(3)).setCountryCode(anyString());
+        verify(mClientModeManager, times(2)).setCountryCode(anyString());
         assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
     }
 
@@ -318,15 +332,16 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         // Wifi get L2 connected.
         mClientModeImplListenerCaptor.getValue().onConnectionStart(mClientModeManager);
 
-        verify(mClientModeManager, times(3)).setCountryCode(anyString());
+        // Set twice, one is mDefaultCountryCode and another on is mTelephonyCountryCode
+        verify(mClientModeManager, times(2)).setCountryCode(anyString());
         assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
 
         // Remove mode manager.
         mModeChangeCallbackCaptor.getValue().onActiveModeManagerRemoved(mClientModeManager);
 
-        // Send Telephony country code again - should be ignored.
+        // Send Telephony country code again - should be ignored, times keep 2.
         mWifiCountryCode.setTelephonyCountryCodeAndUpdate(mTelephonyCountryCode);
-        verify(mClientModeManager, times(3)).setCountryCode(anyString());
+        verify(mClientModeManager, times(2)).setCountryCode(anyString());
         assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCountryCode());
 
         // Now try removing the mode manager again - should not crash.
@@ -375,13 +390,21 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         }
         // Telephony country code still won't be applied.
         assertEquals("00", mWifiCountryCode.getCurrentDriverCountryCode());
-        // Wifi is forced to disconnect
-        verify(mClientModeManager, times(1)).disconnect();
+        if (mCallingSupported) {
+            // Wifi is forced to disconnect
+            verify(mClientModeManager, times(1)).disconnect();
+        }
 
         mClientModeImplListenerCaptor.getValue().onConnectionEnd(mClientModeManager);
         // Telephony country is applied after supplicant is ready.
         verify(mClientModeManager, times(2)).setCountryCode(anyString());
         assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
+    }
+
+    @Test
+    public void telephonyCountryCodeChangeAfterL2ConnectedWithoutCalling() throws Exception {
+        setCallingSupported(false);
+        telephonyCountryCodeChangeAfterL2Connected();
     }
 
     /**
@@ -643,7 +666,8 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         mModeChangeCallbackCaptor.getValue().onActiveModeManagerAdded(mClientModeManager);
         // Verify the SoftApManager doesn't impact when client mode changed
         verify(mSoftApManager, never()).updateCountryCode(anyString());
-        verify(mClientModeManager, times(2)).setCountryCode(anyString());
+        // The mode change should not set country code again
+        verify(mClientModeManager).setCountryCode(anyString());
 
         // Override the mClientModeManager.setCountryCode mock in setUp, do not update driver
         // country code, so both client mode manager and ap mode manager will update country code.
