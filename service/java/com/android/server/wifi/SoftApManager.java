@@ -841,6 +841,9 @@ public class SoftApManager implements ActiveModeManager {
             Log.d(getTag(), "startSoftAp: band " + mCurrentSoftApConfiguration.getBand());
         }
 
+        updateApState(WifiManager.WIFI_AP_STATE_ENABLING,
+                WifiManager.WIFI_AP_STATE_DISABLED, 0);
+
         int startResult = setMacAddress();
         if (startResult != START_RESULT_SUCCESS) {
             return startResult;
@@ -1040,9 +1043,7 @@ public class SoftApManager implements ActiveModeManager {
         private final InterfaceCallback mWifiNativeInterfaceCallback = new InterfaceCallback() {
             @Override
             public void onDestroyed(String ifaceName) {
-                if (mApInterfaceName != null && mApInterfaceName.equals(ifaceName)) {
-                    sendMessage(CMD_INTERFACE_DESTROYED);
-                }
+                    sendMessage(CMD_INTERFACE_DESTROYED, ifaceName);
             }
 
             @Override
@@ -1345,8 +1346,6 @@ public class SoftApManager implements ActiveModeManager {
                         }
 
                         mSoftApNotifier.dismissSoftApShutdownTimeoutExpiredNotification();
-                        updateApState(WifiManager.WIFI_AP_STATE_ENABLING,
-                                WifiManager.WIFI_AP_STATE_DISABLED, 0);
 
                         if (!shouldwaitForDriverCountryCodeIfNoCountryToSet && !setCountryCode()) {
                             handleStartSoftApFailure(START_RESULT_FAILURE_SET_COUNTRY_CODE);
@@ -2037,7 +2036,17 @@ public class SoftApManager implements ActiveModeManager {
                         removeIfaceInstanceFromBridgedApIface(idleInstance);
                         break;
                     case CMD_INTERFACE_DESTROYED:
-                        Log.d(getTag(), "Interface was cleanly destroyed.");
+                        String ifaceName = (String) message.obj;
+                        Log.d(getTag(), "Interface: " + ifaceName + " was cleanly destroyed.");
+                        if (mApInterfaceName == null) {
+                            Log.e(getTag(), "softAp interface is null"
+                                    + " - Drop interface destroyed message");
+                            break;
+                        }
+                        if (!mApInterfaceName.equals(ifaceName)) {
+                            Log.d(getTag(), "Drop stale interface destroyed message");
+                            break;
+                        }
                         updateApState(WifiManager.WIFI_AP_STATE_DISABLING,
                                 WifiManager.WIFI_AP_STATE_ENABLED, 0);
                         mIfaceIsDestroyed = true;
