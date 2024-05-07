@@ -1661,9 +1661,14 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             if (mContext.getResources().getBoolean(R.bool.config_wifi11axSupportOverride)) {
                 cap.setWifiStandardSupport(ScanResult.WIFI_STANDARD_11AX, true);
             }
-            // Enable WPA3 SAE auto-upgrade offload
+            // The Wi-Fi Alliance has introduced the WPA3 security update for Wi-Fi 7, which
+            // mandates cross-AKM (Authenticated Key Management) roaming between three AKMs
+            // (AKM: 24(SAE-EXT-KEY), AKM:8(SAE) and AKM:2(PSK)). If the station supports
+            // AKM 24(SAE-EXT-KEY), it is recommended to enable WPA3 SAE auto-upgrade offload,
+            // provided that the driver indicates that the maximum number of AKM suites allowed in
+            // connection requests is three or more.
             if (Flags.getDeviceCrossAkmRoamingSupport() && SdkLevel.isAtLeastV()
-                    && cap.getMaxNumberAkms() >= 2) {
+                    && cap.getMaxNumberAkms() >= 3) {
                 mWifiGlobals.setWpa3SaeUpgradeOffloadEnabled();
             }
 
