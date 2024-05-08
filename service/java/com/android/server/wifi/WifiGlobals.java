@@ -85,7 +85,7 @@ public class WifiGlobals {
     private final int mNetworkNotFoundEventThreshold;
     private boolean mIsBackgroundScanSupported;
     private boolean mIsSwPnoEnabled;
-    private final boolean mIsWepDeprecated;
+    private boolean mIsWepDeprecated;
     private final boolean mIsWpaPersonalDeprecated;
     private final Map<String, List<String>> mCountryCodeToAfcServers;
     private final long mWifiConfigMaxDisableDurationMs;
@@ -190,7 +190,7 @@ public class WifiGlobals {
         mOverrideMethods.put("config_wifi_background_scan_support",
                 new BiFunction<String, Boolean, Boolean>() {
                 @Override
-                public Boolean apply(String value , Boolean isEnabled) {
+                public Boolean apply(String value, Boolean isEnabled) {
                     // reset to default
                     if (!isEnabled) {
                         mIsBackgroundScanSupported = mContext.getResources()
@@ -199,6 +199,24 @@ public class WifiGlobals {
                     }
                     if ("true".equals(value) || "false".equals(value)) {
                         mIsBackgroundScanSupported = Boolean.parseBoolean(value);
+                        return true;
+                    }
+                    return false;
+                }
+            });
+
+        mOverrideMethods.put("config_wifiWepDeprecated",
+                new BiFunction<String, Boolean, Boolean>() {
+                @Override
+                public Boolean apply(String value, Boolean isEnabled) {
+                    // reset to default
+                    if (!isEnabled) {
+                        mIsWepDeprecated = mContext.getResources()
+                                .getBoolean(R.bool.config_wifiWepDeprecated);
+                        return true;
+                    }
+                    if ("true".equals(value) || "false".equals(value)) {
+                        mIsWepDeprecated = Boolean.parseBoolean(value);
                         return true;
                     }
                     return false;
@@ -693,12 +711,13 @@ public class WifiGlobals {
     /**
      * Force Overlay Config Value for background scan.
      */
-    public boolean forceOverlayConfigValue(String configString, String value,
+    public boolean forceOverlayConfigValue(String overlayName, String configValue,
             boolean isEnabled) {
-        if (!mOverrideMethods.containsKey(configString)) {
+        if (!mOverrideMethods.containsKey(overlayName)) {
+            Log.i(TAG, "Current doesn't support to override " + overlayName);
             return false;
         }
-        return mOverrideMethods.get(configString).apply(value, isEnabled);
+        return mOverrideMethods.get(overlayName).apply(configValue, isEnabled);
     }
 
     /** Dump method for debugging */
