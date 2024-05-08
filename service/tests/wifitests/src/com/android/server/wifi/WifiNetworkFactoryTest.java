@@ -843,7 +843,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         attachDefaultWifiNetworkSpecifierAndAppInfo(TEST_UID_1, false, new int[0], false);
         mWifiNetworkFactory.needNetworkFor(mNetworkRequest);
 
-        verifyPeriodicScans(0,
+        verifyPeriodicScans(false, 0,
                 PERIODIC_SCAN_INTERVAL_MS,     // 10s
                 PERIODIC_SCAN_INTERVAL_MS,     // 10s
                 PERIODIC_SCAN_INTERVAL_MS,     // 10s
@@ -859,7 +859,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         attachDefaultWifiNetworkSpecifierAndAppInfo(TEST_UID_1, false, new int[0], false);
         mWifiNetworkFactory.needNetworkFor(mNetworkRequest);
 
-        verifyPeriodicScans(0,
+        verifyPeriodicScans(false, 0,
                 PERIODIC_SCAN_INTERVAL_MS,     // 10s
                 PERIODIC_SCAN_INTERVAL_MS);    // 10s
 
@@ -881,7 +881,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         verify(mNetworkRequestMatchCallback).onUserSelectionCallbackRegistration(
                 mNetworkRequestUserSelectionCallback.capture());
 
-        verifyPeriodicScans(0,
+        verifyPeriodicScans(false, 0,
                 PERIODIC_SCAN_INTERVAL_MS,     // 10s
                 PERIODIC_SCAN_INTERVAL_MS);    // 10s
 
@@ -962,7 +962,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
@@ -1003,7 +1003,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
@@ -1044,7 +1044,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
@@ -1086,7 +1086,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
@@ -1128,7 +1128,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
@@ -1171,7 +1171,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
@@ -1216,7 +1216,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         // We expect no network match in this case.
         verify(mNetworkRequestMatchCallback, never()).onMatch(any());
@@ -1254,7 +1254,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         // We expect no network match in this case.
         verify(mNetworkRequestMatchCallback, never()).onMatch(any());
@@ -1374,7 +1374,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         verify(mNetworkRequestMatchCallback).onUserSelectionCallbackRegistration(
                 mNetworkRequestUserSelectionCallback.capture());
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         INetworkRequestUserSelectionCallback networkRequestUserSelectionCallback =
                 mNetworkRequestUserSelectionCallback.getValue();
@@ -1476,7 +1476,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
         verify(mNetworkRequestMatchCallback).onUserSelectionCallbackRegistration(
                 mNetworkRequestUserSelectionCallback.capture());
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         // Now trigger user selection to the network.
         mSelectedNetwork = ScanResultUtil.createNetworkFromScanResult(matchingScanResult);
@@ -1524,7 +1524,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
         verify(mNetworkRequestMatchCallback).onUserSelectionCallbackRegistration(
                 mNetworkRequestUserSelectionCallback.capture());
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         // Scan result 2 has the highest RSSI, so that should be picked.
         ScanResult matchingScanResult = mTestScanDatas[0].getResults()[2];
@@ -1587,7 +1587,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
                 mNetworkRequestUserSelectionCallback.capture());
         verifyPeriodicScans(
                 0L,
-                new PeriodicScanParams(0, scanDatas1),
+                false, new PeriodicScanParams(0, scanDatas1),
                 new PeriodicScanParams(PERIODIC_SCAN_INTERVAL_MS, scanDatas2));
 
         // Now trigger user selection to the network.
@@ -1654,7 +1654,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         scanDatas2[0].getResults()[3].timestamp = nowMs;
         verifyPeriodicScans(
                 nowMs,
-                new PeriodicScanParams(0, scanDatas1),
+                false, new PeriodicScanParams(0, scanDatas1),
                 new PeriodicScanParams(PERIODIC_SCAN_INTERVAL_MS, scanDatas2));
 
         // Now trigger user selection to the network.
@@ -2949,7 +2949,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         mWifiNetworkFactory.needNetworkFor(mNetworkRequest);
         when(mNetworkRequestMatchCallback.asBinder()).thenReturn(mAppBinder);
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
         // Verify we triggered the match callback.
@@ -2992,7 +2992,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         mWifiNetworkFactory.needNetworkFor(mNetworkRequest);
         when(mNetworkRequestMatchCallback.asBinder()).thenReturn(mAppBinder);
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
         // Verify we triggered the match callback.
@@ -3033,7 +3033,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         mWifiNetworkFactory.needNetworkFor(mNetworkRequest);
         when(mNetworkRequestMatchCallback.asBinder()).thenReturn(mAppBinder);
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
         // Verify we triggered the match callback.
@@ -3086,7 +3086,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         // simulate scan results coming in and verify we auto connect to the network
         when(mNetworkRequestMatchCallback.asBinder()).thenReturn(mAppBinder);
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
         // Verify the match callback is not triggered since the UI is not started.
@@ -3152,7 +3152,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         mWifiNetworkFactory.needNetworkFor(mNetworkRequest);
         when(mNetworkRequestMatchCallback.asBinder()).thenReturn(mAppBinder);
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
         // Verify we triggered the match callback.
@@ -3196,7 +3196,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         mWifiNetworkFactory.needNetworkFor(mNetworkRequest);
         when(mNetworkRequestMatchCallback.asBinder()).thenReturn(mAppBinder);
         mWifiNetworkFactory.addCallback(mNetworkRequestMatchCallback);
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
         ArgumentCaptor<List<ScanResult>> matchedScanResultsCaptor =
                 ArgumentCaptor.forClass(List.class);
         // Verify we triggered the match callback.
@@ -3371,27 +3371,27 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
      * approved previously via CDM and the scan result is present in the cached scan results.
      */
     private void
-            testNetworkSpecifierMatchSuccessUsingLiteralSsidAndBssidMatchApprovedViaCDM()
+            testNetworkSpecifierMatchSuccessUsingLiteralSsidAndBssidMatchApprovedViaCDM(
+            boolean hasMatchResult)
             throws Exception {
         // Setup scan data for WPA-PSK networks.
-        setupScanData(SCAN_RESULT_TYPE_WPA_PSK,
-                TEST_SSID_1, TEST_SSID_2, TEST_SSID_3, TEST_SSID_4);
-
-        // Choose the matching scan result.
-        ScanResult matchingScanResult = mTestScanDatas[0].getResults()[0];
-        when(mWifiScanner.getSingleScanResults())
-                .thenReturn(Arrays.asList(mTestScanDatas[0].getResults()));
+        if (hasMatchResult) {
+            setupScanData(SCAN_RESULT_TYPE_WPA_PSK,
+                    TEST_SSID_1, TEST_SSID_2, TEST_SSID_3, TEST_SSID_4);
+            when(mWifiScanner.getSingleScanResults())
+                    .thenReturn(Arrays.asList(mTestScanDatas[0].getResults()));
+        }
 
         // Setup CDM approval for the scan result.
         when(mCompanionDeviceManager.isDeviceAssociatedForWifiConnection(
                 TEST_PACKAGE_NAME_1,
-                MacAddress.fromString(matchingScanResult.BSSID),
+                MacAddress.fromString(TEST_BSSID_1),
                 UserHandle.getUserHandleForUid(TEST_UID_1))).thenReturn(true);
 
         PatternMatcher ssidPatternMatch =
                 new PatternMatcher(TEST_SSID_1, PatternMatcher.PATTERN_LITERAL);
         Pair<MacAddress, MacAddress> bssidPatternMatch =
-                Pair.create(MacAddress.fromString(matchingScanResult.BSSID),
+                Pair.create(MacAddress.fromString(TEST_BSSID_1),
                         MacAddress.BROADCAST_ADDRESS);
         attachWifiNetworkSpecifierAndAppInfo(
                 ssidPatternMatch, bssidPatternMatch,
@@ -3401,22 +3401,42 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         // Verify we did not trigger the UI for the second request.
         verify(mContext, never()).startActivityAsUser(any(), any());
-        // Verify we did not trigger a scan.
-        verify(mWifiScanner, never()).startScan(any(), any(), any(), any());
-        // Verify we did not trigger the match callback.
-        verify(mNetworkRequestMatchCallback, never()).onMatch(anyList());
-        // Verify that we sent a connection attempt to ClientModeManager
-        verify(mConnectHelper).connectToNetwork(eq(mClientModeManager),  any(),
-                mConnectListenerArgumentCaptor.capture(), anyInt(), any(), any());
+        if (hasMatchResult) {
+            // Verify we did not trigger a scan.
+            verify(mWifiScanner, never()).startScan(any(), any(), any(), any());
+            // Verify we did not trigger the match callback.
+            verify(mNetworkRequestMatchCallback, never()).onMatch(anyList());
+            // Verify that we sent a connection attempt to ClientModeManager
+            verify(mConnectHelper).connectToNetwork(eq(mClientModeManager), any(),
+                    mConnectListenerArgumentCaptor.capture(), anyInt(), any(), any());
 
-        verify(mWifiMetrics).incrementNetworkRequestApiNumUserApprovalBypass();
+            verify(mWifiMetrics).incrementNetworkRequestApiNumUserApprovalBypass();
+        } else {
+            verifyPeriodicScans(true, 0,
+                    PERIODIC_SCAN_INTERVAL_MS,
+                    PERIODIC_SCAN_INTERVAL_MS,
+                    PERIODIC_SCAN_INTERVAL_MS);
+            verify(mConnectHelper, never()).connectToNetwork(any(), any(),
+                    mConnectListenerArgumentCaptor.capture(), anyInt(), any(), any());
+
+            verify(mWifiMetrics, never()).incrementNetworkRequestApiNumUserApprovalBypass();
+            mLooper.dispatchAll();
+            verify(mConnectivityManager).declareNetworkRequestUnfulfillable(eq(mNetworkRequest));
+        }
     }
 
     @Test
     public void
             testNetworkSpecifierMatchSuccessUsingLiteralSsidAndBssidMatchApprovedViaCDMNoStaSta()
             throws Exception {
-        testNetworkSpecifierMatchSuccessUsingLiteralSsidAndBssidMatchApprovedViaCDM();
+        testNetworkSpecifierMatchSuccessUsingLiteralSsidAndBssidMatchApprovedViaCDM(true);
+    }
+
+    @Test
+    public void
+            testNetworkSpecifierNoMatchUsingLiteralSsidAndBssidMatchApprovedViaCDMNoStaSta()
+            throws Exception {
+        testNetworkSpecifierMatchSuccessUsingLiteralSsidAndBssidMatchApprovedViaCDM(false);
     }
 
     @Test
@@ -3426,7 +3446,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         when(mResources.getBoolean(
                 eq(R.bool.config_wifiMultiStaLocalOnlyConcurrencyEnabled)))
                 .thenReturn(true);
-        testNetworkSpecifierMatchSuccessUsingLiteralSsidAndBssidMatchApprovedViaCDM();
+        testNetworkSpecifierMatchSuccessUsingLiteralSsidAndBssidMatchApprovedViaCDM(true);
     }
 
     /**
@@ -3500,7 +3520,7 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
 
         validateUiStartParams(true);
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         // Ensure we did not send any match callbacks, until the callback is registered
         verify(mNetworkRequestMatchCallback, never()).onMatch(any());
@@ -3816,19 +3836,20 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         verify(mNetworkRequestMatchCallback).onUserSelectionCallbackRegistration(
                 mNetworkRequestUserSelectionCallback.capture());
 
-        verifyPeriodicScans(0, PERIODIC_SCAN_INTERVAL_MS);
+        verifyPeriodicScans(false, 0, PERIODIC_SCAN_INTERVAL_MS);
 
         verify(mNetworkRequestMatchCallback, atLeastOnce()).onMatch(anyList());
     }
 
-    private void verifyPeriodicScans(long...expectedIntervalsInSeconds) {
+    private void verifyPeriodicScans(boolean stopAtLastSchedule,
+            long...expectedIntervalsInSeconds) {
         PeriodicScanParams[] periodicScanParams =
                 new PeriodicScanParams[expectedIntervalsInSeconds.length];
         for (int i = 0; i < expectedIntervalsInSeconds.length; i++) {
             periodicScanParams[i] =
                     new PeriodicScanParams(expectedIntervalsInSeconds[i], mTestScanDatas);
         }
-        verifyPeriodicScans(0L, periodicScanParams);
+        verifyPeriodicScans(0L, stopAtLastSchedule, periodicScanParams);
     }
 
     private static class PeriodicScanParams {
@@ -3846,7 +3867,8 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
     // b) Scan results received.
     // c) Set alarm for next scan at the expected interval.
     // d) Alarm fires, go to step a) again and repeat.
-    private void verifyPeriodicScans(long nowMs, PeriodicScanParams... scanParams) {
+    private void verifyPeriodicScans(long nowMs, boolean stopAtLastSchedule,
+            PeriodicScanParams... scanParams) {
         when(mClock.getElapsedSinceBootMillis()).thenReturn(nowMs);
 
         OnAlarmListener alarmListener = null;
@@ -3874,6 +3896,9 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
             // Now trigger the scan results callback and verify the alarm set for the next scan.
             scanListener.onResults(scanParams[i].scanDatas);
 
+            if (stopAtLastSchedule && i == scanParams.length - 2) {
+                break;
+            }
             mInOrder.verify(mAlarmManager).set(eq(AlarmManager.ELAPSED_REALTIME_WAKEUP),
                     eq(expectedNextIntervalInMs + nowMs), any(),
                     mPeriodicScanListenerArgumentCaptor.capture(), any());
