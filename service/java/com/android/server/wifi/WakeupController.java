@@ -285,6 +285,11 @@ public class WakeupController {
      */
     public void start() {
         Log.d(TAG, "start()");
+        // If already active, we don't want to restart the session, so return early.
+        if (mIsActive) {
+            mWifiWakeMetrics.recordIgnoredStart();
+            return;
+        }
         if (getGoodSavedNetworksAndSuggestions().isEmpty()) {
             Log.i(TAG, "Ignore wakeup start since there are no good networks.");
             return;
@@ -292,11 +297,6 @@ public class WakeupController {
         mWifiInjector.getWifiScanner().registerScanListener(
                 new HandlerExecutor(mHandler), mScanListener);
 
-        // If already active, we don't want to restart the session, so return early.
-        if (mIsActive) {
-            mWifiWakeMetrics.recordIgnoredStart();
-            return;
-        }
         setActive(true);
 
         // ensure feature is enabled and store data has been read before performing work
@@ -423,7 +423,7 @@ public class WakeupController {
      * @param scanResults The scan results with which to update the controller
      */
     private void handleScanResults(Collection<ScanResult> scanResults) {
-        if (!isEnabledAndReady()) {
+        if (!isEnabledAndReady() || !mIsActive) {
             Log.d(TAG, "Attempted to handleScanResults while not enabled");
             return;
         }
@@ -486,16 +486,14 @@ public class WakeupController {
     }
 
     /**
-     * Whether the feature is currently enabled.
+     * Whether the feature is currently enabled and usable.
      *
-     * <p>This method checks both the Settings value and the store data to ensure that it has been
+     * <p>This method checks both the Settings values and the store data to ensure that it has been
      * read.
      */
     @VisibleForTesting
     boolean isEnabledAndReady() {
-        synchronized (mLock) {
-            return mWifiWakeupEnabled && mWakeupConfigStoreData.hasBeenRead();
-        }
+        return isUsable() && mWakeupConfigStoreData.hasBeenRead();
     }
 
     /** Dumps wakeup controller state. */

@@ -743,7 +743,7 @@ public class ClientModeImplTest extends WifiBaseTest {
         when(mWifiHandlerThread.getLooper()).thenReturn(mLooper.getLooper());
         when(mWifiNative.getDeviceWiphyCapabilities(any())).thenReturn(mDeviceWiphyCapabilities);
         if (Flags.getDeviceCrossAkmRoamingSupport() && SdkLevel.isAtLeastV()) {
-            when(mDeviceWiphyCapabilities.getMaxNumberAkms()).thenReturn(2);
+            when(mDeviceWiphyCapabilities.getMaxNumberAkms()).thenReturn(3);
         }
         when(mWifiGlobals.isOweUpgradeEnabled()).thenReturn(true);
         when(mWifiGlobals.getClientModeImplNumLogRecs()).thenReturn(100);
