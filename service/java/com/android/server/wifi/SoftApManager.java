@@ -1875,6 +1875,11 @@ public class SoftApManager implements ActiveModeManager {
 
             @Override
             public void exitImpl() {
+                // Update state to WIFI_AP_STATE_DISABLED now in case the destroyed listeners
+                // trigger a call to WifiManager#startTetheredHotspot again (e.g. for downstream
+                // prefix conflict).
+                updateApState(WifiManager.WIFI_AP_STATE_DISABLED,
+                        WifiManager.WIFI_AP_STATE_DISABLING, 0);
                 if (!mIfaceIsDestroyed) {
                     stopSoftAp();
                 }
@@ -1913,9 +1918,6 @@ public class SoftApManager implements ActiveModeManager {
                         mSpecifiedModeConfiguration.getTargetMode(),
                         mDefaultShutdownTimeoutMillis,
                         isBridgeRequired());
-                updateApState(WifiManager.WIFI_AP_STATE_DISABLED,
-                        WifiManager.WIFI_AP_STATE_DISABLING, 0);
-
                 mSarManager.setSapWifiState(WifiManager.WIFI_AP_STATE_DISABLED);
 
                 mApInterfaceName = null;
