@@ -219,7 +219,6 @@ public class WifiInjector {
     private final DppMetrics mDppMetrics;
     private final DppManager mDppManager;
     private final WifiPulledAtomLogger mWifiPulledAtomLogger;
-    private final LinkProbeManager mLinkProbeManager;
     private IpMemoryStore mIpMemoryStore;
     private final WifiThreadRunner mWifiThreadRunner;
     private final WifiBlocklistMonitor mWifiBlocklistMonitor;
@@ -495,8 +494,6 @@ public class WifiInjector {
         WifiChannelUtilization wifiChannelUtilizationConnected =
                 new WifiChannelUtilization(mClock, mContext);
         mWifiMetrics.setWifiChannelUtilization(wifiChannelUtilizationConnected);
-        mLinkProbeManager = new LinkProbeManager(mClock, mWifiNative, mWifiMetrics,
-                mFrameworkFacade, wifiHandler, mContext);
         mDefaultClientModeManager = new DefaultClientModeManager();
         mExternalScoreUpdateObserverProxy =
                 new ExternalScoreUpdateObserverProxy(mWifiThreadRunner);
@@ -664,7 +661,6 @@ public class WifiInjector {
         mWifiConfigManager.enableVerboseLogging(verboseEnabled);
         mPasspointManager.enableVerboseLogging(verboseEnabled);
         mWifiNetworkFactory.enableVerboseLogging(verboseEnabled);
-        mLinkProbeManager.enableVerboseLogging(verboseEnabled);
         mMboOceController.enableVerboseLogging(verboseEnabled);
         mWifiScoreCard.enableVerboseLogging(verboseEnabled);
         mWifiHealthMonitor.enableVerboseLogging(verboseEnabled);
@@ -877,7 +873,7 @@ public class WifiInjector {
                 mLockManager, mFrameworkFacade, mWifiHandlerThread.getLooper(),
                 mWifiNative, new WrongPasswordNotifier(mContext, mFrameworkFacade,
                 mWifiNotificationManager),
-                mWifiTrafficPoller, mLinkProbeManager, mClock.getElapsedSinceBootMillis(),
+                mWifiTrafficPoller, mClock.getElapsedSinceBootMillis(),
                 mBatteryStats, supplicantStateTracker, mMboOceController, mWifiCarrierInfoManager,
                 mWifiPseudonymManager,
                 new EapFailureNotifier(mContext, mFrameworkFacade, mWifiCarrierInfoManager,
@@ -1210,10 +1206,6 @@ public class WifiInjector {
 
     public DefaultClientModeManager getDefaultClientModeManager() {
         return mDefaultClientModeManager;
-    }
-
-    public LinkProbeManager getLinkProbeManager() {
-        return mLinkProbeManager;
     }
 
     public MultiInternetManager getMultiInternetManager() {
