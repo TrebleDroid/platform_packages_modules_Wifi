@@ -527,7 +527,8 @@ public class WifiInjector {
                 mContext, mCmiMonitor, mSettingsStore, wifiHandler, mClock);
         mExternalPnoScanRequestManager = new ExternalPnoScanRequestManager(wifiHandler, mContext);
         mCountryCode = new WifiCountryCode(mContext, mActiveModeWarden, mWifiP2pMetrics,
-                mCmiMonitor, mWifiNative, mSettingsConfigStore, mClock, mWifiPermissionsUtil);
+                mCmiMonitor, mWifiNative, mSettingsConfigStore, mClock, mWifiPermissionsUtil,
+                mWifiCarrierInfoManager);
         mWifiConnectivityManager = new WifiConnectivityManager(
                 mContext, mScoringParams, mWifiConfigManager,
                 mWifiNetworkSuggestionsManager, mWifiNetworkSelector,
@@ -623,7 +624,8 @@ public class WifiInjector {
                 WifiTwtSession.MAX_TWT_SESSIONS, 1);
         mBackupRestoreController = new BackupRestoreController(mWifiSettingsBackupRestore, mClock);
         if (mFeatureFlags.voipDetection() && SdkLevel.isAtLeastV()) {
-            mWifiVoipDetector = new WifiVoipDetector(mContext, wifiHandler, this);
+            mWifiVoipDetector = new WifiVoipDetector(mContext, wifiHandler, this,
+                    mWifiCarrierInfoManager);
         } else {
             mWifiVoipDetector = null;
         }

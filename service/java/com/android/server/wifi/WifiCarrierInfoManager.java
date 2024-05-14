@@ -54,6 +54,10 @@ import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
+import android.telephony.ims.ImsManager;
+import android.telephony.ims.ImsMmTelManager;
+import android.telephony.ims.feature.MmTelFeature;
+import android.telephony.ims.stub.ImsRegistrationImplBase;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Base64;
@@ -188,6 +192,9 @@ public class WifiCarrierInfoManager {
     private final WifiMetrics mWifiMetrics;
     private final Clock mClock;
     private final WifiPseudonymManager mWifiPseudonymManager;
+
+    private ImsManager mImsManager;
+    private Map<Integer, ImsMmTelManager> mImsMmTelManagerMap = new HashMap<>();
     /**
      * Cached Map of <subscription ID, CarrierConfig PersistableBundle> since retrieving the
      * PersistableBundle from CarrierConfigManager is somewhat expensive as it has hundreds of
@@ -526,6 +533,7 @@ public class WifiCarrierInfoManager {
         @Override
         public void onSubscriptionsChanged() {
             mActiveSubInfos = mSubscriptionManager.getCompleteActiveSubscriptionInfoList();
+            mImsMmTelManagerMap.clear();
             updateSubIdsInNetworkFactoryFilters(mActiveSubInfos);
             mSubIdToSimInfoSparseArray.clear();
             mSubscriptionGroupMap.clear();
@@ -2331,6 +2339,40 @@ public class WifiCarrierInfoManager {
         boolean ret = isOobPseudonymFeatureEnabledInResource(carrierId);
         vlogd("isOobPseudonymFeatureEnabled(" + carrierId + ") = " + ret);
         return ret;
+    }
+
+    /**
+     * Check if wifi calling is being available.
+     */
+    public boolean isWifiCallingAvailable() {
+        if (mActiveSubInfos == null || mActiveSubInfos.isEmpty()) {
+            return false;
+        }
+        if (mImsManager == null) {
+            mImsManager = mContext.getSystemService(ImsManager.class);
+        }
+        for (SubscriptionInfo subInfo : mActiveSubInfos) {
+            int subscriptionId = subInfo.getSubscriptionId();
+            try {
+                if (mImsManager != null) {
+                    ImsMmTelManager imsMmTelManager = mImsMmTelManagerMap.get(subscriptionId);
+                    if (imsMmTelManager == null) {
+                        imsMmTelManager = mImsManager.getImsMmTelManager(subscriptionId);
+                        mImsMmTelManagerMap.put(subscriptionId, imsMmTelManager);
+                    }
+                    if (imsMmTelManager != null
+                            && imsMmTelManager.isAvailable(
+                                    MmTelFeature.MmTelCapabilities.CAPABILITY_TYPE_VOICE,
+                                    ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN)) {
+                        Log.d(TAG, "WifiCalling is available on subId " + subscriptionId);
+                        return true;
+                    }
+                }
+            } catch (RuntimeException e) {
+                Log.d(TAG, "RuntimeException while checking if wifi calling is available: " + e);
+            }
+        }
+        return false;
     }
 
     private boolean isOobPseudonymFeatureEnabledInResource(int carrierId) {
