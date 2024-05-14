@@ -247,7 +247,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     private final PasspointManager mPasspointManager;
     private final WifiDataStall mWifiDataStall;
     private final RssiMonitor mRssiMonitor;
-    private final LinkProbeManager mLinkProbeManager;
     private final MboOceController mMboOceController;
     private final McastLockManagerFilterController mMcastLockManagerFilterController;
     private final ActivityManager mActivityManager;
@@ -737,7 +736,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             @NonNull WifiNative wifiNative,
             @NonNull WrongPasswordNotifier wrongPasswordNotifier,
             @NonNull WifiTrafficPoller wifiTrafficPoller,
-            @NonNull LinkProbeManager linkProbeManager,
             long id,
             @NonNull BatteryStatsManager batteryStatsManager,
             @NonNull SupplicantStateTracker supplicantStateTracker,
@@ -772,7 +770,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         mEapFailureNotifier = eapFailureNotifier;
         mSimRequiredNotifier = simRequiredNotifier;
         mWifiTrafficPoller = wifiTrafficPoller;
-        mLinkProbeManager = linkProbeManager;
         mMboOceController = mboOceController;
         mWifiCarrierInfoManager = wifiCarrierInfoManager;
         mWifiPseudonymManager = wifiPseudonymManager;
@@ -6444,9 +6441,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
 
             mRssiPollToken++;
             if (mEnableRssiPolling) {
-                if (isPrimary()) {
-                    mLinkProbeManager.resetOnNewConnection();
-                }
                 sendMessage(CMD_RSSI_POLL, mRssiPollToken, 0);
             } else {
                 updateLinkLayerStatsRssiAndScoreReport();
@@ -6685,9 +6679,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     if (message.arg1 == mRssiPollToken) {
                         updateLinkLayerStatsRssiDataStallScoreReport();
                         mWifiScoreCard.noteSignalPoll(mWifiInfo);
-                        if (isPrimary()) {
-                            mLinkProbeManager.updateConnectionStats(mWifiInfo, mInterfaceName);
-                        }
                         // Update the polling interval as needed before sending the delayed message
                         // so that the next polling can happen after the updated interval
                         if (isPrimary()) {
@@ -6713,9 +6704,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     if (mEnableRssiPolling) {
                         // First poll
                         mLastSignalLevel = -1;
-                        if (isPrimary()) {
-                            mLinkProbeManager.resetOnScreenTurnedOn();
-                        }
                         long txBytes = mFacade.getTotalTxBytes() - mFacade.getMobileTxBytes();
                         long rxBytes = mFacade.getTotalRxBytes() - mFacade.getMobileRxBytes();
                         updateLinkLayerStatsRssiSpeedFrequencyCapabilities(txBytes, rxBytes);

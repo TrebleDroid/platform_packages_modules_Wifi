@@ -1831,4 +1831,18 @@ public class WifiVendorHalTest extends WifiBaseTest {
         assertTrue(mWifiVendorHal.setRoamingMode(TEST_IFACE_NAME, WifiManager.ROAMING_MODE_NORMAL)
                 == WifiStatusCode.SUCCESS);
     }
+
+    /**
+     * Test that setVoipMode() results in calling into WifiChip
+     */
+    @Test
+    public void testVoipMode() throws Exception {
+        when(mWifiChip.setVoipMode(anyInt())).thenReturn(true);
+        // should fail - not started
+        assertFalse(mWifiVendorHal.setVoipMode(WifiChip.WIFI_VOIP_MODE_VOICE));
+        // Start the vendor hal
+        assertTrue(mWifiVendorHal.startVendorHalSta(mConcreteClientModeManager));
+        assertTrue(mWifiVendorHal.setVoipMode(WifiChip.WIFI_VOIP_MODE_VOICE));
+        verify(mWifiChip).setVoipMode(WifiChip.WIFI_VOIP_MODE_VOICE);
+    }
 }

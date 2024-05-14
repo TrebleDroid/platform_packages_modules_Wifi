@@ -5541,8 +5541,6 @@ public class WifiServiceImpl extends BaseWifiService {
                 pw.println();
                 mLastCallerInfoManager.dump(pw);
                 pw.println();
-                mWifiInjector.getLinkProbeManager().dump(fd, pw, args);
-                pw.println();
                 mWifiNative.dump(pw);
                 pw.println();
                 mWifiInjector.getWifiRoamingModeManager().dump(fd, pw, args);

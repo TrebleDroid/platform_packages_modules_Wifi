@@ -32,6 +32,7 @@ import android.hardware.wifi.IWifiChip.LatencyMode;
 import android.hardware.wifi.IWifiChip.MultiStaUseCase;
 import android.hardware.wifi.IWifiChip.TxPowerScenario;
 import android.hardware.wifi.IWifiChip.UsableChannelFilter;
+import android.hardware.wifi.IWifiChip.VoipMode;
 import android.hardware.wifi.IWifiChipEventCallback;
 import android.hardware.wifi.IWifiNanIface;
 import android.hardware.wifi.IWifiP2pIface;
@@ -1131,6 +1132,31 @@ public class WifiChipAidlImpl implements IWifiChip {
         }
     }
 
+    /**
+     * See comments for {@link IWifiChip#setVoipMode(int)}
+     */
+    @Override
+    public boolean setVoipMode(@WifiChip.WifiVoipMode int mode) {
+        final String methodStr = "setVoipMode";
+        synchronized (mLock) {
+            try {
+                if (!checkIfaceAndLogFailure(methodStr)
+                        || !WifiHalAidlImpl.isServiceVersionAtLeast(2)) {
+                    return false;
+                }
+                mWifiChip.setVoipMode(frameworkToHalVoipMode(mode));
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            } catch (IllegalArgumentException e) {
+                handleIllegalArgumentException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
     private class ChipEventCallback extends IWifiChipEventCallback.Stub {
         @Override
         public void onChipReconfigured(int modeId) throws RemoteException {
@@ -1518,6 +1544,18 @@ public class WifiChipAidlImpl implements IWifiChip {
         }
 
         return halFilter;
+    }
+
+    private static int frameworkToHalVoipMode(@WifiChip.WifiVoipMode int mode)
+            throws IllegalArgumentException {
+        switch (mode) {
+            case WifiChip.WIFI_VOIP_MODE_OFF:
+                return VoipMode.OFF;
+            case WifiChip.WIFI_VOIP_MODE_VOICE:
+                return VoipMode.VOICE;
+            default:
+                throw new IllegalArgumentException("bad voip mode " + mode);
+        }
     }
 
     private static boolean bitmapContains(long bitmap, long expectedBit) {
