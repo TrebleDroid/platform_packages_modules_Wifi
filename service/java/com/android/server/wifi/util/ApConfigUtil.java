@@ -834,23 +834,26 @@ public class ApConfigUtil {
      * Check if IEEE80211BE is allowed for the given softAp configuration.
      *
      * @param capabilities capabilities of the device to check support for IEEE80211BE support.
-     * @param resources the resources to get the OEM configuration for support for single link MLO
-     *                  in bridged mode.
+     * @param context The caller context used to get the OEM configuration for support for
+     *                IEEE80211BE & single link MLO in bridged mode from the resource file.
      * @param config The current {@link SoftApConfiguration}.
      * @param isBridgedMode true if bridged mode is enabled, false otherwise.
      *
      * @return true if IEEE80211BE is allowed for the given configuration, false otherwise.
      */
     public static boolean is11beAllowedForThisConfiguration(DeviceWiphyCapabilities capabilities,
-            @NonNull Resources resources,
+            @NonNull Context context,
             SoftApConfiguration config,
             boolean isBridgedMode) {
+        if (!ApConfigUtil.isIeee80211beSupported(context)) {
+            return false;
+        }
         if (capabilities == null || !capabilities.isWifiStandardSupported(
                 ScanResult.WIFI_STANDARD_11BE)) {
             return false;
         }
         if (isBridgedMode
-                && !resources.getBoolean(
+                && !context.getResources().getBoolean(
                         R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported)) {
             return false;
         }
