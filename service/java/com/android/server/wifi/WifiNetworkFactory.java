@@ -112,6 +112,8 @@ public class WifiNetworkFactory extends NetworkFactory {
     @VisibleForTesting
     public static final int USER_SELECTED_NETWORK_CONNECT_RETRY_MAX = 3; // max of 3 retries.
     @VisibleForTesting
+    public static final int USER_APPROVED_SCAN_RETRY_MAX = 3; // max of 3 retries.
+    @VisibleForTesting
     public static final String UI_START_INTENT_ACTION =
             "com.android.settings.wifi.action.NETWORK_REQUEST";
     @VisibleForTesting
@@ -174,6 +176,7 @@ public class WifiNetworkFactory extends NetworkFactory {
     private boolean mShouldHaveInternetCapabilities = false;
     private Set<Integer> mConnectedUids = new ArraySet<>();
     private int mUserSelectedNetworkConnectRetryCount;
+    private int mUserApprovedScanRetryCount;
     // Map of bssid to latest scan results for all scan results matching a request. Will be
     //  - null, if there are no active requests.
     //  - empty, if there are no matching scan results received for the active request.
@@ -939,6 +942,7 @@ public class WifiNetworkFactory extends NetworkFactory {
                                 mActiveMatchedScanResults.values());
                     }
                 }
+                mUserApprovedScanRetryCount = 0;
                 startPeriodicScans();
             }
         }
@@ -1613,6 +1617,13 @@ public class WifiNetworkFactory extends NetworkFactory {
             Log.e(TAG, "Scan triggered when periodic scanning paused. Ignoring...");
             return;
         }
+        if (mVerboseLoggingEnabled) {
+            Log.v(TAG, "mUserSelectedScanRetryCount: " + mUserApprovedScanRetryCount);
+        }
+        if (mSkipUserDialogue && mUserApprovedScanRetryCount >= USER_APPROVED_SCAN_RETRY_MAX) {
+            cleanupActiveRequest();
+            return;
+        }
         mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 mClock.getElapsedSinceBootMillis() + PERIODIC_SCAN_INTERVAL_MS,
                 TAG, mPeriodicScanTimerListener, mHandler);
@@ -1631,6 +1642,7 @@ public class WifiNetworkFactory extends NetworkFactory {
         if (mVerboseLoggingEnabled) {
             Log.v(TAG, "Starting the next scan for " + mActiveSpecificNetworkRequestSpecifier);
         }
+        mUserApprovedScanRetryCount++;
         // Create a worksource using the caller's UID.
         WorkSource workSource = new WorkSource(mActiveSpecificNetworkRequest.getRequestorUid());
         mWifiScanner.startScan(

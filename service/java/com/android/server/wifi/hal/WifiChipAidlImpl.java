@@ -84,6 +84,7 @@ public class WifiChipAidlImpl implements IWifiChip {
     private final Object mLock = new Object();
     private Context mContext;
     private SsidTranslator mSsidTranslator;
+    private long mHalFeatureSet;
 
     public WifiChipAidlImpl(@NonNull android.hardware.wifi.IWifiChip chip,
             @NonNull Context context, @NonNull SsidTranslator ssidTranslator) {
@@ -402,8 +403,8 @@ public class WifiChipAidlImpl implements IWifiChip {
         synchronized (mLock) {
             try {
                 if (!checkIfaceAndLogFailure(methodStr)) return featuresResp;
-                long halFeatureSet = mWifiChip.getFeatureSet();
-                featuresResp.setValue(halToFrameworkChipFeatureSet(halFeatureSet));
+                mHalFeatureSet = mWifiChip.getFeatureSet();
+                featuresResp.setValue(halToFrameworkChipFeatureSet(mHalFeatureSet));
                 featuresResp.setStatusCode(WifiHal.WIFI_STATUS_SUCCESS);
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);
@@ -1141,7 +1142,8 @@ public class WifiChipAidlImpl implements IWifiChip {
         synchronized (mLock) {
             try {
                 if (!checkIfaceAndLogFailure(methodStr)
-                        || !WifiHalAidlImpl.isServiceVersionAtLeast(2)) {
+                        || !WifiHalAidlImpl.isServiceVersionAtLeast(2)
+                        || !bitmapContains(mHalFeatureSet, FeatureSetMask.SET_VOIP_MODE)) {
                     return false;
                 }
                 mWifiChip.setVoipMode(frameworkToHalVoipMode(mode));

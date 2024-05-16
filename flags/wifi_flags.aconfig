@@ -61,3 +61,11 @@ flag {
     bug: "295792510"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "voip_detection"
+    namespace: "wifi"
+    description: "Detect VoIP over Wifi and execute optimization"
+    bug: "295885471"
+    is_fixed_read_only: true
+}

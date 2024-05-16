@@ -115,7 +115,7 @@ public class MacAddressUtil {
     /**
      * calculate the persistent randomized MAC for SoftAp
      */
-    public MacAddress calculatePersistentMacForSap(String key, int uid) {
+    public synchronized MacAddress calculatePersistentMacForSap(String key, int uid) {
         if (key == null) {
             return null;
         }
