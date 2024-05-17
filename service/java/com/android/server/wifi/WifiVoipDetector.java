@@ -98,8 +98,13 @@ public class WifiVoipDetector {
 
         @Override
         public void onCallAttributesChanged(@NonNull CallAttributes callAttributes) {
-            mIsVoWifiOn = callAttributes.getNetworkType() == TelephonyManager.NETWORK_TYPE_IWLAN;
-            String log = (mIsVoWifiOn ? "Enter" : "Leave") + "IWLAN Call";
+            boolean isVoWifion = callAttributes.getNetworkType()
+                    == TelephonyManager.NETWORK_TYPE_IWLAN;
+            if (isVoWifion == mIsVoWifiOn) {
+                return;
+            }
+            mIsVoWifiOn = isVoWifion;
+            String log = (mIsVoWifiOn ? "Enter" : "Leave") + " IWLAN Call";
             mLocalLog.log(log);
             if (mVerboseLoggingEnabled) {
                 Log.d(TAG, log);
@@ -112,8 +117,12 @@ public class WifiVoipDetector {
     public class AudioModeListener implements AudioManager.OnModeChangedListener {
         @Override
         public void onModeChanged(int audioMode) {
-            mIsOTTCallOn = audioMode == MODE_IN_COMMUNICATION
+            boolean isOTTCallOn = audioMode == MODE_IN_COMMUNICATION
                     || audioMode == MODE_COMMUNICATION_REDIRECT;
+            if (isOTTCallOn == mIsOTTCallOn) {
+                return;
+            }
+            mIsOTTCallOn = isOTTCallOn;
             String log = "Audio mode (" + (mIsOTTCallOn ? "Enter" : "Leave")
                     + " OTT) onModeChanged to " + audioMode;
             mLocalLog.log(log);
@@ -172,7 +181,7 @@ public class WifiVoipDetector {
         if (mCurrentMode != newMode) {
             String log = "Update voip over wifi to new mode: " + newMode;
             if (!mWifiInjector.getWifiNative().setVoipMode(newMode)) {
-                log = "Failed to set Voip Mode (maybe not supported?)";
+                log = "Failed to set Voip Mode to " + newMode + " (maybe not supported?)";
             } else {
                 mCurrentMode = newMode;
             }
