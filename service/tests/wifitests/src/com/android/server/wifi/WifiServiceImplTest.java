@@ -9981,10 +9981,14 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.startAutoDispatch();
         assertThat(mWifiServiceImpl.getUsableChannels(WIFI_BAND_24_5_WITH_DFS_6_60_GHZ, OP_MODE_SAP,
                 FILTER_REGULATORY, TEST_PACKAGE_NAME, mExtras)).containsExactly(
-                new WifiAvailableChannel(2452, WifiAvailableChannel.OP_MODE_SAP),
-                new WifiAvailableChannel(5180, WifiAvailableChannel.OP_MODE_SAP),
-                new WifiAvailableChannel(5955, WifiAvailableChannel.OP_MODE_SAP),
-                new WifiAvailableChannel(58320, WifiAvailableChannel.OP_MODE_SAP));
+                        new WifiAvailableChannel(2452, WifiAvailableChannel.OP_MODE_SAP,
+                        ScanResult.CHANNEL_WIDTH_20MHZ),
+                        new WifiAvailableChannel(5180, WifiAvailableChannel.OP_MODE_SAP,
+                        ScanResult.CHANNEL_WIDTH_20MHZ),
+                        new WifiAvailableChannel(5955, WifiAvailableChannel.OP_MODE_SAP,
+                        ScanResult.CHANNEL_WIDTH_20MHZ),
+                        new WifiAvailableChannel(58320, WifiAvailableChannel.OP_MODE_SAP,
+                        ScanResult.CHANNEL_WIDTH_20MHZ));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
     }
 
@@ -10006,13 +10010,16 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiNative.isHalStarted()).thenReturn(true);
         when(mWifiNative.getUsableChannels(eq(WIFI_BAND_24_GHZ), anyInt(), anyInt()))
                 .thenReturn(Arrays.asList(
-                        new WifiAvailableChannel(2452, WifiAvailableChannel.OP_MODE_SAP)));
+                        new WifiAvailableChannel(2452, WifiAvailableChannel.OP_MODE_SAP,
+                                ScanResult.CHANNEL_WIDTH_20MHZ)));
         when(mWifiNative.getUsableChannels(eq(WIFI_BAND_5_GHZ), anyInt(), anyInt()))
                 .thenReturn(Arrays.asList(
-                        new WifiAvailableChannel(5180, WifiAvailableChannel.OP_MODE_SAP)));
+                        new WifiAvailableChannel(5180, WifiAvailableChannel.OP_MODE_SAP,
+                                ScanResult.CHANNEL_WIDTH_20MHZ)));
         when(mWifiNative.getUsableChannels(eq(WIFI_BAND_6_GHZ), anyInt(), anyInt()))
                 .thenReturn(Arrays.asList(
-                        new WifiAvailableChannel(5955, WifiAvailableChannel.OP_MODE_SAP)));
+                        new WifiAvailableChannel(5955, WifiAvailableChannel.OP_MODE_SAP,
+                                ScanResult.CHANNEL_WIDTH_20MHZ)));
         when(mWifiNative.getUsableChannels(eq(WIFI_BAND_60_GHZ), anyInt(), anyInt()))
                 .thenReturn(null);
 
@@ -11427,7 +11434,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiNative.isHalStarted()).thenReturn(true);
         // Channel 9 - 2452Mhz
         WifiAvailableChannel channels2g = new WifiAvailableChannel(2452,
-                WifiAvailableChannel.OP_MODE_SAP);
+                WifiAvailableChannel.OP_MODE_SAP, ScanResult.CHANNEL_WIDTH_20MHZ);
         when(mWifiNative.isHalSupported()).thenReturn(true);
         when(mWifiNative.isHalStarted()).thenReturn(true);
         when(mWifiNative.getUsableChannels(eq(WifiScanner.WIFI_BAND_24_GHZ), anyInt(), anyInt()))
