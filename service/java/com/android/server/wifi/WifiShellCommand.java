@@ -2151,13 +2151,13 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     }
                     return 0;
                 case "force-overlay-config-value":
-                    String value = getNextArgRequired();
-                    String configString = getNextArgRequired();
+                    String configValue = getNextArgRequired();
+                    String overlayName = getNextArgRequired();
                     boolean isEnabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
-                    if (mWifiService.forceOverlayConfigValue(configString, value, isEnabled)) {
+                    if (mWifiService.forceOverlayConfigValue(overlayName, configValue, isEnabled)) {
                         pw.print("true");
                     } else {
-                        pw.print("fail to force overlay config value: " + configString);
+                        pw.print("fail to force overlay : " + overlayName);
                         return -1;
                     }
                     return 0;
@@ -2956,15 +2956,17 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("       '31' - band 2.4, 5, 6 and 60 GHz with DFS channels");
         pw.println("  get-cached-scan-data");
         pw.println("    Gets scan data cached by the firmware");
-        pw.println("  force-overlay-config-value <overlayName> <configString> enabled|disabled");
+        pw.println("  force-overlay-config-value <configValue> <overlayName> enabled|disabled");
         pw.println("    Force overlay to a specified value. See below for supported overlays.");
+        pw.println("    <configValue> - override value of the overlay. See above for accepted "
+                + "values per overlay.");
         pw.println("    <overlayName> - name of the overlay whose value is overridden.");
         pw.println("        - Currently supports:");
-        pw.println("            - config_wifi_background_scan_support: accepts boolean "
-                + "<configString> = true|false.");
-        pw.println("    <configString> - override value of the overlay. See above for accepted "
-                + "values per overlay.");
-        pw.println("    enabled|disabled: enable the override or disable it and revert to using "
+        pw.println("          <configValue> = true|false for <overlayName> = "
+                + "'config_wifi_background_scan_support'");
+        pw.println("          <configValue> = true|false for <overlayName> = "
+                + "'config_wifiWepDeprecated'");
+        pw.println("    <enabled|disabled>: enable the override or disable it and revert to using "
                 + "the built-in value.");
         pw.println("  get-softap-supported-features");
         pw.println("    Gets softap supported features. Will print 'wifi_softap_acs_supported'");

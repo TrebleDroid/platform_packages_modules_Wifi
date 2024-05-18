@@ -24,6 +24,7 @@ import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
+import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.SystemService;
 import android.compat.annotation.UnsupportedAppUsage;
@@ -2247,6 +2248,7 @@ public class WifiP2pManager {
             android.Manifest.permission.ACCESS_FINE_LOCATION
             }, conditional = true)
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SuppressLint("ExecutorRegistration") // WifiP2pManager is using the async channel
     public void startPeerDiscovery(
             @NonNull Channel channel,
             @NonNull WifiP2pDiscoveryConfig config,
@@ -2503,6 +2505,7 @@ public class WifiP2pManager {
             android.Manifest.permission.ACCESS_FINE_LOCATION
             }, conditional = true)
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SuppressLint("ExecutorRegistration") // WifiP2pManager is using the async channel
     public void startListening(
             @NonNull Channel channel,
             @NonNull WifiP2pExtListenParams params,
