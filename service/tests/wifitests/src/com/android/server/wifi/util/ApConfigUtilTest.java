@@ -1455,21 +1455,23 @@ public class ApConfigUtilTest extends WifiBaseTest {
                 .thenReturn(false);
         /* 11be is disallowed when IEEE80211_BE feature is not supported */
         assertFalse(ApConfigUtil.is11beAllowedForThisConfiguration(mDeviceWiphyCapabilities,
-                mResources, config, true));
+                mContext, config, true));
 
+        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+                .thenReturn(true);
         when(mResources.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
                 .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(true);
         /* 11be is allowed if chip supports single link MLO in bridged mode */
         assertTrue(ApConfigUtil.is11beAllowedForThisConfiguration(mDeviceWiphyCapabilities,
-                mResources, config, true));
+                mContext, config, true));
 
         /* 11be is not allowed if chip doesn't support single link MLO in bridged mode */
         when(mResources.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
                 .thenReturn(false);
         assertFalse(ApConfigUtil.is11beAllowedForThisConfiguration(mDeviceWiphyCapabilities,
-                mResources, config, true));
+                mContext, config, true));
     }
     @Test
     public void testIs11beDisabledForSecurityType() throws Exception {

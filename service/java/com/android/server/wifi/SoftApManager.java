@@ -1335,8 +1335,7 @@ public class SoftApManager implements ActiveModeManager {
                                     mWifiNative.getDeviceWiphyCapabilities(
                                             mApInterfaceName, isBridgeRequired());
                             if (!ApConfigUtil.is11beAllowedForThisConfiguration(capabilities,
-                                    mContext.getResources(),
-                                    mCurrentSoftApConfiguration, isBridgedMode())) {
+                                    mContext, mCurrentSoftApConfiguration, isBridgedMode())) {
                                 Log.d(getTag(), "11BE is not allowed,"
                                         + " removing from configuration");
                                 mCurrentSoftApConfiguration = new SoftApConfiguration.Builder(
