@@ -4038,17 +4038,46 @@ public class SoftApManagerTest extends WifiBaseTest {
 
     /**
      * Tests that 11BE is set to disabled in the SoftApConfiguration if it isn't supported by
-     * SoftApCapability.
+     * device Capabilities.
      */
     @Test
-    public void testStartSoftApRemoves11BEIfNotSupported() throws Exception {
+    public void testStartSoftApRemoves11BEIfNotSupportedByDeviceCapabilities() throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
+        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+                .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(false);
         Builder configBuilder = new SoftApConfiguration.Builder();
-        configBuilder.setBand(SoftApConfiguration.BAND_2GHZ);
+        configBuilder.setBand(SoftApConfiguration.BAND_5GHZ);
         configBuilder.setSsid(TEST_SSID);
         configBuilder.setIeee80211beEnabled(true);
+        configBuilder.setPassphrase("somepassword",
+                SoftApConfiguration.SECURITY_TYPE_WPA3_SAE);
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
+                mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
+        SoftApConfiguration expectedConfig = configBuilder.setIeee80211beEnabled(false).build();
+        startSoftApAndVerifyEnabled(apConfig, expectedConfig, false);
+    }
+
+    /**
+     * Tests that 11BE is set to disabled in the SoftApConfiguration if it isn't supported by
+     * overlay configuration.
+     */
+    @Test
+    public void testStartSoftApRemoves11BEIfNotSupportedByOverlay() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastT());
+        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+                .thenReturn(false);
+        when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
+                .thenReturn(true);
+        mDeviceWiphyCapabilitiesSupports11Be = true;
+        Builder configBuilder = new SoftApConfiguration.Builder();
+        configBuilder.setBand(SoftApConfiguration.BAND_5GHZ);
+        configBuilder.setSsid(TEST_SSID);
+        configBuilder.setIeee80211beEnabled(true);
+        configBuilder.setPassphrase("somepassword",
+                SoftApConfiguration.SECURITY_TYPE_WPA3_SAE);
         SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
                 WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
@@ -4062,6 +4091,8 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApRemoves11BEInWpa2()throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
+        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+                .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(true);
         mDeviceWiphyCapabilitiesSupports11Be = true;
@@ -4086,6 +4117,8 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApRemoves11BEInBridgedModeIfNotSupportedByOverlay()throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
+        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+                .thenReturn(true);
         when(mResources.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
                 .thenReturn(false);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
@@ -4113,6 +4146,8 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApInBridgedMode11BEConfiguration()throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
+        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+                .thenReturn(true);
         when(mResources.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
                 .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
@@ -4138,6 +4173,8 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApInSingleAp11BEConfiguration()throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
+        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+                .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(true);
         mDeviceWiphyCapabilitiesSupports11Be = true;
