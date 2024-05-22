@@ -23,12 +23,7 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.net.wifi.WifiInfo;
 import android.os.SystemProperties;
-import android.telephony.SubscriptionInfo;
-import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
-import android.telephony.ims.ImsMmTelManager;
-import android.telephony.ims.feature.MmTelFeature;
-import android.telephony.ims.stub.ImsRegistrationImplBase;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
@@ -78,6 +73,7 @@ public class WifiCountryCode {
     private final WifiSettingsConfigStore mSettingsConfigStore;
     private final Clock mClock;
     private final WifiPermissionsUtil mWifiPermissionsUtil;
+    private final WifiCarrierInfoManager mWifiCarrierInfoManager;
     private List<ChangeListener> mListeners = new ArrayList<>();
     private boolean mVerboseLoggingEnabled = false;
     private boolean mIsCountryCodePendingToUpdateToCmm = true; // default to true for first update.
@@ -210,7 +206,8 @@ public class WifiCountryCode {
             WifiNative wifiNative,
             @NonNull WifiSettingsConfigStore settingsConfigStore,
             Clock clock,
-            WifiPermissionsUtil wifiPermissionsUtil) {
+            WifiPermissionsUtil wifiPermissionsUtil,
+            @NonNull WifiCarrierInfoManager wifiCarrierInfoManager) {
         mContext = context;
         mTelephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         mActiveModeWarden = activeModeWarden;
@@ -219,6 +216,7 @@ public class WifiCountryCode {
         mSettingsConfigStore = settingsConfigStore;
         mClock = clock;
         mWifiPermissionsUtil = wifiPermissionsUtil;
+        mWifiCarrierInfoManager = wifiCarrierInfoManager;
 
         mActiveModeWarden.registerModeChangeCallback(new ModeChangeCallbackInternal());
         clientModeImplMonitor.registerListener(new ClientModeListenerInternal());
@@ -307,41 +305,6 @@ public class WifiCountryCode {
 
     private boolean hasCalling() {
         return mContext.getPackageManager().hasSystemFeature(FEATURE_TELEPHONY_CALLING);
-    }
-
-    /**
-     * Check if Wi-Fi calling is available.
-     *
-     * This method can only be called if device has calling feature (see hasCalling()).
-     */
-    private boolean isWifiCallingAvailable() {
-        SubscriptionManager subscriptionManager =
-                mContext.getSystemService(SubscriptionManager.class);
-        if (subscriptionManager == null) {
-            Log.d(TAG, "SubscriptionManager not found");
-            return false;
-        }
-
-        List<SubscriptionInfo> subInfoList = subscriptionManager
-                .getCompleteActiveSubscriptionInfoList();
-        if (subInfoList == null) {
-            Log.d(TAG, "Active SubscriptionInfo list not found");
-            return false;
-        }
-        for (SubscriptionInfo subInfo : subInfoList) {
-            int subscriptionId = subInfo.getSubscriptionId();
-            try {
-                if (ImsMmTelManager.createForSubscriptionId(subscriptionId).isAvailable(
-                        MmTelFeature.MmTelCapabilities.CAPABILITY_TYPE_VOICE,
-                        ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN)) {
-                    Log.d(TAG, "WifiCalling is available on subId " + subscriptionId);
-                    return true;
-                }
-            } catch (RuntimeException e) {
-                Log.d(TAG, "RuntimeException while checking if wifi calling is available: " + e);
-            }
-        }
-        return false;
     }
 
     private void initializeTelephonyCountryCodeIfNeeded() {
@@ -547,7 +510,7 @@ public class WifiCountryCode {
     }
 
     private boolean shouldDisconnectWifiToForceUpdate() {
-        if (!hasCalling() || isWifiCallingAvailable()) {
+        if (!hasCalling() || mWifiCarrierInfoManager.isWifiCallingAvailable()) {
             return false;
         }
 
