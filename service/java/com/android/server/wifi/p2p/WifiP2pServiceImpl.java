@@ -882,6 +882,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                             if (staticIpConfig != null) {
                                 config = new ProvisioningConfiguration.Builder()
                                         .withoutIpReachabilityMonitor()
+                                        .withRandomMacAddress()
                                         .withStaticConfiguration(staticIpConfig).build();
                             }
                         }
@@ -889,6 +890,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                             // start DHCP provisioning
                             config = new ProvisioningConfiguration.Builder()
                                     .withoutIpReachabilityMonitor()
+                                    .withRandomMacAddress()
                                     .withPreDhcpAction(30 * 1000)
                                     .withProvisioningTimeoutMs(36 * 1000)
                                     .build();
