@@ -1020,6 +1020,9 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     private void handleShutDown() {
+        if (mVerboseLoggingEnabled) {
+            Log.v(TAG, "handleShutDown");
+        }
         // Direct call to notify ActiveModeWarden as soon as possible with the assumption that
         // notifyShuttingDown() doesn't have codes that may cause concurrentModificationException,
         // e.g., access to a collection.
