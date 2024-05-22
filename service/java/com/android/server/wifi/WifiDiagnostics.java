@@ -1023,6 +1023,24 @@ public class WifiDiagnostics {
         }
     }
 
+    private boolean shouldTakeBugreport(String bugTitle, String bugDetail) {
+        long currentTimeMs = mClock.getWallClockMillis();
+        long timeSinceLastUploadMs = currentTimeMs - mLastBugReportTime;
+        if (timeSinceLastUploadMs
+                < mWifiInjector.getDeviceConfigFacade().getBugReportMinWindowMs()
+                && mLastBugReportTime > 0) {
+            Log.d(TAG, "Bugreport was filed recently, skip " + bugTitle + "(" + bugDetail + ")");
+            return false;
+        }
+        String titleAndDetail = bugTitle + bugDetail;
+        if (mWifiInjector.getDeviceConfigFacade().getDisabledAutoBugreportTitleAndDetails()
+                .contains(titleAndDetail)) {
+            Log.d(TAG, "Bugreport explicitly disabled " + bugTitle + "(" + bugDetail + ")");
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Initiates a system-level bug report if there is no bug report taken recently.
      * This is done in a non-blocking fashion.
@@ -1035,12 +1053,7 @@ public class WifiDiagnostics {
             return;
         }
 
-        long currentTimeMs = mClock.getWallClockMillis();
-        long timeSinceLastUploadMs = currentTimeMs - mLastBugReportTime;
-        if (timeSinceLastUploadMs
-                < mWifiInjector.getDeviceConfigFacade().getBugReportMinWindowMs()
-                && mLastBugReportTime > 0) {
-            Log.d(TAG, "Bugreport was filed recently, skip " + bugTitle + "(" + bugDetail + ")");
+        if (!shouldTakeBugreport(bugTitle, bugDetail)) {
             return;
         }
 
