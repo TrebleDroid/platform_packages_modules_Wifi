@@ -3513,6 +3513,10 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 mWakeupController.setLastDisconnectInfo(matchInfo);
             }
             mRssiMonitor.reset();
+            // On disconnect, restore roaming mode to normal
+            if (!newConnectionInProgress) {
+                enableRoaming(true);
+            }
         }
 
         clearTargetBssid("handleNetworkDisconnect");
