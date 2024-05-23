@@ -2377,6 +2377,31 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             };
         }
 
+        private String messageToString(Message msg) {
+            StringBuilder sb = new StringBuilder();
+
+            String s = getWhatToString(msg.what);
+            if (s == null) {
+                s = "<unknown>";
+            }
+            sb.append(s).append("/");
+
+            if (msg.what == MESSAGE_TYPE_NOTIFICATION || msg.what == MESSAGE_TYPE_COMMAND
+                    || msg.what == MESSAGE_TYPE_RESPONSE) {
+                s = getWhatToString(msg.arg1);
+                if (s == null) {
+                    s = "<unknown>";
+                }
+                sb.append(s);
+            }
+
+            if (msg.what == MESSAGE_TYPE_RESPONSE || msg.what == MESSAGE_TYPE_RESPONSE_TIMEOUT) {
+                sb.append(" (Transaction ID=").append(msg.arg2).append(")");
+            }
+
+            return sb.toString();
+        }
+
         public void onAwareDownCleanupSendQueueState() {
             mSendQueueBlocked = false;
             mHostQueuedSendMessages.clear();
@@ -2390,9 +2415,10 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
 
             @Override
-            public String getMessageLogRec(int what) {
+            public String getMessageLogRec(Message message) {
                 return WifiAwareStateManager.class.getSimpleName() + "."
-                        + DefaultState.class.getSimpleName() + "." + getWhatToString(what);
+                        + DefaultState.class.getSimpleName() + "." + getWhatToString(message.what)
+                        + "#" + getWhatToString(message.arg1);
             }
 
             @Override
@@ -2459,9 +2485,10 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
 
             @Override
-            public String getMessageLogRec(int what) {
+            public String getMessageLogRec(Message message) {
                 return WifiAwareStateManager.class.getSimpleName() + "."
-                        + WaitState.class.getSimpleName() + "." + getWhatToString(what);
+                        + WaitState.class.getSimpleName() + "." + getWhatToString(message.what)
+                        + "#" + getWhatToString(message.arg1);
             }
 
             @Override
@@ -2510,9 +2537,10 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
 
             @Override
-            public String getMessageLogRec(int what) {
+            public String getMessageLogRec(Message message) {
                 return WifiAwareStateManager.class.getSimpleName() + "."
-                        + WaitForResponseState.class.getSimpleName() + "." + getWhatToString(what);
+                        + WaitForResponseState.class.getSimpleName() + "."
+                        + getWhatToString(message.what) + "#" + getWhatToString(message.arg1);
             }
 
             @Override
@@ -3694,7 +3722,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
 
         @Override
         protected String getLogRecString(Message msg) {
-            StringBuilder sb = new StringBuilder(WifiAwareStateManager.messageToString(msg));
+            StringBuilder sb = new StringBuilder(messageToString(msg));
 
             if (msg.what == MESSAGE_TYPE_COMMAND
                     && mCurrentTransactionId != TRANSACTION_ID_IGNORE) {
@@ -5643,31 +5671,6 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
         }
         return instantMode;
-    }
-
-    private static String messageToString(Message msg) {
-        StringBuilder sb = new StringBuilder();
-
-        String s = sSmToString.get(msg.what);
-        if (s == null) {
-            s = "<unknown>";
-        }
-        sb.append(s).append("/");
-
-        if (msg.what == MESSAGE_TYPE_NOTIFICATION || msg.what == MESSAGE_TYPE_COMMAND
-                || msg.what == MESSAGE_TYPE_RESPONSE) {
-            s = sSmToString.get(msg.arg1);
-            if (s == null) {
-                s = "<unknown>";
-            }
-            sb.append(s);
-        }
-
-        if (msg.what == MESSAGE_TYPE_RESPONSE || msg.what == MESSAGE_TYPE_RESPONSE_TIMEOUT) {
-            sb.append(" (Transaction ID=").append(msg.arg2).append(")");
-        }
-
-        return sb.toString();
     }
 
     /**
