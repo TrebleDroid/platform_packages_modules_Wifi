@@ -7866,6 +7866,39 @@ public class ClientModeImplTest extends WifiBaseTest {
         verifyNoMoreInteractions(mWifiNetworkAgent);
     }
 
+    /**
+     * Verify that roaming mode is enabled on disconnect for primary.
+     */
+    @Test
+    public void testRoamingModeOnDisconnectPrimary() throws Exception {
+        when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
+        connect();
+        mCmi.disconnect();
+        mLooper.dispatchAll();
+        mCmi.sendMessage(WifiMonitor.SUPPLICANT_STATE_CHANGE_EVENT, 0, 0,
+                new StateChangeResult(0, WifiSsid.fromUtf8Text(mConnectedNetwork.SSID),
+                        TEST_BSSID_STR, sFreq, SupplicantState.DISCONNECTED));
+        mLooper.dispatchAll();
+        verify(mWifiNative).enableFirmwareRoaming(anyString(),
+                eq(WifiNative.ENABLE_FIRMWARE_ROAMING));
+    }
+
+    /**
+     * Verify that roaming mode doesn't change on disconnect for secondary.
+     */
+    @Test
+    public void testRoamingModeOnDisconnectSecondary() throws Exception {
+        when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_SECONDARY_TRANSIENT);
+        connect();
+        mCmi.disconnect();
+        mLooper.dispatchAll();
+        mCmi.sendMessage(WifiMonitor.SUPPLICANT_STATE_CHANGE_EVENT, 0, 0,
+                new StateChangeResult(0, WifiSsid.fromUtf8Text(mConnectedNetwork.SSID),
+                        TEST_BSSID_STR, sFreq, SupplicantState.DISCONNECTED));
+        mLooper.dispatchAll();
+        verify(mWifiNative, never()).enableFirmwareRoaming(anyString(), anyInt());
+    }
+
     @Test
     public void testConnectionWhileDisconnecting() throws Exception {
         connect();
