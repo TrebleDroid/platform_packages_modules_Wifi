@@ -180,6 +180,7 @@ public class WifiPermissionsUtil {
         try {
             enforceNearbyDevicesPermission(attributionSource, checkForLocation, message);
         } catch (SecurityException e) {
+            Log.e(TAG, "checkNearbyDevicesPermission - " + e);
             return false;
         }
         return true;

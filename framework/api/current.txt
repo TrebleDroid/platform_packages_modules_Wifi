@@ -145,6 +145,7 @@ package android.net.wifi {
   public final class WifiAvailableChannel implements android.os.Parcelable {
     ctor public WifiAvailableChannel(int, int);
     method public int describeContents();
+    method @FlaggedApi("com.android.wifi.flags.get_channel_width_api") public int getChannelWidth();
     method public int getFrequencyMhz();
     method public int getOperationalModes();
     method public void writeToParcel(@NonNull android.os.Parcel, int);

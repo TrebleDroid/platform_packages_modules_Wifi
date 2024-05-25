@@ -63,6 +63,14 @@ flag {
 }
 
 flag {
+    name: "get_channel_width_api"
+    namespace: "wifi"
+    description: "Add new API to get channel width"
+    bug: "335358378"
+    is_fixed_read_only: true
+}
+
+flag {
     name: "voip_detection"
     namespace: "wifi"
     description: "Detect VoIP over Wifi and execute optimization"

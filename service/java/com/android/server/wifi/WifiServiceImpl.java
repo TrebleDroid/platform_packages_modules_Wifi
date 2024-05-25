@@ -7458,7 +7458,10 @@ public class WifiServiceImpl extends BaseWifiService {
             if ((band & ScanResult.toBand(freq)) == 0) {
                 continue;
             }
-            channels.add(new WifiAvailableChannel(freq, WifiAvailableChannel.OP_MODE_SAP));
+            // TODO b/340956906: Save and retrieve channel width in config store along with
+            //  frequency.
+            channels.add(new WifiAvailableChannel(freq, WifiAvailableChannel.OP_MODE_SAP,
+                    ScanResult.CHANNEL_WIDTH_20MHZ));
         }
         return channels;
     }

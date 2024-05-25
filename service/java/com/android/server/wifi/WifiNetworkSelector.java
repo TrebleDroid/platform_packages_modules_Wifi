@@ -1453,9 +1453,11 @@ public class WifiNetworkSelector {
     private void updateSecurityParamsForTransitionModeIfNecessary(
             ScanResult scanResult, SecurityParams params) {
         if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_SAE)
+                && params.isAddedByAutoUpgrade()
                 && ScanResultUtil.isScanResultForPskSaeTransitionNetwork(scanResult)) {
             params.setRequirePmf(false);
         } else if (params.isSecurityType(WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE)
+                && params.isAddedByAutoUpgrade()
                 && ScanResultUtil.isScanResultForWpa3EnterpriseTransitionNetwork(scanResult)) {
             params.setRequirePmf(false);
         }
