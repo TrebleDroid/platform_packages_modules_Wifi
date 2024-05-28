@@ -2760,6 +2760,13 @@ public class WifiNetworkSelectorTest extends WifiBaseTest {
                 false);
         // Candidate should not be null
         assertNotNull(candidates);
+
+        // disable associated network selection and verify no candidate is returned now
+        doReturn(false).when(mResource).getBoolean(
+                R.bool.config_wifi_framework_enable_associated_network_selection);
+        assertNull(mWifiNetworkSelector.getCandidatesFromScan(
+                scanDetails, blocklist, cmmStates, false, true, true, Collections.emptySet(),
+                false));
     }
 
     private void runNetworkSelectionWith(ScanDetailsAndWifiConfigs scanDetailsAndConfigs) {
