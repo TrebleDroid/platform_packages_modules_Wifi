@@ -60,8 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"వీరికి:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"అవసరమైన పిన్‌ను టైప్ చేయండి:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"పిన్‌:"</string>
-    <!-- no translation found for wifi_p2p_frequency_conflict_message (8535404941723941766) -->
-    <skip />
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"మీ పరికరం <xliff:g id="DEVICE_NAME">%1$s</xliff:g>‌కి కనెక్ట్ అయి ఉన్నప్పుడు తాత్కాలికంగా Wi-Fi నుండి డిస్‌కనెక్ట్ అవుతుంది"</string>
     <string name="dlg_ok" msgid="254496739491689405">"సరే"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g>కు కనెక్ట్ చేయడం సాధ్యపడదు"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"మీ గోప్యతా సెట్టింగ్‌లను మార్చడానికి నొక్కి, మళ్లీ ట్రై చేయండి"</string>
