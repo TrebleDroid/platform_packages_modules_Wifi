@@ -102,6 +102,13 @@ public class WifiThreadRunner {
     }
 
     /**
+     * TODO(b/342976570): remove when we are sure no more usage
+     */
+    public <T> T call(@NonNull Supplier<T> supplier, T valueToReturnOnTimeout) {
+        return call(supplier, valueToReturnOnTimeout, null);
+    }
+
+    /**
      * Runs a Runnable on the main Wifi thread and <b>blocks</b> the calling thread until the
      * Runnable completes execution on the main Wifi thread.
      *
@@ -123,6 +130,13 @@ public class WifiThreadRunner {
             }
             return false;
         }
+    }
+
+    /**
+     * TODO(b/342976570): remove when we are sure no more usage
+     */
+    public boolean run(@NonNull Runnable runnable) {
+        return run(runnable, null);
     }
 
     /**
@@ -188,10 +202,17 @@ public class WifiThreadRunner {
      * @param runnable The Runnable that will be executed.
      * @param taskName The task name for performance logging
      */
-    public boolean post(@NonNull Runnable runnable, String taskName) {
+    public boolean post(@NonNull Runnable runnable, @Nullable String taskName) {
         Message m = Message.obtain(mHandler, runnable);
         m.getData().putString(KEY_SIGNATURE, taskName);
         return mHandler.sendMessage(m);
+    }
+
+    /**
+     * TODO(b/342976570): remove when we are sure no more usage
+     */
+    public boolean post(@NonNull Runnable runnable) {
+        return post(runnable, null);
     }
 
     /**
