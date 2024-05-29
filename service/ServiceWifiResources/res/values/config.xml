@@ -1342,4 +1342,17 @@
     -->
     <bool translatable="false" name="config_wifiTwtSupported">true</bool>
 
+    <!-- Array containing carrier IDs whose networks should not auto-connect upon initial discovery.
+         These networks are eligible to become network selection candidates if they still appear in
+         the scan results after the delay period has passed. Carriers who have requested this
+         feature are included in the array by default.
+     -->
+    <integer-array translatable="false" name="config_wifiDelayedSelectionCarrierIds">
+        <item>2032</item>
+    </integer-array>
+
+    <!-- Delay time in milliseconds for delayed carrier network selection.
+         See also config_wifiDelayedSelectionCarrierIds.
+     -->
+    <integer translatable="false" name="config_wifiDelayedCarrierSelectionTimeMs">120000</integer>
 </resources>

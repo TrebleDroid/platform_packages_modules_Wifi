@@ -265,6 +265,9 @@ public class WifiConnectivityManager {
     private @DeviceMobilityState int mDeviceMobilityState =
             WifiManager.DEVICE_MOBILITY_STATE_UNKNOWN;
 
+    private Set<Integer> mDelayedSelectionCarrierIds = new HashSet<>();
+    private long mDelayedCarrierSelectionTimeMs;
+
     // A helper to log debugging information in the local log buffer, which can
     // be retrieved in bugreport.
     private void localLog(String log) {
@@ -1387,6 +1390,16 @@ public class WifiConnectivityManager {
         mWifiCarrierInfoManager = wifiCarrierInfoManager;
         mWifiCountryCode = wifiCountryCode;
         mWifiDialogManager = wifiDialogManager;
+
+        mDelayedCarrierSelectionTimeMs = mContext.getResources().getInteger(
+                R.integer.config_wifiDelayedCarrierSelectionTimeMs);
+        int[] delayedSelectionCarrierIds = mContext.getResources().getIntArray(
+                R.array.config_wifiDelayedSelectionCarrierIds);
+        if (delayedSelectionCarrierIds != null && delayedSelectionCarrierIds.length != 0) {
+            for (Integer carrierId : delayedSelectionCarrierIds) {
+                mDelayedSelectionCarrierIds.add(carrierId);
+            }
+        }
 
         // Listen to WifiConfigManager network update events
         mEventHandler.postToFront(() ->

@@ -267,6 +267,10 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         resources.setInteger(R.integer.config_wifiPnoScanIterations, EXPECTED_PNO_ITERATIONS);
         resources.setInteger(R.integer.config_wifiPnoScanIntervalMultiplier,
                 EXPECTED_PNO_MULTIPLIER);
+        resources.setIntArray(R.array.config_wifiDelayedSelectionCarrierIds,
+                DELAYED_SELECTION_CARRIER_IDS);
+        resources.setInteger(R.integer.config_wifiDelayedCarrierSelectionTimeMs,
+                DELAYED_CARRIER_SELECTION_TIME_MS);
     }
 
     /**
@@ -408,6 +412,8 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
     private static final int EXPECTED_PNO_MULTIPLIER = 4;
     private static final int TEST_FREQUENCY_2G = 2412;
     private static final int TEST_FREQUENCY_5G = 5262;
+    private static final int[] DELAYED_SELECTION_CARRIER_IDS = new int[]{123};
+    private static final int DELAYED_CARRIER_SELECTION_TIME_MS = 100_000;
 
     /**
     * A test Handler that stores one single incoming Message with delayed time internally, to be
