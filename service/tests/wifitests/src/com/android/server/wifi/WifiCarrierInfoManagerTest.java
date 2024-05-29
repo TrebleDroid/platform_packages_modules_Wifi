@@ -2531,4 +2531,67 @@ public class WifiCarrierInfoManagerTest extends WifiBaseTest {
                 wifiCaptor.capture());
         assertThat(wifiCaptor.getValue()).containsExactly(DATA_SUBID, NON_DATA_SUBID);
     }
+
+    @Test
+    public void isMobileDataEnabled_true() {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mDataTelephonyManager.isDataEnabled()).thenReturn(true);
+        assertTrue(mWifiCarrierInfoManager.isMobileDataEnabled());
+    }
+
+    @Test
+    public void isMobileDataEnabled_false_null() {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mSubscriptionManager.getCompleteActiveSubscriptionInfoList())
+                .thenReturn(null);
+        mListenerArgumentCaptor.getValue().onSubscriptionsChanged();
+        mLooper.dispatchAll();
+
+        assertFalse(mWifiCarrierInfoManager.isMobileDataEnabled());
+    }
+    @Test
+    public void isMobileDataEnabled_false_empty() {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mSubscriptionManager.getCompleteActiveSubscriptionInfoList())
+                .thenReturn(new ArrayList<>());
+        mListenerArgumentCaptor.getValue().onSubscriptionsChanged();
+        mLooper.dispatchAll();
+
+        assertFalse(mWifiCarrierInfoManager.isMobileDataEnabled());
+    }
+
+    @Test
+    public void isMobileDataEnabled_false_present() {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mDataTelephonyManager.isDataEnabled()).thenReturn(false);
+        when(mNonDataTelephonyManager.isDataEnabled()).thenReturn(false);
+        mListenerArgumentCaptor.getValue().onSubscriptionsChanged();
+        mLooper.dispatchAll();
+
+        assertFalse(mWifiCarrierInfoManager.isMobileDataEnabled());
+    }
+
+    @Test
+    public void hasActiveSubInfo_true() {
+        assertTrue(mWifiCarrierInfoManager.hasActiveSubInfo());
+    }
+
+    @Test
+    public void hasActiveSubInfo_false_null() {
+        when(mSubscriptionManager.getCompleteActiveSubscriptionInfoList()).thenReturn(null);
+        mListenerArgumentCaptor.getValue().onSubscriptionsChanged();
+        mLooper.dispatchAll();
+
+        assertFalse(mWifiCarrierInfoManager.hasActiveSubInfo());
+    }
+
+    @Test
+    public void hasActiveSubInfo_false_empty() {
+        when(mSubscriptionManager.getCompleteActiveSubscriptionInfoList())
+                .thenReturn(new ArrayList<>());
+        mListenerArgumentCaptor.getValue().onSubscriptionsChanged();
+        mLooper.dispatchAll();
+
+        assertFalse(mWifiCarrierInfoManager.hasActiveSubInfo());
+    }
 }

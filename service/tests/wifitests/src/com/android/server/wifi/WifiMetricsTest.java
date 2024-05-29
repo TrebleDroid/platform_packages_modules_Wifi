@@ -36,11 +36,22 @@ import static com.android.server.wifi.WifiMetricsTestUtil.buildInt32Count;
 import static com.android.server.wifi.WifiMetricsTestUtil.buildLinkProbeFailureReasonCount;
 import static com.android.server.wifi.WifiMetricsTestUtil.buildLinkProbeFailureStaEvent;
 import static com.android.server.wifi.WifiMetricsTestUtil.buildLinkProbeSuccessStaEvent;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_SIM_INSERTED;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_SCORING_DISABLED;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_OFF;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_UNAVAILABLE;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_OTHERS;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONFIG_SAVED;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_UNKNOWN;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE;
 import static com.android.server.wifi.proto.nano.WifiMetricsProto.StaEvent.TYPE_LINK_PROBE;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FRAMEWORK_DATA_STALL;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FIRMWARE_ALERT;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_IP_REACHABILITY_LOST;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -186,6 +197,8 @@ public class WifiMetricsTest extends WifiBaseTest {
     private static final String MLO_LINK_STA_MAC_ADDRESS = "12:34:56:78:9a:bc";
     private static final String MLO_LINK_AP_MAC_ADDRESS = "bc:9a:78:56:34:12";
     private static final int TEST_CHANNEL = 36;
+    private static final int POLLING_INTERVAL_DEFAULT = 3000;
+    private static final int POLLING_INTERVAL_NOT_DEFAULT = 6000;
 
     private MockitoSession mSession;
     @Mock Context mContext;
@@ -7315,5 +7328,199 @@ public class WifiMetricsTest extends WifiBaseTest {
                         eq(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__AP_TYPE_6GHZ__AP_TYPE_6GHZ_STANDARD_POWER),
                         eq(true), // mIsEcpsPriorityAccessSupported
                         eq(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_160MHZ))); // mChannelWidth
+    }
+
+    @Test
+    public void getDeviceStateForScorer() {
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM,
+                mWifiMetrics.getDeviceStateForScorer(false, false, false, false, false));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_SIM_INSERTED,
+                mWifiMetrics.getDeviceStateForScorer(true, false, false, false, false));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_SCORING_DISABLED,
+                mWifiMetrics.getDeviceStateForScorer(true, true, false, false, false));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_OFF,
+                mWifiMetrics.getDeviceStateForScorer(true, true, false, false, true));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_UNAVAILABLE,
+                mWifiMetrics.getDeviceStateForScorer(true, true, true, false, true));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_OTHERS,
+                mWifiMetrics.getDeviceStateForScorer(true, true, true, true, true));
+    }
+
+    @Test
+    public void convertWifiUnusableTypeForScorer() {
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FRAMEWORK_DATA_STALL,
+                mWifiMetrics.convertWifiUnusableTypeForScorer(
+                        WifiIsUnusableEvent.TYPE_DATA_STALL_BAD_TX));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FRAMEWORK_DATA_STALL,
+                mWifiMetrics.convertWifiUnusableTypeForScorer(
+                        WifiIsUnusableEvent.TYPE_DATA_STALL_TX_WITHOUT_RX));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FRAMEWORK_DATA_STALL,
+                mWifiMetrics.convertWifiUnusableTypeForScorer(
+                        WifiIsUnusableEvent.TYPE_DATA_STALL_BOTH));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FIRMWARE_ALERT,
+                mWifiMetrics.convertWifiUnusableTypeForScorer(
+                        WifiIsUnusableEvent.TYPE_FIRMWARE_ALERT));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_IP_REACHABILITY_LOST,
+                mWifiMetrics.convertWifiUnusableTypeForScorer(
+                        WifiIsUnusableEvent.TYPE_IP_REACHABILITY_LOST));
+
+        assertEquals(SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE,
+                mWifiMetrics.convertWifiUnusableTypeForScorer(WifiIsUnusableEvent.TYPE_UNKNOWN));
+    }
+    @Test
+    public void logScorerPredictionResult_withoutExternalScorer() {
+        when(mWifiDataStall.isThroughputSufficient()).thenReturn(false);
+
+        mWifiMetrics.logScorerPredictionResult(false, false, false, POLLING_INTERVAL_DEFAULT,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE);
+
+        ExtendedMockito.verify(() -> WifiStatsLog.write_non_chained(
+                SCORER_PREDICTION_RESULT_REPORTED,
+                Process.WIFI_UID, null,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE,
+                false,
+                SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM,
+                POLLING_INTERVAL_DEFAULT));
+
+
+    }
+
+    @Test
+    public void logScorerPredictionResult_withExternalScorer() {
+        mWifiMetrics.setIsExternalWifiScorerOn(true, TEST_UID);
+        when(mWifiDataStall.isThroughputSufficient()).thenReturn(false);
+
+        mWifiMetrics.logScorerPredictionResult(false, false, false, POLLING_INTERVAL_DEFAULT,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE);
+
+        ExtendedMockito.verify(() -> WifiStatsLog.write_non_chained(
+                SCORER_PREDICTION_RESULT_REPORTED,
+                Process.WIFI_UID, null,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE,
+                false,
+                SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM,
+                POLLING_INTERVAL_DEFAULT));
+        ExtendedMockito.verify(() -> WifiStatsLog.write_non_chained(
+                SCORER_PREDICTION_RESULT_REPORTED,
+                TEST_UID, null,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE,
+                false,
+                SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM,
+                POLLING_INTERVAL_DEFAULT));
+    }
+
+    @Test
+    public void logScorerPredictionResult_notDefaultPollingInterval() {
+        when(mWifiDataStall.isThroughputSufficient()).thenReturn(false);
+
+        mWifiMetrics.logScorerPredictionResult(false, false, false, POLLING_INTERVAL_NOT_DEFAULT,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE);
+
+        ExtendedMockito.verify(() -> WifiStatsLog.write_non_chained(
+                SCORER_PREDICTION_RESULT_REPORTED,
+                Process.WIFI_UID, null,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE,
+                false,
+                SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM,
+                POLLING_INTERVAL_NOT_DEFAULT));
+    }
+
+    @Test
+    public void logScorerPredictionResult_withUnusableEvent() {
+        when(mWifiDataStall.isThroughputSufficient()).thenReturn(false);
+        mWifiMetrics.logWifiIsUnusableEvent(TEST_IFACE_NAME,
+                WifiIsUnusableEvent.TYPE_DATA_STALL_BAD_TX);
+
+        mWifiMetrics.logScorerPredictionResult(false, false, false, POLLING_INTERVAL_DEFAULT,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE);
+
+        ExtendedMockito.verify(() -> WifiStatsLog.write_non_chained(
+                SCORER_PREDICTION_RESULT_REPORTED,
+                Process.WIFI_UID, null,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FRAMEWORK_DATA_STALL,
+                false,
+                SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM,
+                POLLING_INTERVAL_DEFAULT));
+    }
+
+    @Test
+    public void logScorerPredictionResult_wifiSufficient() {
+        when(mWifiDataStall.isThroughputSufficient()).thenReturn(true);
+
+        mWifiMetrics.logScorerPredictionResult(false, false, false, POLLING_INTERVAL_DEFAULT,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE);
+
+        ExtendedMockito.verify(() -> WifiStatsLog.write_non_chained(
+                SCORER_PREDICTION_RESULT_REPORTED,
+                Process.WIFI_UID, null,
+                WIFI_IS_UNUSABLE_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE,
+                true,
+                SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM,
+                POLLING_INTERVAL_DEFAULT));
+    }
+
+    @Test
+    public void resetWifiUnusableEvent() {
+        long eventTime = 0;
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(eventTime);
+
+        mWifiMetrics.logWifiIsUnusableEvent(TEST_IFACE_NAME,
+                WifiIsUnusableEvent.TYPE_DATA_STALL_BAD_TX);
+        assertEquals(WifiIsUnusableEvent.TYPE_DATA_STALL_BAD_TX, mWifiMetrics.mUnusableEventType);
+        mWifiMetrics.resetWifiUnusableEvent();
+        assertEquals(WifiIsUnusableEvent.TYPE_UNKNOWN, mWifiMetrics.mUnusableEventType);
+
+        eventTime += WifiMetrics.MIN_DATA_STALL_WAIT_MS;
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(eventTime);
+        mWifiMetrics.logWifiIsUnusableEvent(TEST_IFACE_NAME,
+                WifiIsUnusableEvent.TYPE_DATA_STALL_TX_WITHOUT_RX);
+        assertEquals(WifiIsUnusableEvent.TYPE_DATA_STALL_TX_WITHOUT_RX,
+                mWifiMetrics.mUnusableEventType);
+        mWifiMetrics.resetWifiUnusableEvent();
+        assertEquals(WifiIsUnusableEvent.TYPE_UNKNOWN, mWifiMetrics.mUnusableEventType);
+
+        eventTime += WifiMetrics.MIN_DATA_STALL_WAIT_MS;
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(eventTime);
+        mWifiMetrics.logWifiIsUnusableEvent(TEST_IFACE_NAME,
+                WifiIsUnusableEvent.TYPE_DATA_STALL_BOTH);
+        assertEquals(WifiIsUnusableEvent.TYPE_DATA_STALL_BOTH, mWifiMetrics.mUnusableEventType);
+        mWifiMetrics.resetWifiUnusableEvent();
+        assertEquals(WifiIsUnusableEvent.TYPE_UNKNOWN, mWifiMetrics.mUnusableEventType);
+
+        eventTime += WifiMetrics.MIN_DATA_STALL_WAIT_MS;
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(eventTime);
+        mWifiMetrics.logWifiIsUnusableEvent(TEST_IFACE_NAME,
+                WifiIsUnusableEvent.TYPE_FIRMWARE_ALERT);
+        assertEquals(WifiIsUnusableEvent.TYPE_FIRMWARE_ALERT, mWifiMetrics.mUnusableEventType);
+        mWifiMetrics.resetWifiUnusableEvent();
+        assertEquals(WifiIsUnusableEvent.TYPE_UNKNOWN, mWifiMetrics.mUnusableEventType);
+
+        eventTime += WifiMetrics.MIN_DATA_STALL_WAIT_MS;
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(eventTime);
+        mWifiMetrics.logWifiIsUnusableEvent(TEST_IFACE_NAME,
+                WifiIsUnusableEvent.TYPE_IP_REACHABILITY_LOST);
+        assertEquals(WifiIsUnusableEvent.TYPE_IP_REACHABILITY_LOST, mWifiMetrics.mUnusableEventType);
+        mWifiMetrics.resetWifiUnusableEvent();
+        assertEquals(WifiIsUnusableEvent.TYPE_UNKNOWN, mWifiMetrics.mUnusableEventType);
     }
 }
