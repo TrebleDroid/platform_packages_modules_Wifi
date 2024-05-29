@@ -62,7 +62,10 @@ public abstract class RunnerState extends State {
     public boolean processMessage(Message message) {
         long startTime = System.currentTimeMillis();
 
-        String signatureToLog = getMessageLogRec(message.what);
+        String signatureToLog = getMessageLogRec(message);
+        if (signatureToLog == null) {
+            signatureToLog = getMessageLogRec(message.what);
+        }
         Trace.traceBegin(Trace.TRACE_TAG_NETWORK, signatureToLog);
         boolean ret = processMessageImpl(message);
         Trace.traceEnd(Trace.TRACE_TAG_NETWORK);
@@ -128,5 +131,15 @@ public abstract class RunnerState extends State {
      * @param what message 'what' field
      * @return Readable string
      */
-    public abstract String getMessageLogRec(int what);
+    public String getMessageLogRec(int what) {
+        return null;
+    };
+
+    /**
+     * Implement this to translate a message into a readable String
+     * @return Readable string
+     */
+    public String getMessageLogRec(Message message) {
+        return null;
+    };
 }

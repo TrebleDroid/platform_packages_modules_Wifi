@@ -11595,10 +11595,6 @@ public class WifiManager {
     })
     public void addCustomDhcpOptions(@NonNull WifiSsid ssid, @NonNull byte[] oui,
             @NonNull List<DhcpOption> options) {
-        if (mVerboseLoggingEnabled) {
-            Log.v(TAG, "addCustomDhcpOptions: ssid="
-                    + ssid + ", oui=" + Arrays.toString(oui) + ", options=" + options);
-        }
         try {
             mService.addCustomDhcpOptions(ssid, oui, options);
         } catch (RemoteException e) {
@@ -11621,9 +11617,6 @@ public class WifiManager {
             android.Manifest.permission.OVERRIDE_WIFI_CONFIG
     })
     public void removeCustomDhcpOptions(@NonNull WifiSsid ssid, @NonNull byte[] oui) {
-        if (mVerboseLoggingEnabled) {
-            Log.v(TAG, "removeCustomDhcpOptions: ssid=" + ssid + ", oui=" + Arrays.toString(oui));
-        }
         try {
             mService.removeCustomDhcpOptions(ssid, oui);
         } catch (RemoteException e) {
