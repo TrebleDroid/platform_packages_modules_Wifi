@@ -918,6 +918,15 @@ public class DeviceConfigFacade {
         mOobPseudonymFeatureFlagChangedListener = listener;
     }
 
+    /**
+     * Get the set of bugreports that are explicitly disabled.
+     * @return A Set of String to indicate disabled auto-bugreports trigger points.
+     */
+    public Set<String> getDisabledAutoBugreportTitleAndDetails() {
+        // TODO: b/336376991
+        return Collections.EMPTY_SET;
+    }
+
     public FeatureFlags getFeatureFlags() {
         return mFeatureFlags;
     }
