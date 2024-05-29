@@ -343,6 +343,7 @@
           <item type="bool" name="config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled" />
           <item type="array" name="config_wifiTwtBlockedOuiList" />
           <item type="bool" name="config_wifiSoftApSingleLinkMloInBridgedModeSupported" />
+          <item type="bool" name="config_wifiTwtSupported" />
 
           <!-- Params from config.xml that can be overlayed -->
 
