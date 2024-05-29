@@ -138,6 +138,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
     @Mock private WorkSourceHelper mWorkSourceHelper1;
     @Mock private WorkSourceHelper mWorkSourceHelper2;
     @Mock private DeviceConfigFacade mDeviceConfigFacade;
+    @Mock private WifiConfigManager mWifiConfigManager;
     @Mock private FeatureFlags mFeatureFlags;
     private TestLooper mTestLooper;
     private Handler mHandler;
@@ -175,6 +176,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         mHandler = new Handler(mTestLooper.getLooper());
 
         when(mWifiInjector.getInterfaceConflictManager()).thenReturn(mInterfaceConflictManager);
+        when(mWifiInjector.getWifiConfigManager()).thenReturn(mWifiConfigManager);
         when(mInterfaceConflictManager.needsUserApprovalToDelete(anyInt(), any(), anyInt(), any()))
                 .thenReturn(false);
         when(mWifiInjector.makeWsHelper(TEST_WORKSOURCE_0)).thenReturn(mWorkSourceHelper0);
@@ -248,6 +250,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         // verify: onStop called
         mInOrder.verify(mWifiMock).stop();
         mInOrder.verify(mManagerStatusListenerMock).onStatusChanged();
+        verify(mWifiConfigManager).writeDataToStorage();
 
         verifyNoMoreInteractions(mManagerStatusListenerMock);
     }
@@ -300,6 +303,7 @@ public class HalDeviceManagerTest extends WifiBaseTest {
 
         // verify: getting onStop
         mInOrder.verify(mManagerStatusListenerMock).onStatusChanged();
+        verify(mWifiConfigManager).writeDataToStorage();
 
         // act: start
         collector.checkThat(mDut.start(), equalTo(true));
