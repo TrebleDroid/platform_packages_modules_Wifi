@@ -4080,7 +4080,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         mContextConfigStoreMockOrder.verify(mWifiConfigStore).write();
         verify(mWifiMetrics).wifiConfigStored(anyInt());
         // Verify shut down handling
-        mWifiConfigManager.handleShutDown();
+        mWifiConfigManager.writeDataToStorage();
         mContextConfigStoreMockOrder.verify(mWifiConfigStore).write();
     }
 

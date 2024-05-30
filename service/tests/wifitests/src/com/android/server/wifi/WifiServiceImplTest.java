@@ -12168,7 +12168,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mBroadcastReceiverCaptor.getValue().onReceive(mContext, intent);
         verify(mActiveModeWarden).notifyShuttingDown();
         verify(mWifiScoreCard).resetAllConnectionStates();
-        verify(mWifiConfigManager).handleShutDown();
+        verify(mWifiConfigManager).writeDataToStorage();
     }
 
     @Test(expected = SecurityException.class)
