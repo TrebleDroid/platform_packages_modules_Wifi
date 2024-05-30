@@ -77,3 +77,12 @@ flag {
     bug: "295885471"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "get_bssid_blocklist_api"
+    is_exported: true
+    namespace: "wifi"
+    description: "Add new API to get BSSID blocklist"
+    bug: "336109216"
+    is_fixed_read_only: true
+}

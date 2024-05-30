@@ -103,8 +103,8 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.ignoreStubs;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.ignoreStubs;
 import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -160,6 +160,7 @@ import android.net.wifi.ILastCallerListener;
 import android.net.wifi.IListListener;
 import android.net.wifi.ILocalOnlyConnectionStatusListener;
 import android.net.wifi.ILocalOnlyHotspotCallback;
+import android.net.wifi.IMacAddressListListener;
 import android.net.wifi.IMapListener;
 import android.net.wifi.INetworkRequestMatchCallback;
 import android.net.wifi.IOnWifiActivityEnergyInfoListener;
@@ -235,6 +236,7 @@ import android.telephony.PhoneStateListener;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.ArrayMap;
+import android.util.ArraySet;
 import android.util.Pair;
 
 import androidx.test.filters.SmallTest;
@@ -1694,6 +1696,67 @@ public class WifiServiceImplTest extends WifiBaseTest {
         assertThrows(SecurityException.class,
                 () -> mWifiServiceImpl.addWifiNetworkStateChangedListener(testListener));
         verify(mActiveModeWarden).addWifiNetworkStateChangedListener(testListener);
+    }
+
+    private class GetBssidBlocklistMatcher implements
+            ArgumentMatcher<ParceledListSlice<MacAddress>> {
+        private boolean mDoMatching;
+        GetBssidBlocklistMatcher(boolean doMatching) {
+            // false to match empty
+            // true to match some BSSID
+            mDoMatching = doMatching;
+        }
+        @Override
+        public boolean matches(ParceledListSlice<MacAddress> macAddresses) {
+            if (mDoMatching) {
+                return macAddresses.getList().size() == 1
+                        && macAddresses.getList().get(0).toString().equals(TEST_BSSID);
+            }
+            return macAddresses.getList().isEmpty();
+        }
+    }
+
+    @Test
+    public void testGetBssidBlocklist() throws Exception {
+        IMacAddressListListener listener = mock(IMacAddressListListener.class);
+        // verify null arguments throw exception
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.getBssidBlocklist(null, listener));
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.getBssidBlocklist(
+                        new ParceledListSlice(Collections.EMPTY_LIST), null));
+
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(false);
+        when(mWifiPermissionsUtil.checkNetworkSetupWizardPermission(anyInt())).thenReturn(false);
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.getBssidBlocklist(
+                        new ParceledListSlice(Collections.EMPTY_LIST), listener));
+
+        // Verify calling with empty SSIDs with network settings permission
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(true);
+        mWifiServiceImpl.getBssidBlocklist(new ParceledListSlice(Collections.EMPTY_LIST), listener);
+        mLooper.dispatchAll();
+        verify(mWifiBlocklistMonitor).getBssidBlocklistForSsids(null);
+        verify(listener).onResult(argThat(new GetBssidBlocklistMatcher(false)));
+
+        // Verify calling with non-null SSIDs with SUW permission, and verify dup SSID gets removed
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(anyInt())).thenReturn(false);
+        when(mWifiPermissionsUtil.checkNetworkSetupWizardPermission(anyInt())).thenReturn(true);
+        when(mWifiBlocklistMonitor.getBssidBlocklistForSsids(any())).thenReturn(
+                Arrays.asList(new String[] {TEST_BSSID}));
+        ParceledListSlice<MacAddress> expectedResult = new ParceledListSlice<>(Arrays.asList(
+                new MacAddress[] {MacAddress.fromString(TEST_BSSID)}));
+        WifiSsid ssid = WifiSsid.fromString(TEST_SSID_WITH_QUOTES);
+        List<WifiSsid> ssidListWithDup = new ArrayList<>();
+        ssidListWithDup.add(ssid);
+        ssidListWithDup.add(ssid);
+        ParceledListSlice<WifiSsid> ssidsParceledListWithDup =
+                new ParceledListSlice<>(ssidListWithDup);
+        Set<String> ssidSet = new ArraySet<>(Arrays.asList(new String[]{TEST_SSID_WITH_QUOTES}));
+        mWifiServiceImpl.getBssidBlocklist(ssidsParceledListWithDup, listener);
+        mLooper.dispatchAll();
+        verify(mWifiBlocklistMonitor).getBssidBlocklistForSsids(ssidSet);
+        verify(listener).onResult(argThat(new GetBssidBlocklistMatcher(true)));
     }
 
     /**
