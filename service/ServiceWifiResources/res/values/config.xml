@@ -1330,4 +1330,13 @@
 
     <!-- Wi-Fi chip supports single link MLO SoftAp instances in the bridged mode -->
     <bool translatable="false" name="config_wifiSoftApSingleLinkMloInBridgedModeSupported">false</bool>
+
+    <!-- Boolean indicating whether Target Wake Time (TWT) feature is supported or not. This flag
+         overrides the device's TWT capability if set to false. If the device supports TWT and this
+         overlay parameter is set to false, the application cannot set up a TWT session. Also, the
+         API WifiManager#getTwtCapabilities returns TWT unsupported even if the device is capable
+         of setting up TWT session.
+    -->
+    <bool translatable="false" name="config_wifiTwtSupported">true</bool>
+
 </resources>
