@@ -1114,6 +1114,7 @@ public class HalDeviceManager {
         dispatchRttControllerLifecycleOnDestroyed();
         mRttControllerLifecycleCallbacks.clear();
         mWifiP2pIfaces.clear();
+        mWifiInjector.getWifiConfigManager().writeDataToStorage();
     }
 
     private class WifiDeathRecipient implements WifiHal.DeathRecipient {

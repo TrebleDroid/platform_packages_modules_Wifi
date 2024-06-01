@@ -59,6 +59,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -159,6 +161,8 @@ public class WifiDiagnosticsTest extends WifiBaseTest {
         when(mActiveModeWarden.getPrimaryClientModeManager()).thenReturn(mClientModeManager);
         when(mActiveModeWarden.getClientModeManagers()).thenReturn(clientModeManagerList);
         when(mDeviceConfigFacade.getBugReportMinWindowMs()).thenReturn(BUG_REPORT_MIN_WINDOW_MS);
+        when(mDeviceConfigFacade.getDisabledAutoBugreportTitleAndDetails()).thenReturn(
+                Collections.EMPTY_SET);
         when(mContext.getPackageManager()).thenReturn(mPackageManager);
         when(mPackageManager.queryIntentActivities(any(), anyInt())).thenReturn(mResolveInfoList);
         // needed to for the loop in WifiDiagnostics.readLogcatStreamLinesWithTimeout().
@@ -921,6 +925,17 @@ public class WifiDiagnosticsTest extends WifiBaseTest {
         when(mBuildProperties.isUserBuild()).thenReturn(false);
         mWifiDiagnostics.takeBugReport("", "");
         verify(mPackageManager, times(1)).queryIntentActivities(any(), anyInt());
+    }
+
+    @Test
+    public void takeBugreportIgnoredWhenTitleAndDetailDisabled() {
+        // Verify bugreport is disabled for a specific title and detail.
+        // Use set of empty String here to match empty title and detail.
+        when(mDeviceConfigFacade.getDisabledAutoBugreportTitleAndDetails()).thenReturn(
+                new HashSet<>(Arrays.asList("TITLEDETAIL")));
+        when(mBuildProperties.isUserBuild()).thenReturn(false);
+        mWifiDiagnostics.takeBugReport("TITLE", "DETAIL");
+        verify(mPackageManager, never()).queryIntentActivities(any(), anyInt());
     }
 
     @Test

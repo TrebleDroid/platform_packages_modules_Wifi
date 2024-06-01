@@ -4566,9 +4566,9 @@ public class WifiConfigManager {
     }
 
     /**
-     * Handle the device shutdown, should write all cached data to the storage
+     * Write all cached data to the storage
      */
-    public void handleShutDown() {
+    public void writeDataToStorage() {
         if (mPendingStoreRead) {
             Log.e(TAG, "Cannot save to store before store is read!");
             return;
