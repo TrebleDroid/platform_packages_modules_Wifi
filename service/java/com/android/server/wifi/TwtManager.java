@@ -97,12 +97,12 @@ class TwtManager {
     private final AlarmManager mAlarmManager;
     private final Handler mHandler;
     ArraySet<Integer> mBlockedOuiSet = new ArraySet<>();
-
     private final WifiNative mWifiNative;
     private final WifiNativeTwtEvents mWifiNativeTwtEvents;
     private final AlarmManager.OnAlarmListener mTimeoutListener = () -> {
         startGarbageCollector();
     };
+    private final WifiInjector mWifiInjector;
 
     /**
      * Whenever primary clientModeManager identified by the interface name gets disconnected, reset
@@ -121,6 +121,7 @@ class TwtManager {
     TwtManager(@NonNull WifiInjector wifiInjector, @NonNull ClientModeImplMonitor cmiMonitor,
             @NonNull WifiNative wifiNative, @NonNull Handler handler, @NonNull Clock clock,
             int maxSessions, int startOffset) {
+        mWifiInjector = wifiInjector;
         mAlarmManager = wifiInjector.getAlarmManager();
         mHandler = handler;
         mClock = clock;
@@ -483,7 +484,7 @@ class TwtManager {
     public void getTwtCapabilities(@Nullable String interfaceName,
             @NonNull ITwtCapabilitiesListener listener) {
         try {
-            if (interfaceName == null) {
+            if (interfaceName == null || !isTwtSupported()) {
                 listener.onResult(getDefaultTwtCapabilities());
                 return;
             }
@@ -506,6 +507,11 @@ class TwtManager {
      */
     public void setupTwtSession(@Nullable String interfaceName, @NonNull TwtRequest twtRequest,
             @NonNull ITwtCallback iTwtCallback, int callingUid, @NonNull String bssid) {
+        if (!isTwtSupported() || !isTwtCapable(interfaceName)) {
+            notifyFailure(iTwtCallback, CallbackType.SETUP,
+                    TwtSessionCallback.TWT_ERROR_CODE_NOT_SUPPORTED);
+            return;
+        }
         if (isOuiBlockListed(bssid)) {
             notifyFailure(iTwtCallback, CallbackType.SETUP,
                     TwtSessionCallback.TWT_ERROR_CODE_AP_OUI_BLOCKLISTED);
@@ -525,6 +531,18 @@ class TwtManager {
             notifyFailure(iTwtCallback, CallbackType.SETUP,
                     TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE);
         }
+    }
+
+    private boolean isTwtSupported() {
+        return mWifiInjector.getContext().getResources().getBoolean(
+                R.bool.config_wifiTwtSupported);
+    }
+
+    private boolean isTwtCapable(String interfaceName) {
+        if (interfaceName == null) return false;
+        Bundle twtCapabilities = mWifiNative.getTwtCapabilities(interfaceName);
+        if (twtCapabilities == null) return false;
+        return twtCapabilities.getBoolean(WifiManager.TWT_CAPABILITIES_KEY_BOOLEAN_TWT_REQUESTER);
     }
 
     private boolean isOuiBlockListed(@NonNull String bssid) {

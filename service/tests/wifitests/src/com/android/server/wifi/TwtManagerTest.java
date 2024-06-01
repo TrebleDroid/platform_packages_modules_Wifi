@@ -118,11 +118,20 @@ public class TwtManagerTest extends WifiBaseTest {
                 {TEST_BLOCKED_OUI_4, TEST_BLOCKED_OUI_3, TEST_BLOCKED_OUI_2, TEST_BLOCKED_OUI_1};
         when(mResources.getIntArray(R.array.config_wifiTwtBlockedOuiList)).thenReturn(
                 blockedOuiList);
+        when(mResources.getBoolean(R.bool.config_wifiTwtSupported)).thenReturn(true);
         mTwtManager = new TwtManager(mWifiInjector, mCmiMonitor, mWifiNative, mHandler, mClock,
                 WifiTwtSession.MAX_TWT_SESSIONS, TWT_CALLBACKS_ID_START_OFFSET);
         verify(mCmiMonitor).registerListener(mCmiListenerCaptor.capture());
         mTwtManager.registerWifiNativeTwtEvents();
         verify(mWifiNative).registerTwtCallbacks(mWifiNativeTwtEventsArgumentCaptor.capture());
+        when(mWifiNative.getTwtCapabilities(eq(WIFI_IFACE_NAME))).thenReturn(
+                getMockTwtCapabilities());
+    }
+
+    private void disableTwtSupport() {
+        when(mResources.getBoolean(R.bool.config_wifiTwtSupported)).thenReturn(false);
+        mTwtManager = new TwtManager(mWifiInjector, mCmiMonitor, mWifiNative, mHandler, mClock,
+                WifiTwtSession.MAX_TWT_SESSIONS, TWT_CALLBACKS_ID_START_OFFSET);
     }
 
     private Bundle getDefaultTwtCapabilities() {
@@ -199,6 +208,11 @@ public class TwtManagerTest extends WifiBaseTest {
         mTwtManager.getTwtCapabilities(WIFI_IFACE_NAME, iTwtCapabilitiesListener);
         inorder.verify(iTwtCapabilitiesListener).onResult(
                 argThat(argument -> isBundleContentEqual(mockTwtCapabilities, argument)));
+        // Disable overlay and test
+        disableTwtSupport();
+        mTwtManager.getTwtCapabilities(WIFI_IFACE_NAME, iTwtCapabilitiesListener);
+        inorder.verify(iTwtCapabilitiesListener).onResult(
+                argThat(argument -> isBundleContentEqual(defaultTwtCapabilities, argument)));
     }
 
     @Test
@@ -227,7 +241,7 @@ public class TwtManagerTest extends WifiBaseTest {
         mTwtManager.setupTwtSession(null, twtRequest, iTwtCallback, Binder.getCallingUid(),
                 TEST_BSSID);
         inOrderCallback.verify(iTwtCallback).onFailure(
-                TwtSessionCallback.TWT_ERROR_CODE_NOT_AVAILABLE);
+                TwtSessionCallback.TWT_ERROR_CODE_NOT_SUPPORTED);
         // Test when wifiNative.setupTwtSession return false
         when(mWifiNative.setupTwtSession(eq(1), eq(WIFI_IFACE_NAME), eq(twtRequest))).thenReturn(
                 false);
@@ -248,6 +262,28 @@ public class TwtManagerTest extends WifiBaseTest {
         inOrderBinder.verify(mAppBinder).linkToDeath(any(IBinder.DeathRecipient.class), anyInt());
         inOrderAlarm.verify(mAlarmManager).set(eq(AlarmManager.ELAPSED_REALTIME), anyLong(),
                 anyString(), any(AlarmManager.OnAlarmListener.class), eq(mHandler));
+        // Enable overlay, disable TWT capability, and test
+        when(mWifiNative.getTwtCapabilities(eq(WIFI_IFACE_NAME))).thenReturn(
+                getDefaultTwtCapabilities());
+        mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
+                Binder.getCallingUid(), TEST_BSSID);
+        inOrderCallback.verify(iTwtCallback).onFailure(
+                TwtSessionCallback.TWT_ERROR_CODE_NOT_SUPPORTED);
+        // Disable overlay, enable TWT capability, and test
+        when(mWifiNative.getTwtCapabilities(eq(WIFI_IFACE_NAME))).thenReturn(
+                getMockTwtCapabilities());
+        disableTwtSupport();
+        mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
+                Binder.getCallingUid(), TEST_BSSID);
+        inOrderCallback.verify(iTwtCallback).onFailure(
+                TwtSessionCallback.TWT_ERROR_CODE_NOT_SUPPORTED);
+        // Disable overlay, disable TWT capability, and test
+        when(mWifiNative.getTwtCapabilities(eq(WIFI_IFACE_NAME))).thenReturn(
+                getDefaultTwtCapabilities());
+        mTwtManager.setupTwtSession(WIFI_IFACE_NAME, twtRequest, iTwtCallback,
+                Binder.getCallingUid(), TEST_BSSID);
+        inOrderCallback.verify(iTwtCallback).onFailure(
+                TwtSessionCallback.TWT_ERROR_CODE_NOT_SUPPORTED);
     }
 
     @Test
