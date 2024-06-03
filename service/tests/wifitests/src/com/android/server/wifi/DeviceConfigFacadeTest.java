@@ -19,6 +19,7 @@ package com.android.server.wifi;
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.verify;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 import android.app.test.MockAnswerUtil.AnswerWithArguments;
@@ -234,6 +235,8 @@ public class DeviceConfigFacadeTest extends WifiBaseTest {
         assertEquals(false, mDeviceConfigFacade.isAdjustPollRssiIntervalEnabled());
         assertEquals(true, mDeviceConfigFacade.includePasspointSsidsInPnoScans());
         assertEquals(true, mDeviceConfigFacade.isHandleRssiOrganicKernelFailuresEnabled());
+        assertEquals(Collections.EMPTY_SET,
+                mDeviceConfigFacade.getDisabledAutoBugreportTitleAndDetails());
     }
 
     /**
@@ -376,6 +379,9 @@ public class DeviceConfigFacadeTest extends WifiBaseTest {
                 anyBoolean())).thenReturn(true);
         when(DeviceConfig.getBoolean(anyString(), eq("handle_rssi_organic_kernel_failures_enabled"),
                 anyBoolean())).thenReturn(true);
+        when(DeviceConfig.getString(anyString(),
+                eq("disabled_auto_bugreport_title_and_description"), any()))
+                .thenReturn("TITLE_1DETAIL_1,TITLE_2DETAIL_2");
         mOnPropertiesChangedListenerCaptor.getValue().onPropertiesChanged(null);
 
         // Verifying fields are updated to the new values
@@ -449,6 +455,11 @@ public class DeviceConfigFacadeTest extends WifiBaseTest {
         assertEquals(true, mDeviceConfigFacade.isAdjustPollRssiIntervalEnabled());
         assertEquals(true, mDeviceConfigFacade.includePasspointSsidsInPnoScans());
         assertEquals(true, mDeviceConfigFacade.isHandleRssiOrganicKernelFailuresEnabled());
+        Set<String> disabledAutoBugreports =
+                mDeviceConfigFacade.getDisabledAutoBugreportTitleAndDetails();
+        assertEquals(2, disabledAutoBugreports.size());
+        assertTrue(disabledAutoBugreports.contains("TITLE_1DETAIL_1"));
+        assertTrue(disabledAutoBugreports.contains("TITLE_2DETAIL_2"));
 
         when(DeviceConfig.getBoolean(anyString(), eq("oob_pseudonym_enabled"),
                 anyBoolean())).thenReturn(false);

@@ -220,6 +220,7 @@ public class DeviceConfigFacade {
     private boolean mSoftwarePnoEnabled;
     private boolean mIncludePasspointSsidsInPnoScans;
     private boolean mHandleRssiOrganicKernelFailuresEnabled;
+    private Set<String> mDisabledAutoBugreports = Collections.EMPTY_SET;
 
     private final Handler mWifiHandler;
 
@@ -421,6 +422,24 @@ public class DeviceConfigFacade {
                 "include_passpoint_ssids_in_pno_scans", true);
         mHandleRssiOrganicKernelFailuresEnabled = DeviceConfig.getBoolean(NAMESPACE,
                 "handle_rssi_organic_kernel_failures_enabled", true);
+        mDisabledAutoBugreports = getDisabledAutoBugreports();
+    }
+
+    private Set<String> getDisabledAutoBugreports() {
+        String rawList = DeviceConfig.getString(NAMESPACE,
+                "disabled_auto_bugreport_title_and_description", null);
+        if (rawList == null || rawList.isEmpty()) {
+            return Collections.EMPTY_SET;
+        }
+        Set<String> result = new ArraySet<>();
+        String[] list = rawList.split(",");
+        for (String cur : list) {
+            if (cur.length() == 0) {
+                continue;
+            }
+            result.add(cur);
+        }
+        return Collections.unmodifiableSet(result);
     }
 
     private Set<String> getUnmodifiableSetQuoted(String key) {
@@ -923,8 +942,7 @@ public class DeviceConfigFacade {
      * @return A Set of String to indicate disabled auto-bugreports trigger points.
      */
     public Set<String> getDisabledAutoBugreportTitleAndDetails() {
-        // TODO: b/336376991
-        return Collections.EMPTY_SET;
+        return mDisabledAutoBugreports;
     }
 
     public FeatureFlags getFeatureFlags() {
