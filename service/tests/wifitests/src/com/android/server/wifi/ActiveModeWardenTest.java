@@ -189,6 +189,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
     @Mock LastCallerInfoManager mLastCallerInfoManager;
     @Mock WifiGlobals mWifiGlobals;
     @Mock WifiConnectivityManager mWifiConnectivityManager;
+    @Mock WifiConfigManager mWifiConfigManager;
 
     Listener<ConcreteClientModeManager> mClientListener;
     Listener<SoftApManager> mSoftApListener;
@@ -222,6 +223,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         when(mWifiInjector.getUserManager()).thenReturn(mUserManager);
         when(mWifiInjector.getWifiHandlerLocalLog()).thenReturn(mLocalLog);
         when(mWifiInjector.getWifiConnectivityManager()).thenReturn(mWifiConnectivityManager);
+        when(mWifiInjector.getWifiConfigManager()).thenReturn(mWifiConfigManager);
         when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
         when(mClientModeManager.getInterfaceName()).thenReturn(WIFI_IFACE_NAME);
         when(mContext.getResources()).thenReturn(mResources);
@@ -1178,6 +1180,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mWifiDiagnostics).triggerBugReportDataCapture(
                 WifiDiagnostics.REPORT_REASON_WIFINATIVE_FAILURE);
         verify(mSelfRecovery).trigger(eq(SelfRecovery.REASON_WIFINATIVE_FAILURE));
+        verify(mWifiConfigManager).writeDataToStorage();
     }
 
     /**
@@ -1191,6 +1194,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mWifiDiagnostics, never()).triggerBugReportDataCapture(
                 WifiDiagnostics.REPORT_REASON_WIFINATIVE_FAILURE);
         verify(mSelfRecovery, never()).trigger(eq(SelfRecovery.REASON_WIFINATIVE_FAILURE));
+        verify(mWifiConfigManager, never()).writeDataToStorage();
     }
 
     /**
@@ -1203,6 +1207,7 @@ public class ActiveModeWardenTest extends WifiBaseTest {
         verify(mWifiDiagnostics, never()).triggerBugReportDataCapture(
                 WifiDiagnostics.REPORT_REASON_WIFINATIVE_FAILURE);
         verify(mSelfRecovery, never()).trigger(eq(SelfRecovery.REASON_WIFINATIVE_FAILURE));
+        verify(mWifiConfigManager, never()).writeDataToStorage();
     }
 
     /**
