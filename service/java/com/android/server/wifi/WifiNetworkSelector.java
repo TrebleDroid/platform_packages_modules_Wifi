@@ -1104,6 +1104,11 @@ public class WifiNetworkSelector {
                 || isNetworkSelectionNeeded(cmmStates);
         final String userConnectChoiceKey;
         if (!networkSelectionNeeded) {
+            if (!isAssociatedNetworkSelectionEnabled()) {
+                // Skip network selection based on connect choice because associated network
+                // selection is disabled.
+                return null;
+            }
             userConnectChoiceKey = getConnectChoiceKey(cmmStates);
             if (userConnectChoiceKey == null) {
                 return null;
