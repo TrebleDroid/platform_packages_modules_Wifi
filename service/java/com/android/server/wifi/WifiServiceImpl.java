@@ -5599,6 +5599,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     pw.println();
                     mWifiInjector.getWifiVoipDetector().dump(fd, pw, args);
                 }
+                pw.println();
             }
         }, TAG + "#dump");
     }
