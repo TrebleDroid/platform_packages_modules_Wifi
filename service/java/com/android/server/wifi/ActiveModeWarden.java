@@ -411,18 +411,17 @@ public class ActiveModeWarden {
 
         wifiNative.registerStatusListener(isReady -> {
             if (!isReady && !mIsShuttingdown) {
-                mHandler.post(() -> {
-                    Log.e(TAG, "One of the native daemons died. Triggering recovery");
-                    wifiDiagnostics.triggerBugReportDataCapture(
-                            WifiDiagnostics.REPORT_REASON_WIFINATIVE_FAILURE);
+                Log.e(TAG, "One of the native daemons died. Triggering recovery");
+                mWifiInjector.getWifiConfigManager().writeDataToStorage();
+                wifiDiagnostics.triggerBugReportDataCapture(
+                        WifiDiagnostics.REPORT_REASON_WIFINATIVE_FAILURE);
 
-                    // immediately trigger SelfRecovery if we receive a notice about an
-                    // underlying daemon failure
-                    // Note: SelfRecovery has a circular dependency with ActiveModeWarden and is
-                    // instantiated after ActiveModeWarden, so use WifiInjector to get the instance
-                    // instead of directly passing in SelfRecovery in the constructor.
+                // immediately trigger SelfRecovery if we receive a notice about an
+                // underlying daemon failure
+                // Note: SelfRecovery has a circular dependency with ActiveModeWarden and is
+                // instantiated after ActiveModeWarden, so use WifiInjector to get the instance
+                // instead of directly passing in SelfRecovery in the constructor.
                     mWifiInjector.getSelfRecovery().trigger(SelfRecovery.REASON_WIFINATIVE_FAILURE);
-                });
             }
         });
 

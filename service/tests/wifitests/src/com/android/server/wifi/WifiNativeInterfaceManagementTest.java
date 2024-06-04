@@ -929,6 +929,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
         // Trigger vendor HAL death
 
         mWifiVendorHalDeathHandlerCaptor.getValue().onDeath();
+        mLooper.dispatchAll();
 
         mInOrder.verify(mWifiMetrics).incrementNumHalCrashes();
 
@@ -976,6 +977,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
 
         // Trigger vendor HAL death
         mHostapdDeathHandlerCaptor.getValue().onDeath();
+        mLooper.dispatchAll();
 
         mInOrder.verify(mWifiMetrics).incrementNumHostapdCrashes();
 
@@ -1005,6 +1007,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
 
         // Trigger vendor HAL death
         mHostapdDeathHandlerCaptor.getValue().onDeath();
+        mLooper.dispatchAll();
 
         mInOrder.verify(mWifiMetrics).incrementNumHostapdCrashes();
 
