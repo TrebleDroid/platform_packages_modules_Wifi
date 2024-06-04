@@ -5391,6 +5391,34 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     /**
+     * Verify that the CONNECT_NETWORK message received from NF is forwarded to
+     * ClientModeManager.
+     */
+    @Test
+    public void testConnectNetworkWithNfcUid() throws Exception {
+        final int origCallingUid = Binder.getCallingUid();
+        BinderUtil.setUid(Process.NFC_UID);
+        try {
+            when(mWifiConfigManager.addOrUpdateNetwork(any(), anyInt()))
+                    .thenReturn(new NetworkUpdateResult(TEST_NETWORK_ID));
+            WifiConfiguration config = new WifiConfiguration();
+            config.SSID = TEST_SSID;
+            when(mWifiConfigManager.getConfiguredNetwork(TEST_NETWORK_ID))
+                    .thenReturn(config);
+            mWifiServiceImpl.connect(config, TEST_NETWORK_ID, mock(IActionListener.class),
+                    TEST_PACKAGE_NAME, mExtras);
+            mLooper.dispatchAll();
+            verify(mWifiConfigManager).addOrUpdateNetwork(eq(config), anyInt());
+            verify(mConnectHelper).connectToNetwork(any(NetworkUpdateResult.class),
+                    any(ActionListenerWrapper.class), anyInt(), any(), any());
+            verify(mLastCallerInfoManager).put(eq(WifiManager.API_CONNECT_CONFIG), anyInt(),
+                    anyInt(), anyInt(), anyString(), eq(true));
+        } finally {
+            BinderUtil.setUid(origCallingUid);
+        }
+    }
+
+    /**
      * Verify the secondary internet CMM is stopped when explicit connection is initiated on the
      * primary.
      */
