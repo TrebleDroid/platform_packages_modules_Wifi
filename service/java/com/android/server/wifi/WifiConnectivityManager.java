@@ -73,6 +73,7 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -265,6 +266,8 @@ public class WifiConnectivityManager {
     private @DeviceMobilityState int mDeviceMobilityState =
             WifiManager.DEVICE_MOBILITY_STATE_UNKNOWN;
 
+    // Cached WifiCandidate timestamps for delayed carrier network selection
+    private Map<WifiCandidates.Key, Long> mDelayedCarrierCandidateTimestamps = new HashMap<>();
     private Set<Integer> mDelayedSelectionCarrierIds = new HashSet<>();
     private long mDelayedCarrierSelectionTimeMs;
 
@@ -652,6 +655,9 @@ public class WifiConnectivityManager {
                 scanDetails, bssidBlocklist, cmmStates, mUntrustedConnectionAllowed,
                 mOemPaidConnectionAllowed, mOemPrivateConnectionAllowed,
                 mRestrictedConnectionAllowedUids, skipSufficiencyCheck);
+
+        // Filter candidates before caching to avoid reconnecting on failure
+        candidates = filterDelayedCarrierSelectionCandidates(candidates, listenerName, isFullScan);
         mLatestCandidates = candidates;
         mLatestCandidatesTimestampMs = mClock.getElapsedSinceBootMillis();
 
@@ -882,6 +888,79 @@ public class WifiConnectivityManager {
         }
         mWifiMetrics.incrementNumHighMovementConnectionSkipped();
         return null;
+    }
+
+    /**
+     * Filter carrier candidates affected by the delayed carrier selection optimization.
+     */
+    private List<WifiCandidates.Candidate> filterDelayedCarrierSelectionCandidates(
+            List<WifiCandidates.Candidate> candidates, String listenerName, boolean isFullScan) {
+        if (mDelayedSelectionCarrierIds == null || mDelayedSelectionCarrierIds.isEmpty()) {
+            // No carrier IDs apply to this filter
+            return candidates;
+        }
+
+        boolean isNotPartialScan = isFullScan || listenerName.equals(PNO_SCAN_LISTENER);
+        if (candidates == null || candidates.isEmpty()) {
+            // No connectable networks nearby or network selection is unnecessary
+            if (isNotPartialScan) {
+                mDelayedCarrierCandidateTimestamps.clear();
+            }
+            return null;
+        }
+
+        List<WifiCandidates.Candidate> delayedCarrierCandidates = new ArrayList<>();
+        List<WifiCandidates.Candidate> nonAffectedCandidates = new ArrayList<>();
+        for (WifiCandidates.Candidate candidate : candidates) {
+            WifiConfiguration configuration =
+                    mConfigManager.getConfiguredNetwork(candidate.getNetworkConfigId());
+            if (configuration != null
+                    && mDelayedSelectionCarrierIds.contains(configuration.carrierId)) {
+                delayedCarrierCandidates.add(candidate);
+            } else {
+                nonAffectedCandidates.add(candidate);
+            }
+        }
+
+        if (isNotPartialScan) {
+            updateDelayedCarrierCandidateTimestamps(delayedCarrierCandidates);
+        }
+        if (delayedCarrierCandidates.isEmpty()) {
+            return candidates;
+        }
+
+        // Include delayed carrier candidates that were first seen
+        // at least mDelayedCarrierSelectionTimeMs ago
+        long currentTimeMs = mClock.getElapsedSinceBootMillis();
+        List<WifiCandidates.Candidate> filteredCandidates = new ArrayList<>();
+        for (WifiCandidates.Candidate candidate : delayedCarrierCandidates) {
+            long firstSeenTimeMs = mDelayedCarrierCandidateTimestamps
+                    .getOrDefault(candidate.getKey(), currentTimeMs);
+            if ((currentTimeMs - firstSeenTimeMs) > mDelayedCarrierSelectionTimeMs) {
+                filteredCandidates.add(candidate);
+            }
+        }
+        Log.i(TAG, filteredCandidates.size() + " of " + delayedCarrierCandidates.size()
+                + " delayed carrier candidates are eligible for network selection");
+        filteredCandidates.addAll(nonAffectedCandidates);
+        return filteredCandidates;
+    }
+
+    /**
+     * Update the first seen timestamp for all delayed carrier scan candidates.
+     */
+    private void updateDelayedCarrierCandidateTimestamps(
+            List<WifiCandidates.Candidate> delayedCarrierCandidates) {
+        Map<WifiCandidates.Key, Long> updatedTimestamps = new HashMap<>();
+        long currentTimeMs = mClock.getElapsedSinceBootMillis();
+        for (WifiCandidates.Candidate candidate : delayedCarrierCandidates) {
+            WifiCandidates.Key candidateKey = candidate.getKey();
+            // Use the existing first-seen time if this candidate has been seen before
+            long firstSeenTimestamp = mDelayedCarrierCandidateTimestamps.getOrDefault(
+                    candidateKey, currentTimeMs);
+            updatedTimestamps.put(candidateKey, firstSeenTimestamp);
+        }
+        mDelayedCarrierCandidateTimestamps = updatedTimestamps;
     }
 
     private void updateUserDisabledList(List<ScanDetail> scanDetails) {
