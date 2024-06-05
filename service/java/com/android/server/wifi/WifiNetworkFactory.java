@@ -1439,12 +1439,8 @@ public class WifiNetworkFactory extends NetworkFactory {
             mConnectedSpecificNetworkRequestSpecifier = mActiveSpecificNetworkRequestSpecifier;
             mConnectedUids.clear();
         }
-        if (mActiveSpecificNetworkRequest.getRequestorUid() == 0) {
-            // For shell test call from root
-            mConnectedUids.add(Process.SYSTEM_UID);
-        } else {
-            mConnectedUids.add(mActiveSpecificNetworkRequest.getRequestorUid());
-        }
+
+        mConnectedUids.add(mActiveSpecificNetworkRequest.getRequestorUid());
         mActiveSpecificNetworkRequest = null;
         mActiveSpecificNetworkRequestSpecifier = null;
         mSkipUserDialogue = false;

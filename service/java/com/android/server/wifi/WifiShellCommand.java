@@ -1220,7 +1220,10 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     ConnectivityManager.NetworkCallback networkCallback =
                             new ConnectivityManager.NetworkCallback();
                     pw.println("Adding request: " + networkRequest);
-                    mConnectivityManager.requestNetwork(networkRequest, networkCallback);
+                    mWifiThreadRunner.post(() -> mConnectivityManager
+                                    .requestNetwork(networkRequest, networkCallback),
+                            "shell#add-request");
+
                     sActiveRequests.put(ssid, Pair.create(networkRequest, networkCallback));
                     return 0;
                 }
@@ -1233,7 +1236,10 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         return -1;
                     }
                     pw.println("Removing request: " + nrAndNc.first);
-                    mConnectivityManager.unregisterNetworkCallback(nrAndNc.second);
+                    mWifiThreadRunner.post(() -> mConnectivityManager
+                                    .unregisterNetworkCallback(nrAndNc.second),
+                            "shell#remove-request")
+                    ;
                     return 0;
                 }
                 case "remove-all-requests":

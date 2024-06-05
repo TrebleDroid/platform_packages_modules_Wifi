@@ -58,8 +58,10 @@ import android.net.wifi.WifiNetworkSpecifier;
 import android.net.wifi.WifiNetworkSuggestion;
 import android.net.wifi.WifiScanner;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.PatternMatcher;
 import android.os.Process;
+import android.os.test.TestLooper;
 
 import androidx.test.filters.SmallTest;
 
@@ -101,16 +103,17 @@ public class WifiShellCommandTest extends WifiBaseTest {
     @Mock WifiCarrierInfoManager mWifiCarrierInfoManager;
     @Mock WifiNetworkFactory mWifiNetworkFactory;
     @Mock WifiGlobals mWifiGlobals;
-    @Mock WifiThreadRunner mWifiThreadRunner;
     @Mock ScanRequestProxy mScanRequestProxy;
     @Mock WifiDiagnostics mWifiDiagnostics;
     @Mock DeviceConfigFacade mDeviceConfig;
     @Mock WifiScanner mWifiScanner;
     WifiShellCommand mWifiShellCommand;
+    TestLooper mLooper;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        mLooper = new TestLooper();
 
         when(mWifiInjector.getActiveModeWarden()).thenReturn(mActiveModeWarden);
         when(mActiveModeWarden.getPrimaryClientModeManager()).thenReturn(mPrimaryClientModeManager);
@@ -135,7 +138,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         when(mScanRequestProxy.getScanResults()).thenReturn(new ArrayList<>());
 
         mWifiShellCommand = new WifiShellCommand(mWifiInjector, mWifiService, mContext,
-                mWifiGlobals, mWifiThreadRunner);
+                mWifiGlobals, new WifiThreadRunner(new Handler(mLooper.getLooper())));
 
         // by default emulate shell uid.
         BinderUtil.setUid(Process.SHELL_UID);
@@ -904,6 +907,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "open"});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -918,6 +922,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "owe"});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -933,6 +938,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "wpa2", testPassphrase});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -948,6 +954,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "wpa3", testPassphrase});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -963,6 +970,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "open", "-b", testBssid});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -978,6 +986,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", "-g", testSsid, "open"});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
