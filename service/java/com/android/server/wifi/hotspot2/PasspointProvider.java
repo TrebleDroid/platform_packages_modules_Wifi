@@ -351,7 +351,8 @@ public class PasspointProvider {
 
         // Install the client private key & certificate.
         if (mConfig.getCredential().getClientPrivateKey() != null
-                && mConfig.getCredential().getClientCertificateChain() != null) {
+                && mConfig.getCredential().getClientCertificateChain() != null
+                && mConfig.getCredential().getCertCredential() != null) {
             String keyName = ALIAS_HS_TYPE + mProviderId;
             PrivateKey clientKey = mConfig.getCredential().getClientPrivateKey();
             X509Certificate clientCert = getClientCertificate(
