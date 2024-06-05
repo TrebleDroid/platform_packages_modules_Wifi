@@ -66,16 +66,15 @@ public class WifiDeviceStateChangeManager {
                     @Override
                     public void onReceive(Context context, Intent intent) {
                         String action = intent.getAction();
-                        if (TextUtils.equals(action, Intent.ACTION_SCREEN_ON)) {
-                            handleScreenStateChanged(true);
-                        } else if (TextUtils.equals(action, Intent.ACTION_SCREEN_OFF)) {
-                            handleScreenStateChanged(false);
+                        if (TextUtils.equals(action, Intent.ACTION_SCREEN_ON)
+                                || TextUtils.equals(action, Intent.ACTION_SCREEN_OFF)) {
+                            mHandler.post(() ->
+                                    handleScreenStateChanged(TextUtils.equals(action,
+                                            Intent.ACTION_SCREEN_ON)));
                         }
                     }
                 },
-                filter,
-                null,
-                mHandler);
+                filter);
         handleScreenStateChanged(mPowerManager.isInteractive());
         mIsWifiServiceStarted = true;
     }
