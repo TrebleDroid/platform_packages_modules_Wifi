@@ -379,7 +379,8 @@ public class WifiNetworkSuggestionsManager {
             config.shared = false;
             config.allowAutojoin = isAutojoinEnabled;
             if (config.enterpriseConfig
-                    != null && config.enterpriseConfig.isAuthenticationSimBased()) {
+                    != null && config.enterpriseConfig.isAuthenticationSimBased()
+                    && anonymousIdentity != null) {
                 config.enterpriseConfig.setAnonymousIdentity(anonymousIdentity);
             }
             config.getNetworkSelectionStatus().setConnectChoice(connectChoice);
