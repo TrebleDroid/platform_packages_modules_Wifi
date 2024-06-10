@@ -315,6 +315,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"network-suggestions-set-user-approved", TEST_PACKAGE, "yes"});
+        mLooper.dispatchAll();
         verify(mWifiNetworkSuggestionsManager, never()).setHasUserApprovedForApp(
                 anyBoolean(), anyInt(), anyString());
         assertFalse(mWifiShellCommand.getErrPrintWriter().toString().isEmpty());
@@ -324,12 +325,14 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"network-suggestions-set-user-approved", TEST_PACKAGE, "yes"});
+        mLooper.dispatchAll();
         verify(mWifiNetworkSuggestionsManager).setHasUserApprovedForApp(
                 eq(true), anyInt(), eq(TEST_PACKAGE));
 
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"network-suggestions-set-user-approved", TEST_PACKAGE, "no"});
+        mLooper.dispatchAll();
         verify(mWifiNetworkSuggestionsManager).setHasUserApprovedForApp(
                 eq(false), anyInt(), eq(TEST_PACKAGE));
     }
