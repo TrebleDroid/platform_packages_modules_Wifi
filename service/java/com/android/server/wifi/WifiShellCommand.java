@@ -553,8 +553,10 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 case "network-suggestions-set-user-approved": {
                     String packageName = getNextArgRequired();
                     boolean approved = getNextArgRequiredTrueOrFalse("yes", "no");
-                    mWifiNetworkSuggestionsManager.setHasUserApprovedForApp(approved,
-                            Binder.getCallingUid(), packageName);
+                    mWifiThreadRunner.post(() -> mWifiNetworkSuggestionsManager
+                            .setHasUserApprovedForApp(approved,
+                                    Binder.getCallingUid(), packageName),
+                            "shell#setHasUserApprovedForApp");
                     return 0;
                 }
                 case "network-suggestions-has-user-approved": {
@@ -1220,7 +1222,10 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     ConnectivityManager.NetworkCallback networkCallback =
                             new ConnectivityManager.NetworkCallback();
                     pw.println("Adding request: " + networkRequest);
-                    mConnectivityManager.requestNetwork(networkRequest, networkCallback);
+                    mWifiThreadRunner.post(() -> mConnectivityManager
+                                    .requestNetwork(networkRequest, networkCallback),
+                            "shell#add-request");
+
                     sActiveRequests.put(ssid, Pair.create(networkRequest, networkCallback));
                     return 0;
                 }
@@ -1233,7 +1238,10 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         return -1;
                     }
                     pw.println("Removing request: " + nrAndNc.first);
-                    mConnectivityManager.unregisterNetworkCallback(nrAndNc.second);
+                    mWifiThreadRunner.post(() -> mConnectivityManager
+                                    .unregisterNetworkCallback(nrAndNc.second),
+                            "shell#remove-request")
+                    ;
                     return 0;
                 }
                 case "remove-all-requests":
