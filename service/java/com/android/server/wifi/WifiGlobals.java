@@ -17,9 +17,10 @@
 package com.android.server.wifi;
 
 import android.annotation.Nullable;
-import android.content.Context;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
+import android.net.wifi.util.WifiResourceCache;
 import android.util.ArraySet;
 import android.util.Log;
 import android.util.SparseArray;
@@ -38,7 +39,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -48,7 +48,8 @@ import javax.annotation.concurrent.ThreadSafe;
 public class WifiGlobals {
 
     private static final String TAG = "WifiGlobals";
-    private final Context mContext;
+    private final WifiContext mContext;
+    private final WifiResourceCache mWifiResourceCache;
 
     private final AtomicInteger mPollRssiIntervalMillis = new AtomicInteger(-1);
     private final AtomicBoolean mIpReachabilityDisconnectEnabled = new AtomicBoolean(true);
@@ -83,9 +84,7 @@ public class WifiGlobals {
     private final boolean mAdjustPollRssiIntervalEnabled;
     private final boolean mWifiInterfaceAddedSelfRecoveryEnabled;
     private final int mNetworkNotFoundEventThreshold;
-    private boolean mIsBackgroundScanSupported;
     private boolean mIsSwPnoEnabled;
-    private boolean mIsWepDeprecated;
     private boolean mWepAllowedControlSupported;
     private final boolean mIsWpaPersonalDeprecated;
     private final Map<String, List<String>> mCountryCodeToAfcServers;
@@ -98,15 +97,14 @@ public class WifiGlobals {
     private boolean mDisableNudDisconnectsForWapiInSpecificCc = false;
     private boolean mD2dAllowedControlSupportedWhenInfraStaDisabled = false;
     private Set<String> mMacRandomizationUnsupportedSsidPrefixes = new ArraySet<>();
-    private Map<String, BiFunction<String, Boolean, Boolean>> mOverrideMethods = new HashMap<>();
 
     private SparseArray<SparseArray<CarrierSpecificEapFailureConfig>>
             mCarrierSpecificEapFailureConfigMapPerCarrierId = new SparseArray<>();
 
 
-    public WifiGlobals(Context context) {
+    public WifiGlobals(WifiContext context) {
         mContext = context;
-
+        mWifiResourceCache = context.getResourceCache();
         mIsWpa3SaeUpgradeEnabled = mContext.getResources()
                 .getBoolean(R.bool.config_wifiSaeUpgradeEnabled);
         mIsWpa3SaeUpgradeOffloadEnabled = mContext.getResources()
@@ -161,12 +159,8 @@ public class WifiGlobals {
                 R.bool.config_wifiDisableNudDisconnectsForWapiInSpecificCc);
         mNetworkNotFoundEventThreshold = mContext.getResources().getInteger(
                 R.integer.config_wifiNetworkNotFoundEventThreshold);
-        mIsBackgroundScanSupported = mContext.getResources()
-                .getBoolean(R.bool.config_wifi_background_scan_support);
         mIsSwPnoEnabled = mContext.getResources()
                 .getBoolean(R.bool.config_wifiSwPnoEnabled);
-        mIsWepDeprecated = mContext.getResources()
-                .getBoolean(R.bool.config_wifiWepDeprecated);
         mWepAllowedControlSupported = mContext.getResources()
                 .getBoolean(R.bool.config_wifiWepAllowedControlSupported);
         mIsWpaPersonalDeprecated = mContext.getResources()
@@ -190,41 +184,6 @@ public class WifiGlobals {
             }
         }
         loadCarrierSpecificEapFailureConfigMap();
-        mOverrideMethods.put("config_wifi_background_scan_support",
-                new BiFunction<String, Boolean, Boolean>() {
-                @Override
-                public Boolean apply(String value, Boolean isEnabled) {
-                    // reset to default
-                    if (!isEnabled) {
-                        mIsBackgroundScanSupported = mContext.getResources()
-                        .getBoolean(R.bool.config_wifi_background_scan_support);
-                        return true;
-                    }
-                    if ("true".equals(value) || "false".equals(value)) {
-                        mIsBackgroundScanSupported = Boolean.parseBoolean(value);
-                        return true;
-                    }
-                    return false;
-                }
-            });
-
-        mOverrideMethods.put("config_wifiWepDeprecated",
-                new BiFunction<String, Boolean, Boolean>() {
-                @Override
-                public Boolean apply(String value, Boolean isEnabled) {
-                    // reset to default
-                    if (!isEnabled) {
-                        mIsWepDeprecated = mContext.getResources()
-                                .getBoolean(R.bool.config_wifiWepDeprecated);
-                        return true;
-                    }
-                    if ("true".equals(value) || "false".equals(value)) {
-                        mIsWepDeprecated = Boolean.parseBoolean(value);
-                        return true;
-                    }
-                    return false;
-                }
-            });
     }
 
     /**
@@ -386,7 +345,9 @@ public class WifiGlobals {
      * @return boolean true if WEP networks are deprecated, false otherwise.
      */
     public boolean isWepDeprecated() {
-        return mIsWepDeprecated || (mWepAllowedControlSupported && !mIsWepAllowed.get());
+        return mWifiResourceCache.getBoolean(R.bool.config_wifiWepDeprecated,
+                "config_wifiWepDeprecated")
+                || (mWepAllowedControlSupported && !mIsWepAllowed.get());
     }
 
     /**
@@ -395,7 +356,8 @@ public class WifiGlobals {
      * @return boolean true if WEP networks are supported, false otherwise.
      */
     public boolean isWepSupported() {
-        return !mIsWepDeprecated;
+        return !mWifiResourceCache.getBoolean(R.bool.config_wifiWepDeprecated,
+                "config_wifiWepDeprecated");
     }
 
     /**
@@ -628,7 +590,9 @@ public class WifiGlobals {
      * Get whether background scan is supported.
      */
     public boolean isBackgroundScanSupported() {
-        return mIsBackgroundScanSupported;
+        return mWifiResourceCache
+                .getBoolean(R.bool.config_wifi_background_scan_support,
+                        "config_wifi_background_scan_support");
     };
 
     /**
@@ -711,18 +675,6 @@ public class WifiGlobals {
         return mWifiConfigMaxDisableDurationMs;
     }
 
-    /**
-     * Force Overlay Config Value for background scan.
-     */
-    public boolean forceOverlayConfigValue(String overlayName, String configValue,
-            boolean isEnabled) {
-        if (!mOverrideMethods.containsKey(overlayName)) {
-            Log.i(TAG, "Current doesn't support to override " + overlayName);
-            return false;
-        }
-        return mOverrideMethods.get(overlayName).apply(configValue, isEnabled);
-    }
-
     /** Dump method for debugging */
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("Dump of WifiGlobals");
@@ -751,9 +703,7 @@ public class WifiGlobals {
                 + mWifiInterfaceAddedSelfRecoveryEnabled);
         pw.println("mDisableUnwantedNetworkOnLowRssi=" + mDisableUnwantedNetworkOnLowRssi);
         pw.println("mNetworkNotFoundEventThreshold=" + mNetworkNotFoundEventThreshold);
-        pw.println("mIsBackgroundScanSupported=" + mIsBackgroundScanSupported);
         pw.println("mIsSwPnoEnabled=" + mIsSwPnoEnabled);
-        pw.println("mIsWepDeprecated=" + mIsWepDeprecated);
         pw.println("mIsWpaPersonalDeprecated=" + mIsWpaPersonalDeprecated);
         pw.println("mIsWepAllowed=" + mIsWepAllowed.get());
         pw.println("mWepAllowedControlSupported=" + mWepAllowedControlSupported);

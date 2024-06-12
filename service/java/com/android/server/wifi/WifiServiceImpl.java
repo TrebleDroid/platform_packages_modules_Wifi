@@ -168,6 +168,7 @@ import android.net.wifi.twt.TwtRequest;
 import android.net.wifi.twt.TwtSession;
 import android.net.wifi.twt.TwtSessionCallback;
 import android.net.wifi.util.ScanResultUtil;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Build;
@@ -334,6 +335,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private static final String CERT_INSTALLER_PKG = "com.android.certinstaller";
 
     private final WifiSettingsConfigStore mSettingsConfigStore;
+    private final WifiResourceCache mWifiResourceCache;
 
     /**
      * Callback for use with LocalOnlyHotspot to unregister requesting applications upon death.
@@ -514,6 +516,7 @@ public class WifiServiceImpl extends BaseWifiService {
 
     public WifiServiceImpl(WifiContext context, WifiInjector wifiInjector) {
         mContext = context;
+        mWifiResourceCache = mContext.getResourceCache();
         mWifiInjector = wifiInjector;
         mClock = wifiInjector.getClock();
 
@@ -5600,6 +5603,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     mWifiInjector.getWifiVoipDetector().dump(fd, pw, args);
                 }
                 pw.println();
+                mWifiResourceCache.dump(pw);
             }
         }, TAG + "#dump");
     }
@@ -8522,19 +8526,6 @@ public class WifiServiceImpl extends BaseWifiService {
                 Log.e(TAG, e.getMessage(), e);
             }
         }, TAG + "#querySendDhcpHostnameRestriction");
-    }
-
-    /**
-     * Force Overlay Config for testing
-     */
-    public boolean forceOverlayConfigValue(String overlayName, String configValue,
-            boolean isEnabled) {
-        int uid = Binder.getCallingUid();
-        if (!mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)) {
-            throw new SecurityException(TAG + " Uid " + uid
-                    + " Missing NETWORK_SETTINGS permission");
-        }
-        return mWifiGlobals.forceOverlayConfigValue(overlayName, configValue, isEnabled);
     }
 
     /**
