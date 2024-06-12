@@ -1099,6 +1099,14 @@
          it as low priority when disconnected, allowing it to be deleted to create other
          interfaces. A negative value disables this behavior. -->
     <integer translatable="false" name="config_disconnectedP2pIfaceLowPriorityTimeoutMs">-1</integer>
+    <!-- list of package names that the framework will allow to use P2P/Aware concurrency. If this
+         list is empty, then all packages are allowed -->
+    <string-array translatable="false" name="config_wifiP2pAwareConcurrencyAllowlist">
+        <!-- Below is a sample configuration for this list:
+        <item>com.company1.example.test.name1</item>
+        <item>com.company2.example.test.name2</item>
+        -->
+    </string-array>
     <!-- boolean indicating whether the Easy Connect (DPP) AKM is supported -->
     <bool translatable="false" name ="config_wifiDppAkmSupported">false</bool>
     <!-- Indicates the number of octets to mask for each BSSID in the SecurityLog output.
