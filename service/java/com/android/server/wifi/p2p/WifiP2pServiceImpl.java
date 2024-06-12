@@ -1519,7 +1519,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         }
                         if (wifistate == WifiManager.WIFI_STATE_ENABLED
                                 || wifistate == WifiManager.WIFI_STATE_DISABLING) {
-                            checkAndSendP2pStateChangedBroadcast();
+                            getHandler().post(() -> checkAndSendP2pStateChangedBroadcast());
                         }
                     }
                 }, new IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION));
