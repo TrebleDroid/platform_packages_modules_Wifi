@@ -1316,6 +1316,9 @@
     <!-- Boolean indicating whether the device supports d2d allowed control when infra STA is disabled  -->
     <bool translatable="false" name ="config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled">false</bool>
 
+    <!-- Boolean indicating whether the device supports WEP allowed control or not  -->
+    <bool translatable="false" name ="config_wifiWepAllowedControlSupported">true</bool>
+
     <!-- Array describing MAC OUI list to block TWT session setup request. If the primary station is
          connected to an AP with a MAC address OUI (https://standards-oui.ieee.org/oui/oui.txt)
          matching with any of entries in this blocked list, WifiManager#setupTwtSession() will fail
