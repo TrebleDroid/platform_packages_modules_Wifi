@@ -277,6 +277,8 @@ public class WifiGlobalsTest extends WifiBaseTest {
 
     @Test
     public void testSetWepAllowedWhenWepIsNotDeprecated() {
+        mResources.setBoolean(R.bool.config_wifiWepAllowedControlSupported, true);
+        mWifiGlobals = new WifiGlobals(mContext);
         assertTrue(mWifiGlobals.isWepSupported());
         // Default is not allow
         assertFalse(mWifiGlobals.isWepAllowed());
@@ -288,6 +290,15 @@ public class WifiGlobalsTest extends WifiBaseTest {
         mWifiGlobals.setWepAllowed(false);
         assertTrue(mWifiGlobals.isWepDeprecated());
         assertFalse(mWifiGlobals.isWepAllowed());
+
+        // Test WEP allowed control is NOT supported.
+        mResources.setBoolean(R.bool.config_wifiWepAllowedControlSupported, false);
+        mWifiGlobals = new WifiGlobals(mContext);
+        // Default is not allow, but don't care it since control is not supported.
+        assertFalse(mWifiGlobals.isWepAllowed());
+        // But we won't consider WEP is allowed since control is NOT supported.
+        // So WEP should be NOT deprecated since config_wifiWepDeprecated is false.
+        assertFalse(mWifiGlobals.isWepDeprecated());
     }
 
 

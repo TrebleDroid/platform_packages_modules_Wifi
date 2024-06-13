@@ -41,6 +41,7 @@ import android.net.wifi.INetworkRequestMatchCallback;
 import android.net.wifi.IOnWifiActivityEnergyInfoListener;
 import android.net.wifi.IOnWifiDriverCountryCodeChangedListener;
 import android.net.wifi.IWifiNetworkStateChangedListener;
+import android.net.wifi.IMacAddressListListener;
 import android.net.wifi.IOnWifiUsabilityStatsListener;
 import android.net.wifi.IPnoScanResultsCallback;
 import android.net.wifi.IScanResultsCallback;
@@ -159,6 +160,8 @@ interface IWifiManager
     ParceledListSlice getScanResults(String callingPackage, String callingFeatureId);
 
     void getChannelData(in IListListener listener, String packageName, in Bundle extras);
+
+    void getBssidBlocklist(in ParceledListSlice<WifiSsid> ssids, in IMacAddressListListener listener);
 
     boolean disconnect(String packageName);
 
