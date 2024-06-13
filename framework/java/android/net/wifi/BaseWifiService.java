@@ -232,6 +232,12 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
+    public void getBssidBlocklist(ParceledListSlice<WifiSsid> ssids,
+            IMacAddressListListener listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void setMacRandomizationSettingPasspointEnabled(String fqdn, boolean enable) {
         throw new UnsupportedOperationException();
     }

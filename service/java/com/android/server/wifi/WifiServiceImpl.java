@@ -112,6 +112,7 @@ import android.net.wifi.ILastCallerListener;
 import android.net.wifi.IListListener;
 import android.net.wifi.ILocalOnlyConnectionStatusListener;
 import android.net.wifi.ILocalOnlyHotspotCallback;
+import android.net.wifi.IMacAddressListListener;
 import android.net.wifi.IMapListener;
 import android.net.wifi.INetworkRequestMatchCallback;
 import android.net.wifi.IOnWifiActivityEnergyInfoListener;
@@ -191,6 +192,7 @@ import android.telephony.PhoneStateListener;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.util.ArraySet;
 import android.util.EventLog;
 import android.util.Log;
 import android.util.Pair;
@@ -4354,6 +4356,52 @@ public class WifiServiceImpl extends BaseWifiService {
         mWifiThreadRunner.post(
                 () -> mPasspointManager.enableAutojoin(null, fqdn, enableAutojoin),
                 TAG + "#allowAutojoinPasspoint");
+    }
+
+    /**
+     * See {@link WifiManager#getBssidBlocklist(List, Executor, Consumer)}
+     * @param ssids the list of ssids to get BSSID blocklist for.
+     * @param listener returns the results
+     */
+    @Override
+    public void getBssidBlocklist(@NonNull ParceledListSlice<WifiSsid> ssids,
+            @NonNull IMacAddressListListener listener) {
+        if (ssids == null) {
+            throw new IllegalArgumentException("Null ssids");
+        }
+        if (listener == null) {
+            throw new IllegalArgumentException("Null listener");
+        }
+        int uid = Binder.getCallingUid();
+        if (!mWifiPermissionsUtil.checkNetworkSettingsPermission(uid)
+                && !mWifiPermissionsUtil.checkNetworkSetupWizardPermission(uid)) {
+            throw new SecurityException("No permission to call getBssidBlocklist");
+        }
+        Set<String> ssidSet;
+        if (!ssids.getList().isEmpty()) {
+            ssidSet = new ArraySet<>();
+            for (WifiSsid ssid : ssids.getList()) {
+                ssidSet.add(ssid.toString());
+            }
+        } else {
+            ssidSet = null;
+        }
+        mWifiThreadRunner.post(() -> {
+            try {
+                List<String> bssids = mWifiBlocklistMonitor.getBssidBlocklistForSsids(ssidSet);
+                List<MacAddress> macAddresses = new ArrayList<>();
+                for (String bssid : bssids) {
+                    try {
+                        macAddresses.add(MacAddress.fromString(bssid));
+                    } catch (Exception e) {
+                        Log.e(TAG, "getBssidBlocklist failed to convert MAC address: " + bssid);
+                    }
+                }
+                listener.onResult(new ParceledListSlice(macAddresses));
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getMessage(), e);
+            }
+        }, TAG + "#getBssidBlocklist");
     }
 
     /**
