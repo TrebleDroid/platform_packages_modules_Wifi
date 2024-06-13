@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"به:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"پین لازم را تایپ کنید:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"پین:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"‏در حین اتصال به <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ارتباط این رایانه لوحی با Wi-Fi موقتاً قطع خواهد شد."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"‏وقتی دستگاه Android TV به <xliff:g id="DEVICE_NAME">%1$s</xliff:g> متصل است، اتصال آن به Wi-Fi موقتاً قطع می‌شود"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"‏این گوشی به‌طور موقت از Wi-Fi قطع خواهد شد، در حالی که به <xliff:g id="DEVICE_NAME">%1$s</xliff:g> وصل است"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"‏وقتی دستگاهتان به <xliff:g id="DEVICE_NAME">%1$s</xliff:g> متصل است، اتصال آن به Wi-Fi موقتاً قطع می‌شود"</string>
     <string name="dlg_ok" msgid="254496739491689405">"تأیید"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"اتصال به <xliff:g id="SSID">%1$s</xliff:g> امکان‌پذیر نیست"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"برای تغییر تنظیم حریم خصوصی ضربه بزنید و دوباره امتحان کنید"</string>

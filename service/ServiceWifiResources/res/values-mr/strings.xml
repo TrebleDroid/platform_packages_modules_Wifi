@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"प्रति:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"आवश्यक पिन टाइप करा:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"पिन:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"टॅबलेट <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ला कनेक्‍ट केलेले असताना तात्‍पुरते वाय-फाय वरून डिस्‍कनेक्‍ट होईल"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>शी तुमचे Android TV डिव्हाइस कनेक्ट केलेले असताना ते वाय-फाय वरून तात्पुरते डिस्कनेक्ट केले जाईल"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> वर फोन कनेक्ट केलेला असताना तो वाय-फाय वरून तात्पुरता डिस्कनेक्ट केला जाईल"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"तुमचे डिव्हाइस <xliff:g id="DEVICE_NAME">%1$s</xliff:g> शी कनेक्ट केलेले असताना वाय-फायवरून तात्पुरते डिस्कनेक्ट होईल"</string>
     <string name="dlg_ok" msgid="254496739491689405">"ठीक"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g> शी कनेक्ट करता आले नाही"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"गोपनीयता सेटिंग्ज बदलण्यासाठी टॅप करा आणि पुन्हा प्रयत्न करा"</string>

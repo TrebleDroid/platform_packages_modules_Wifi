@@ -16,6 +16,7 @@
 
 package com.android.server.wifi;
 
+import android.net.TetheringManager;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.WifiManager;
@@ -41,8 +42,14 @@ class SoftApModeConfiguration {
      */
     private final @Nullable SoftApConfiguration mSoftApConfig;
 
+    /**
+     * TetheringRequest for internal use, or null if none was passed in.
+     */
+    private final @Nullable TetheringManager.TetheringRequest mTetheringRequest;
+
     SoftApModeConfiguration(int targetMode, @Nullable SoftApConfiguration config,
-            SoftApCapability capability, @Nullable String countryCode) {
+            SoftApCapability capability, @Nullable String countryCode,
+            @Nullable TetheringManager.TetheringRequest request) {
         Preconditions.checkArgument(
                 targetMode == WifiManager.IFACE_IP_MODE_TETHERED
                         || targetMode == WifiManager.IFACE_IP_MODE_LOCAL_ONLY);
@@ -51,6 +58,7 @@ class SoftApModeConfiguration {
         mSoftApConfig = config;
         mCapability = capability;
         mCountryCode = countryCode;
+        mTetheringRequest = request;
     }
 
     public int getTargetMode() {
@@ -67,5 +75,9 @@ class SoftApModeConfiguration {
 
     public String getCountryCode() {
         return mCountryCode;
+    }
+
+    public TetheringManager.TetheringRequest getTetheringRequest() {
+        return mTetheringRequest;
     }
 }

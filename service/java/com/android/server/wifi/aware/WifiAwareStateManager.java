@@ -68,6 +68,7 @@ import android.net.MacAddress;
 import android.net.wifi.IBooleanListener;
 import android.net.wifi.IIntegerListener;
 import android.net.wifi.IListListener;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
@@ -107,7 +108,6 @@ import android.util.StatsEvent;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.MessageUtils;
-import com.android.internal.util.State;
 import com.android.internal.util.StateMachine;
 import com.android.internal.util.WakeupMessage;
 import com.android.modules.utils.BasicShellCommandHandler;
@@ -116,6 +116,7 @@ import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.Clock;
 import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.InterfaceConflictManager;
+import com.android.server.wifi.RunnerState;
 import com.android.server.wifi.WifiInjector;
 import com.android.server.wifi.aware.PairingConfigManager.PairingSecurityAssociationInfo;
 import com.android.server.wifi.hal.WifiNanIface.NanStatusCode;
@@ -347,6 +348,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     private static final String MESSAGE_BUNDLE_KEY_BOOTSTRAPPING_IS_COME_BACK_REQUEST =
             "bootstrapping_is_come_back";
     private static final String MESSAGE_BUNDLE_KEY_CALLER_TYPE = "caller_type";
+    private static final String MESSAGE_BUNDLE_KEY_VENDOR_DATA = "vendor_data";
     private WifiAwareNativeApi mWifiAwareNativeApi;
     private WifiAwareNativeManager mWifiAwareNativeManager;
 
@@ -1065,7 +1067,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                         listener.onResult(mPairingConfigManager
                                 .getAllPairedDevices(callingPackage));
                     } catch (RemoteException e) {
-                        Log.e(TAG, e.getMessage());
+                        Log.e(TAG, e.getMessage(), e);
                     }
                 }
         );
@@ -1099,7 +1101,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             try {
                 listener.onResult(state.getConfigRequest().mMasterPreference);
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -1131,7 +1133,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             try {
                 listener.onResult(mOpportunisticSet.contains(ctxPkg));
             } catch (RemoteException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, e.getMessage(), e);
             }
         });
     }
@@ -1938,7 +1940,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     public void onMatchNotification(int pubSubId, int requestorInstanceId, byte[] peerMac,
             byte[] serviceSpecificInfo, byte[] matchFilter, int rangingIndication, int rangeMm,
             byte[] scid, int peerCipherSuite, byte[] nonce, byte[] tag,
-            AwarePairingConfig pairingConfig) {
+            AwarePairingConfig pairingConfig, @Nullable List<OuiKeyedData> vendorData) {
         Message msg = mSm.obtainMessage(MESSAGE_TYPE_NOTIFICATION);
         msg.arg1 = NOTIFICATION_TYPE_MATCH;
         msg.arg2 = pubSubId;
@@ -1953,6 +1955,8 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         msg.getData().putByteArray(MESSAGE_BUNDLE_KEY_NONCE, nonce);
         msg.getData().putByteArray(MESSAGE_BUNDLE_KEY_TAG, tag);
         msg.getData().putParcelable(MESSAGE_BUNDLE_KEY_PAIRING_CONFIG, pairingConfig);
+        msg.getData().putParcelableArrayList(MESSAGE_BUNDLE_KEY_VENDOR_DATA,
+                vendorData != null ? new ArrayList<>(vendorData) : new ArrayList<>());
         mSm.sendMessage(msg);
     }
 
@@ -2167,9 +2171,9 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     class WifiAwareStateMachine extends StateMachine {
         private static final int TRANSACTION_ID_IGNORE = 0;
 
-        private final DefaultState mDefaultState = new DefaultState();
-        private final WaitState mWaitState = new WaitState();
-        private final WaitForResponseState mWaitForResponseState = new WaitForResponseState();
+        private final DefaultState mDefaultState;
+        private final WaitState mWaitState;
+        private final WaitForResponseState mWaitForResponseState;
         private final WaitingState mWaitingState = new WaitingState(this);
 
         private short mNextTransactionId = 1;
@@ -2198,7 +2202,11 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
 
         WifiAwareStateMachine(String name, Looper looper) {
             super(name, looper);
-
+            final int threshold = mContext.getResources().getInteger(
+                    R.integer.config_wifiConfigurationWifiRunnerThresholdInMs);
+            mDefaultState = new DefaultState(threshold);
+            mWaitState = new WaitState(threshold);
+            mWaitForResponseState = new WaitForResponseState(threshold);
             addState(mDefaultState);
             /* --> */ addState(mWaitState, mDefaultState);
             /* ----> */ addState(mWaitingState, mWaitState);
@@ -2207,15 +2215,160 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             setInitialState(mWaitState);
         }
 
+        @Override
+        protected String getWhatToString(int what) {
+            return switch (what) {
+                case COMMAND_TYPE_CONNECT -> "COMMAND_TYPE_CONNECT";
+                case COMMAND_TYPE_DISCONNECT -> "COMMAND_TYPE_DISCONNECT";
+                case COMMAND_TYPE_TERMINATE_SESSION -> "COMMAND_TYPE_TERMINATE_SESSION";
+                case COMMAND_TYPE_PUBLISH -> "COMMAND_TYPE_PUBLISH";
+                case COMMAND_TYPE_UPDATE_PUBLISH -> "COMMAND_TYPE_UPDATE_PUBLISH";
+                case COMMAND_TYPE_SUBSCRIBE -> "COMMAND_TYPE_SUBSCRIBE";
+                case COMMAND_TYPE_UPDATE_SUBSCRIBE -> "COMMAND_TYPE_UPDATE_SUBSCRIBE";
+                case COMMAND_TYPE_ENQUEUE_SEND_MESSAGE -> "COMMAND_TYPE_ENQUEUE_SEND_MESSAGE";
+                case COMMAND_TYPE_ENABLE_USAGE -> "COMMAND_TYPE_ENABLE_USAGE";
+                case COMMAND_TYPE_DISABLE_USAGE -> "COMMAND_TYPE_DISABLE_USAGE";
+                case COMMAND_TYPE_GET_CAPABILITIES -> "COMMAND_TYPE_GET_CAPABILITIES";
+                case COMMAND_TYPE_DELETE_ALL_DATA_PATH_INTERFACES
+                        -> "COMMAND_TYPE_DELETE_ALL_DATA_PATH_INTERFACES";
+                case COMMAND_TYPE_CREATE_DATA_PATH_INTERFACE
+                        -> "COMMAND_TYPE_CREATE_DATA_PATH_INTERFACE";
+                case COMMAND_TYPE_DELETE_DATA_PATH_INTERFACE
+                        -> "COMMAND_TYPE_DELETE_DATA_PATH_INTERFACE";
+                case COMMAND_TYPE_INITIATE_DATA_PATH_SETUP
+                        -> "COMMAND_TYPE_INITIATE_DATA_PATH_SETUP";
+                case COMMAND_TYPE_RESPOND_TO_DATA_PATH_SETUP_REQUEST
+                        -> "COMMAND_TYPE_RESPOND_TO_DATA_PATH_SETUP_REQUEST";
+                case COMMAND_TYPE_END_DATA_PATH -> "COMMAND_TYPE_END_DATA_PATH";
+                case COMMAND_TYPE_TRANSMIT_NEXT_MESSAGE -> "COMMAND_TYPE_TRANSMIT_NEXT_MESSAGE";
+                case COMMAND_TYPE_RECONFIGURE -> "COMMAND_TYPE_RECONFIGURE";
+                case COMMAND_TYPE_DELAYED_INITIALIZATION -> "COMMAND_TYPE_DELAYED_INITIALIZATION";
+                case COMMAND_TYPE_GET_AWARE -> "COMMAND_TYPE_GET_AWARE";
+                case COMMAND_TYPE_RELEASE_AWARE -> "COMMAND_TYPE_RELEASE_AWARE";
+                case COMMAND_TYPE_DISABLE -> "COMMAND_TYPE_DISABLE";
+                case COMMAND_TYPE_INITIATE_PAIRING_REQUEST
+                        -> "COMMAND_TYPE_INITIATE_PAIRING_REQUEST";
+                case COMMAND_TYPE_RESPONSE_PAIRING_REQUEST
+                        -> "COMMAND_TYPE_RESPONSE_PAIRING_REQUEST";
+                case COMMAND_TYPE_INITIATE_BOOTSTRAPPING_REQUEST
+                        -> "COMMAND_TYPE_INITIATE_BOOTSTRAPPING_REQUEST";
+                case COMMAND_TYPE_RESPONSE_BOOTSTRAPPING_REQUEST
+                        -> "COMMAND_TYPE_RESPONSE_BOOTSTRAPPING_REQUEST";
+                case COMMAND_TYPE_SUSPEND_SESSION -> "COMMAND_TYPE_SUSPEND_SESSION";
+                case COMMAND_TYPE_RESUME_SESSION -> "COMMAND_TYPE_RESUME_SESSION";
+                case COMMAND_TYPE_END_PAIRING -> "COMMAND_TYPE_END_PAIRING";
+
+                case RESPONSE_TYPE_ON_CONFIG_SUCCESS -> "RESPONSE_TYPE_ON_CONFIG_SUCCESS";
+                case RESPONSE_TYPE_ON_CONFIG_FAIL -> "RESPONSE_TYPE_ON_CONFIG_FAIL";
+                case RESPONSE_TYPE_ON_SESSION_CONFIG_SUCCESS
+                        -> "RESPONSE_TYPE_ON_SESSION_CONFIG_SUCCESS";
+                case RESPONSE_TYPE_ON_SESSION_CONFIG_FAIL -> "RESPONSE_TYPE_ON_SESSION_CONFIG_FAIL";
+                case RESPONSE_TYPE_ON_MESSAGE_SEND_QUEUED_SUCCESS
+                        -> "RESPONSE_TYPE_ON_MESSAGE_SEND_QUEUED_SUCCESS";
+                case RESPONSE_TYPE_ON_MESSAGE_SEND_QUEUED_FAIL
+                        -> "RESPONSE_TYPE_ON_MESSAGE_SEND_QUEUED_FAIL";
+                case RESPONSE_TYPE_ON_CAPABILITIES_UPDATED
+                        -> "RESPONSE_TYPE_ON_CAPABILITIES_UPDATED";
+                case RESPONSE_TYPE_ON_CREATE_INTERFACE -> "RESPONSE_TYPE_ON_CREATE_INTERFACE";
+                case RESPONSE_TYPE_ON_DELETE_INTERFACE -> "RESPONSE_TYPE_ON_DELETE_INTERFACE";
+                case RESPONSE_TYPE_ON_INITIATE_DATA_PATH_SUCCESS
+                        -> "RESPONSE_TYPE_ON_INITIATE_DATA_PATH_SUCCESS";
+                case RESPONSE_TYPE_ON_INITIATE_DATA_PATH_FAIL
+                        -> "RESPONSE_TYPE_ON_INITIATE_DATA_PATH_FAIL";
+                case RESPONSE_TYPE_ON_RESPOND_TO_DATA_PATH_SETUP_REQUEST
+                        -> "RESPONSE_TYPE_ON_RESPOND_TO_DATA_PATH_SETUP_REQUEST";
+                case RESPONSE_TYPE_ON_END_DATA_PATH -> "RESPONSE_TYPE_ON_END_DATA_PATH";
+                case RESPONSE_TYPE_ON_DISABLE -> "RESPONSE_TYPE_ON_DISABLE";
+                case RESPONSE_TYPE_ON_INITIATE_PAIRING_SUCCESS
+                        -> "RESPONSE_TYPE_ON_INITIATE_PAIRING_SUCCESS";
+                case RESPONSE_TYPE_ON_INITIATE_PAIRING_FAIL
+                        -> "RESPONSE_TYPE_ON_INITIATE_PAIRING_FAIL";
+                case RESPONSE_TYPE_ON_RESPONSE_PAIRING_SUCCESS
+                        -> "RESPONSE_TYPE_ON_RESPONSE_PAIRING_SUCCESS";
+                case RESPONSE_TYPE_ON_RESPONSE_PAIRING_FAIL
+                        -> "RESPONSE_TYPE_ON_RESPONSE_PAIRING_FAIL";
+                case RESPONSE_TYPE_ON_INITIATE_BOOTSTRAPPING_SUCCESS
+                        -> "RESPONSE_TYPE_ON_INITIATE_BOOTSTRAPPING_SUCCESS";
+                case RESPONSE_TYPE_ON_INITIATE_BOOTSTRAPPING_FAIL
+                        -> "RESPONSE_TYPE_ON_INITIATE_BOOTSTRAPPING_FAIL";
+                case RESPONSE_TYPE_ON_RESPONSE_BOOTSTRAPPING_SUCCESS
+                        -> "RESPONSE_TYPE_ON_RESPONSE_BOOTSTRAPPING_SUCCESS";
+                case RESPONSE_TYPE_ON_RESPONSE_BOOTSTRAPPING_FAIL
+                        -> "RESPONSE_TYPE_ON_RESPONSE_BOOTSTRAPPING_FAIL";
+                case RESPONSE_TYPE_ON_SUSPEND -> "RESPONSE_TYPE_ON_SUSPEND";
+                case RESPONSE_TYPE_ON_RESUME -> "RESPONSE_TYPE_ON_RESUME";
+                case RESPONSE_TYPE_ON_END_PAIRING -> "RESPONSE_TYPE_ON_END_PAIRING";
+
+                case NOTIFICATION_TYPE_INTERFACE_CHANGE -> "NOTIFICATION_TYPE_INTERFACE_CHANGE";
+                case NOTIFICATION_TYPE_CLUSTER_CHANGE -> "NOTIFICATION_TYPE_CLUSTER_CHANGE";
+                case NOTIFICATION_TYPE_MATCH -> "NOTIFICATION_TYPE_MATCH";
+                case NOTIFICATION_TYPE_SESSION_TERMINATED -> "NOTIFICATION_TYPE_SESSION_TERMINATED";
+                case NOTIFICATION_TYPE_MESSAGE_RECEIVED -> "NOTIFICATION_TYPE_MESSAGE_RECEIVED";
+                case NOTIFICATION_TYPE_AWARE_DOWN -> "NOTIFICATION_TYPE_AWARE_DOWN";
+                case NOTIFICATION_TYPE_ON_MESSAGE_SEND_SUCCESS
+                        -> "NOTIFICATION_TYPE_ON_MESSAGE_SEND_SUCCESS";
+                case NOTIFICATION_TYPE_ON_MESSAGE_SEND_FAIL
+                        -> "NOTIFICATION_TYPE_ON_MESSAGE_SEND_FAIL";
+                case NOTIFICATION_TYPE_ON_DATA_PATH_REQUEST
+                        -> "NOTIFICATION_TYPE_ON_DATA_PATH_REQUEST";
+                case NOTIFICATION_TYPE_ON_DATA_PATH_CONFIRM
+                        -> "NOTIFICATION_TYPE_ON_DATA_PATH_CONFIRM";
+                case NOTIFICATION_TYPE_ON_DATA_PATH_END -> "NOTIFICATION_TYPE_ON_DATA_PATH_END";
+                case NOTIFICATION_TYPE_ON_DATA_PATH_SCHED_UPDATE
+                        -> "NOTIFICATION_TYPE_ON_DATA_PATH_SCHED_UPDATE";
+                case NOTIFICATION_TYPE_MATCH_EXPIRED -> "NOTIFICATION_TYPE_MATCH_EXPIRED";
+                case NOTIFICATION_TYPE_ON_PAIRING_REQUEST -> "NOTIFICATION_TYPE_ON_PAIRING_REQUEST";
+                case NOTIFICATION_TYPE_ON_PAIRING_CONFIRM -> "NOTIFICATION_TYPE_ON_PAIRING_CONFIRM";
+                case NOTIFICATION_TYPE_ON_BOOTSTRAPPING_REQUEST
+                        -> "NOTIFICATION_TYPE_ON_BOOTSTRAPPING_REQUEST";
+                case NOTIFICATION_TYPE_ON_BOOTSTRAPPING_CONFIRM
+                        -> "NOTIFICATION_TYPE_ON_BOOTSTRAPPING_CONFIRM";
+                case NOTIFICATION_TYPE_ON_SUSPENSION_MODE_CHANGED
+                        -> "NOTIFICATION_TYPE_ON_SUSPENSION_MODE_CHANGED";
+                case RunnerState.STATE_ENTER_CMD -> "Enter";
+                case RunnerState.STATE_EXIT_CMD -> "Exit";
+                case MESSAGE_TYPE_COMMAND -> "MESSAGE_TYPE_COMMAND";
+                case MESSAGE_TYPE_RESPONSE -> "MESSAGE_TYPE_RESPONSE";
+                case MESSAGE_TYPE_NOTIFICATION -> "MESSAGE_TYPE_NOTIFICATION";
+                case MESSAGE_TYPE_RESPONSE_TIMEOUT -> "MESSAGE_TYPE_RESPONSE_TIMEOUT";
+                case MESSAGE_TYPE_SEND_MESSAGE_TIMEOUT -> "MESSAGE_TYPE_SEND_MESSAGE_TIMEOUT";
+                case MESSAGE_TYPE_DATA_PATH_TIMEOUT -> "MESSAGE_TYPE_DATA_PATH_TIMEOUT";
+                case MESSAGE_TYPE_PAIRING_TIMEOUT -> "MESSAGE_TYPE_PAIRING_TIMEOUT";
+                case MESSAGE_TYPE_BOOTSTRAPPING_TIMEOUT -> "MESSAGE_TYPE_BOOTSTRAPPING_TIMEOUT";
+                default -> {
+                    Log.e(TAG, "unknown message what: " + what);
+                    yield "what:" + what;
+                }
+            };
+        }
+
         public void onAwareDownCleanupSendQueueState() {
             mSendQueueBlocked = false;
             mHostQueuedSendMessages.clear();
             mFwQueuedSendMessages.clear();
         }
 
-        private class DefaultState extends State {
+        private class DefaultState extends RunnerState {
+
+            DefaultState(int threshold) {
+                super(threshold, mWifiInjector.getWifiHandlerLocalLog());
+            }
+
             @Override
-            public boolean processMessage(Message msg) {
+            public String getMessageLogRec(int what) {
+                return WifiAwareStateManager.class.getSimpleName() + "."
+                        + DefaultState.class.getSimpleName() + "." + getWhatToString(what);
+            }
+
+            @Override
+            public void enterImpl() {
+            }
+
+            @Override
+            public void exitImpl() {
+            }
+            @Override
+            public boolean processMessageImpl(Message msg) {
                 if (mVdbg) {
                     Log.v(TAG, getName() + msg.toString());
                 }
@@ -2264,9 +2417,27 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
         }
 
-        private class WaitState extends State {
+        private class WaitState extends RunnerState {
+
+            WaitState(int threshold) {
+                super(threshold, mWifiInjector.getWifiHandlerLocalLog());
+            }
+
             @Override
-            public boolean processMessage(Message msg) {
+            public String getMessageLogRec(int what) {
+                return WifiAwareStateManager.class.getSimpleName() + "."
+                        + WaitState.class.getSimpleName() + "." + getWhatToString(what);
+            }
+
+            @Override
+            public void enterImpl() {
+            }
+
+            @Override
+            public void exitImpl() {
+            }
+            @Override
+            public boolean processMessageImpl(Message msg) {
                 if (mVdbg) {
                     Log.v(TAG, getName() + msg.toString());
                 }
@@ -2295,12 +2466,22 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
         }
 
-        private class WaitForResponseState extends State {
+        private class WaitForResponseState extends RunnerState {
             private static final long AWARE_COMMAND_TIMEOUT = 5_000;
             private WakeupMessage mTimeoutMessage;
 
+            WaitForResponseState(int threshold) {
+                super(threshold, mWifiInjector.getWifiHandlerLocalLog());
+            }
+
             @Override
-            public void enter() {
+            public String getMessageLogRec(int what) {
+                return WifiAwareStateManager.class.getSimpleName() + "."
+                        + WaitForResponseState.class.getSimpleName() + "." + getWhatToString(what);
+            }
+
+            @Override
+            public void enterImpl() {
                 mTimeoutMessage = new WakeupMessage(mContext, getHandler(), HAL_COMMAND_TIMEOUT_TAG,
                         MESSAGE_TYPE_RESPONSE_TIMEOUT, mCurrentCommand.arg1, mCurrentTransactionId);
                 mTimeoutMessage.schedule(SystemClock.elapsedRealtime() + AWARE_COMMAND_TIMEOUT);
@@ -2308,12 +2489,12 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             }
 
             @Override
-            public void exit() {
+            public void exitImpl() {
                 mTimeoutMessage.cancel();
             }
 
             @Override
-            public boolean processMessage(Message msg) {
+            public boolean processMessageImpl(Message msg) {
                 if (mVdbg) {
                     Log.v(TAG, getName() + msg.toString());
                 }
@@ -2392,10 +2573,12 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                     byte[] tag = msg.getData().getByteArray(MESSAGE_BUNDLE_KEY_TAG);
                     AwarePairingConfig pairingConfig = msg.getData()
                             .getParcelable(MESSAGE_BUNDLE_KEY_PAIRING_CONFIG);
+                    ArrayList<OuiKeyedData> vendorData =
+                            msg.getData().getParcelableArrayList(MESSAGE_BUNDLE_KEY_VENDOR_DATA);
 
                     onMatchLocal(pubSubId, requesterInstanceId, peerMac, serviceSpecificInfo,
                             matchFilter, rangingIndication, rangeMm, cipherSuite, scid, nonce, tag,
-                            pairingConfig);
+                            pairingConfig, vendorData);
                     break;
                 }
                 case NOTIFICATION_TYPE_MATCH_EXPIRED: {
@@ -2834,8 +3017,10 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                     int method = data.getInt(MESSAGE_BUNDLE_KEY_BOOTSTRAPPING_METHOD);
                     byte[] cookie = data.getByteArray(
                             MESSAGE_BUNDLE_KEY_BOOTSTRAPPING_COME_BACK_COOKIE);
+                    boolean isComeBack = data
+                            .getBoolean(MESSAGE_BUNDLE_KEY_BOOTSTRAPPING_IS_COME_BACK_REQUEST);
                     waitForResponse = initiateBootstrappingRequestLocal(mCurrentTransactionId,
-                            clientId, sessionId, peerId, method, cookie);
+                            clientId, sessionId, peerId, method, cookie, isComeBack);
                     break;
                 }
                 case COMMAND_TYPE_RESPONSE_BOOTSTRAPPING_REQUEST: {
@@ -3963,7 +4148,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     }
 
     private boolean initiateBootstrappingRequestLocal(short transactionId, int clientId,
-            int sessionId, int peerId, int method, byte[] cookie) {
+            int sessionId, int peerId, int method, byte[] cookie, boolean isComeBack) {
         String methodString = "initiateBootstrappingRequestLocal";
         if (mVdbg) {
             Log.v(TAG, methodString + ": transactionId=" + transactionId
@@ -3974,7 +4159,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         if (session == null) {
             return false;
         }
-        return session.initiateBootstrapping(transactionId, peerId, method, cookie);
+        return session.initiateBootstrapping(transactionId, peerId, method, cookie, isComeBack);
     }
 
     private boolean respondToBootstrappingRequestLocal(short transactionId, int clientId,
@@ -4950,7 +5135,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
     private void onMatchLocal(int pubSubId, int requestorinstanceid, byte[] peerMac,
             byte[] serviceSpecificInfo, byte[] matchFilter, int rangingIndication, int rangeMm,
             int cipherSuite, byte[] scid, byte[] nonce, byte[] tag,
-            AwarePairingConfig pairingConfig) {
+            AwarePairingConfig pairingConfig, @NonNull List<OuiKeyedData> vendorData) {
         if (mVerboseLoggingEnabled) {
             Log.v(TAG, "onMatch: pubSubId=" + pubSubId
                     + ", requestorInstanceId=" + requestorinstanceid
@@ -4974,7 +5159,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                 data.first.getCallingPackage(), nonce, tag, peerMac);
         int peerId = data.second.onMatch(requestorinstanceid, peerMac, serviceSpecificInfo,
                 matchFilter, rangingIndication, rangeMm, cipherSuite, scid, pairingAlias,
-                pairingConfig);
+                pairingConfig, vendorData);
         if (TextUtils.isEmpty(pairingAlias)) {
             return;
         }
@@ -5287,6 +5472,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         int clusterHigh = ConfigRequest.CLUSTER_ID_MAX;
         int[] discoveryWindowInterval =
                 {ConfigRequest.DW_INTERVAL_NOT_INIT, ConfigRequest.DW_INTERVAL_NOT_INIT};
+        List<OuiKeyedData> vendorData = null;
         if (configRequest != null) {
             support5gBand = configRequest.mSupport5gBand;
             support6gBand = configRequest.mSupport6gBand;
@@ -5338,6 +5524,10 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                             cr.mDiscoveryWindowInterval[band]);
                 }
             }
+
+            if (SdkLevel.isAtLeastV() && !cr.getVendorData().isEmpty()) {
+                vendorData = cr.getVendorData();
+            }
         }
         ConfigRequest.Builder builder = new ConfigRequest.Builder().setSupport5gBand(support5gBand)
                 .setMasterPreference(masterPreference).setClusterLow(clusterLow)
@@ -5345,6 +5535,16 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
         for (int band = ConfigRequest.NAN_BAND_24GHZ; band <= ConfigRequest.NAN_BAND_5GHZ; ++band) {
             if (discoveryWindowInterval[band] != ConfigRequest.DW_INTERVAL_NOT_INIT) {
                 builder.setDiscoveryWindowInterval(band, discoveryWindowInterval[band]);
+            }
+        }
+        if (SdkLevel.isAtLeastV()) {
+            // Always use the vendor data from the incoming ConfigRequest if provided.
+            // Otherwise, use the most recent vendor data in the mClients list.
+            if (configRequest != null && !configRequest.getVendorData().isEmpty()) {
+                vendorData = configRequest.getVendorData();
+            }
+            if (vendorData != null) {
+                builder.setVendorData(vendorData);
             }
         }
         return builder.build();

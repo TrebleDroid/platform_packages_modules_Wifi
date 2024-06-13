@@ -33,6 +33,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkProvider;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.WifiTwtSession;
 import android.net.wifi.nl80211.WifiNl80211Manager;
 import android.os.BatteryManager;
 import android.os.BatteryStatsManager;
@@ -54,6 +55,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.BackgroundThread;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.aware.WifiAwareMetrics;
+import com.android.server.wifi.b2b.WifiRoamingModeManager;
 import com.android.server.wifi.coex.CoexManager;
 import com.android.server.wifi.hotspot2.PasspointManager;
 import com.android.server.wifi.hotspot2.PasspointNetworkNominateHelper;
@@ -183,9 +185,11 @@ public class WifiInjector {
     private final PropertyService mPropertyService = new SystemPropertyService();
     private final BuildProperties mBuildProperties = new SystemBuildProperties();
     private final WifiBackupRestore mWifiBackupRestore;
+    private final BackupRestoreController mBackupRestoreController;
     // This will only be null if SdkLevel is not at least S
     @Nullable private final CoexManager mCoexManager;
     private final SoftApBackupRestore mSoftApBackupRestore;
+    private final WifiSettingsBackupRestore mWifiSettingsBackupRestore;
     private final WifiMulticastLockManager mWifiMulticastLockManager;
     private final WifiConfigStore mWifiConfigStore;
     private final WifiKeyStore mWifiKeyStore;
@@ -266,6 +270,8 @@ public class WifiInjector {
     @NonNull private final WifiDialogManager mWifiDialogManager;
     @NonNull private final SsidTranslator mSsidTranslator;
     @NonNull private final ApplicationQosPolicyRequestHandler mApplicationQosPolicyRequestHandler;
+    private final WifiRoamingModeManager mWifiRoamingModeManager;
+    private final TwtManager mTwtManager;
 
     public WifiInjector(WifiContext context) {
         if (context == null) {
@@ -322,7 +328,8 @@ public class WifiInjector {
         mSoftApBackupRestore = new SoftApBackupRestore(mContext, mSettingsMigrationDataHolder);
         mWifiStateTracker = new WifiStateTracker(mBatteryStats);
         mWifiThreadRunner = new WifiThreadRunner(wifiHandler);
-        mWifiDialogManager = new WifiDialogManager(mContext, mWifiThreadRunner, mFrameworkFacade);
+        mWifiDialogManager = new WifiDialogManager(mContext, mWifiThreadRunner, mFrameworkFacade,
+                this);
         mSsidTranslator = new SsidTranslator(mContext, wifiHandler);
         mWifiP2pServiceHandlerThread = new HandlerThread("WifiP2pService");
         mWifiP2pServiceHandlerThread.start();
@@ -354,7 +361,7 @@ public class WifiInjector {
         mWifiP2pMonitor = new WifiP2pMonitor();
         mSupplicantP2pIfaceHal = new SupplicantP2pIfaceHal(mWifiP2pMonitor, mWifiGlobals, this);
         mWifiP2pNative = new WifiP2pNative(mWifiCondManager, mWifiNative, mWifiMetrics,
-                mWifiVendorHal, mSupplicantP2pIfaceHal, mHalDeviceManager, mPropertyService);
+                mWifiVendorHal, mSupplicantP2pIfaceHal, mHalDeviceManager, mPropertyService, this);
         SubscriptionManager subscriptionManager =
                 mContext.getSystemService(SubscriptionManager.class);
         if (SdkLevel.isAtLeastS()) {
@@ -439,6 +446,7 @@ public class WifiInjector {
                         wifiHandler);
         mSettingsConfigStore = new WifiSettingsConfigStore(context, wifiHandler,
                 mSettingsMigrationDataHolder, mWifiConfigManager, mWifiConfigStore);
+        mWifiSettingsBackupRestore = new WifiSettingsBackupRestore(mSettingsConfigStore);
         mSettingsStore = new WifiSettingsStore(mContext, mSettingsConfigStore, mWifiThreadRunner,
                 mFrameworkFacade, mWifiNotificationManager, mDeviceConfigFacade,
                 mWifiMetrics, mClock);
@@ -614,6 +622,13 @@ public class WifiInjector {
         // {@link LocationManager#getCurrentLocation}, so we need to pass mContextWithAttributionTag
         // instead of mContext to the AfcManager.
         mAfcManager = new AfcManager(mContextWithAttributionTag, this);
+        mWifiRoamingModeManager = new WifiRoamingModeManager(mWifiNative,
+                mActiveModeWarden, new WifiRoamingConfigStore(mWifiConfigManager,
+                mWifiConfigStore));
+
+        mTwtManager = new TwtManager(this, mCmiMonitor, mWifiNative, wifiHandler, mClock,
+                WifiTwtSession.MAX_TWT_SESSIONS, 1);
+        mBackupRestoreController = new BackupRestoreController(mWifiSettingsBackupRestore, mClock);
     }
 
     /**
@@ -673,6 +688,7 @@ public class WifiInjector {
         mWifiDialogManager.enableVerboseLogging(verboseEnabled);
         mExternalPnoScanRequestManager.enableVerboseLogging(verboseEnabled);
         mMultiInternetWifiNetworkFactory.enableVerboseLogging(verboseEnabled);
+        mWifiRoamingModeManager.enableVerboseLogging(verboseEnabled);
     }
 
     public UserManager getUserManager() {
@@ -1128,6 +1144,11 @@ public class WifiInjector {
         return mSettingsConfigStore;
     }
 
+    @NonNull
+    public WifiSettingsBackupRestore getWifiSettingsBackupRestore() {
+        return mWifiSettingsBackupRestore;
+    }
+
     public WifiScanAlwaysAvailableSettingsCompatibility
             getWifiScanAlwaysAvailableSettingsCompatibility() {
         return mWifiScanAlwaysAvailableSettingsCompatibility;
@@ -1306,5 +1327,18 @@ public class WifiInjector {
     @NonNull
     public AlarmManager getAlarmManager() {
         return mAlarmManager;
+    }
+
+    public WifiRoamingModeManager getWifiRoamingModeManager() {
+        return mWifiRoamingModeManager;
+    }
+
+    public TwtManager getTwtManager() {
+        return mTwtManager;
+    }
+
+    @NonNull
+    public BackupRestoreController getBackupRestoreController() {
+        return mBackupRestoreController;
     }
 }

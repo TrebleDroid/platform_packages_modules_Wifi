@@ -25,7 +25,8 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.WorkSource;
 import android.os.test.TestLooper;
-import android.test.suitebuilder.annotation.SmallTest;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.build.SdkLevel;
 

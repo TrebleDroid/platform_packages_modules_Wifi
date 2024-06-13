@@ -139,6 +139,8 @@ RequiresPermission: android.net.wifi.p2p.WifiP2pManager#requestPersistentGroupIn
     Method 'requestPersistentGroupInfo' documentation mentions permissions already declared by @RequiresPermission
 RequiresPermission: android.net.wifi.p2p.WifiP2pManager#startListening(android.net.wifi.p2p.WifiP2pManager.Channel, android.net.wifi.p2p.WifiP2pManager.ActionListener):
     Method 'startListening' documentation mentions permissions already declared by @RequiresPermission
+RequiresPermission: android.net.wifi.p2p.WifiP2pManager#startPeerDiscovery(android.net.wifi.p2p.WifiP2pManager.Channel, android.net.wifi.p2p.WifiP2pDiscoveryConfig, android.net.wifi.p2p.WifiP2pManager.ActionListener):
+    Method 'startPeerDiscovery' documentation mentions permissions already declared by @RequiresPermission
 RequiresPermission: android.net.wifi.rtt.WifiRttManager#startRanging(android.net.wifi.rtt.RangingRequest, java.util.concurrent.Executor, android.net.wifi.rtt.RangingResultCallback):
     Method 'startRanging' documentation mentions permissions already declared by @RequiresPermission
 RequiresPermission: android.net.wifi.rtt.WifiRttManager#startRanging(android.os.WorkSource, android.net.wifi.rtt.RangingRequest, java.util.concurrent.Executor, android.net.wifi.rtt.RangingResultCallback):

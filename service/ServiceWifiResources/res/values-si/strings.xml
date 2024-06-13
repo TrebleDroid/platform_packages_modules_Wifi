@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"වෙත:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"අවශ්‍ය PIN එක ටයිප් කරන්න:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"ටැබ්ලටය <xliff:g id="DEVICE_NAME">%1$s</xliff:g> වෙත සම්බන්ධ වන අතරතුර එය Wi-Fi වලින් තාවකාලිකව විසන්ධි කෙරේ."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"ඔබගේ Android TV උපාංගය <xliff:g id="DEVICE_NAME">%1$s</xliff:g> වෙත සම්බන්ධ වී පවතින විට Wi-Fi වෙතින් එය තාවකාලිකව විසන්ධි වනු ඇත"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"දුරකථනය <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ට සම්බන්ධ වී පවතින විට Wi-Fi වලින් එය තාවකාලිකව විසන්ධි වෙයි."</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> වෙත සම්බන්ධ වී ඇති අතරේ ඔබේ උපාංගය Wi-Fi වෙතින් තාවකාලිකව විසන්ධි වනු ඇත"</string>
     <string name="dlg_ok" msgid="254496739491689405">"හරි"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g> වෙත සම්බන්ධ විය නොහැකිය"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"රහස්‍යතා සැකසීම් වෙනස් කිරීමට තට්ටු කර යළි උත්සාහ කරන්න"</string>

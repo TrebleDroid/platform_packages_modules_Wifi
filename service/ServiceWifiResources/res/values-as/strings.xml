@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"প্ৰতি:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"প্ৰয়োজনীয় পিন নম্বৰটো লিখক:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"পিন:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"টি.ভি.টো <xliff:g id="DEVICE_NAME">%1$s</xliff:g> লৈ সংযোগ হৈ থকাৰ অৱস্থাত অস্থায়ীভাৱে ৱাই-ফাইৰ পৰা সংযোগ বিচ্ছিন্ন হ\'ব"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"আপোনাৰ Android TV ডিভাইচটো <xliff:g id="DEVICE_NAME">%1$s</xliff:g>ৰ লগত সংযোগ হ’লে অস্থায়ীভাৱে ৱাই-ফাইৰ পৰা সংযোগ বিচ্ছিন্ন হ’ব"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"ফ\'নটো <xliff:g id="DEVICE_NAME">%1$s</xliff:g> লৈ সংযোগ হ\'লে ৱাই-ফাইৰ পৰা কিছু সময়ৰ বাবে সংযোগ স্বীকাৰ বিচ্ছিন্ন হ\'ব"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"আপোনাৰ ডিভাইচটো <xliff:g id="DEVICE_NAME">%1$s</xliff:g>ৰ লগত সংযুক্ত হৈ থকাৰ অৱস্থাত অস্থায়ীভাৱে ৱাই-ফাইৰ পৰা সংযোগ বিচ্ছিন্ন হ’ব"</string>
     <string name="dlg_ok" msgid="254496739491689405">"ঠিক আছে"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g>ৰ সৈতে সংযোগ কৰিব নোৱাৰি"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"গোপনীয়তাৰ ছেটিং সলনি কৰিবলৈ আৰু পুনৰ চেষ্টা কৰিবলৈ টিপক"</string>

@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"પ્રતિ:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"આવશ્યક પિન લખો:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"પિન:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"ટેબ્લેટ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> થી કનેક્ટ હોય તે વખતે વાઇ-ફાઇ થી અસ્થાયી રૂપે ડિસ્કનેક્ટ કરવામાં આવશે"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"તમારું Android TV ડિવાઇસ, <xliff:g id="DEVICE_NAME">%1$s</xliff:g>થી કનેક્ટ હોય તે વખતે વાઇ-ફાઇથી અસ્થાયી રૂપે ડિસ્કનેક્ટ કરવામાં આવશે"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"ફોન <xliff:g id="DEVICE_NAME">%1$s</xliff:g> થી કનેક્ટ હોય તે વખતે વાઇ-ફાઇ થી અસ્થાયી રૂપે ડિસ્કનેક્ટ કરવામાં આવશે"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"જ્યારે તમારું ડિવાઇસ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> સાથે કનેક્ટેડ હોય, ત્યારે તેને વાઇ-ફાઇથી હંગામી રીતે ડિસ્કનેક્ટ કરવામાં આવશે"</string>
     <string name="dlg_ok" msgid="254496739491689405">"ઓકે"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g> સાથે કનેક્ટ કરી શકાતું નથી"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"પ્રાઇવસી સેટિંગ બદલવા અને ફરી પ્રયાસ કરવા ટૅપ કરો"</string>

@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"إلى:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"‏اكتب رمز PIN المطلوب:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"رقم التعريف الشخصي:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"‏سيتم قطع اتصال الجهاز اللوحي مؤقتًا بشبكة Wi-Fi في الوقت الذي يكون فيه متصلاً بـ <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"‏سيتم قطع اتصال جهاز Android TV بشبكة Wi-Fi مؤقتًا أثناء اتصاله بجهاز<xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"‏سيتم قطع اتصال الهاتف مؤقتًا بشبكة Wi-Fi في الوقت الذي يكون فيه متصلاً بـ <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"‏سيتم قطع اتصال الجهاز بشبكة Wi-Fi مؤقتًا أثناء اتصاله بـ <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"حسنًا"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"يتعذّر الاتصال بـ <xliff:g id="SSID">%1$s</xliff:g>."</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"انقر لتغيير إعدادات الخصوصية وإعادة المحاولة."</string>

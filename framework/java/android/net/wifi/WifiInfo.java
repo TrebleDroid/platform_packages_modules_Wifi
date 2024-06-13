@@ -48,6 +48,7 @@ import androidx.annotation.RequiresApi;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.Inet4AddressUtils;
+import com.android.wifi.flags.Flags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -492,6 +493,9 @@ public class WifiInfo implements TransportInfo, Parcelable {
      */
     private String mNetworkKey;
 
+    /** List of {@link OuiKeyedData} providing vendor-specific configuration data. */
+    private @NonNull List<OuiKeyedData> mVendorData;
+
     /** @hide */
     @UnsupportedAppUsage
     public WifiInfo() {
@@ -510,6 +514,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
         mIsPrimary = IS_PRIMARY_FALSE;
         mNetworkKey = null;
         mApMloLinkId = MloLink.INVALID_MLO_LINK_ID;
+        mVendorData = Collections.emptyList();
     }
 
     /** @hide */
@@ -555,6 +560,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
         mNetworkKey = null;
         resetMultiLinkInfo();
         enableApTidToLinkMappingNegotiationSupport(false);
+        mVendorData = Collections.emptyList();
     }
 
     /** @hide */
@@ -646,6 +652,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
                     ? null : source.mNetworkKey;
             mApTidToLinkMappingNegotiationSupported =
                     source.mApTidToLinkMappingNegotiationSupported;
+            mVendorData = new ArrayList<>(source.mVendorData);
         }
     }
 
@@ -729,7 +736,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
          * Set the subscription ID.
          * @see WifiInfo#getSubscriptionId()
          */
-        @FlaggedApi("com.android.wifi.flags.add_subscription_id")
+        @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
         @NonNull
         public Builder setSubscriptionId(int subId) {
             mWifiInfo.setSubscriptionId(subId);
@@ -1544,7 +1551,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 .append(", Security type: ").append(mSecurityType)
                 .append(", Supplicant state: ")
                 .append(mSupplicantState == null ? none : mSupplicantState)
-                .append(", Wi-Fi standard: ").append(mWifiStandard)
+                .append(", Wi-Fi standard: ").append(ScanResult.wifiStandardToString(mWifiStandard))
                 .append(", RSSI: ").append(mRssi)
                 .append(", Link speed: ").append(mLinkSpeed).append(LINK_SPEED_UNITS)
                 .append(", Tx Link speed: ").append(mTxLinkSpeed).append(LINK_SPEED_UNITS)
@@ -1581,7 +1588,9 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 .append(", AP MLO Link Id: ").append(
                         mApMldMacAddress == null ? none : mApMloLinkId)
                 .append(", AP MLO Affiliated links: ").append(
-                        mApMldMacAddress == null ? none : mAffiliatedMloLinks);
+                        mApMldMacAddress == null ? none : mAffiliatedMloLinks)
+                .append(", Vendor Data: ").append(
+                        mVendorData == null || mVendorData.isEmpty() ? none : mVendorData);
 
         return sb.toString();
     }
@@ -1662,6 +1671,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
         dest.writeInt(mApMloLinkId);
         dest.writeTypedList(mAffiliatedMloLinks);
         dest.writeBoolean(mApTidToLinkMappingNegotiationSupported);
+        dest.writeList(mVendorData);
     }
 
     /** Implement the Parcelable interface {@hide} */
@@ -1725,6 +1735,7 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 info.mApMloLinkId = in.readInt();
                 info.mAffiliatedMloLinks = in.createTypedArrayList(MloLink.CREATOR);
                 info.mApTidToLinkMappingNegotiationSupported = in.readBoolean();
+                info.mVendorData = ParcelUtil.readOuiKeyedDataList(in);
                 return info;
             }
 
@@ -1746,9 +1757,9 @@ public class WifiInfo implements TransportInfo, Parcelable {
     /**
      * Get the Passpoint unique identifier for the current connection
      *
-     * @return Passpoint unique identifier
-     * @hide
+     * @return Passpoint unique identifier, or null if this connection is not Passpoint.
      */
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     public @Nullable String getPasspointUniqueId() {
         return mPasspointUniqueId;
     }
@@ -1894,7 +1905,8 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 && mRestricted == thatWifiInfo.mRestricted
                 && Objects.equals(mNetworkKey, thatWifiInfo.mNetworkKey)
                 && mApTidToLinkMappingNegotiationSupported
-                == thatWifiInfo.mApTidToLinkMappingNegotiationSupported;
+                == thatWifiInfo.mApTidToLinkMappingNegotiationSupported
+                && Objects.equals(mVendorData, thatWifiInfo.mVendorData);
     }
 
     @Override
@@ -1946,7 +1958,8 @@ public class WifiInfo implements TransportInfo, Parcelable {
                 mSecurityType,
                 mRestricted,
                 mNetworkKey,
-                mApTidToLinkMappingNegotiationSupported);
+                mApTidToLinkMappingNegotiationSupported,
+                mVendorData);
     }
 
     /**
@@ -2115,5 +2128,43 @@ public class WifiInfo implements TransportInfo, Parcelable {
     /** @hide */
     public void enableApTidToLinkMappingNegotiationSupport(boolean enable) {
         mApTidToLinkMappingNegotiationSupported = enable;
+    }
+
+    /**
+     * Return the vendor-provided configuration data, if it exists. See also {@link
+     * #setVendorData(List)}
+     *
+     * @return Vendor configuration data, or empty list if it does not exist.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @NonNull
+    @SystemApi
+    public List<OuiKeyedData> getVendorData() {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        return mVendorData;
+    }
+
+    /**
+     * Set additional vendor-provided configuration data.
+     *
+     * @param vendorData List of {@link OuiKeyedData} containing the vendor-provided
+     *     configuration data. Note that multiple elements with the same OUI are allowed.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public void setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        if (vendorData == null) {
+            throw new IllegalArgumentException("setVendorData received a null value");
+        }
+        mVendorData = new ArrayList<>(vendorData);
     }
 }

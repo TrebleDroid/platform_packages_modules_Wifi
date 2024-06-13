@@ -611,6 +611,12 @@
     <integer translatable="false" name="config_wifiDisableReasonAuthenticationNoSubscriptionDurationMs"> -1 </integer>
     <integer translatable="false" name="config_wifiDisableReasonConsecutiveFailuresDurationMs"> 300000 </integer>
 
+    <!-- Configuration for disabling a network due to repeated NUD failures -->
+    <!-- The number of NUD failures that need to happen to trigger blocking -->
+    <integer translatable="false" name="config_wifiDisableReasonRepeatedNudFailuresThreshold"> 5 </integer>
+    <!-- The NUD failures need to happen within this time window or else the counter will be reset -->
+    <integer translatable="false" name="config_wifiDisableReasonRepeatedNudFailuresWindowMs"> 60000 </integer>
+
     <!-- List of constants that indicate the number of consecutive failures per type needed to block a BSSID.
     A blocked BSSID will not be considered in network selection and firmware roaming.-->
     <integer translatable="false" name="config_wifiBssidBlocklistMonitorApUnableToHandleNewStaThreshold"> 1 </integer>
@@ -659,9 +665,6 @@
 
     <!-- Indicates that hidden networks are to be scanned during scan only mode -->
     <bool translatable="false" name="config_wifiScanHiddenNetworksScanOnlyMode">false</bool>
-
-    <!-- Enable logging WifiIsUnusableEvent in metrics which gets triggered when wifi becomes unusable. -->
-    <bool translatable="false" name="config_wifiIsUnusableEventMetricsEnabled">true</bool>
 
     <!-- The minimum number of txBad the framework has to observe to trigger a wifi data stall. -->
     <integer translatable="false" name="config_wifiDataStallMinTxBad">1</integer>
@@ -1273,4 +1276,43 @@
            regulatory domain.
      false: disconnect on NUD failures (normal/default action). -->
     <bool translatable="false" name ="config_wifiDisableNudDisconnectsForWapiInSpecificCc">false</bool>
+    <!-- A list of AKM suite selector mapping to configure the unknown AKM suite specifier to
+         known AKM suite specifier (Refer IEEE-80211-2020 section 9.4.2.24.3 AKM suites).
+         An AKM suite selector is defined as a combination of OUI (Organizationally unique
+         identifier) and AKMP (Authentication and key management protocol) suite type in IEEE80211
+         spec. For example 00-0F-AC:1 represents Authentication negotiated over IEEE Std 802.1X,
+         where the OUI is 00-0F-AC and AKMP is 1.
+         The Values specified here is for OEMs to allow setting the security type for APs which
+         advertise the AKMs not defined in Wi-Fi framework(unknown to framework). If a mapping is
+         available, framework sets the AP's key management type to the mapped known AKM and the
+         security type will be derived based on the known AKM. Then it is up to the HAL
+         implementation to derive the actual AKM to use in connection.
+         The mapping specified here is in integer decimal format separated by a comma:
+         (Unknown AKM, Known AKM).
+         When defining the integer AKM value here, follow this rule, the most significant byte
+         should carry the AKMP suite type. Use the below method to compute the integer decimal
+         AKM suite selector value -  AKM_VALUE(0x00, 0x0f, 0xac, 0x1)
+         AKM_VALUE(a, b, c, d) -> ((((u32) (a)) << 24) | (((u32) (b)) << 16) | (((u32) (c)) << 8)
+         | (u32) (d)) = 28053248 (Hex value - 0x01ac0f00) -->
+    <string-array translatable="false" name="config_wifiUnknownAkmToKnownAkmMapping">
+        <!-- Below is a sample configuration for this list:
+             <item>unknownAkm1,knownAkm</item>
+             <item>unknownAkm2,knownAkm</item>
+        -->
+    </string-array>
+    <!-- Integer for minimum time between IEEE 802.11az non-trigger based ranging measurements in
+         microseconds. Note that ranging request converts this to units of 100 microseconds. So the
+         value should be a multiple of 100 microseconds. Non-zero values in this setting take
+         precedence over individual responder settings, effectively enforcing a system-wide minimum
+         measurement interval for non-trigger based ranging operations.. -->
+    <integer translatable="false" name="config_wifi80211azMinTimeBetweenNtbMeasurementsMicros">250000</integer>
+    <!-- Integer for maximum time between IEEE 802.11az non-trigger based ranging measurements in
+         microseconds. Note that ranging request converts this to units of 10 milliseconds. So the
+         value should be a multiple of 10000 microseconds. Non-zero values in this setting take
+         precedence over individual responder settings, effectively enforcing a system-wide maximum
+         measurement interval for non-trigger based ranging operations. -->
+    <integer translatable="false" name="config_wifi80211azMaxTimeBetweenNtbMeasurementsMicros">15000000</integer>
+
+    <!-- Boolean indicating whether the device supports d2d allowed control when infra STA is disabled  -->
+    <bool translatable="false" name ="config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled">false</bool>
 </resources>

@@ -26,6 +26,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.wifi.util.SettingsMigrationDataHolder;
 import com.android.server.wifi.util.WifiConfigStoreEncryptionUtil;
 import com.android.server.wifi.util.XmlUtil;
@@ -40,6 +41,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Store data for storing wifi settings. These are key (string) / value pairs that are stored in
@@ -193,6 +195,16 @@ public class WifiSettingsConfigStore {
     public static final Key<Boolean> WIFI_WIPHY_11BE_SUPPORTED =
             new Key<>("wifi_wiphy_11be_supported", true);
 
+    /**
+     * Whether the D2D is allowed or not when infra sta is disabled.
+     */
+    public static final Key<Boolean> D2D_ALLOWED_WHEN_INFRA_STA_DISABLED =
+            new Key<>("d2d_allowed_when_infra_sta_disabled", false);
+
+    // List of all keys which require to backup and restore.
+    @SuppressWarnings("DoubleBraceInitialization")
+    private static final ArrayList<Key> sBackupRestoreKeys = new ArrayList<>() {{
+            add(WIFI_WEP_ALLOWED); }};
     /******** Wifi shared pref keys ***************/
 
     private final Context mContext;
@@ -235,6 +247,14 @@ public class WifiSettingsConfigStore {
 
         // Register our data store.
         wifiConfigStore.registerStoreData(new StoreData());
+    }
+
+    public ArrayList<Key> getAllKeys() {
+        return sKeys;
+    }
+
+    public ArrayList<Key> getAllBackupRestoreKeys() {
+        return sBackupRestoreKeys;
     }
 
     private void invokeAllListeners() {
@@ -417,18 +437,44 @@ public class WifiSettingsConfigStore {
             sKeys.add(this);
         }
 
+        @VisibleForTesting
+        public String getKey() {
+            return key;
+        }
+
         @Override
         public String toString() {
             return "[Key " + key + ", DefaultValue: " + defaultValue + "]";
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+
+            // null instanceof [type]" also returns false
+            if (!(o instanceof Key)) {
+                return false;
+            }
+
+            Key anotherKey = (Key) o;
+            return Objects.equals(key, anotherKey.key)
+                    && Objects.equals(defaultValue, anotherKey.defaultValue);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, defaultValue);
         }
     }
 
     /**
      * Store data for persisting the settings data to config store.
      */
-    private class StoreData implements WifiConfigStore.StoreData {
-        private static final String XML_TAG_SECTION_HEADER = "Settings";
-        private static final String XML_TAG_VALUES = "Values";
+    public class StoreData implements WifiConfigStore.StoreData {
+        public static final String XML_TAG_SECTION_HEADER = "Settings";
+        public static final String XML_TAG_VALUES = "Values";
 
         @Override
         public void serializeData(XmlSerializer out,
@@ -450,6 +496,22 @@ public class WifiSettingsConfigStore {
                 migrateFromSettingsIfNeeded();
                 return;
             }
+            Map<String, Object> values = deserializeSettingsData(in, outerTagDepth);
+            if (values != null) {
+                synchronized (mLock) {
+                    mSettings.putAll(values);
+                    // Invoke all the registered listeners.
+                    invokeAllListeners();
+                }
+            }
+        }
+
+        /**
+         * Parse out the wifi settings from the input xml stream.
+         */
+        public static Map<String, Object> deserializeSettingsData(
+                XmlPullParser in, int outerTagDepth)
+                throws XmlPullParserException, IOException {
             Map<String, Object> values = null;
             while (!XmlUtil.isNextSectionEnd(in, outerTagDepth)) {
                 String[] valueName = new String[1];
@@ -467,13 +529,7 @@ public class WifiSettingsConfigStore {
                         break;
                 }
             }
-            if (values != null) {
-                synchronized (mLock) {
-                    mSettings.putAll(values);
-                    // Invoke all the registered listeners.
-                    invokeAllListeners();
-                }
-            }
+            return values;
         }
 
         @Override

@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Коме:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Унесите потребни PIN:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Таблет ће привремено прекинути везу са WiFi-ем док је повезан са уређајем <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Android TV уређај ће привремено прекинути везу са WiFi мрежом док је повезан са уређајем <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Телефон ће привремено прекинути везу са WiFi-ем док је повезан са уређајем <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Уређај ће привремено прекинути везу са WiFi мрежом док је повезан са уређајем <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"Потврди"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Повезивање на мрежу <xliff:g id="SSID">%1$s</xliff:g> није успело"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Додирните да бисте променили подешавања приватности и пробали поново"</string>
@@ -104,19 +102,19 @@
   </string-array>
     <string name="wifi_eap_error_message_code_32767" msgid="7094289719914089006">"<xliff:g id="SSID">%1$s</xliff:g> : Грешка при EAP потврди идентитета 32767"</string>
   <string-array name="wifi_eap_error_message_code_32767_carrier_overrides">
-    <item msgid="3756793972687282940">"<xliff:g id="CARRIER_ID_PREFIX">:::1839:::</xliff:g><xliff:g id="SSID">%1$s</xliff:g> : Постоји проблем при повезивању на Verizon Wi-Fi Access. Пробајте поново касније или пробајте са неке друге локације. (грешка = 32767)"</item>
+    <item msgid="3756793972687282940">"<xliff:g id="CARRIER_ID_PREFIX">:::1839:::</xliff:g><xliff:g id="SSID">%1$s</xliff:g> : Постоји проблем при повезивању на Verizon WiFi Access. Пробајте поново касније или пробајте са неке друге локације. (грешка = 32767)"</item>
   </string-array>
     <string name="wifi_eap_error_message_code_16384" msgid="575394783233092922">"<xliff:g id="SSID">%1$s</xliff:g> : Грешка при EAP потврди идентитета 16384"</string>
   <string-array name="wifi_eap_error_message_code_16384_carrier_overrides">
-    <item msgid="270219697600808218">"<xliff:g id="CARRIER_ID_PREFIX">:::1839:::</xliff:g><xliff:g id="SSID">%1$s</xliff:g> : Постоји проблем при повезивању на Verizon Wi-Fi. (грешка = 16384)"</item>
+    <item msgid="270219697600808218">"<xliff:g id="CARRIER_ID_PREFIX">:::1839:::</xliff:g><xliff:g id="SSID">%1$s</xliff:g> : Постоји проблем при повезивању на Verizon WiFi. (грешка = 16384)"</item>
   </string-array>
     <string name="wifi_eap_error_message_code_16385" msgid="8392878664662215609">"<xliff:g id="SSID">%1$s</xliff:g> : Грешка при EAP потврди идентитета 16385"</string>
   <string-array name="wifi_eap_error_message_code_16385_carrier_overrides">
-    <item msgid="50575315771146940">"<xliff:g id="CARRIER_ID_PREFIX">:::1839:::</xliff:g><xliff:g id="SSID">%1$s</xliff:g> : Постоји проблем при повезивању на Verizon Wi-Fi. (грешка = 16385)"</item>
+    <item msgid="50575315771146940">"<xliff:g id="CARRIER_ID_PREFIX">:::1839:::</xliff:g><xliff:g id="SSID">%1$s</xliff:g> : Постоји проблем при повезивању на Verizon WiFi. (грешка = 16385)"</item>
   </string-array>
     <string name="wifi_eap_error_message_unknown_error_code" msgid="4480884285384231323">"<xliff:g id="SSID">%1$s</xliff:g> : Грешка при EAP потврди идентитета, непознат кôд грешке"</string>
   <string-array name="wifi_eap_error_message_unknown_error_code_carrier_overrides">
-    <item msgid="2705387186478280792">"<xliff:g id="CARRIER_ID_PREFIX">:::1839:::</xliff:g><xliff:g id="SSID">%1$s</xliff:g> : Постоји проблем при повезивању на Verizon Wi-Fi. (грешка = непознато)"</item>
+    <item msgid="2705387186478280792">"<xliff:g id="CARRIER_ID_PREFIX">:::1839:::</xliff:g><xliff:g id="SSID">%1$s</xliff:g> : Постоји проблем при повезивању на Verizon WiFi. (грешка = непознато)"</item>
   </string-array>
     <string name="wifi_softap_auto_shutdown_timeout_expired_title" msgid="4896534374569504484">"Хотспот је искључен"</string>
     <string name="wifi_softap_auto_shutdown_timeout_expired_summary" msgid="7975476698140267728">"Ниједан уређај није повезан. Додирните да бисте изменили."</string>

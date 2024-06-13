@@ -19,6 +19,7 @@ package com.android.server.wifi;
 
 import android.annotation.NonNull;
 import android.net.MacAddress;
+import android.net.wifi.MscsParams;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
@@ -729,7 +730,10 @@ interface ISupplicantStaIfaceHal {
      * @param isEnabled true if the feature is enabled, false otherwise.
      * @return true if operation is successful, false otherwise.
      */
-    boolean setNetworkCentricQosPolicyFeatureEnabled(@NonNull String ifaceName, boolean isEnabled);
+    default boolean setNetworkCentricQosPolicyFeatureEnabled(
+            @NonNull String ifaceName, boolean isEnabled) {
+        return false;
+    }
 
     /**
      * Sends a QoS policy response.
@@ -740,15 +744,20 @@ interface ISupplicantStaIfaceHal {
      * @param qosPolicyStatusList List of framework QosPolicyStatus objects.
      * @return true if response is sent successfully, false otherwise.
      */
-    boolean sendQosPolicyResponse(String ifaceName, int qosPolicyRequestId, boolean morePolicies,
-            @NonNull List<SupplicantStaIfaceHal.QosPolicyStatus> qosPolicyStatusList);
+    default boolean sendQosPolicyResponse(String ifaceName, int qosPolicyRequestId,
+            boolean morePolicies,
+            @NonNull List<SupplicantStaIfaceHal.QosPolicyStatus> qosPolicyStatusList) {
+        return false;
+    }
 
     /**
      * Indicates the removal of all active QoS policies configured by the AP.
      *
      * @param ifaceName Name of the interface.
      */
-    boolean removeAllQosPolicies(String ifaceName);
+    default boolean removeAllQosPolicies(String ifaceName) {
+        return false;
+    }
 
     /**
      * Send a set of QoS SCS policy add requests to the AP.
@@ -763,8 +772,10 @@ interface ISupplicantStaIfaceHal {
      *         Status code will be one of
      *         {@link SupplicantStaIfaceHal.QosPolicyScsRequestStatusCode}.
      */
-    List<SupplicantStaIfaceHal.QosPolicyStatus> addQosPolicyRequestForScs(
-            @NonNull String ifaceName, @NonNull List<QosPolicyParams> policies);
+    default List<SupplicantStaIfaceHal.QosPolicyStatus> addQosPolicyRequestForScs(
+            @NonNull String ifaceName, @NonNull List<QosPolicyParams> policies) {
+        return null;
+    }
 
     /**
      * Request the removal of specific QoS policies for SCS.
@@ -779,8 +790,10 @@ interface ISupplicantStaIfaceHal {
      *         Status code will be one of
      *         {@link SupplicantStaIfaceHal.QosPolicyScsRequestStatusCode}.
      */
-    List<SupplicantStaIfaceHal.QosPolicyStatus> removeQosPolicyForScs(
-            @NonNull String ifaceName, @NonNull List<Byte> policyIds);
+    default List<SupplicantStaIfaceHal.QosPolicyStatus> removeQosPolicyForScs(
+            @NonNull String ifaceName, @NonNull List<Byte> policyIds) {
+        return null;
+    }
 
     /**
      * Register a callback to receive notifications for QoS SCS transactions.
@@ -788,7 +801,8 @@ interface ISupplicantStaIfaceHal {
      *
      * @param callback {@link SupplicantStaIfaceHal.QosScsResponseCallback} to register.
      */
-    void registerQosScsResponseCallback(SupplicantStaIfaceHal.QosScsResponseCallback callback);
+    default void registerQosScsResponseCallback(
+            SupplicantStaIfaceHal.QosScsResponseCallback callback) {}
 
     /**
      * Generate DPP credential for network access
@@ -798,8 +812,10 @@ interface ISupplicantStaIfaceHal {
      * @param privEcKey Private EC Key for DPP Configurator
      * Returns true when operation is successful. On error, false is returned.
      */
-    boolean generateSelfDppConfiguration(@NonNull String ifaceName, @NonNull String ssid,
-            byte[] privEcKey);
+    default boolean generateSelfDppConfiguration(@NonNull String ifaceName, @NonNull String ssid,
+            byte[] privEcKey) {
+        return false;
+    }
 
     /**
      * Set the currently configured network's anonymous identity.
@@ -809,6 +825,24 @@ interface ISupplicantStaIfaceHal {
      * @param updateToNativeService write the data to the native service.
      * @return true if succeeds, false otherwise.
      */
-    boolean setEapAnonymousIdentity(@NonNull String ifaceName, String anonymousIdentity,
-            boolean updateToNativeService);
+    default boolean setEapAnonymousIdentity(@NonNull String ifaceName, String anonymousIdentity,
+            boolean updateToNativeService) {
+        return false;
+    }
+
+    /**
+     * Enable Mirrored Stream Classification Service (MSCS) and configure using
+     * the provided configuration values.
+     *
+     * @param mscsParams {@link MscsParams} object containing the configuration parameters.
+     * @param ifaceName Name of the interface.
+     */
+    default void enableMscs(@NonNull MscsParams mscsParams, String ifaceName) {}
+
+    /**
+     * Disable Mirrored Stream Classification Service (MSCS).
+     *
+     * @param ifaceName Name of the interface.
+     */
+    default void disableMscs(String ifaceName) {}
 }

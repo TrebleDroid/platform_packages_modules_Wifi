@@ -17,13 +17,18 @@
 package com.android.server.wifi.p2p;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.ScanResult;
 import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDiscoveryConfig;
+import android.net.wifi.p2p.WifiP2pExtListenParams;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pGroupList;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pServiceInfo;
+
+import com.android.server.wifi.WifiNative;
 
 import java.util.List;
 import java.util.Set;
@@ -106,6 +111,19 @@ interface ISupplicantP2pIfaceHal {
      * @return boolean value indicating whether operation was successful.
      */
     boolean find(@WifiP2pManager.WifiP2pScanType int type, int freq, int timeout);
+
+    /**
+     * Initiate P2P device discovery with config params.
+     *
+     * @param config The config parameters to initiate P2P discovery.
+     * @param timeout The maximum amount of time to be spent in performing discovery.
+     *        Set to 0 to indefinitely continue discovery until an explicit
+     *        |stopFind| is sent.
+     * @return boolean value indicating whether the operation was successful.
+     */
+    default boolean findWithParams(@NonNull WifiP2pDiscoveryConfig config, int timeout) {
+        return false;
+    }
 
     /**
      * Stop an ongoing P2P service discovery.
@@ -317,10 +335,12 @@ interface ISupplicantP2pIfaceHal {
      * @param enable Enables or disables listening.
      * @param periodInMillis Period in milliseconds.
      * @param intervalInMillis Interval in milliseconds.
+     * @param extListenParams Additional parameter struct for this request.
      *
      * @return true, if operation was successful.
      */
-    boolean configureExtListen(boolean enable, int periodInMillis, int intervalInMillis);
+    boolean configureExtListen(boolean enable, int periodInMillis, int intervalInMillis,
+            @Nullable WifiP2pExtListenParams extListenParams);
 
     /**
      * Set P2P Listen channel.
@@ -585,4 +605,30 @@ interface ISupplicantP2pIfaceHal {
      */
     boolean configureEapolIpAddressAllocationParams(int ipAddressGo, int ipAddressMask,
             int ipAddressStart, int ipAddressEnd);
+
+    /**
+     * Terminate the supplicant daemon & wait for its death.
+     * Note: Aidl only since it was added from HIDL 1.1
+     */
+    default void terminate() {};
+
+    /**
+     * Registers a death notification for supplicant.
+     * @return Returns true on success.
+     *
+     * Note: Aidl only.
+     */
+    default boolean registerDeathHandler(@NonNull WifiNative.SupplicantDeathEventHandler handler) {
+        return false;
+    };
+
+    /**
+     * Deregisters a death notification for supplicant.
+     * @return Returns true on success.
+     *
+     * Note: Aidl only.
+     */
+    default boolean deregisterDeathHandler() {
+        return false;
+    };
 }

@@ -138,7 +138,7 @@ public class ExternalApproverManager {
 
     private void logd(String s) {
         if (!mVerboseLoggingEnabled) return;
-        Log.d(TAG, s);
+        Log.d(TAG, s, null);
     }
 
     /** The approver data. */

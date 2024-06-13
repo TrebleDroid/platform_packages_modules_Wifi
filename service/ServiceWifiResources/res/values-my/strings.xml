@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"သို့:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"လိုအပ်သော ပင် နံပါတ် ရိုက်ရန်:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"ပင် နံပါတ်:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> နှင့် ဆက်သွယ်ထားစဉ် တက်ဘလက်ဟာ Wi-Fi  နှင့် ဆက်သွယ်မှု ရပ်ဆိုင်းထားမှာ ဖြစ်ပါတယ်"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"သင်၏ Android TV စက်ပစ္စည်းသည် <xliff:g id="DEVICE_NAME">%1$s</xliff:g> သို့ ချိတ်ဆက်ထားသည့်အခါ Wi-Fi မှနေ၍ ယာယီ ချိတ်ဆက်မှုဖြုတ်သွားပါမည်။"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> ကို ဆက်သွယ်ထားစဉ် ဖုန်းအား ဝိုင်ဖိုင်မှ ဆက်သွယ်မှု ရပ်ဆိုင်းထားပါမည်"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"သင့်စက်သည် <xliff:g id="DEVICE_NAME">%1$s</xliff:g> သို့ ချိတ်ဆက်ထားစဉ် Wi-Fi နှင့် ချိတ်ဆက်မှုကို ယာယီဖြုတ်ထားမည်"</string>
     <string name="dlg_ok" msgid="254496739491689405">"OK"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g> နှင့် ချိတ်ဆက်၍မရပါ။"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"ကိုယ်ရေးလုံခြုံမှုဆက်တင်ကို ပြောင်းရန် တို့ပြီးနောက် ပြန်စမ်းကြည့်ပါ"</string>

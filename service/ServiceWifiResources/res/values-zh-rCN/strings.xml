@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"收件人："</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"输入所需的PIN码："</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN 码："</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"平板电脑连接到“<xliff:g id="DEVICE_NAME">%1$s</xliff:g>”时会暂时断开与WLAN的连接"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"当 Android TV 设备连接到 <xliff:g id="DEVICE_NAME">%1$s</xliff:g> 时，它会暂时断开 WLAN 连接"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"手机连接到<xliff:g id="DEVICE_NAME">%1$s</xliff:g>时会暂时断开与WLAN的连接。"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"当设备连接到<xliff:g id="DEVICE_NAME">%1$s</xliff:g>时，它会暂时断开 WLAN 连接"</string>
     <string name="dlg_ok" msgid="254496739491689405">"确定"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"无法连接到“<xliff:g id="SSID">%1$s</xliff:g>”"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"点按以更改隐私设置并重试"</string>

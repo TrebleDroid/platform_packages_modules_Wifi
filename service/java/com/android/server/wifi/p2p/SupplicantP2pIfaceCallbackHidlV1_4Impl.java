@@ -58,7 +58,7 @@ public class SupplicantP2pIfaceCallbackHidlV1_4Impl
     }
 
     protected static void logd(String s) {
-        if (sVerboseLoggingEnabled) Log.d(TAG, s);
+        if (sVerboseLoggingEnabled) Log.d(TAG, s, null);
     }
 
     /**

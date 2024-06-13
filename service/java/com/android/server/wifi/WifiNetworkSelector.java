@@ -218,7 +218,7 @@ public class WifiNetworkSelector {
     // be retrieved in bugreport. It is also used to print the log in the console.
     private void localLog(String log) {
         mLocalLog.log(log);
-        if (mVerboseLoggingEnabled) Log.d(TAG, log);
+        if (mVerboseLoggingEnabled) Log.d(TAG, log, null);
     }
 
     /**
@@ -1181,6 +1181,16 @@ public class WifiNetworkSelector {
     }
 
     /**
+     * Check Wi-Fi7 is enabled for all candidates.
+     */
+    private boolean isWifi7Enabled(List<WifiCandidates.Candidate> candidates) {
+        for (WifiCandidates.Candidate candidate : candidates) {
+            if (!mWifiConfigManager.isWifi7Enabled(candidate.getNetworkConfigId())) return false;
+        }
+        return true;
+    }
+
+    /**
      * Update multi link candidate's throughput which is used in network selection by
      * {@link ThroughputScorer}
      *
@@ -1221,6 +1231,7 @@ public class WifiNetworkSelector {
 
         for (List<WifiCandidates.Candidate> mlCandidates :
                 wifiCandidates.getMultiLinkCandidates()) {
+            if (!isWifi7Enabled(mlCandidates)) continue;
             for (List<Integer> bands : simultaneousBandCombinations) {
                 // Limit the radios/bands to maximum STR link supported in multi link operation.
                 if (bands.size() > maxMloStrLinkCount) break;

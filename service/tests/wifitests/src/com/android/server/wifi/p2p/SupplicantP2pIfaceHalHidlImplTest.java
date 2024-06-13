@@ -1581,13 +1581,13 @@ public class SupplicantP2pIfaceHalHidlImplTest extends WifiBaseTest {
         when(mISupplicantP2pIfaceMock.configureExtListen(eq(0), eq(0)))
                 .thenReturn(mStatusSuccess);
         // Default value when service is not initialized.
-        assertFalse(mDut.configureExtListen(true, 123, 456));
+        assertFalse(mDut.configureExtListen(true, 123, 456, null));
         executeAndValidateInitializationSequence(false, false, false);
-        assertTrue(mDut.configureExtListen(true, 123, 456));
+        assertTrue(mDut.configureExtListen(true, 123, 456, null));
         // Turning listening off should reset intervals to 0s.
-        assertTrue(mDut.configureExtListen(false, 999, 999));
+        assertTrue(mDut.configureExtListen(false, 999, 999, null));
         // Disable listening.
-        assertTrue(mDut.configureExtListen(false, -1, -1));
+        assertTrue(mDut.configureExtListen(false, -1, -1, null));
     }
 
     /**
@@ -1598,8 +1598,8 @@ public class SupplicantP2pIfaceHalHidlImplTest extends WifiBaseTest {
         executeAndValidateInitializationSequence(false, false, false);
         when(mISupplicantP2pIfaceMock.configureExtListen(anyInt(), anyInt()))
                 .thenReturn(mStatusFailure);
-        assertFalse(mDut.configureExtListen(true, -1, 1));
-        assertFalse(mDut.configureExtListen(true, 1, -1));
+        assertFalse(mDut.configureExtListen(true, -1, 1, null));
+        assertFalse(mDut.configureExtListen(true, 1, -1, null));
     }
 
     /**
@@ -1610,7 +1610,7 @@ public class SupplicantP2pIfaceHalHidlImplTest extends WifiBaseTest {
         executeAndValidateInitializationSequence(false, false, false);
         when(mISupplicantP2pIfaceMock.configureExtListen(anyInt(), anyInt()))
                 .thenReturn(mStatusFailure);
-        assertFalse(mDut.configureExtListen(true, 1, 1));
+        assertFalse(mDut.configureExtListen(true, 1, 1, null));
         // Check that service is still alive.
         assertTrue(mDut.isInitializationComplete());
     }
@@ -1623,7 +1623,7 @@ public class SupplicantP2pIfaceHalHidlImplTest extends WifiBaseTest {
         executeAndValidateInitializationSequence(false, false, false);
         when(mISupplicantP2pIfaceMock.configureExtListen(anyInt(), anyInt()))
                 .thenThrow(mRemoteException);
-        assertFalse(mDut.configureExtListen(true, 1, 1));
+        assertFalse(mDut.configureExtListen(true, 1, 1, null));
         // Check service is dead.
         assertFalse(mDut.isInitializationComplete());
     }

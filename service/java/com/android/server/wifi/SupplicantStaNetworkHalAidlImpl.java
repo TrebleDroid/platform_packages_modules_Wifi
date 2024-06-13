@@ -16,6 +16,7 @@
 
 package com.android.server.wifi;
 
+import android.annotation.NonNull;
 import android.content.Context;
 import android.hardware.wifi.supplicant.AuthAlgMask;
 import android.hardware.wifi.supplicant.DppConnectionKeys;
@@ -33,6 +34,7 @@ import android.hardware.wifi.supplicant.PairwiseCipherMask;
 import android.hardware.wifi.supplicant.ProtoMask;
 import android.hardware.wifi.supplicant.SaeH2eMode;
 import android.hardware.wifi.supplicant.TlsVersion;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
@@ -44,6 +46,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.util.ArrayUtils;
 import com.android.server.wifi.util.HalAidlUtil;
 import com.android.server.wifi.util.NativeUtil;
@@ -59,6 +62,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -309,7 +313,14 @@ public class SupplicantStaNetworkHalAidlImpl {
             if (config == null) {
                 return false;
             }
-            /** SSID */
+            // ieee80211be
+            if (!config.isWifi7Enabled() && isServiceVersionIsAtLeast(3)) {
+                if (!disableEht()) {
+                    Log.e(TAG, "failed to disable EHT (Wi-Fi 7)");
+                    return false;
+                }
+            }
+            // SSID
             if (config.SSID != null) {
                 WifiSsid wifiSsid = WifiSsid.fromString(config.SSID);
                 if (!setSsid(wifiSsid.getBytes())) {
@@ -317,7 +328,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                     return false;
                 }
             }
-            /** BSSID */
+            // BSSID
             String bssidStr = config.getNetworkSelectionStatus().getNetworkSelectionBSSID();
             if (bssidStr != null) {
                 byte[] bssid = NativeUtil.macAddressToByteArray(bssidStr);
@@ -326,7 +337,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                     return false;
                 }
             }
-            /** HiddenSSID */
+            // HiddenSSID
             if (!setScanSsid(config.hiddenSSID)) {
                 Log.e(TAG, config.SSID + ": failed to set hiddenSSID: " + config.hiddenSSID);
                 return false;
@@ -342,12 +353,12 @@ public class SupplicantStaNetworkHalAidlImpl {
 
             boolean isRequirePmf = NativeUtil.getOptimalPmfSettingForConfig(config,
                     securityParams.isRequirePmf(), mWifiGlobals);
-            /** RequirePMF */
+            // RequirePMF
             if (!setRequirePmf(isRequirePmf)) {
                 Log.e(TAG, config.SSID + ": failed to set requirePMF: " + config.requirePmf);
                 return false;
             }
-            /** Key Management Scheme */
+            // Key Management Scheme
             BitSet allowedKeyManagement = securityParams.getAllowedKeyManagement();
             if (allowedKeyManagement.cardinality() != 0) {
                 // Add upgradable type key management flags for PSK/SAE.
@@ -374,7 +385,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                     return false;
                 }
             }
-            /** Security Protocol */
+            // Security Protocol
             BitSet allowedProtocols = securityParams.getAllowedProtocols();
             if (allowedProtocols.cardinality() != 0 && !setProto(
                     wifiConfigurationToSupplicantProtoMask(allowedProtocols, mWifiGlobals,
@@ -382,7 +393,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                 Log.e(TAG, "failed to set Security Protocol");
                 return false;
             }
-            /** Auth Algorithm */
+            // Auth Algorithm
             BitSet allowedAuthAlgorithms = securityParams.getAllowedAuthAlgorithms();
             if (allowedAuthAlgorithms.cardinality() != 0
                     && !setAuthAlg(wifiConfigurationToSupplicantAuthAlgMask(
@@ -390,7 +401,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                 Log.e(TAG, "failed to set AuthAlgorithm");
                 return false;
             }
-            /** Group Cipher */
+            // Group Cipher
             BitSet allowedGroupCiphers = NativeUtil.getOptimalGroupCiphersForConfig(
                     config, securityParams.getAllowedGroupCiphers(), mWifiGlobals);
             if (allowedGroupCiphers.cardinality() != 0
@@ -399,7 +410,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                 Log.e(TAG, "failed to set Group Cipher");
                 return false;
             }
-            /** Pairwise Cipher*/
+            // Pairwise Cipher
             BitSet allowedPairwiseCiphers = NativeUtil.getOptimalPairwiseCiphersForConfig(
                     config, securityParams.getAllowedPairwiseCiphers(), mWifiGlobals);
             if (allowedPairwiseCiphers.cardinality() != 0
@@ -408,7 +419,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                 Log.e(TAG, "failed to set PairwiseCipher");
                 return false;
             }
-            /** Pre Shared Key */
+            // Pre Shared Key
             // For PSK, this can either be quoted ASCII passphrase or hex string for raw psk.
             // For SAE, password must be a quoted ASCII string
             if (config.preSharedKey != null) {
@@ -419,7 +430,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                     }
                 } else if (config.preSharedKey.startsWith("\"")) {
                     if (allowedKeyManagement.get(WifiConfiguration.KeyMgmt.SAE)) {
-                        /* WPA3 case, field is SAE Password */
+                        // WPA3 case, field is SAE Password
                         if (!setSaePassword(
                                 NativeUtil.removeEnclosingQuotes(config.preSharedKey))) {
                             Log.e(TAG, "failed to set sae password");
@@ -444,7 +455,7 @@ public class SupplicantStaNetworkHalAidlImpl {
                     }
                 }
             }
-            /** Wep Keys */
+            // Wep Keys
             boolean hasSetKey = false;
             if (config.wepKeys != null) {
                 for (int i = 0; i < config.wepKeys.length; i++) {
@@ -458,18 +469,18 @@ public class SupplicantStaNetworkHalAidlImpl {
                     }
                 }
             }
-            /** Wep Tx Key Idx */
+            // Wep Tx Key Idx
             if (hasSetKey) {
                 if (!setWepTxKeyIdx(config.wepTxKeyIndex)) {
                     Log.e(TAG, "failed to set wep_tx_keyidx: " + config.wepTxKeyIndex);
                     return false;
                 }
             }
-            /** metadata: FQDN + ConfigKey + CreatorUid */
+            // metadata: FQDN + ConfigKey + CreatorUid
             final Map<String, String> metadata = new HashMap<String, String>();
             if (config.isPasspoint()) {
                 metadata.put(ID_STRING_KEY_FQDN, config.FQDN);
-                /** Selected RCOI */
+                // Selected RCOI
                 if (!setSelectedRcoi(config.enterpriseConfig.getSelectedRcoi())) {
                     Log.e(TAG, "failed to set selected RCOI");
                     return false;
@@ -481,13 +492,13 @@ public class SupplicantStaNetworkHalAidlImpl {
                 Log.e(TAG, "failed to set id string");
                 return false;
             }
-            /** UpdateIdentifier */
+            // UpdateIdentifier
             if (config.updateIdentifier != null
                     && !setUpdateIdentifier(Integer.parseInt(config.updateIdentifier))) {
                 Log.e(TAG, "failed to set update identifier");
                 return false;
             }
-            /** SAE configuration */
+            // SAE configuration
             if (allowedKeyManagement.get(WifiConfiguration.KeyMgmt.SAE)) {
                 /**
                  * Hash-to-Element preference.
@@ -512,11 +523,19 @@ public class SupplicantStaNetworkHalAidlImpl {
                     return false;
                 }
             }
+            // Vendor data
+            if (SdkLevel.isAtLeastV() && isServiceVersionIsAtLeast(3)
+                    && config.getVendorData() != null
+                    && !config.getVendorData().isEmpty()
+                    && !setVendorData(config.getVendorData())) {
+                Log.e(TAG, "Failed to set vendor data.");
+                return false;
+            }
             // Finish here if no EAP config to set
             if (config.enterpriseConfig != null
                     && config.enterpriseConfig.getEapMethod() != WifiEnterpriseConfig.Eap.NONE) {
                 if (config.enterpriseConfig.getEapMethod() == WifiEnterpriseConfig.Eap.WAPI_CERT) {
-                    /** WAPI certificate suite name*/
+                    // WAPI certificate suite name
                     String param = config.enterpriseConfig
                             .getFieldValue(WifiEnterpriseConfig.WAPI_CERT_SUITE_KEY);
                     if (!TextUtils.isEmpty(param) && !setWapiCertSuite(param)) {
@@ -1293,6 +1312,33 @@ public class SupplicantStaNetworkHalAidlImpl {
             try {
                 mISupplicantStaNetwork.setSsid(ssid);
                 Log.i(TAG, "Successfully set SSID");
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Disable EHT for this network.
+     *
+     * @return true if successful, false otherwise
+     */
+    private boolean disableEht() {
+        synchronized (mLock) {
+            final String methodStr = "disableEht";
+            if (!checkStaNetworkAndLogFailure(methodStr)) {
+                return false;
+            }
+            try {
+                if (!isServiceVersionIsAtLeast(3)) {
+                    return false;
+                }
+                mISupplicantStaNetwork.disableEht();
+                Log.i(TAG, "Successfully disabled EHT");
                 return true;
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);
@@ -3736,6 +3782,31 @@ public class SupplicantStaNetworkHalAidlImpl {
                     return false;
                 }
                 mISupplicantStaNetwork.setStrictConservativePeerMode(true);
+                return true;
+            } catch (RemoteException e) {
+                handleRemoteException(e, methodStr);
+            } catch (ServiceSpecificException e) {
+                handleServiceSpecificException(e, methodStr);
+            }
+            return false;
+        }
+    }
+
+    private boolean setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+        synchronized (mLock) {
+            final String methodStr = "setVendorData";
+            if (!checkStaNetworkAndLogFailure(methodStr)) {
+                return false;
+            }
+            try {
+                if (!isServiceVersionIsAtLeast(3)) {
+                    return false;
+                }
+                if (vendorData == null || vendorData.isEmpty()) {
+                    return false;
+                }
+                mISupplicantStaNetwork.setVendorData(
+                        HalAidlUtil.frameworkToHalOuiKeyedDataList(vendorData));
                 return true;
             } catch (RemoteException e) {
                 handleRemoteException(e, methodStr);

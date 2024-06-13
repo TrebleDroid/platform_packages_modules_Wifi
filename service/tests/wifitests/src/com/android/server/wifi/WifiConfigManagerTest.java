@@ -63,6 +63,7 @@ import android.content.pm.PackageManager;
 import android.net.DhcpOption;
 import android.net.IpConfiguration;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
@@ -319,6 +320,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         when(mWifiPermissionsUtil.isProfileOwner(anyInt(), any())).thenReturn(false);
         when(mWifiPermissionsUtil.doesUidBelongToCurrentUserOrDeviceOwner(anyInt()))
                 .thenReturn(true);
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(false);
         when(mWifiPermissionsUtil.isDeviceInDemoMode(any())).thenReturn(false);
         when(mWifiPermissionsUtil.isSystem(any(), anyInt())).thenReturn(true);
         when(mWifiLastResortWatchdog.shouldIgnoreSsidUpdate()).thenReturn(false);
@@ -1291,6 +1294,29 @@ public class WifiConfigManagerTest extends WifiBaseTest {
     }
 
     /**
+     * Test that configs containing vendor data can only be added/updated if the
+     * caller has the proper permissions.
+     */
+    @Test
+    public void testAddNetworkWithVendorDataPermissionCheck() {
+        assumeTrue(SdkLevel.isAtLeastV());
+        WifiConfiguration configuration = WifiConfigurationTestUtil.createOpenNetwork();
+        configuration.setVendorData(Arrays.asList(mock(OuiKeyedData.class)));
+
+        // Expect failure if the caller does not have the permission.
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(false);
+        NetworkUpdateResult result = addNetworkToWifiConfigManager(configuration,
+                configuration.creatorUid);
+        assertEquals(WifiConfiguration.INVALID_NETWORK_ID, result.getNetworkId());
+
+        // Expect success if the caller has the permission.
+        when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
+                .thenReturn(true);
+        verifyAddNetworkToWifiConfigManager(configuration);
+    }
+
+    /**
      * Verifies that the modification of a single open network using
      * {@link WifiConfigManager#addOrUpdateNetwork(WifiConfiguration, int)} with the creator UID
      * should always succeed.
@@ -1818,7 +1844,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         NetworkUpdateResult result = verifyAddNetworkToWifiConfigManager(openNetwork);
 
         mWifiConfigManager
-                .updateBeforeConnect(result.getNetworkId(), TEST_CREATOR_UID, TEST_PACKAGE_NAME);
+                .updateBeforeConnect(result.getNetworkId(), TEST_CREATOR_UID, TEST_PACKAGE_NAME,
+                        true);
 
         WifiConfiguration retrievedNetwork =
                 mWifiConfigManager.getConfiguredNetwork(result.getNetworkId());
@@ -6657,7 +6684,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 .thenReturn(true);
 
         mWifiConfigManager.updateBeforeConnect(config.networkId, TEST_CREATOR_UID,
-                TEST_PACKAGE_NAME);
+                TEST_PACKAGE_NAME, true);
 
         config = mWifiConfigManager.getConfiguredNetwork(config.networkId);
         // network became enabled
@@ -6695,7 +6722,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 .thenReturn(false);
 
         mWifiConfigManager.updateBeforeConnect(config.networkId, TEST_CREATOR_UID,
-                TEST_PACKAGE_NAME);
+                TEST_PACKAGE_NAME, true);
 
         config = mWifiConfigManager.getConfiguredNetwork(config.networkId);
         // network became enabled
@@ -6730,7 +6757,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         when(mUserManager.isSameProfileGroup(any(), any())).thenReturn(false);
 
         mWifiConfigManager.updateBeforeConnect(config.networkId, TEST_OTHER_USER_UID,
-                TEST_PACKAGE_NAME);
+                TEST_PACKAGE_NAME, true);
 
         // network still disabled
         assertFalse(config.getNetworkSelectionStatus().isNetworkEnabled());
@@ -8218,7 +8245,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         WifiConfiguration config = mWifiConfigManager.getConfiguredNetwork(eapPeapNetId);
         assertFalse(config.enterpriseConfig.isTrustOnFirstUseEnabled());
         assertFalse(config.enterpriseConfig.isUserApproveNoCaCert());
-        assertEquals("", config.enterpriseConfig.getDomainSuffixMatch());
+        assertEquals("mockServerCert", config.enterpriseConfig.getDomainSuffixMatch());
         assertEquals("DNS:wifi.android;EMAIL:test@wifi.com;DNS:network.android;"
                 + "URI:http://test.android.com",
                 config.enterpriseConfig.getAltSubjectMatch());
@@ -8443,5 +8470,61 @@ public class WifiConfigManagerTest extends WifiBaseTest {
 
         // Verify operation still fails
         assertFalse(addNetworkToWifiConfigManager(config).isSuccess());
+    }
+
+    /**
+     * Verify that the send DHCP hostname setting is correctly updated
+     */
+    @Test
+    public void testAddNetworkUpdatesSendDhcpHostname() {
+        WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
+        config.setSendDhcpHostnameEnabled(false);
+
+        NetworkUpdateResult result = addNetworkToWifiConfigManager(config);
+
+        assertTrue(result.isSuccess());
+        config = mWifiConfigManager.getConfiguredNetwork(result.getNetworkId());
+        assertFalse(config.isSendDhcpHostnameEnabled());
+
+        config.setSendDhcpHostnameEnabled(true);
+        result = updateNetworkToWifiConfigManager(config);
+
+        assertTrue(result.isSuccess());
+        config = mWifiConfigManager.getConfiguredNetwork(result.getNetworkId());
+        assertTrue(config.isSendDhcpHostnameEnabled());
+    }
+
+    /**
+     * Verify that changing the DHCP hostname setting fails without NETWORK_SETTINGS or
+     * NETWORK_SETUP_WIZARD permissions.
+     */
+    @Test
+    public void testUpdateSendDhcpHostnameFailsWithoutSettingsOrSuwPermission() {
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(TEST_CREATOR_UID))
+                .thenReturn(false);
+        when(mWifiPermissionsUtil.checkNetworkSetupWizardPermission(TEST_CREATOR_UID))
+                .thenReturn(false);
+        when(mWifiPermissionsUtil.checkNetworkSettingsPermission(TEST_UPDATE_UID))
+                .thenReturn(false);
+        when(mWifiPermissionsUtil.checkNetworkSetupWizardPermission(TEST_UPDATE_UID))
+                .thenReturn(false);
+        WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
+
+        // Fail to add if dhcp hostname setting is set to DO_NOT_SEND
+        config.setSendDhcpHostnameEnabled(false);
+        NetworkUpdateResult result = addNetworkToWifiConfigManager(config);
+        assertFalse(result.isSuccess());
+
+        // Can add if dhcp hostname setting is reset to default SEND
+        config.setSendDhcpHostnameEnabled(true);
+        result = addNetworkToWifiConfigManager(config);
+        assertTrue(result.isSuccess());
+        config = mWifiConfigManager.getConfiguredNetwork(result.getNetworkId());
+        assertTrue(config.isSendDhcpHostnameEnabled());
+
+        // Fail to update if dchp hostname setting is set to DO_NOT_SEND
+        config.setSendDhcpHostnameEnabled(false);
+        result = updateNetworkToWifiConfigManager(config);
+        assertFalse(result.isSuccess());
     }
 }

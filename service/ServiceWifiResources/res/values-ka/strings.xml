@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"მიმღები:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"შეიყვანეთ საჭირო PIN:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"პინ-კოდი:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"ტაბლეტი დროებით გაითიშება Wi-Fi-დან, სანამ მიერთებულია <xliff:g id="DEVICE_NAME">%1$s</xliff:g>-ზე"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"თქვენი Android TV მოწყობილობა დროებით გაითიშება Wi-Fi-დან, სანამ ის <xliff:g id="DEVICE_NAME">%1$s</xliff:g>-თან იქნება დაკავშირებული"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"ტელეფონი დროებით გაითიშება Wi-Fi-დან, სანამ მიერთებულია <xliff:g id="DEVICE_NAME">%1$s</xliff:g>-ზე"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"თქვენი მოწყობილობა დროებით გაითიშება Wi-Fi-დან, სანამ ის <xliff:g id="DEVICE_NAME">%1$s</xliff:g>-თან იქნება დაკავშირებული"</string>
     <string name="dlg_ok" msgid="254496739491689405">"OK"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g>-თან დაკავშირება ვერ ხერხდება"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"შეეხეთ კონფიდენციალურობის პარამეტრების შესაცვლელად და ცადეთ ხელახლა"</string>

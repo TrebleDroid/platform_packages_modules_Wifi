@@ -40,10 +40,10 @@
     <string name="wifi_suggestion_imsi_privacy_exemption_confirmation_content" msgid="9211241189147807136">"Konektatzen bazara, baliteke <xliff:g id="CARRIERNAME">%s</xliff:g> operadorearen wifi-sareek zure SIM txartelarekin lotutako identifikatzaile esklusiboa atzitzea edo partekatzea. Horrela, baliteke zure gailuaren kokapenaren jarraipena egiteko aukera izatea."</string>
     <string name="wifi_suggestion_action_allow_imsi_privacy_exemption_confirmation" msgid="2168947026413431603">"Konektatu"</string>
     <string name="wifi_suggestion_action_disallow_imsi_privacy_exemption_confirmation" msgid="5156881939985876066">"Ez konektatu"</string>
-    <string name="wifi_wakeup_onboarding_title" msgid="3868826648004934540">"Wi‑Fi konexioa automatikoki aktibatuko da"</string>
+    <string name="wifi_wakeup_onboarding_title" msgid="3868826648004934540">"Wifi-konexioa automatikoki aktibatuko da"</string>
     <string name="wifi_wakeup_onboarding_subtext" msgid="5705886295837387430">"Gordeta daukazun kalitate handiko sare batetik gertu zaudenean"</string>
     <string name="wifi_wakeup_onboarding_action_disable" msgid="6209706680391785825">"Ez aktibatu berriro"</string>
-    <string name="wifi_wakeup_enabled_title" msgid="5043486751612595850">"Automatikoki aktibatu da Wi‑Fi konexioa"</string>
+    <string name="wifi_wakeup_enabled_title" msgid="5043486751612595850">"Automatikoki aktibatu da wifi-konexioa"</string>
     <string name="wifi_wakeup_enabled_content" msgid="3911262526267025882">"Gordetako sare honetatik gertu zaude: <xliff:g id="NETWORK_SSID">%1$s</xliff:g>"</string>
     <string name="wifi_watchdog_network_disabled" msgid="5769226742956006362">"Ezin izan da wifi-sarera konektatu"</string>
     <string name="wifi_watchdog_network_disabled_detailed" msgid="1725243835135539125">" SSIDak Interneteko konexio txarra du."</string>
@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Hartzaileak:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Idatzi beharrezko PINa:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PINa:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Tableta wifi-saretik deskonektatuko da <xliff:g id="DEVICE_NAME">%1$s</xliff:g> gailura konektatuta dagoen bitartean"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Android TV gailua wifi-saretik deskonektatuko da aldi batez <xliff:g id="DEVICE_NAME">%1$s</xliff:g> gailura konektatuta dagoen bitartean"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Telefonoa wifi-saretik deskonektatuko da <xliff:g id="DEVICE_NAME">%1$s</xliff:g> gailura konektatuta dagoen bitartean"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Gailua wifi-saretik deskonektatuko da aldi batez <xliff:g id="DEVICE_NAME">%1$s</xliff:g> gailura konektatuta dagoen bitartean"</string>
     <string name="dlg_ok" msgid="254496739491689405">"Ados"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Ezin da konektatu <xliff:g id="SSID">%1$s</xliff:g> sarera"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Sakatu hau pribatutasun-ezarpenak aldatzeko, eta saiatu berriro"</string>

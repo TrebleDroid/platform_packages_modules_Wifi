@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedDataUtil;
 import android.os.Parcel;
 
 import androidx.test.filters.SmallTest;
@@ -264,6 +265,9 @@ public class WifiP2pConfigTest {
     public void testWifiP2pConfig() throws Exception {
         WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = DEVICE_ADDRESS;
+        if (SdkLevel.isAtLeastV()) {
+            config.setVendorData(OuiKeyedDataUtil.createTestOuiKeyedDataList(5));
+        }
 
         WifiP2pConfig copiedConfig = new WifiP2pConfig(config);
         // no equals operator, use toString for comparison.
@@ -279,6 +283,9 @@ public class WifiP2pConfigTest {
         parcelR.setDataPosition(0);
         WifiP2pConfig configFromParcel = WifiP2pConfig.CREATOR.createFromParcel(parcelR);
 
+        if (SdkLevel.isAtLeastV()) {
+            assertTrue(config.getVendorData().equals(configFromParcel.getVendorData()));
+        }
         // no equals operator, use toString for comparison.
         assertEquals(config.toString(), configFromParcel.toString());
     }

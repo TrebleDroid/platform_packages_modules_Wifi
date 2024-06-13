@@ -276,21 +276,26 @@ public interface IWifiNanIface {
      *                      match indication).
      * @param peer          The MAC address of the peer to create a connection with.
      * @param method        the proposed bootstrapping method
+     * @param pubSubId      ID of the publish/subscribe session - obtained when creating a session.
+     * @param isComeBack    If the request is for a previous comeback response
      * @return True if the request send succeed.
      */
     boolean initiateNanBootstrappingRequest(short transactionId, int peerId, MacAddress peer,
-            int method, byte[] cookie);
+            int method, byte[] cookie, byte pubSubId, boolean isComeBack);
 
     /**
      * Respond to a bootstrapping request
-     * @param transactionId Transaction ID for the transaction - used in the
-     *            async callback to match with the original request.
+     *
+     * @param transactionId   Transaction ID for the transaction - used in the
+     *                        async callback to match with the original request.
      * @param bootstrappingId the id of this bootstrapping session
-     * @param accept True if the proposed bootstrapping method is accepted.
+     * @param accept          True if the proposed bootstrapping method is accepted.
+     * @param pubSubId        ID of the publish/subscribe session - obtained when creating a
+     *                        session.
      * @return True if the request send succeed.
      */
     boolean respondToNanBootstrappingRequest(short transactionId, int bootstrappingId,
-            boolean accept);
+            boolean accept, byte pubSubId);
 
     /**
      * Suspend the specified Aware session. During the suspend state, the Wi-Fi Aware device

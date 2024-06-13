@@ -1735,4 +1735,22 @@ public class WifiNetworkSuggestionTest {
                 .setWifiSsid(ssid)
                 .build();
     }
+
+    /**
+     * Test set a network suggestion with Wi-Fi 7
+     */
+    @Test
+    public void testNetworkSuggestionForWifi7() {
+        // Validate default behavior
+        WifiNetworkSuggestion suggestion = new WifiNetworkSuggestion.Builder().setSsid(
+                TEST_SSID).setWpa2Passphrase(TEST_PRESHARED_KEY).build();
+        assertTrue(suggestion.isWifi7Enabled());
+        assertTrue(suggestion.wifiConfiguration.isWifi7Enabled());
+
+        // Validate disable Wi-Fi 7
+        suggestion = new WifiNetworkSuggestion.Builder().setSsid(TEST_SSID).setWpa2Passphrase(
+                TEST_PRESHARED_KEY).setWifi7Enabled(false).build();
+        assertFalse(suggestion.isWifi7Enabled());
+        assertFalse(suggestion.wifiConfiguration.isWifi7Enabled());
+    }
 }

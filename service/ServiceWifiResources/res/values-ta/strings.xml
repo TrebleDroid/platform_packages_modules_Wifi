@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"பெறுநர்:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"பின்வரும் அவசியமான பின்னை உள்ளிடவும்:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"பின்:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> உடன் டேப்லெட் இணைக்கப்படும்போது, வைஃபையிலிருந்து தற்காலிகமாகத் துண்டிக்கப்படும்."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"உங்கள் Android TV <xliff:g id="DEVICE_NAME">%1$s</xliff:g> சாதனத்துடன் இணைக்கப்பட்டிருக்கும் போது வைஃபையிலிருந்து தற்காலிகமாகத் துண்டிக்கப்படும்"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> உடன் மொபைல் இணைக்கப்படும்போது, வைஃபையிலிருந்து தற்காலிகமாகத் துண்டிக்கப்படும்."</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> உடன் இணைக்கப்பட்டிருக்கும்போது உங்கள் சாதனம் வைஃபை இணைப்பில் இருந்து தற்காலிகமாகத் துண்டிக்கப்படும்"</string>
     <string name="dlg_ok" msgid="254496739491689405">"சரி"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g> உடன் இணைக்க முடியவில்லை"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"தனியுரிமை அமைப்புகளை மாற்ற தட்டி மீண்டும் முயலவும்"</string>

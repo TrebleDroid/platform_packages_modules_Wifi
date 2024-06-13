@@ -16,6 +16,7 @@
 
 package android.net.wifi;
 
+import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
@@ -28,7 +29,11 @@ import androidx.annotation.RequiresApi;
 
 import com.android.internal.util.Preconditions;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -155,6 +160,9 @@ public final class SoftApInfo implements Parcelable {
      * The current shutdown timeout millis which applied on Soft AP.
      */
     private long mIdleShutdownTimeoutMillis;
+
+    /** List of {@link OuiKeyedData} containing vendor-specific configuration data. */
+    private List<OuiKeyedData> mVendorData = Collections.emptyList();
 
     /**
      * Get the frequency which AP resides on.
@@ -307,6 +315,44 @@ public final class SoftApInfo implements Parcelable {
     }
 
     /**
+     * Set additional vendor-provided configuration data.
+     *
+     * @param vendorData List of {@link android.net.wifi.OuiKeyedData} containing the
+     *                   vendor-provided configuration data. Note that multiple elements with
+     *                   the same OUI are allowed.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    public void setVendorData(@NonNull List<OuiKeyedData> vendorData) {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        if (vendorData == null) {
+            throw new IllegalArgumentException("setVendorData received a null value");
+        }
+        mVendorData = new ArrayList<>(vendorData);
+    }
+
+    /**
+     * Get the vendor-provided configuration data, if it exists.
+     *
+     * @return Vendor configuration data, or empty list if it does not exist.
+     * @hide
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
+    @SystemApi
+    @NonNull
+    public List<OuiKeyedData> getVendorData() {
+        if (!SdkLevel.isAtLeastV()) {
+            throw new UnsupportedOperationException();
+        }
+        return mVendorData;
+    }
+
+    /**
      * @hide
      */
     public SoftApInfo(@Nullable SoftApInfo source) {
@@ -317,6 +363,7 @@ public final class SoftApInfo implements Parcelable {
             mWifiStandard = source.mWifiStandard;
             mApInstanceIdentifier = source.mApInstanceIdentifier;
             mIdleShutdownTimeoutMillis = source.mIdleShutdownTimeoutMillis;
+            mVendorData = new ArrayList<>(source.mVendorData);
         }
     }
 
@@ -341,6 +388,7 @@ public final class SoftApInfo implements Parcelable {
         dest.writeInt(mWifiStandard);
         dest.writeString(mApInstanceIdentifier);
         dest.writeLong(mIdleShutdownTimeoutMillis);
+        dest.writeList(mVendorData);
     }
 
     @NonNull
@@ -354,6 +402,7 @@ public final class SoftApInfo implements Parcelable {
             info.mWifiStandard = in.readInt();
             info.mApInstanceIdentifier = in.readString();
             info.mIdleShutdownTimeoutMillis = in.readLong();
+            info.mVendorData = ParcelUtil.readOuiKeyedDataList(in);
             return info;
         }
 
@@ -373,6 +422,7 @@ public final class SoftApInfo implements Parcelable {
         sbuf.append(", wifiStandard= ").append(mWifiStandard);
         sbuf.append(", mApInstanceIdentifier= ").append(mApInstanceIdentifier);
         sbuf.append(", mIdleShutdownTimeoutMillis= ").append(mIdleShutdownTimeoutMillis);
+        sbuf.append(", mVendorData= ").append(mVendorData);
         sbuf.append("}");
         return sbuf.toString();
     }
@@ -387,12 +437,13 @@ public final class SoftApInfo implements Parcelable {
                 && Objects.equals(mBssid, softApInfo.mBssid)
                 && mWifiStandard == softApInfo.mWifiStandard
                 && Objects.equals(mApInstanceIdentifier, softApInfo.mApInstanceIdentifier)
-                && mIdleShutdownTimeoutMillis == softApInfo.mIdleShutdownTimeoutMillis;
+                && mIdleShutdownTimeoutMillis == softApInfo.mIdleShutdownTimeoutMillis
+                && Objects.equals(mVendorData, softApInfo.mVendorData);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(mFrequency, mBandwidth, mBssid, mWifiStandard, mApInstanceIdentifier,
-                mIdleShutdownTimeoutMillis);
+                mIdleShutdownTimeoutMillis, mVendorData);
     }
 }

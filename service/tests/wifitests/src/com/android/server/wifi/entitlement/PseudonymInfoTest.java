@@ -23,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import android.test.suitebuilder.annotation.SmallTest;
+import androidx.test.filters.SmallTest;
 
 import org.junit.Test;
 
@@ -53,7 +53,10 @@ public class PseudonymInfoTest {
         PseudonymInfo pseudonymInfo = new PseudonymInfo(PSEUDONYM, IMSI, TTL_IN_MILLIS);
         assertEquals(PSEUDONYM, pseudonymInfo.getPseudonym());
         assertEquals(TTL_IN_MILLIS, pseudonymInfo.getTtlInMillis());
-        assertEquals(TTL_IN_MILLIS - REFRESH_AHEAD_TIME_IN_MILLIS, pseudonymInfo.getLttrInMillis());
+        final long delta = Math.abs(TTL_IN_MILLIS - REFRESH_AHEAD_TIME_IN_MILLIS
+                - pseudonymInfo.getLttrInMillis());
+        assertTrue("(" + delta + ") not in 1ms error margin",
+                delta < 2);
         assertFalse(pseudonymInfo.hasExpired());
         assertFalse(pseudonymInfo.isOldEnoughToRefresh());
     }
@@ -81,6 +84,9 @@ public class PseudonymInfoTest {
     public void pseudonymInfoWithSmallTtl() {
         PseudonymInfo pseudonymInfo =
                 new PseudonymInfo(PSEUDONYM, IMSI, TWENTY_MINUTES_IN_MILLIS);
-        assertTrue(pseudonymInfo.getLttrInMillis() == TWENTY_MINUTES_IN_MILLIS / 2);
+        final long delta = Math.abs(TWENTY_MINUTES_IN_MILLIS / 2
+                - pseudonymInfo.getLttrInMillis());
+        assertTrue("(" + delta + ") not in 1ms error margin",
+                delta < 2);
     }
 }

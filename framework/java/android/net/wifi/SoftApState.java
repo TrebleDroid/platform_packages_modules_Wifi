@@ -25,6 +25,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.flags.Flags;
 
 import java.util.Objects;
 
@@ -34,8 +35,8 @@ import java.util.Objects;
  *
  * @hide
  */
+@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
 @SystemApi
-@FlaggedApi("com.android.wifi.flags.android_v_wifi_api")
 public final class SoftApState implements Parcelable {
 
     @WifiManager.WifiApState

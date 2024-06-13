@@ -66,7 +66,7 @@ public interface ClientMode {
     void enableVerboseLogging(boolean verbose);
 
     void connectNetwork(NetworkUpdateResult result, ActionListenerWrapper wrapper, int callingUid,
-            @NonNull String packageName);
+            @NonNull String packageName, @Nullable String attributionTag);
 
     void saveNetwork(NetworkUpdateResult result, ActionListenerWrapper wrapper, int callingUid,
             @NonNull String packageName);

@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Προς:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Πληκτρολογήστε τον απαιτούμενο κωδικό PIN:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Το tablet θα αποσυνδεθεί προσωρινά από το δίκτυο Wi-Fi ενώ συνδέεται στη συσκευή <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Η συσκευή σας Android TV θα αποσυνδεθεί προσωρινά από το δίκτυο Wi-Fi, ενόσω είναι συνδεδεμένη στη συσκευή <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Το τηλέφωνο θα αποσυνδεθεί προσωρινά από το δίκτυο Wi-Fi ενώ συνδέεται στη συσκευή <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Η συσκευή σας θα αποσυνδεθεί προσωρινά από το δίκτυο Wi-Fi ενώ είναι συνδεδεμένη στη συσκευή <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"ΟΚ"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Δεν είναι δυνατή η σύνδεση με <xliff:g id="SSID">%1$s</xliff:g>"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Πατήστε για αλλαγή των ρυθμίσεων απορρήτου και δοκιμάστε ξανά"</string>

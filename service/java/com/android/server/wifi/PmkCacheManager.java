@@ -22,6 +22,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.util.ArrayList;
@@ -39,6 +40,10 @@ public class PmkCacheManager {
     private final Handler mEventHandler;
 
     private boolean mVerboseLoggingEnabled = false;
+
+    private final Object mLock = new Object();
+
+    @GuardedBy("mLock")
     private SparseArray<List<PmkCacheStoreData>> mPmkCacheEntries = new SparseArray<>();
 
     public PmkCacheManager(Clock clock, Handler eventHandler) {
@@ -58,63 +63,71 @@ public class PmkCacheManager {
      */
     public boolean add(MacAddress macAddress, int networkId, MacAddress bssid,
             long expirationTimeInSec, ArrayList<Byte> serializedEntry) {
-        if (WifiConfiguration.INVALID_NETWORK_ID == networkId) return false;
-        if (macAddress == null) {
-            Log.w(TAG, "Omit PMK cache due to no valid MAC address");
-            return false;
-        }
-        if (null == serializedEntry) {
-            Log.w(TAG, "Omit PMK cache due to null entry.");
-            return false;
-        }
-        final long elapseTimeInSecond = mClock.getElapsedSinceBootMillis() / 1000;
-        if (elapseTimeInSecond >= expirationTimeInSec) {
-            Log.w(TAG, "Omit expired PMK cache.");
-            return false;
-        }
+        synchronized (mLock) {
+            if (WifiConfiguration.INVALID_NETWORK_ID == networkId) return false;
+            if (macAddress == null) {
+                Log.w(TAG, "Omit PMK cache due to no valid MAC address");
+                return false;
+            }
+            if (null == serializedEntry) {
+                Log.w(TAG, "Omit PMK cache due to null entry.");
+                return false;
+            }
+            final long elapseTimeInSecond = mClock.getElapsedSinceBootMillis() / 1000;
+            if (elapseTimeInSecond >= expirationTimeInSec) {
+                Log.w(TAG, "Omit expired PMK cache.");
+                return false;
+            }
 
-        PmkCacheStoreData newStoreData =
-                new PmkCacheStoreData(macAddress, bssid, serializedEntry, expirationTimeInSec);
-        List<PmkCacheStoreData> pmkDataList = mPmkCacheEntries.get(networkId);
-        if (pmkDataList == null) {
-            pmkDataList = new ArrayList<>();
-            mPmkCacheEntries.put(networkId, pmkDataList);
-        } else {
-            if (bssid != null) {
-                // Remove the stored PMK cache if the PMK cache is changed for an existing BSSID.
-                PmkCacheStoreData existStoreData = pmkDataList.stream()
-                        .filter(storeData -> Objects.equals(storeData.bssid, bssid))
-                        .findAny()
-                        .orElse(null);
-                if (null != existStoreData) {
-                    if (Objects.equals(existStoreData, newStoreData)) {
+            PmkCacheStoreData newStoreData =
+                    new PmkCacheStoreData(macAddress, bssid, serializedEntry, expirationTimeInSec);
+            List<PmkCacheStoreData> pmkDataList = mPmkCacheEntries.get(networkId);
+            if (pmkDataList == null) {
+                pmkDataList = new ArrayList<>();
+                mPmkCacheEntries.put(networkId, pmkDataList);
+            } else {
+                PmkCacheStoreData existStoreData = null;
+                if (bssid != null) {
+                    // Remove the stored PMK cache if the PMK cache is changed for an existing
+                    // BSSID.
+                    for (PmkCacheStoreData storeData : pmkDataList) {
+                        if (Objects.equals(storeData.bssid, bssid)) {
+                            existStoreData = storeData;
+                            break;
+                        }
+                    }
+                    if (null != existStoreData) {
+                        if (Objects.equals(existStoreData, newStoreData)) {
+                            if (mVerboseLoggingEnabled) {
+                                Log.d(TAG, "PMK entry exists for the BSSID, skip it.");
+                            }
+                            return true;
+                        }
+                        pmkDataList.remove(existStoreData);
+                    }
+                } else {
+                    for (PmkCacheStoreData storeData : pmkDataList) {
+                        if (Objects.equals(storeData, newStoreData)) {
+                            existStoreData = storeData;
+                            break;
+                        }
+                    }
+                    if (null != existStoreData) {
                         if (mVerboseLoggingEnabled) {
-                            Log.d(TAG, "PMK entry exists for the BSSID, skip it.");
+                            Log.d(TAG, "PMK entry exists, skip it.");
                         }
                         return true;
                     }
-                    pmkDataList.remove(existStoreData);
-                }
-            } else {
-                PmkCacheStoreData existStoreData = pmkDataList.stream()
-                        .filter(storeData -> Objects.equals(storeData, newStoreData))
-                        .findAny()
-                        .orElse(null);
-                if (null != existStoreData) {
-                    if (mVerboseLoggingEnabled) {
-                        Log.d(TAG, "PMK entry exists, skip it.");
-                    }
-                    return true;
                 }
             }
-        }
 
-        pmkDataList.add(newStoreData);
-        if (mVerboseLoggingEnabled) {
-            Log.d(TAG, "Network " + networkId + " PmkCache Count: " + pmkDataList.size());
+            pmkDataList.add(newStoreData);
+            if (mVerboseLoggingEnabled) {
+                Log.d(TAG, "Network " + networkId + " PmkCache Count: " + pmkDataList.size());
+            }
+            updatePmkCacheExpiration();
+            return true;
         }
-        updatePmkCacheExpiration();
-        return true;
     }
 
     /**
@@ -124,12 +137,14 @@ public class PmkCacheManager {
      * @return true when PMK caches are removed; otherwise, false.
      */
     public boolean remove(int networkId) {
-        if (WifiConfiguration.INVALID_NETWORK_ID == networkId) return false;
-        if (!mPmkCacheEntries.contains(networkId)) return false;
+        synchronized (mLock) {
+            if (WifiConfiguration.INVALID_NETWORK_ID == networkId) return false;
+            if (!mPmkCacheEntries.contains(networkId)) return false;
 
-        mPmkCacheEntries.remove(networkId);
-        updatePmkCacheExpiration();
-        return true;
+            mPmkCacheEntries.remove(networkId);
+            updatePmkCacheExpiration();
+            return true;
+        }
     }
 
     /**
@@ -142,16 +157,18 @@ public class PmkCacheManager {
      */
 
     public boolean remove(int networkId, MacAddress curMacAddress) {
-        if (WifiConfiguration.INVALID_NETWORK_ID == networkId) return false;
-        List<PmkCacheStoreData> pmkDataList = mPmkCacheEntries.get(networkId);
-        if (null == pmkDataList) return false;
+        synchronized (mLock) {
+            if (WifiConfiguration.INVALID_NETWORK_ID == networkId) return false;
+            List<PmkCacheStoreData> pmkDataList = mPmkCacheEntries.get(networkId);
+            if (null == pmkDataList) return false;
 
-        pmkDataList.removeIf(pmkData -> !Objects.equals(curMacAddress, pmkData.macAddress));
+            pmkDataList.removeIf(pmkData -> !Objects.equals(curMacAddress, pmkData.macAddress));
 
-        if (pmkDataList.size() == 0) {
-            remove(networkId);
+            if (pmkDataList.size() == 0) {
+                remove(networkId);
+            }
+            return true;
         }
-        return true;
     }
 
     /**
@@ -162,18 +179,20 @@ public class PmkCacheManager {
      *         If none of PMK cache is associated with the network ID, return null.
      */
     public List<ArrayList<Byte>> get(int networkId) {
-        List<PmkCacheStoreData> pmkDataList = mPmkCacheEntries.get(networkId);
-        if (WifiConfiguration.INVALID_NETWORK_ID == networkId) return null;
-        if (null == pmkDataList) return null;
+        synchronized (mLock) {
+            List<PmkCacheStoreData> pmkDataList = mPmkCacheEntries.get(networkId);
+            if (WifiConfiguration.INVALID_NETWORK_ID == networkId) return null;
+            if (null == pmkDataList) return null;
 
-        final long elapseTimeInSecond = mClock.getElapsedSinceBootMillis() / 1000;
-        List<ArrayList<Byte>> dataList = new ArrayList<>();
-        for (PmkCacheStoreData pmkData: pmkDataList) {
-            if (pmkData.isValid(elapseTimeInSecond)) {
-                dataList.add(pmkData.data);
+            final long elapseTimeInSecond = mClock.getElapsedSinceBootMillis() / 1000;
+            List<ArrayList<Byte>> dataList = new ArrayList<>();
+            for (PmkCacheStoreData pmkData : pmkDataList) {
+                if (pmkData.isValid(elapseTimeInSecond)) {
+                    dataList.add(pmkData.data);
+                }
             }
+            return dataList;
         }
-        return dataList;
     }
 
     /**
@@ -185,46 +204,48 @@ public class PmkCacheManager {
 
     @VisibleForTesting
     void updatePmkCacheExpiration() {
-        mEventHandler.removeCallbacksAndMessages(PMK_CACHE_EXPIRATION_ALARM_TAG);
+        synchronized (mLock) {
+            mEventHandler.removeCallbacksAndMessages(PMK_CACHE_EXPIRATION_ALARM_TAG);
 
-        long elapseTimeInSecond = mClock.getElapsedSinceBootMillis() / 1000;
-        long nextUpdateTimeInSecond = Long.MAX_VALUE;
-        if (mVerboseLoggingEnabled) {
-            Log.d(TAG, "Update PMK cache expiration at " + elapseTimeInSecond);
-        }
-
-        List<Integer> emptyStoreDataList = new ArrayList<>();
-        for (int i = 0; i < mPmkCacheEntries.size(); i++) {
-            int networkId = mPmkCacheEntries.keyAt(i);
-            List<PmkCacheStoreData> list = mPmkCacheEntries.get(networkId);
-            list.removeIf(pmkData -> !pmkData.isValid(elapseTimeInSecond));
-            if (list.size() == 0) {
-                emptyStoreDataList.add(networkId);
-                continue;
+            long elapseTimeInSecond = mClock.getElapsedSinceBootMillis() / 1000;
+            long nextUpdateTimeInSecond = Long.MAX_VALUE;
+            if (mVerboseLoggingEnabled) {
+                Log.d(TAG, "Update PMK cache expiration at " + elapseTimeInSecond);
             }
-            for (PmkCacheStoreData pmkData: list) {
-                if (nextUpdateTimeInSecond > pmkData.expirationTimeInSec) {
-                    nextUpdateTimeInSecond = pmkData.expirationTimeInSec;
+
+            List<Integer> emptyStoreDataList = new ArrayList<>();
+            for (int i = 0; i < mPmkCacheEntries.size(); i++) {
+                int networkId = mPmkCacheEntries.keyAt(i);
+                List<PmkCacheStoreData> list = mPmkCacheEntries.get(networkId);
+                list.removeIf(pmkData -> !pmkData.isValid(elapseTimeInSecond));
+                if (list.size() == 0) {
+                    emptyStoreDataList.add(networkId);
+                    continue;
+                }
+                for (PmkCacheStoreData pmkData : list) {
+                    if (nextUpdateTimeInSecond > pmkData.expirationTimeInSec) {
+                        nextUpdateTimeInSecond = pmkData.expirationTimeInSec;
+                    }
                 }
             }
-        }
-        emptyStoreDataList.forEach(networkId -> mPmkCacheEntries.remove(networkId));
+            emptyStoreDataList.forEach(networkId -> mPmkCacheEntries.remove(networkId));
 
-        // No need to arrange next update since there is no valid PMK in the cache.
-        if (nextUpdateTimeInSecond == Long.MAX_VALUE) {
-            return;
-        }
+            // No need to arrange next update since there is no valid PMK in the cache.
+            if (nextUpdateTimeInSecond == Long.MAX_VALUE) {
+                return;
+            }
 
-        if (mVerboseLoggingEnabled) {
-            Log.d(TAG, "PMK cache next expiration time: " + nextUpdateTimeInSecond);
+            if (mVerboseLoggingEnabled) {
+                Log.d(TAG, "PMK cache next expiration time: " + nextUpdateTimeInSecond);
+            }
+            long delayedTimeInMs = (nextUpdateTimeInSecond - elapseTimeInSecond) * 1000;
+            mEventHandler.postDelayed(
+                    () -> {
+                        updatePmkCacheExpiration();
+                    },
+                    PMK_CACHE_EXPIRATION_ALARM_TAG,
+                    (delayedTimeInMs > 0) ? delayedTimeInMs : 0);
         }
-        long delayedTimeInMs = (nextUpdateTimeInSecond - elapseTimeInSecond) * 1000;
-        mEventHandler.postDelayed(
-                () -> {
-                    updatePmkCacheExpiration();
-                },
-                PMK_CACHE_EXPIRATION_ALARM_TAG,
-                (delayedTimeInMs > 0) ? delayedTimeInMs : 0);
     }
 
     private static class PmkCacheStoreData {

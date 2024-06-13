@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"بنام:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"‏مطلوبہ PIN ٹائپ کریں:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"‏ٹیبلیٹ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> سے مربوط ہونے پر عارضی طور پر Wi-Fi سے منقطع ہو جائے گا"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"‏آپ کا Android TV آلہ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> سے منسلک ہونے پر عارضی طور پر Wi-Fi سے غیر منسلک ہو جائے گا"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"‏فون <xliff:g id="DEVICE_NAME">%1$s</xliff:g> سے مربوط رہنے کے وقت عارضی طور پر Wi-Fi سے منقطع ہوجائے گا"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"‏آپ کا آلہ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> سے منسلک ہونے پر، عارضی طور پر Wi-Fi سے غیر منسلک ہو جائے گا"</string>
     <string name="dlg_ok" msgid="254496739491689405">"ٹھیک ہے"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g> سے منسلک نہیں کر سکتے"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"رازداری کی ترتیبات تبدیل کرنے اور دوبارہ کوشش کرنے کے لیے تھپتھپائیں"</string>

@@ -77,10 +77,9 @@ public class RttTestUtils {
     }
 
     /**
-     * Returns a placeholder ranging request with 2 requests:
-     * - First: 802.11mc capable
+     * Returns a placeholder ranging request with 11mc request with a specified burst size.
      */
-    public static RangingRequest getDummyRangingRequestMcOnly(byte lastMacByte) {
+    public static RangingRequest getDummyRangingRequestMcOnly(byte lastMacByte, int rttBurstSize) {
         RangingRequest.Builder builder = new RangingRequest.Builder();
 
         ScanResult scan1 = new ScanResult();
@@ -89,6 +88,7 @@ public class RttTestUtils {
         scan1.channelWidth = ScanResult.CHANNEL_WIDTH_40MHZ;
 
         builder.addAccessPoint(scan1);
+        builder.setRttBurstSize(rttBurstSize);
 
         return builder.build();
     }
@@ -127,49 +127,78 @@ public class RttTestUtils {
 
         if (request != null) {
             for (ResponderConfig peer : request.mRttPeers) {
-                RangingResult rangingResult;
-                halResults.add(new RangingResult(RangingResult.STATUS_SUCCESS,
-                        peer.macAddress, rangeCmBase, rangeStdDevCmBase, rssiBase,
-                        8, 5, null, null, null, rangeTimestampBase, true, 5180,
-                        ScanResult.CHANNEL_WIDTH_40MHZ));
+                halResults.add(new RangingResult.Builder()
+                        .setStatus(RangingResult.STATUS_SUCCESS)
+                        .setMacAddress(peer.getMacAddress())
+                        .setDistanceMm(rangeCmBase)
+                        .setDistanceStdDevMm(rangeStdDevCmBase)
+                        .setRssi(rssiBase)
+                        .setNumAttemptedMeasurements(8)
+                        .setNumSuccessfulMeasurements(5)
+                        .setRangingTimestampMillis(rangeTimestampBase)
+                        .set80211mcMeasurement(true)
+                        .setMeasurementChannelFrequencyMHz(5180)
+                        .setMeasurementBandwidth(ScanResult.CHANNEL_WIDTH_40MHZ)
+                        .build());
+                RangingResult.Builder builder = new RangingResult.Builder()
+                        .setStatus(RangingResult.STATUS_SUCCESS)
+                        .setDistanceMm(rangeCmBase++)
+                        .setDistanceStdDevMm(rangeStdDevCmBase++)
+                        .setRssi(rssiBase++)
+                        .setNumAttemptedMeasurements(8)
+                        .setNumSuccessfulMeasurements(5)
+                        .setRangingTimestampMillis(rangeTimestampBase++)
+                        .set80211mcMeasurement(true)
+                        .setMeasurementChannelFrequencyMHz(5180)
+                        .setMeasurementBandwidth(ScanResult.CHANNEL_WIDTH_40MHZ);
                 if (peer.peerHandle == null) {
-                    rangingResult = new RangingResult(RangingResult.STATUS_SUCCESS,
-                            peer.macAddress, rangeCmBase++, rangeStdDevCmBase++, rssiBase++,
-                            8, 5, null, null, null, rangeTimestampBase++, true, 5180,
-                            ScanResult.CHANNEL_WIDTH_40MHZ);
+                    builder.setMacAddress(peer.getMacAddress());
                 } else {
-                    rangingResult =
-                            new RangingResult(
-                                    RangingResult.STATUS_SUCCESS,
-                                    peer.peerHandle,
-                                    rangeCmBase++,
-                                    rangeStdDevCmBase++,
-                                    rssiBase++,
-                                    8,
-                                    5,
-                                    null,
-                                    null,
-                                    null,
-                                    rangeTimestampBase++,
-                                    5180,
-                                    ScanResult.CHANNEL_WIDTH_40MHZ);
+                    builder.setPeerHandle(peer.peerHandle);
                 }
+                RangingResult rangingResult = builder.build();
                 results.add(rangingResult);
-
             }
         } else {
-            results.add(new RangingResult(RangingResult.STATUS_SUCCESS,
-                    MacAddress.fromString("10:01:02:03:04:05"), rangeCmBase++,
-                    rangeStdDevCmBase++, rssiBase++, 8, 4, null, null,
-                    null, rangeTimestampBase++, true, 5180, ScanResult.CHANNEL_WIDTH_40MHZ));
-            results.add(new RangingResult(RangingResult.STATUS_SUCCESS,
-                    MacAddress.fromString("1A:0B:0C:0D:0E:0F"), rangeCmBase++,
-                    rangeStdDevCmBase++, rssiBase++, 9, 3, null, null,
-                    null, rangeTimestampBase++, true, 5180, ScanResult.CHANNEL_WIDTH_40MHZ));
-            results.add(new RangingResult(RangingResult.STATUS_SUCCESS,
-                    MacAddress.fromString("08:09:08:07:06:05"), rangeCmBase++,
-                    rangeStdDevCmBase++, rssiBase++, 10, 2, null, null,
-                    null, rangeTimestampBase++, true, 5180, ScanResult.CHANNEL_WIDTH_40MHZ));
+            results.add(new RangingResult.Builder()
+                    .setStatus(RangingResult.STATUS_SUCCESS)
+                    .setMacAddress(MacAddress.fromString("10:01:02:03:04:05"))
+                    .setDistanceMm(rangeCmBase++)
+                    .setDistanceStdDevMm(rangeStdDevCmBase++)
+                    .setRssi(rssiBase++)
+                    .setNumAttemptedMeasurements(8)
+                    .setNumSuccessfulMeasurements(4)
+                    .setRangingTimestampMillis(rangeTimestampBase++)
+                    .set80211mcMeasurement(true)
+                    .setMeasurementChannelFrequencyMHz(5180)
+                    .setMeasurementBandwidth(ScanResult.CHANNEL_WIDTH_40MHZ)
+                    .build());
+            results.add(new RangingResult.Builder()
+                    .setStatus(RangingResult.STATUS_SUCCESS)
+                    .setMacAddress(MacAddress.fromString("1A:0B:0C:0D:0E:0F"))
+                    .setDistanceMm(rangeCmBase++)
+                    .setDistanceStdDevMm(rangeStdDevCmBase++)
+                    .setRssi(rssiBase++)
+                    .setNumAttemptedMeasurements(9)
+                    .setNumSuccessfulMeasurements(3)
+                    .setRangingTimestampMillis(rangeTimestampBase++)
+                    .set80211mcMeasurement(true)
+                    .setMeasurementChannelFrequencyMHz(5180)
+                    .setMeasurementBandwidth(ScanResult.CHANNEL_WIDTH_40MHZ)
+                    .build());
+            results.add(new RangingResult.Builder()
+                    .setStatus(RangingResult.STATUS_SUCCESS)
+                    .setMacAddress(MacAddress.fromString("08:09:08:07:06:05"))
+                    .setDistanceMm(rangeCmBase++)
+                    .setDistanceStdDevMm(rangeStdDevCmBase++)
+                    .setRssi(rssiBase++)
+                    .setNumAttemptedMeasurements(10)
+                    .setNumSuccessfulMeasurements(2)
+                    .setRangingTimestampMillis(rangeTimestampBase++)
+                    .set80211mcMeasurement(true)
+                    .setMeasurementChannelFrequencyMHz(5180)
+                    .setMeasurementBandwidth(ScanResult.CHANNEL_WIDTH_40MHZ)
+                    .build());
             halResults.addAll(results);
         }
 

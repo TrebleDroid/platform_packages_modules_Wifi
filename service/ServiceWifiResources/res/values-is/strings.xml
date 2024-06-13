@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Til:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Sláðu inn PIN-númerið sem er krafist:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN-númer:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Wi-Fi tengingu spjaldtölvunnar verður tímabundið slitið á meðan hún er tengd við <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Android TV mun tímabundið aftengjast Wi-Fi á meðan það er tengt við <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Síminn mun tímabundið aftengjast Wi-Fi á meðan hann er tengdur við <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Tækið þitt mun tímabundið aftengjast Wi-Fi á meðan það er tengt við <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"Í lagi"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Ekki hægt að tengjast <xliff:g id="SSID">%1$s</xliff:g>"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Ýttu til að breyta persónuverndarstillingum og reyna aftur"</string>

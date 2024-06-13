@@ -31,7 +31,7 @@
     <string name="wifi_suggestion_title" msgid="2564179935989099139">"Permitir redes Wi-Fi sugeridas?"</string>
     <string name="wifi_suggestion_content" msgid="6985149577828091835">"Redes sugeridas por <xliff:g id="NAME">%s</xliff:g>. O dispositivo pode estabelecer ligação automaticamente."</string>
     <string name="wifi_suggestion_action_allow_app" msgid="7757859972144671588">"Permitir"</string>
-    <string name="wifi_suggestion_action_disallow_app" msgid="4565857699629860726">"Não, obrigado"</string>
+    <string name="wifi_suggestion_action_disallow_app" msgid="4565857699629860726">"Não"</string>
     <string name="wifi_suggestion_imsi_privacy_title" msgid="8969261812845304079">"Quer estabelecer ligação à rede Wi-Fi do operador <xliff:g id="CARRIERNAME">%s</xliff:g>?"</string>
     <string name="wifi_suggestion_imsi_privacy_content" msgid="4266931269306079184">"Estas redes recebem um ID do SIM que pode ser utilizado para monitorizar a localização dos dispositivos."</string>
     <string name="wifi_suggestion_action_allow_imsi_privacy_exemption_carrier" msgid="3888538126440442636">"Ligar"</string>
@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Para:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Introduza o PIN solicitado:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"O tablet sera temporariamente desligado da rede Wi-Fi enquanto estiver ligado a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"O seu dispositivo Android TV irá desligar-se temporariamente da rede Wi-Fi enquanto está ligado a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"O telemóvel irá desligar-se temporariamente da rede Wi-Fi enquanto está ligado a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"O seu dispositivo vai desligar-se temporariamente da rede Wi-Fi enquanto está ligado ao dispositivo <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
     <string name="dlg_ok" msgid="254496739491689405">"OK"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Não é possível ligar a <xliff:g id="SSID">%1$s</xliff:g>."</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Toque para alterar as definições de privacidade e tente novamente."</string>

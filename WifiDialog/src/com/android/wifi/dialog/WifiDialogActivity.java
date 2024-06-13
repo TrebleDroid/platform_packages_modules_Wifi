@@ -246,19 +246,17 @@ public class WifiDialogActivity extends Activity  {
     @Override
     protected void onStop() {
         super.onStop();
-        if (!isChangingConfigurations()) {
-            if (!BuildCompat.isAtLeastU()) {
-                // Before U, we don't have INTERNAL_SYSTEM_WINDOW permission to always show at the
-                // top, so close all dialogs when we're not visible anymore.
-                for (int i = 0; i < mActiveDialogsPerId.size(); i++) {
-                    mActiveDialogsPerId.valueAt(i).cancel();
-                }
+        if (!isChangingConfigurations() && !BuildCompat.isAtLeastU()) {
+            // Before U, we don't have INTERNAL_SYSTEM_WINDOW permission to always show at the
+            // top, so close all dialogs when we're not visible anymore (i.e. another app launches
+            // on top of us).
+            for (int i = 0; i < mActiveDialogsPerId.size(); i++) {
+                mActiveDialogsPerId.valueAt(i).cancel();
             }
             return;
         }
-        // If we're stopping due to a configuration change, dismiss all the dialogs without
-        // removing it from mLaunchIntentsPerId to prevent window leaking. The dialogs will be
-        // recreated from mLaunchIntentsPerId in onStart().
+        // Dismiss all the dialogs without removing it from mLaunchIntentsPerId to prevent window
+        // leaking. The dialogs will be recreated from mLaunchIntentsPerId in onStart().
         for (int i = 0; i < mActiveDialogsPerId.size(); i++) {
             Dialog dialog = mActiveDialogsPerId.valueAt(i);
             // Set the dismiss listener to null to prevent removing the Intent from

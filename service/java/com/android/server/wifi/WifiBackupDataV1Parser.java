@@ -93,7 +93,7 @@ class WifiBackupDataV1Parser implements WifiBackupDataParser {
 
     private static final String TAG = "WifiBackupDataV1Parser";
 
-    private static final int HIGHEST_SUPPORTED_MINOR_VERSION = 3;
+    private static final int HIGHEST_SUPPORTED_MINOR_VERSION = 4;
 
     // List of tags supported for <WifiConfiguration> section in minor version 0
     private static final Set<String> WIFI_CONFIGURATION_MINOR_V0_SUPPORTED_TAGS = Set.of(
@@ -155,8 +155,23 @@ class WifiBackupDataV1Parser implements WifiBackupDataParser {
                 WifiConfigurationXmlUtil.XML_TAG_NUM_REBOOTS_SINCE_LAST_USE);
     }
 
-    // List of tags supported for <IpConfiguration> section in minor version 0 to 3
-    private static final Set<String> IP_CONFIGURATION_MINOR_V0_V1_V2_V3_SUPPORTED_TAGS = Set.of(
+    // List of tags supported for <WifiConfiguration> section in minor version 4
+    private static final Set<String> WIFI_CONFIGURATION_MINOR_V4_SUPPORTED_TAGS =
+            new HashSet<String>();
+    static {
+        WIFI_CONFIGURATION_MINOR_V4_SUPPORTED_TAGS.addAll(
+                WIFI_CONFIGURATION_MINOR_V3_SUPPORTED_TAGS);
+        WIFI_CONFIGURATION_MINOR_V4_SUPPORTED_TAGS.add(
+                WifiConfigurationXmlUtil.XML_TAG_ENABLE_WIFI7);
+        WIFI_CONFIGURATION_MINOR_V4_SUPPORTED_TAGS.add(
+                WifiConfigurationXmlUtil.XML_TAG_IS_REPEATER_ENABLED);
+        WIFI_CONFIGURATION_MINOR_V4_SUPPORTED_TAGS.add(
+                WifiConfigurationXmlUtil.XML_TAG_SEND_DHCP_HOSTNAME);
+    }
+
+    // List of tags supported for <IpConfiguration> section in last minor version, i.e. version: 4
+    // Note: Update the getSupportedIpConfigurationTags when the minor version is increased.
+    private static final Set<String> IP_CONFIGURATION_LAST_MINOR_SUPPORTED_TAGS = Set.of(
             IpConfigurationXmlUtil.XML_TAG_IP_ASSIGNMENT,
             IpConfigurationXmlUtil.XML_TAG_LINK_ADDRESS,
             IpConfigurationXmlUtil.XML_TAG_LINK_PREFIX_LENGTH,
@@ -315,7 +330,7 @@ class WifiBackupDataV1Parser implements WifiBackupDataParser {
         WifiConfiguration configuration = new WifiConfiguration();
         String configKeyInData = null;
         Set<String> supportedTags = getSupportedWifiConfigurationTags(minorVersion);
-
+        boolean sendDhcpHostnameExists = false;
         // Loop through and parse out all the elements from the stream within this section.
         while (!XmlUtil.isNextSectionEnd(in, outerTagDepth)) {
             String tagName = null;
@@ -340,7 +355,6 @@ class WifiBackupDataV1Parser implements WifiBackupDataParser {
                         + " section, ignoring.");
                 continue;
             }
-
             // note: the below switch case list should contain all tags supported up until the
             // highest minor version supported by this parser
             switch (tagName) {
@@ -404,11 +418,28 @@ class WifiBackupDataV1Parser implements WifiBackupDataParser {
                 case WifiConfigurationXmlUtil.XML_TAG_SECURITY_PARAMS_LIST:
                     parseSecurityParamsListFromXml(in, outerTagDepth + 1, configuration);
                     break;
+                // V4
+                case WifiConfigurationXmlUtil.XML_TAG_IS_REPEATER_ENABLED:
+                    configuration.setRepeaterEnabled((boolean) value);
+                    break;
+                case WifiConfigurationXmlUtil.XML_TAG_ENABLE_WIFI7:
+                    configuration.setWifi7Enabled((boolean) value);
+                    break;
+                case WifiConfigurationXmlUtil.XML_TAG_SEND_DHCP_HOSTNAME:
+                    configuration.setSendDhcpHostnameEnabled((boolean) value);
+                    sendDhcpHostnameExists = true;
+                    break;
                 default:
                     // should never happen, since other tags are filtered out earlier
                     throw new XmlPullParserException(
                             "Unknown value name found: " + tagName);
             }
+        }
+        if (!sendDhcpHostnameExists) {
+            // Update legacy configs to send the DHCP hostname for secure networks only.
+            configuration.setSendDhcpHostnameEnabled(
+                    !configuration.isSecurityType(WifiConfiguration.SECURITY_TYPE_OPEN)
+                    && !configuration.isSecurityType(WifiConfiguration.SECURITY_TYPE_OWE));
         }
         clearAnyKnownIssuesInParsedConfiguration(configuration);
         return Pair.create(configKeyInData, configuration);
@@ -432,6 +463,8 @@ class WifiBackupDataV1Parser implements WifiBackupDataParser {
                 return WIFI_CONFIGURATION_MINOR_V2_SUPPORTED_TAGS;
             case 3:
                 return WIFI_CONFIGURATION_MINOR_V3_SUPPORTED_TAGS;
+            case 4:
+                return WIFI_CONFIGURATION_MINOR_V4_SUPPORTED_TAGS;
             default:
                 Log.e(TAG, "Invalid minorVersion: " + minorVersion);
                 return Collections.<String>emptySet();
@@ -717,7 +750,8 @@ class WifiBackupDataV1Parser implements WifiBackupDataParser {
             case 1:
             case 2:
             case 3:
-                return IP_CONFIGURATION_MINOR_V0_V1_V2_V3_SUPPORTED_TAGS;
+            case 4:
+                return IP_CONFIGURATION_LAST_MINOR_SUPPORTED_TAGS;
             default:
                 Log.e(TAG, "Invalid minorVersion: " + minorVersion);
                 return Collections.<String>emptySet();

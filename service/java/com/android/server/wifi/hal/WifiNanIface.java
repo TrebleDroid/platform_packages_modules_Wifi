@@ -19,6 +19,7 @@ package com.android.server.wifi.hal;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.net.MacAddress;
+import android.net.wifi.OuiKeyedData;
 import android.net.wifi.aware.AwarePairingConfig;
 import android.net.wifi.aware.ConfigRequest;
 import android.net.wifi.aware.PublishConfig;
@@ -513,22 +514,22 @@ public class WifiNanIface implements WifiHal.WifiInterface {
                         cipherSuite));
     }
     /**
-     * {@link IWifiNanIface#initiateNanBootstrappingRequest(short, int, MacAddress, int, byte[])}
+     * {@link IWifiNanIface#initiateNanBootstrappingRequest(short, int, MacAddress, int, byte[], byte, boolean)}
      */
     public boolean initiateBootstrapping(short transactionId, int peerId, MacAddress peer,
-            int method, byte[] cookie) {
+            int method, byte[] cookie, byte pubSubId, boolean isComeBack) {
         return validateAndCall("initiateBootstrapping", false,
                 () -> mWifiNanIface.initiateNanBootstrappingRequest(transactionId, peerId, peer,
-                        method, cookie));
+                        method, cookie, pubSubId, isComeBack));
     }
     /**
-     * {@link IWifiNanIface#respondToNanBootstrappingRequest(short, int, boolean)}
+     * {@link IWifiNanIface#respondToNanBootstrappingRequest(short, int, boolean, byte)}
      */
     public boolean respondToBootstrappingRequest(short transactionId, int bootstrappingId,
-            boolean accept) {
+            boolean accept, byte pubSubId) {
         return validateAndCall("initiateBootstrapping", false,
                 () -> mWifiNanIface.respondToNanBootstrappingRequest(transactionId, bootstrappingId,
-                        accept));
+                        accept, pubSubId));
     }
 
     /**
@@ -741,11 +742,13 @@ public class WifiNanIface implements WifiHal.WifiInterface {
          *             identifying the PMK used for setting up the Secure Data Path.
          * @param peerCipherType Cipher type for data-paths constructed in the context of this
          *                       discovery session.
+         * @param vendorData Additional vendor-specific parameters, or null if not provided.
          */
         void eventMatch(byte discoverySessionId, int peerId, byte[] addr,
                 byte[] serviceSpecificInfo, byte[] matchFilter, int rangingIndicationType,
                 int rangingMeasurementInMm, byte[] scid, int peerCipherType, byte[] nonce,
-                byte[] tag, AwarePairingConfig pairingConfig);
+                byte[] tag, AwarePairingConfig pairingConfig,
+                @Nullable List<OuiKeyedData> vendorData);
 
         /**
          * Indicates that a previously discovered match (service) has expired.

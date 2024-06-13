@@ -53,7 +53,7 @@ public abstract class RunnerState extends State {
      * The Runner state Constructor
      * @param threshold the running time threshold in milliseconds
      */
-    RunnerState(int threshold, @NonNull LocalLog localLog) {
+    public RunnerState(int threshold, @NonNull LocalLog localLog) {
         mRunningTimeThresholdInMilliseconds = threshold;
         mLocalLog = localLog;
     }
@@ -111,22 +111,22 @@ public abstract class RunnerState extends State {
     /**
      * Implement this method for State enter process, instead of enter()
      */
-    abstract void enterImpl();
+    public abstract void enterImpl();
 
     /**
      * Implement this method for State exit process, instead of exit()
      */
-    abstract void exitImpl();
+    public abstract void exitImpl();
 
     /**
-     * Implement this method for State message processing, instead of processMessage()
+     * Implement this method for process message, instead of processMessage()
      */
-    abstract boolean processMessageImpl(Message message);
+    public abstract boolean processMessageImpl(Message msg);
 
     /**
      * Implement this to translate a message `what` into a readable String
      * @param what message 'what' field
      * @return Readable string
      */
-    abstract String getMessageLogRec(int what);
+    public abstract String getMessageLogRec(int what);
 }

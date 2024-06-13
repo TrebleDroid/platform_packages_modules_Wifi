@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"수신:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"필수 PIN 입력:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>에 연결되어 있는 동안 일시적으로 태블릿의 Wi-Fi 연결이 해제됩니다."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>에 연결되어 있는 동안 Android TV 기기의 Wi-Fi 연결이 일시적으로 해제됩니다."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>에 연결되어 있는 동안 일시적으로 휴대전화의 Wi-Fi 연결이 해제됩니다."</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>에 연결되어 있는 동안 기기의 Wi-Fi 연결이 일시적으로 해제됩니다"</string>
     <string name="dlg_ok" msgid="254496739491689405">"확인"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g>에 연결할 수 없습니다."</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"탭하여 개인정보 보호 설정을 변경하고 다시 시도하세요."</string>

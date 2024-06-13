@@ -18,6 +18,8 @@ package com.android.server.wifi;
 
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_LOCAL_ONLY;
 import static android.net.wifi.WifiManager.IFACE_IP_MODE_TETHERED;
+import static android.net.wifi.WifiManager.SAP_START_FAILURE_GENERAL;
+import static android.net.wifi.WifiManager.WIFI_AP_STATE_FAILED;
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
@@ -47,6 +49,7 @@ import android.net.wifi.IWifiConnectedNetworkScorer;
 import android.net.wifi.IWifiNetworkStateChangedListener;
 import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
+import android.net.wifi.SoftApState;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -214,9 +217,9 @@ public class ActiveModeWarden {
     }
 
     /**
-     * Get the request WorkSource for secondary CMM
+     * Get the request WorkSource for secondary LOCAL-ONLY CMM
      *
-     * @return the WorkSources of the current secondary CMMs
+     * @return the WorkSources of the current secondary LOCAL-ONLY CMMs
      */
     public Set<WorkSource> getSecondaryRequestWs() {
         synchronized (mServiceApiLock) {
@@ -716,6 +719,7 @@ public class ActiveModeWarden {
                 }
             }, new IntentFilter(TelephonyManager.ACTION_EMERGENCY_CALL_STATE_CHANGED));
         }
+        mWifiGlobals.setD2dStaConcurrencySupported(mWifiNative.isP2pStaConcurrencySupported());
         // Initialize the supported feature set.
         setSupportedFeatureSet(mWifiNative.getSupportedFeatureSet(null),
                 mWifiNative.isStaApConcurrencySupported(),
@@ -1414,7 +1418,7 @@ public class ActiveModeWarden {
         ConcreteClientModeManager manager = mWifiInjector.makeClientModeManager(
                 listener, requestorWs, role, mVerboseLoggingEnabled);
         mClientModeManagers.add(manager);
-        if (ROLE_CLIENT_SECONDARY_LONG_LIVED.equals(role) || ROLE_CLIENT_LOCAL_ONLY.equals(role)) {
+        if (ROLE_CLIENT_LOCAL_ONLY.equals(role)) {
             synchronized (mServiceApiLock) {
                 mRequestWs.add(new WorkSource(requestorWs));
             }
@@ -1435,7 +1439,7 @@ public class ActiveModeWarden {
         synchronized (mServiceApiLock) {
             mRequestWs.remove(manager.getRequestorWs());
         }
-        if (ROLE_CLIENT_SECONDARY_LONG_LIVED.equals(role) || ROLE_CLIENT_LOCAL_ONLY.equals(role)) {
+        if (ROLE_CLIENT_LOCAL_ONLY.equals(role)) {
             synchronized (mServiceApiLock) {
                 mRequestWs.add(new WorkSource(requestorWs));
             }
@@ -1690,8 +1694,7 @@ public class ActiveModeWarden {
 
         private void onStoppedOrStartFailure(ConcreteClientModeManager clientModeManager) {
             mClientModeManagers.remove(clientModeManager);
-            if (ROLE_CLIENT_SECONDARY_LONG_LIVED.equals(clientModeManager.getPreviousRole())
-                    || ROLE_CLIENT_LOCAL_ONLY.equals(clientModeManager.getPreviousRole())) {
+            if (ROLE_CLIENT_LOCAL_ONLY.equals(clientModeManager.getPreviousRole())) {
                 synchronized (mServiceApiLock) {
                     mRequestWs.remove(clientModeManager.getRequestorWs());
                 }
@@ -2048,8 +2051,9 @@ public class ActiveModeWarden {
                                     softApConfig.getTargetMode() == IFACE_IP_MODE_LOCAL_ONLY
                                             ? mLohsCallback : mSoftApCallback;
                             // need to notify SoftApCallback that start/stop AP failed
-                            callback.onStateChanged(WifiManager.WIFI_AP_STATE_FAILED,
-                                    WifiManager.SAP_START_FAILURE_GENERAL);
+                            callback.onStateChanged(new SoftApState(
+                                    WIFI_AP_STATE_FAILED, SAP_START_FAILURE_GENERAL,
+                                    softApConfig.getTetheringRequest(), null /* iface */));
                         }
                         break;
                     default:
@@ -2107,7 +2111,7 @@ public class ActiveModeWarden {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return ActiveModeWarden.class.getSimpleName() + "."
                         + DefaultState.class.getSimpleName() + "." + getWhatToString(what);
             }
@@ -2140,17 +2144,17 @@ public class ActiveModeWarden {
             }
 
             @Override
-            String getMessageLogRec(int what) {
+            public String getMessageLogRec(int what) {
                 return ActiveModeWarden.class.getSimpleName() + "."
                         + DefaultState.class.getSimpleName() + "." + getWhatToString(what);
             }
 
             @Override
-            void enterImpl() {
+            public void enterImpl() {
             }
 
             @Override
-            void exitImpl() {
+            public void exitImpl() {
             }
 
             private void checkAndHandleAirplaneModeState() {
@@ -2238,7 +2242,8 @@ public class ActiveModeWarden {
         }
 
         private boolean shouldEnableSta() {
-            return mSettingsStore.isWifiToggleEnabled() || shouldEnableScanOnlyMode();
+            return (mSettingsStore.isWifiToggleEnabled() || shouldEnableScanOnlyMode())
+                    && !mSettingsStore.isSatelliteModeOn();
         }
 
         private void handleStaToggleChangeInDisabledState(WorkSource requestorWs) {
@@ -2510,8 +2515,7 @@ public class ActiveModeWarden {
 
                 // fallback decision
                 if (requestInfo.clientRole == ROLE_CLIENT_LOCAL_ONLY
-                        && mContext.getResources().getBoolean(
-                        R.bool.config_wifiMultiStaLocalOnlyConcurrencyEnabled)
+                        && isStaStaConcurrencySupportedForLocalOnlyConnections()
                         && !mWifiPermissionsUtil.isTargetSdkLessThan(
                         requestInfo.requestorWs.getPackageName(0), Build.VERSION_CODES.S,
                         requestInfo.requestorWs.getUid(0))) {
@@ -2767,6 +2771,9 @@ public class ActiveModeWarden {
         if (!mWifiGlobals.isWpaPersonalDeprecated()) {
             // The WPA didn't be deprecated, set it.
             additionalFeatureSet |= WifiManager.WIFI_FEATURE_WPA_PERSONAL;
+        }
+        if (mWifiGlobals.isD2dSupportedWhenInfraStaDisabled()) {
+            additionalFeatureSet |= WifiManager.WIFI_FEATURE_D2D_WHEN_INFRA_STA_DISABLED;
         }
         mSupportedFeatureSet.set(
                 (supportedFeatureSet | concurrencyFeatureSet | additionalFeatureSet)

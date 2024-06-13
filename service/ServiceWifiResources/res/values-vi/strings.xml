@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Người nhận:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Nhập PIN bắt buộc:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"Mã PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Máy tính bảng sẽ tạm thời ngắt kết nối khỏi Wi-Fi trong khi máy tính bảng được kết nối với <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Thiết bị Android TV sẽ tạm thời ngắt kết nối khỏi Wi-Fi trong khi kết nối với <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Điện thoại sẽ tạm thời ngắt kết nối khỏi Wi-Fi trong khi điện thoại được kết nối với <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Thiết bị của bạn sẽ tạm thời ngắt kết nối với Wi-Fi trong khi kết nối với <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"OK"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Không thể kết nối với <xliff:g id="SSID">%1$s</xliff:g>"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Nhấn để thay đổi các tùy chọn cài đặt quyền riêng tư rồi thử lại"</string>

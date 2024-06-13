@@ -987,7 +987,7 @@ public class InsecureEapNetworkHandler {
             }
         } catch (Exception e) {
             // Fall through
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, e.getMessage(), e);
         }
         // The certificate is not in the trust store.
         return false;

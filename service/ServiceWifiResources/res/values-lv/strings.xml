@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Kam:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Ierakstiet pieprasīto PIN:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Planšetdators tiks īslaicīgi atvienots no Wi-Fi tīkla, kamēr būs izveidots savienojums ar ierīci <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Android TV ierīce tiks īslaicīgi atvienota no Wi-Fi tīkla, kamēr ir izveidots savienojums ar ierīci <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Tālrunis tiks īslaicīgi atvienots no Wi-Fi tīkla, kamēr būs izveidots savienojums ar ierīci <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Jūsu ierīce tiks īslaicīgi atvienota no Wi-Fi tīkla, kamēr ir izveidots savienojums ar ierīci <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
     <string name="dlg_ok" msgid="254496739491689405">"Labi"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Nevar izveidot savienojumu ar: <xliff:g id="SSID">%1$s</xliff:g>"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Pieskarieties, lai mainītu konfidencialitātes iestatījumus un mēģinātu vēlreiz"</string>

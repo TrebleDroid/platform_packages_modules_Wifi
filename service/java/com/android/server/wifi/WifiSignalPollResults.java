@@ -180,4 +180,14 @@ public class WifiSignalPollResults {
     public int getFrequency(int linkId) {
         return mEntries.getOrDefault(linkId, mDefault).frequencyMHz;
     }
+
+    /**
+     * Return whether the poll results available for the specific link.
+     *
+     * @param linkId Identifier of the link.
+     * @return true if available, otherwise false
+     */
+    public boolean isAvailable(int linkId) {
+        return mEntries.containsKey(linkId);
+    }
 }

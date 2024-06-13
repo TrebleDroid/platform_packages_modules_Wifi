@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"До:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Внеси го бараниот PIN:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Таблетот привремено ќе се исклучи од Wi-Fi, додека да се приклучи на <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Привремено ќе се прекине врската на вашиот уред Android TV со Wi-Fi додека е поврзан со <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Телефонот привремено ќе се исклучи од Wi-Fi додека е приклучен на <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Ќе се прекине врската на вашиот уред со Wi-Fi привремено додека е поврзан со <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"Во ред"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Не може да се поврзе на „<xliff:g id="SSID">%1$s</xliff:g>“"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Допрете за да ги промените поставките за приватност и обидете се повторно"</string>

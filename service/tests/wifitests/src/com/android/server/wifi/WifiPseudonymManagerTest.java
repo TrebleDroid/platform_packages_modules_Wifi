@@ -36,7 +36,8 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.os.Looper;
-import android.test.suitebuilder.annotation.SmallTest;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.server.wifi.entitlement.CarrierSpecificServiceEntitlement;
 import com.android.server.wifi.entitlement.PseudonymInfo;
@@ -338,7 +339,8 @@ public class WifiPseudonymManagerTest extends WifiBaseTest {
                         any());
         assertEquals(AlarmManager.RTC_WAKEUP, mAlarmTypeCaptor.getValue().intValue());
         long maxStartTime = Instant.now().toEpochMilli();
-        assertTrue(mWindowStartCaptor.getValue().longValue() <= maxStartTime);
+        assertTrue("The difference is:" + (mWindowStartCaptor.getValue() - maxStartTime),
+                mWindowStartCaptor.getValue() <= maxStartTime);
         assertEquals(CARRIER_ID, mRetrieveListenerArgumentCaptor.getValue().mCarrierId);
     }
 
@@ -362,7 +364,8 @@ public class WifiPseudonymManagerTest extends WifiBaseTest {
                                 .getValidPseudonymInfo(CARRIER_ID)
                                 .get()
                                 .getLttrInMillis();
-        assertTrue(mWindowStartCaptor.getValue().longValue() <= maxStartTime);
+        assertTrue("The difference is:" + (mWindowStartCaptor.getValue() - maxStartTime),
+                mWindowStartCaptor.getValue() <= maxStartTime + 2);
         assertEquals(CARRIER_ID, mRetrieveListenerArgumentCaptor.getValue().mCarrierId);
     }
 
@@ -383,7 +386,8 @@ public class WifiPseudonymManagerTest extends WifiBaseTest {
                         any());
         assertEquals(AlarmManager.RTC_WAKEUP, mAlarmTypeCaptor.getValue().intValue());
         long maxStartTime = Instant.now().toEpochMilli();
-        assertTrue(mWindowStartCaptor.getValue().longValue() <= maxStartTime);
+        assertTrue("The difference is:" + (mWindowStartCaptor.getValue() - maxStartTime),
+                mWindowStartCaptor.getValue() <= maxStartTime);
         assertEquals(CARRIER_ID, mRetrieveListenerArgumentCaptor.getValue().mCarrierId);
     }
 

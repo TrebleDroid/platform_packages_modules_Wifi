@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"Каму:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Увядзіце патрэбны PIN-код:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN-код"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Тэлефон будзе часова адключаны ад сеткі Wi-Fi, пакуль ён падлучаны да прылады <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Прылада Android TV будзе часова адключана ад сеткі Wi-Fi, пакуль яна падключана да прылады \"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>\""</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Тэлефон будзе часова адключаны ад Wi-Fi, пакуль ён падлучаны да прылады <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Прылада будзе часова заставацца адключанай ад сеткі Wi-Fi, пакуль падключана да прылады \"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>\""</string>
     <string name="dlg_ok" msgid="254496739491689405">"ОК"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Не ўдалося падключыцца да сеткі \"<xliff:g id="SSID">%1$s</xliff:g>\""</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Націсніце, каб змяніць налады прыватнасці, і паўтарыце спробу"</string>

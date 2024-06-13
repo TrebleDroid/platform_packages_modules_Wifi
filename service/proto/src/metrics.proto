@@ -1463,6 +1463,9 @@ message StaEvent {
 
     // The network has been marked as untrusted.
     DISCONNECT_NETWORK_UNTRUSTED = 16;
+
+    // Wi-Fi 7 support for this network has been enabled or disabled.
+    DISCONNECT_NETWORK_WIFI7_TOGGLED = 17;
   }
 
   // Authentication Failure reasons as reported through the API.
@@ -2310,8 +2313,8 @@ message WifiRadioUsage {
 }
 
 message ExperimentValues {
-  // Indicates if we are logging WifiIsUnusableEvent in metrics
-  optional bool wifi_is_unusable_logging_enabled = 1;
+  reserved 1;
+  reserved "wifi_is_unusable_logging_enabled";
 
   // Minimum number of txBad to trigger a data stall
   optional int32 wifi_data_stall_min_tx_bad = 2;

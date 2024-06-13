@@ -45,6 +45,7 @@ filegroup {
         ":framework-wifi-updatable-java-sources",
         ":framework-wifi-updatable-exported-aidl-sources",
         ":module-utils-os-aidls",
+        ":wifi_framework_aconfig_flags_lib{.generated_srcjars}",
     ],
 }
 
@@ -112,6 +113,9 @@ java_defaults {
         "androidx.annotation_annotation",
         "unsupportedappusage", // for android.compat.annotation.UnsupportedAppUsage
         "app-compat-annotations",
+        // Add aconfig-annotations-lib as a dependency for the optimization
+        "aconfig-annotations-lib",
+        "framework-configinfrastructure",
     ],
     aidl: {
         generate_get_transaction_name: true,
@@ -155,7 +159,6 @@ java_sdk_library {
     ],
 
     impl_only_libs: [
-        "framework-location.stubs.module_lib",
         "framework-connectivity.stubs.module_lib",
         "framework-location.stubs.module_lib",
         "framework-tethering.stubs.module_lib",

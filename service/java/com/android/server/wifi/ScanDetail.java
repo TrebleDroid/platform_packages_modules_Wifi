@@ -42,6 +42,7 @@ public class ScanDetail {
     private volatile NetworkDetail mNetworkDetail;
     private long mSeen = 0;
     private byte[] mInformationElementRawData;
+    private static final ScanResult.Builder sBuilder = new ScanResult.Builder();
 
     /**
      * Main constructor used when converting from NativeScanResult
@@ -59,6 +60,7 @@ public class ScanDetail {
         int centerFreq1 = ScanResult.UNSPECIFIED;
         boolean isPasspoint = false;
         boolean is80211McResponder = false;
+        boolean isTwtResponder = false;
         if (networkDetail != null) {
             hessid = networkDetail.getHESSID();
             anqpDomainId = networkDetail.getAnqpDomainID();
@@ -72,9 +74,21 @@ public class ScanDetail {
                             && networkDetail.isInterworking()
                             && networkDetail.getHSRelease() != null;
             is80211McResponder = networkDetail.is80211McResponderSupport();
+            isTwtResponder = networkDetail.isIndividualTwtSupported();
         }
-        mScanResult = new ScanResult(wifiSsid, bssid, hessid, anqpDomainId, osuProviders, caps,
-                level, frequency, tsf);
+        sBuilder.clear();
+        mScanResult = sBuilder
+                .setWifiSsid(wifiSsid)
+                .setBssid(bssid)
+                .setHessid(hessid)
+                .setAnqpDomainId(anqpDomainId)
+                .setOsuProviders(osuProviders)
+                .setCaps(caps)
+                .setRssi(level)
+                .setFrequency(frequency)
+                .setTsf(tsf)
+                .setIsTwtResponder(isTwtResponder)
+                .build();
         mSeen = System.currentTimeMillis();
         mScanResult.seen = mSeen;
         mScanResult.channelWidth = channelWidth;

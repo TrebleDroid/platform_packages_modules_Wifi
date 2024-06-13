@@ -60,9 +60,7 @@
     <string name="wifi_p2p_to_message" msgid="3809923305696994787">"A:"</string>
     <string name="wifi_p2p_enter_pin_message" msgid="5200220251738047620">"Inserisci il PIN richiesto:"</string>
     <string name="wifi_p2p_show_pin_message" msgid="1000091690967930798">"PIN:"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tablet" msgid="2875937871590955304">"Il tablet verrà momentaneamente scollegato dalla rete Wi-Fi durante il collegamento a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="tv" msgid="9133053225387001827">"Il dispositivo Android TV verrà scollegato temporaneamente dalla rete Wi-Fi mentre è connesso a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
-    <string name="wifi_p2p_frequency_conflict_message" product="default" msgid="2226863827636191980">"Il telefono verrà momentaneamente scollegato dalla rete Wi-Fi durante il collegamento a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+    <string name="wifi_p2p_frequency_conflict_message" msgid="8535404941723941766">"Il dispositivo verrà scollegato temporaneamente dalla rete Wi-Fi mentre è connesso a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
     <string name="dlg_ok" msgid="254496739491689405">"OK"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"Impossibile connettersi alla rete <xliff:g id="SSID">%1$s</xliff:g>"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Tocca per cambiare le impostazioni sulla privacy e riprova"</string>
