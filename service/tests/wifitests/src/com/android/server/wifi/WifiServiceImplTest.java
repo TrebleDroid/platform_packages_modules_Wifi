@@ -213,6 +213,7 @@ import android.net.wifi.hotspot2.pps.Credential;
 import android.net.wifi.hotspot2.pps.HomeSp;
 import android.net.wifi.twt.TwtRequest;
 import android.net.wifi.twt.TwtSessionCallback;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -504,6 +505,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Captor ArgumentCaptor<Intent> mIntentCaptor;
     @Captor ArgumentCaptor<List> mListCaptor;
     @Mock TwtManager mTwtManager;
+    @Mock WifiResourceCache mWifiResourceCache;
+
     @Rule
     // For frameworks
     public TestRule compatChangeRule = new PlatformCompatChangeRule();
@@ -563,6 +566,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mHandlerThread.getThreadHandler()).thenReturn(new Handler(mLooper.getLooper()));
         when(mHandlerThread.getLooper()).thenReturn(mLooper.getLooper());
         when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(mWifiResourceCache);
         when(mContext.getContentResolver()).thenReturn(mContentResolver);
         when(mContext.getPackageManager()).thenReturn(mPackageManager);
         when(mPackageManager.getPackageInfo(anyString(), anyInt())).thenReturn(mPackageInfo);
@@ -857,6 +861,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 WifiDiagnostics.REPORT_REASON_USER_ACTION);
         verify(mWifiDiagnostics).dump(any(), any(), any());
         verify(mPasspointNetworkNominateHelper).dump(any());
+        verify(mWifiResourceCache).dump(any());
     }
 
     @Test
@@ -9432,6 +9437,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.stopAutoDispatchAndIgnoreExceptions();
         verify(mWakeupController).dump(any(), any(), any());
         verify(mPasspointNetworkNominateHelper).dump(any());
+        verify(mWifiResourceCache).dump(any());
     }
 
     /**

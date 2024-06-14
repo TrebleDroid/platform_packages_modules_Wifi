@@ -76,6 +76,7 @@ import android.net.wifi.WifiNetworkSuggestion;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
 import android.net.wifi.util.ScanResultUtil;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -184,6 +185,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
             "set-mock-wifimodem-methods",
             "force-overlay-config-value",
             "get-softap-supported-features",
+            "get-overlay-config-values"
     };
 
     private static final Map<String, Pair<NetworkRequest, ConnectivityManager.NetworkCallback>>
@@ -215,6 +217,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
     private final WifiDiagnostics mWifiDiagnostics;
     private final DeviceConfigFacade mDeviceConfig;
     private final AfcManager mAfcManager;
+    private final WifiInjector mWifiInjector;
     private static final int[] OP_MODE_LIST = {
             WifiAvailableChannel.OP_MODE_STA,
             WifiAvailableChannel.OP_MODE_SAP,
@@ -439,6 +442,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
 
     WifiShellCommand(WifiInjector wifiInjector, WifiServiceImpl wifiService, WifiContext context,
             WifiGlobals wifiGlobals, WifiThreadRunner wifiThreadRunner) {
+        mWifiInjector = wifiInjector;
         mWifiGlobals = wifiGlobals;
         mWifiThreadRunner = wifiThreadRunner;
         mActiveModeWarden = wifiInjector.getActiveModeWarden();
@@ -2160,15 +2164,45 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     }
                     return 0;
                 case "force-overlay-config-value":
-                    String configValue = getNextArgRequired();
-                    String overlayName = getNextArgRequired();
-                    boolean isEnabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
-                    if (mWifiService.forceOverlayConfigValue(overlayName, configValue, isEnabled)) {
-                        pw.print("true");
-                    } else {
-                        pw.print("fail to force overlay : " + overlayName);
+                    int uid = Binder.getCallingUid();
+                    if (!mWifiInjector.getWifiPermissionsUtil()
+                            .checkNetworkSettingsPermission(Binder.getCallingUid())) {
+                        pw.println("current shell caller Uid " + uid
+                                + " Missing NETWORK_SETTINGS permission");
                         return -1;
                     }
+                    WifiResourceCache resourceCache = mContext.getResourceCache();
+                    String type = getNextArgRequired();
+                    String overlayName = getNextArgRequired();
+                    boolean isEnabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
+                    switch (type) {
+                        case "bool" -> {
+                            boolean value = false;
+                            if (isEnabled) {
+                                value = getNextArgRequiredTrueOrFalse("true", "false");
+                                resourceCache.overrideBooleanValue(overlayName, value);
+                            } else {
+                                resourceCache.restoreBooleanValue(overlayName);
+                            }
+                        }
+                        case "integer" -> {
+                            int value = 0;
+                            if (isEnabled) {
+                                value = Integer.parseInt(getNextArgRequired());
+                                resourceCache.overrideIntegerValue(overlayName, value);
+                            } else {
+                                resourceCache.restoreIntegerValue(overlayName);
+                            }
+                        }
+                        default -> {
+                            pw.print("require a valid type of the overlay");
+                            return -1;
+                        }
+                    }
+                    pw.println("true");
+                    return 0;
+                case "get-overlay-config-values":
+                    mContext.getResourceCache().dump(pw);
                     return 0;
                 default:
                     return handleDefaultCommands(cmd);
@@ -2965,18 +2999,17 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("       '31' - band 2.4, 5, 6 and 60 GHz with DFS channels");
         pw.println("  get-cached-scan-data");
         pw.println("    Gets scan data cached by the firmware");
-        pw.println("  force-overlay-config-value <configValue> <overlayName> enabled|disabled");
-        pw.println("    Force overlay to a specified value. See below for supported overlays.");
-        pw.println("    <configValue> - override value of the overlay. See above for accepted "
-                + "values per overlay.");
+        pw.println("  force-overlay-config-value bool|integer <overlayName> enabled|disabled"
+                + "<configValue>");
+        pw.println("    Force overlay to a specified value.");
+        pw.println("    bool|integer   - specified the type of the overlay");
         pw.println("    <overlayName> - name of the overlay whose value is overridden.");
-        pw.println("        - Currently supports:");
-        pw.println("          <configValue> = true|false for <overlayName> = "
-                + "'config_wifi_background_scan_support'");
-        pw.println("          <configValue> = true|false for <overlayName> = "
-                + "'config_wifiWepDeprecated'");
-        pw.println("    <enabled|disabled>: enable the override or disable it and revert to using "
+        pw.println("    enabled|disabled: enable the override or disable it and revert to using "
                 + "the built-in value.");
+        pw.println("    <configValue> - override value of the overlay."
+                + "Must match the overlay type");
+        pw.println("  get-overlay-config-values");
+        pw.println("    Get current overlay value in resource cache.");
         pw.println("  get-softap-supported-features");
         pw.println("    Gets softap supported features. Will print 'wifi_softap_acs_supported'");
         pw.println("    and/or 'wifi_softap_wpa3_sae_supported',");
