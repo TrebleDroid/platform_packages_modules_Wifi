@@ -1240,8 +1240,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     pw.println("Removing request: " + nrAndNc.first);
                     mWifiThreadRunner.post(() -> mConnectivityManager
                                     .unregisterNetworkCallback(nrAndNc.second),
-                            "shell#remove-request")
-                    ;
+                            "shell#remove-request");
                     return 0;
                 }
                 case "remove-all-requests":
@@ -1252,7 +1251,9 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     for (Pair<NetworkRequest, ConnectivityManager.NetworkCallback> nrAndNc
                             : sActiveRequests.values()) {
                         pw.println("Removing request: " + nrAndNc.first);
-                        mConnectivityManager.unregisterNetworkCallback(nrAndNc.second);
+                        mWifiThreadRunner.post(() ->
+                                mConnectivityManager.unregisterNetworkCallback(nrAndNc.second),
+                                "shell#remove-request");
                     }
                     sActiveRequests.clear();
                     return 0;
