@@ -3987,6 +3987,104 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         );
     }
 
+    /**
+     * Validate a P2P request from requestors not on the P2P/NAN concurrency allowlist.
+     */
+    @Test
+    public void testP2pNanConcurrencyNotAllowedTestChipV11()
+            throws Exception {
+        when(mResources.getStringArray(R.array.config_wifiP2pAwareConcurrencyAllowlist)).thenReturn(
+                new String[]{"Some other package"});
+
+        TestChipV11 chipMock = new TestChipV11();
+        chipMock.initialize();
+        mInOrder = inOrder(mWifiMock, chipMock.chip, mManagerStatusListenerMock);
+        executeAndValidateStartupSequence();
+
+        InterfaceDestroyedListener idl = mock(InterfaceDestroyedListener.class);
+
+        // Create a NAN
+        WifiInterface nanIface = validateInterfaceSequence(chipMock,
+                false, // chipModeValid
+                -1000, // chipModeId (only used if chipModeValid is true)
+                HDM_CREATE_IFACE_NAN,
+                "wlan0",
+                TestChipV11.CHIP_MODE_ID,
+                null, // tearDownList
+                idl, // destroyedListener
+                TEST_WORKSOURCE_0 // requestorWs
+        );
+        collector.checkThat("interface was null", nanIface, IsNull.notNullValue());
+
+        // P2P request from Worksource 1 (lower priority) should be blocked.
+        when(mWorkSourceHelper1.getRequestorWsPriority())
+                .thenReturn(WorkSourceHelper.PRIORITY_FG_APP);
+        List<Pair<Integer, WorkSource>> p2pDetails = mDut.reportImpactToCreateIface(
+                HDM_CREATE_IFACE_P2P, true, TEST_WORKSOURCE_1);
+        if (SdkLevel.isAtLeastS()) {
+            assertNull("Should not be able to create this P2P", p2pDetails);
+        } else {
+            // Pre-S lets P2P/NAN destroy each other.
+            assertTrue(p2pDetails.isEmpty());
+        }
+
+        // P2P request from Worksource 2 (same privileged priority) should tear down NAN.
+        WifiInterface p2pIface = validateInterfaceSequence(chipMock,
+                true, // chipModeValid
+                TestChipV11.CHIP_MODE_ID, // chipModeId (only used if chipModeValid is true)
+                HDM_CREATE_IFACE_P2P,
+                "wlan1",
+                TestChipV11.CHIP_MODE_ID,
+                new WifiInterface[]{nanIface}, // tearDownList
+                idl, // destroyedListener
+                TEST_WORKSOURCE_2 // requestorWs
+        );
+        collector.checkThat("interface was null", p2pIface, IsNull.notNullValue());
+    }
+
+    /**
+     * Validate a P2P request from a requestor on the P2P/NAN concurrency allowlist.
+     */
+    @Test
+    public void testP2pNanConcurrencyAllowedTestChipV11()
+            throws Exception {
+        when(mResources.getStringArray(R.array.config_wifiP2pAwareConcurrencyAllowlist)).thenReturn(
+                new String[]{TEST_WORKSOURCE_1.getPackageName(0)});
+
+        TestChipV11 chipMock = new TestChipV11();
+        chipMock.initialize();
+        mInOrder = inOrder(mWifiMock, chipMock.chip, mManagerStatusListenerMock);
+        executeAndValidateStartupSequence();
+
+        InterfaceDestroyedListener idl = mock(InterfaceDestroyedListener.class);
+
+        // Create a NAN
+        WifiInterface nanIface = validateInterfaceSequence(chipMock,
+                false, // chipModeValid
+                -1000, // chipModeId (only used if chipModeValid is true)
+                HDM_CREATE_IFACE_NAN,
+                "wlan0",
+                TestChipV11.CHIP_MODE_ID,
+                null, // tearDownList
+                idl, // destroyedListener
+                TEST_WORKSOURCE_0 // requestorWs
+        );
+        collector.checkThat("interface was null", nanIface, IsNull.notNullValue());
+
+        // P2P request from Worksource 1 (on allowlist) should be allowed.
+        WifiInterface p2pIface = validateInterfaceSequence(chipMock,
+                true, // chipModeValid
+                TestChipV11.CHIP_MODE_ID, // chipModeId (only used if chipModeValid is true)
+                HDM_CREATE_IFACE_P2P,
+                "wlan1",
+                TestChipV11.CHIP_MODE_ID,
+                null, // tearDownList
+                idl, // destroyedListener
+                TEST_WORKSOURCE_1 // requestorWs
+        );
+        collector.checkThat("interface was null", p2pIface, IsNull.notNullValue());
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////
     // utilities
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -5283,6 +5381,39 @@ public class HalDeviceManagerTest extends WifiBaseTest {
         @Override
         void onChipConfigured() {
             configureDriverAvailableModes();
+        }
+    }
+
+    // Test chip configuration V11 for P2P/NAN concurrency
+    // mode:
+    //    (STA + AP + NAN + P2P)
+    private class TestChipV11 extends ChipMockBase {
+        static final int CHIP_MODE_ID = 90;
+
+        void initialize() throws Exception {
+            super.initialize();
+
+            // chip Id configuration
+            ArrayList<Integer> chipIds;
+            chipId = 11;
+            chipIds = new ArrayList<>();
+            chipIds.add(chipId);
+            doAnswer(new GetChipIdsAnswer(true, chipIds)).when(mWifiMock).getChipIds();
+            doAnswer(new GetChipAnswer(true, chip)).when(mWifiMock).getChip(anyInt());
+
+            // Initialize availableModes
+            availableModes = new ArrayList<>();
+
+            // Mode 90 (only one): (1xSTA + 1xAP + 1xP2P + 1xNAN)
+            WifiChip.ChipConcurrencyCombination combo1 = createConcurrencyCombo(
+                    createConcurrencyComboLimit(1, WifiChip.IFACE_CONCURRENCY_TYPE_STA),
+                    createConcurrencyComboLimit(1, WifiChip.IFACE_CONCURRENCY_TYPE_AP),
+                    createConcurrencyComboLimit(1, WifiChip.IFACE_CONCURRENCY_TYPE_P2P),
+                    createConcurrencyComboLimit(1, WifiChip.IFACE_CONCURRENCY_TYPE_NAN));
+            availableModes.add(createChipMode(CHIP_MODE_ID, combo1));
+
+            chipModeIdValidForRtt = CHIP_MODE_ID;
+            doAnswer(new GetAvailableModesAnswer(this)).when(chip).getAvailableModes();
         }
     }
 }
