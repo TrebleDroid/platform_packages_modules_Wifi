@@ -1851,22 +1851,6 @@ public class HalDeviceManager {
         }
     }
 
-    private boolean isRequestorAllowedToUseP2pNanConcurrency(WorkSource requestorWs) {
-        String[] allowlistArray = mContext.getResources().getStringArray(
-                R.array.config_wifiP2pAwareConcurrencyAllowlist);
-        if (allowlistArray == null || allowlistArray.length == 0) {
-            // No allowlist defined, so allow.
-            return true;
-        }
-        List<String> allowlist = Arrays.asList(allowlistArray);
-        for (int i = 0; i < requestorWs.size(); i++) {
-            if (allowlist.contains(requestorWs.getPackageName(i))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
      * Checks whether the input chip-create-type-combo can support the requested create type:
      * if not then returns null, if yes then returns information containing the list of interfaces
@@ -1897,21 +1881,6 @@ public class HalDeviceManager {
         if (chipCreateTypeCombo[requestedCreateType] == 0) {
             if (VDBG) Log.d(TAG, "Requested create type not supported by combo");
             return null;
-        }
-
-        // Remove P2P/NAN concurrency if the requestor isn't on the allowlist.
-        if ((requestedCreateType == HDM_CREATE_IFACE_P2P
-                || requestedCreateType == HDM_CREATE_IFACE_NAN)
-                && chipCreateTypeCombo[HDM_CREATE_IFACE_P2P] > 0
-                && chipCreateTypeCombo[HDM_CREATE_IFACE_NAN] > 0) {
-            if (!isRequestorAllowedToUseP2pNanConcurrency(requestorWs)) {
-                chipCreateTypeCombo = chipCreateTypeCombo.clone();
-                if (requestedCreateType == HDM_CREATE_IFACE_P2P) {
-                    chipCreateTypeCombo[HDM_CREATE_IFACE_NAN] = 0;
-                } else {
-                    chipCreateTypeCombo[HDM_CREATE_IFACE_P2P] = 0;
-                }
-            }
         }
 
         IfaceCreationData ifaceCreationData = new IfaceCreationData();
