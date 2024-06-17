@@ -932,11 +932,11 @@ public class WifiNative {
     private class VendorHalDeathHandlerInternal implements VendorHalDeathEventHandler {
         @Override
         public void onDeath() {
-            synchronized (mLock) {
+            mHandler.post(() -> {
                 Log.i(TAG, "Vendor HAL died. Cleaning up internal state.");
                 onNativeDaemonDeath();
                 mWifiMetrics.incrementNumHalCrashes();
-            }
+            });
         }
     }
 
@@ -947,11 +947,9 @@ public class WifiNative {
         @Override
         public void run() {
             mHandler.post(() -> {
-                synchronized (mLock) {
-                    Log.i(TAG, "wificond died. Cleaning up internal state.");
-                    onNativeDaemonDeath();
-                    mWifiMetrics.incrementNumWificondCrashes();
-                }
+                Log.i(TAG, "wificond died. Cleaning up internal state.");
+                onNativeDaemonDeath();
+                mWifiMetrics.incrementNumWificondCrashes();
             });
         }
     }
@@ -963,11 +961,9 @@ public class WifiNative {
         @Override
         public void onDeath() {
             mHandler.post(() -> {
-                synchronized (mLock) {
-                    Log.i(TAG, "wpa_supplicant died. Cleaning up internal state.");
-                    onNativeDaemonDeath();
-                    mWifiMetrics.incrementNumSupplicantCrashes();
-                }
+                Log.i(TAG, "wpa_supplicant died. Cleaning up internal state.");
+                onNativeDaemonDeath();
+                mWifiMetrics.incrementNumSupplicantCrashes();
             });
         }
     }
@@ -978,11 +974,11 @@ public class WifiNative {
     private class HostapdDeathHandlerInternal implements HostapdDeathEventHandler {
         @Override
         public void onDeath() {
-            synchronized (mLock) {
+            mHandler.post(() -> {
                 Log.i(TAG, "hostapd died. Cleaning up internal state.");
                 onNativeDaemonDeath();
                 mWifiMetrics.incrementNumHostapdCrashes();
-            }
+            });
         }
     }
 

@@ -77,7 +77,7 @@ public class PasspointProvisioner {
     private static final int PROVISIONING_FAILURE = 1;
 
     // TLS version to be used for HTTPS connection with OSU server
-    private static final String TLS_VERSION = "TLSv1";
+    private static final String TLS_VERSION = "TLS";
 
     private final Context mContext;
     private final ProvisioningStateMachine mProvisioningStateMachine;

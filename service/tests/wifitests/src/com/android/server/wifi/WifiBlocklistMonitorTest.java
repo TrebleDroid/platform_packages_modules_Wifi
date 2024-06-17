@@ -34,6 +34,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiConfiguration.NetworkSelectionStatus;
 import android.net.wifi.WifiConfiguration.NetworkSelectionStatus.DisableReasonInfo;
 import android.net.wifi.WifiSsid;
+import android.util.ArraySet;
 import android.util.LocalLog;
 
 import androidx.test.filters.SmallTest;
@@ -266,6 +267,11 @@ public class WifiBlocklistMonitorTest extends WifiBaseTest {
                 TEST_BSSID_1, config,
                 WifiBlocklistMonitor.REASON_AP_UNABLE_TO_HANDLE_NEW_STA, TEST_GOOD_RSSI);
         assertTrue(mWifiBlocklistMonitor.updateAndGetBssidBlocklist().contains(TEST_BSSID_1));
+        assertTrue(mWifiBlocklistMonitor.getBssidBlocklistForSsids(
+                new ArraySet<>(Arrays.asList(new String[]{TEST_SSID_1}))).contains(TEST_BSSID_1));
+        assertTrue(mWifiBlocklistMonitor.getBssidBlocklistForSsids(null).contains(TEST_BSSID_1));
+        assertFalse(mWifiBlocklistMonitor.getBssidBlocklistForSsids(
+                Collections.EMPTY_SET).contains(TEST_BSSID_1));
     }
 
     // Verify adding 2 BSSID for SSID_1 and 1 BSSID for SSID_2 to the blocklist.
