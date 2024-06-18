@@ -39,6 +39,10 @@ public class WifiResourceCacheTest {
     private static final String TEST_NAME = "test_name";
     private static final int VALUE_1 = 10;
     private static final int VALUE_2 = 20;
+    private static final int[] INT_ARRAY_1 = {1, 2, 3, 4, 5};
+    private static final int[] INT_ARRAY_2 = {5, 4, 3, 2, 1};
+    private static final String[] STRINGS_1 = {"1", "2", "3", "4", "5"};
+    private static final String[] STRINGS_2 = {"5", "4", "3", "2", "1"};
     @Mock WifiContext mWifiContext;
     @Mock Resources mResources;
     private WifiResourceCache mWifiResourceCache;
@@ -86,6 +90,29 @@ public class WifiResourceCacheTest {
         assertEquals(VALUE_1, mWifiResourceCache.getInteger(TEST_ID, TEST_NAME));
         verify(mResources, times(2)).getInteger(TEST_ID);
     }
+
+    @Test
+    public void testOverrideIntArrayResource() {
+        when(mResources.getIntArray(TEST_ID)).thenReturn(INT_ARRAY_1);
+        assertEquals(INT_ARRAY_1, mWifiResourceCache.getIntArray(TEST_ID, TEST_NAME));
+        mWifiResourceCache.overrideIntArrayValue(TEST_NAME, INT_ARRAY_2);
+        assertEquals(INT_ARRAY_2, mWifiResourceCache.getIntArray(TEST_ID, TEST_NAME));
+        mWifiResourceCache.restoreIntArrayValue(TEST_NAME);
+        assertEquals(INT_ARRAY_1, mWifiResourceCache.getIntArray(TEST_ID, TEST_NAME));
+        verify(mResources, times(2)).getIntArray(TEST_ID);
+    }
+
+    @Test
+    public void testOverrideStringArrayResource() {
+        when(mResources.getStringArray(TEST_ID)).thenReturn(STRINGS_1);
+        assertEquals(STRINGS_1, mWifiResourceCache.getStringArray(TEST_ID, TEST_NAME));
+        mWifiResourceCache.overrideStringArrayValue(TEST_NAME, STRINGS_2);
+        assertEquals(STRINGS_2, mWifiResourceCache.getStringArray(TEST_ID, TEST_NAME));
+        mWifiResourceCache.restoreStringArrayValue(TEST_NAME);
+        assertEquals(STRINGS_1, mWifiResourceCache.getStringArray(TEST_ID, TEST_NAME));
+        verify(mResources, times(2)).getStringArray(TEST_ID);
+    }
+
 
     @Test
     public void testReset() {

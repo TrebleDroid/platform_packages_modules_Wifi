@@ -19,6 +19,7 @@ package android.net.wifi.util;
 import android.content.Context;
 
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,11 +32,15 @@ public class WifiResourceCache {
 
     private final Map<String, Boolean> mBooleanResourceMap;
     private final Map<String, Integer> mIntegerResourceMap;
+    private final Map<String, String[]> mStringArrayResourceMap;
+    private final Map<String, int[]> mIntArrayResourceMap;
 
     public WifiResourceCache(Context context) {
         mContext = context;
         mBooleanResourceMap = new HashMap<>();
         mIntegerResourceMap = new HashMap<>();
+        mStringArrayResourceMap = new HashMap<>();
+        mIntArrayResourceMap = new HashMap<>();
     }
 
     /**
@@ -52,6 +57,22 @@ public class WifiResourceCache {
     public int getInteger(int resourceId, String resourceName) {
         return mIntegerResourceMap.computeIfAbsent(resourceName,
                 v -> mContext.getResources().getInteger(resourceId));
+    }
+
+    /**
+     * Get and cache the integer value as {@link android.content.res.Resources#getStringArray(int)}
+     */
+    public String[] getStringArray(int resourceId, String resourceName) {
+        return mStringArrayResourceMap.computeIfAbsent(resourceName,
+                v -> mContext.getResources().getStringArray(resourceId));
+    }
+
+    /**
+     * Get and cache the integer value as {@link android.content.res.Resources#getIntArray(int)}
+     */
+    public int[] getIntArray(int resourceId, String resourceName) {
+        return mIntArrayResourceMap.computeIfAbsent(resourceName,
+                v -> mContext.getResources().getIntArray(resourceId));
     }
 
     /**
@@ -88,6 +109,38 @@ public class WifiResourceCache {
     }
 
     /**
+     * Override the target string array value
+     * @param resourceName the resource overlay name
+     * @param value override to this value
+     */
+    public void overrideStringArrayValue(String resourceName, String[] value) {
+        mStringArrayResourceMap.put(resourceName, value);
+    }
+
+    /**
+     * Override the target string array value
+     */
+    public void restoreStringArrayValue(String resourceName) {
+        mStringArrayResourceMap.remove(resourceName);
+    }
+
+    /**
+     * Override the target int array value
+     * @param resourceName the resource overlay name
+     * @param value override to this value
+     */
+    public void overrideIntArrayValue(String resourceName, int[] value) {
+        mIntArrayResourceMap.put(resourceName, value);
+    }
+
+    /**
+     * Override the target int array value
+     */
+    public void restoreIntArrayValue(String resourceName) {
+        mIntArrayResourceMap.remove(resourceName);
+    }
+
+    /**
      * Dump of current resource value
      */
     public void dump(PrintWriter pw) {
@@ -102,6 +155,14 @@ public class WifiResourceCache {
             pw.println("Resource Name: " + resourceEntry.getKey()
                     + ", value: " + resourceEntry.getValue());
         }
+        for (Map.Entry<String, String[]> resourceEntry : mStringArrayResourceMap.entrySet()) {
+            pw.println("Resource Name: " + resourceEntry.getKey()
+                    + ", value: " + Arrays.toString(resourceEntry.getValue()));
+        }
+        for (Map.Entry<String, int[]> resourceEntry : mIntArrayResourceMap.entrySet()) {
+            pw.println("Resource Name: " + resourceEntry.getKey()
+                    + ", value: " + Arrays.toString(resourceEntry.getValue()));
+        }
         pw.println("WifiResourceCache - resource value End ----");
     }
 
@@ -111,5 +172,7 @@ public class WifiResourceCache {
     public void reset() {
         mBooleanResourceMap.clear();
         mIntegerResourceMap.clear();
+        mStringArrayResourceMap.clear();
+        mIntArrayResourceMap.clear();
     }
 }
