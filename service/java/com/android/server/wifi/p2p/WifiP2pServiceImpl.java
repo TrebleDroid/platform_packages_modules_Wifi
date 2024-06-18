@@ -6893,7 +6893,7 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
 
             mWifiNative.setDeviceName(mThisDevice.deviceName);
             // DIRECT-XY-DEVICENAME (XY is randomly generated)
-            mWifiNative.setP2pSsidPostfix("-" + mThisDevice.deviceName);
+            mWifiNative.setP2pSsidPostfix(generateP2pSsidPostfix(mThisDevice.deviceName));
             mWifiNative.setP2pDeviceType(mThisDevice.primaryDeviceType);
             // Supplicant defaults to using virtual display with display
             // which refers to a remote display. Use physical_display
