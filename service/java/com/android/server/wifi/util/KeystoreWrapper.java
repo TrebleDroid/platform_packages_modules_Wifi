@@ -73,7 +73,7 @@ public class KeystoreWrapper {
                 return null;
             }
             Log.e(TAG, "Unexpected exception caught in getHmacSHA256ForUid", e);
-            throw e;
+            return null;
         }
     }
 

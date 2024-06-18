@@ -470,4 +470,14 @@ public interface IWifiChip {
      * @return whether the channel allowance was set successfully.
      */
     boolean setAfcChannelAllowance(WifiChip.AfcChannelAllowance afcChannelAllowance);
+
+    /**
+     * Sets the wifi VoIP mode.
+     *
+     * @param mode Voip mode as defined by the enum |WifiVoipMode|
+     * @return true if successful, false otherwise.
+     */
+    default boolean setVoipMode(@WifiChip.WifiVoipMode int mode) {
+        return false;
+    }
 }

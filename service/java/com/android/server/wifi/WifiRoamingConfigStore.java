@@ -65,7 +65,7 @@ public class WifiRoamingConfigStore {
      */
     private void triggerSaveToStore() {
         mHasNewDataToSerialize = true;
-        mWifiConfigManager.saveToStore(true);
+        mWifiConfigManager.saveToStore();
     }
 
     /**

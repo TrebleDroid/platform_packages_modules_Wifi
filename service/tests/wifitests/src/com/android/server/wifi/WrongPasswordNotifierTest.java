@@ -115,6 +115,7 @@ public class WrongPasswordNotifierTest extends WifiBaseTest {
         assertEquals(TEST_SETTINGS_PACKAGE, intent.getValue().getPackage());
         assertEquals(TEST_SSID.getUtf8Text(),
                 intent.getValue().getStringExtra("wifi_start_connect_ssid"));
+        assertEquals(Intent.FLAG_ACTIVITY_CLEAR_TOP, intent.getValue().getFlags());
     }
 
     /**

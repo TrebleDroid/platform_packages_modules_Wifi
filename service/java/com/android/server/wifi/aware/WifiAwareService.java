@@ -24,6 +24,8 @@ import android.util.Log;
 import com.android.server.SystemService;
 import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.WifiInjector;
+import com.android.server.wifi.WifiNative;
+import com.android.wifi.flags.FeatureFlags;
 
 /**
  * Service implementing Wi-Fi Aware functionality. Delegates actual interface
@@ -54,13 +56,16 @@ public final class WifiAwareService extends SystemService {
             }
 
             HalDeviceManager halDeviceManager = wifiInjector.getHalDeviceManager();
+            WifiNative wifiNative = wifiInjector.getWifiNative();
+            FeatureFlags featureFlags = wifiInjector.getDeviceConfigFacade().getFeatureFlags();
 
             WifiAwareStateManager wifiAwareStateManager = new WifiAwareStateManager(wifiInjector,
                     new PairingConfigManager());
             WifiAwareNativeCallback wifiAwareNativeCallback = new WifiAwareNativeCallback(
                     wifiAwareStateManager);
             WifiAwareNativeManager wifiAwareNativeManager = new WifiAwareNativeManager(
-                    wifiAwareStateManager, halDeviceManager, wifiAwareNativeCallback);
+                    wifiAwareStateManager, halDeviceManager, wifiAwareNativeCallback,
+                    wifiNative, featureFlags);
             WifiAwareNativeApi wifiAwareNativeApi = new WifiAwareNativeApi(wifiAwareNativeManager);
             wifiAwareStateManager.setNative(wifiAwareNativeManager, wifiAwareNativeApi);
             WifiAwareShellCommand wifiAwareShellCommand = new WifiAwareShellCommand();
@@ -68,7 +73,7 @@ public final class WifiAwareService extends SystemService {
             wifiAwareShellCommand.register("native_cb", wifiAwareNativeCallback);
             wifiAwareShellCommand.register("state_mgr", wifiAwareStateManager);
 
-            HandlerThread awareHandlerThread = wifiInjector.getWifiAwareHandlerThread();
+            HandlerThread awareHandlerThread = wifiInjector.getWifiHandlerThread();
             mImpl.start(awareHandlerThread, wifiAwareStateManager, wifiAwareShellCommand,
                     wifiInjector.getWifiMetrics().getWifiAwareMetrics(),
                     wifiInjector.getWifiPermissionsUtil(),

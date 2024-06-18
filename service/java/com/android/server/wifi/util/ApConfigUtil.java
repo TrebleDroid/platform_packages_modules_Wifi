@@ -47,11 +47,13 @@ import android.net.wifi.WifiClient;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.SoftApManager;
 import com.android.server.wifi.WifiNative;
@@ -809,6 +811,59 @@ public class ApConfigUtil {
     }
 
     /**
+     * As per IEEE specification, 11BE mode should be disabled for the following
+     * security types.
+     *   - OPEN
+     *   - WPA2-Personal
+     * Also, disable 11BE in OWE-Transition as SoftAp run in bridged mode with one instance in open
+     * mode.
+     */
+    @VisibleForTesting
+    static boolean is11beDisabledForSecurityType(
+            @SoftApConfiguration.SecurityType int type) {
+        switch(type) {
+            case SoftApConfiguration.SECURITY_TYPE_OPEN:
+            case SoftApConfiguration.SECURITY_TYPE_WPA2_PSK:
+            case SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION:
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if IEEE80211BE is allowed for the given softAp configuration.
+     *
+     * @param capabilities capabilities of the device to check support for IEEE80211BE support.
+     * @param context The caller context used to get the OEM configuration for support for
+     *                IEEE80211BE & single link MLO in bridged mode from the resource file.
+     * @param config The current {@link SoftApConfiguration}.
+     * @param isBridgedMode true if bridged mode is enabled, false otherwise.
+     *
+     * @return true if IEEE80211BE is allowed for the given configuration, false otherwise.
+     */
+    public static boolean is11beAllowedForThisConfiguration(DeviceWiphyCapabilities capabilities,
+            @NonNull Context context,
+            SoftApConfiguration config,
+            boolean isBridgedMode) {
+        if (!ApConfigUtil.isIeee80211beSupported(context)) {
+            return false;
+        }
+        if (capabilities == null || !capabilities.isWifiStandardSupported(
+                ScanResult.WIFI_STANDARD_11BE)) {
+            return false;
+        }
+        if (isBridgedMode
+                && !context.getResources().getBoolean(
+                        R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported)) {
+            return false;
+        }
+        if (is11beDisabledForSecurityType(config.getSecurityType())) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Update AP band and channel based on the provided country code and band.
      * This will also set
      * @param wifiNative reference to WifiNative
@@ -1087,6 +1142,19 @@ public class ApConfigUtil {
                             put(HDM_CREATE_IFACE_AP_BRIDGE, 1);
                         }});
     }
+
+   /**
+     * Helper function to get whether or not device claim support bridged AP.
+     * (i.e. In resource file)
+     *
+     * @param context the caller context used to get value from resource file.
+     * @return true if supported, false otherwise.
+     */
+    public static boolean isBridgedModeSupportedInConfig(@NonNull Context context) {
+        return SdkLevel.isAtLeastS() && context.getResources().getBoolean(
+                    R.bool.config_wifiBridgedSoftApSupported);
+    }
+
 
     /**
      * Helper function to get HAL support STA + bridged AP or not.

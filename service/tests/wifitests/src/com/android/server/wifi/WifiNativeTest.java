@@ -1601,8 +1601,10 @@ public class WifiNativeTest extends WifiBaseTest {
     @Test
     public void testGetSupportedBandsFromHal() throws Exception {
         List<WifiAvailableChannel> usableChannelList = new ArrayList<>();
-        usableChannelList.add(new WifiAvailableChannel(2412, WifiAvailableChannel.OP_MODE_STA));
-        usableChannelList.add(new WifiAvailableChannel(5160, WifiAvailableChannel.OP_MODE_STA));
+        usableChannelList.add(new WifiAvailableChannel(2412, WifiAvailableChannel.OP_MODE_STA,
+                ScanResult.CHANNEL_WIDTH_20MHZ));
+        usableChannelList.add(new WifiAvailableChannel(5160, WifiAvailableChannel.OP_MODE_STA,
+                ScanResult.CHANNEL_WIDTH_40MHZ));
         when(mWifiVendorHal.getUsableChannels(WifiScanner.WIFI_BAND_24_5_WITH_DFS_6_60_GHZ,
                 WifiAvailableChannel.OP_MODE_STA,
                 WifiAvailableChannel.FILTER_REGULATORY)).thenReturn(usableChannelList);

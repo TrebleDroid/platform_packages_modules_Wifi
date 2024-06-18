@@ -934,6 +934,8 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(WifiP2pDevice.class);
         mDut.onStaAuthorized(mDeviceAddress1Bytes, mDeviceAddress2Bytes);
         verify(mMonitor).broadcastP2pApStaConnected(any(String.class), p2pDeviceCaptor.capture());
+        assertEquals(MacAddress.fromBytes(mDeviceAddress1Bytes),
+                p2pDeviceCaptor.getValue().getInterfaceMacAddress());
         assertEquals(mDeviceAddress2String, p2pDeviceCaptor.getValue().deviceAddress);
     }
 
@@ -948,6 +950,8 @@ public class SupplicantP2pIfaceCallbackAidlImplTest extends WifiBaseTest {
                 ArgumentCaptor.forClass(WifiP2pDevice.class);
         mDut.onStaAuthorized(mDeviceAddress1Bytes, NativeUtil.ANY_MAC_BYTES);
         verify(mMonitor).broadcastP2pApStaConnected(any(String.class), p2pDeviceCaptor.capture());
+        assertEquals(MacAddress.fromBytes(mDeviceAddress1Bytes),
+                p2pDeviceCaptor.getValue().getInterfaceMacAddress());
         assertEquals(mDeviceAddress1String, p2pDeviceCaptor.getValue().deviceAddress);
     }
 

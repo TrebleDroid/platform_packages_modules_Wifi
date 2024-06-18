@@ -379,7 +379,8 @@ public class WifiNetworkSuggestionsManager {
             config.shared = false;
             config.allowAutojoin = isAutojoinEnabled;
             if (config.enterpriseConfig
-                    != null && config.enterpriseConfig.isAuthenticationSimBased()) {
+                    != null && config.enterpriseConfig.isAuthenticationSimBased()
+                    && anonymousIdentity != null) {
                 config.enterpriseConfig.setAnonymousIdentity(anonymousIdentity);
             }
             config.getNetworkSelectionStatus().setConnectChoice(connectChoice);
@@ -708,7 +709,7 @@ public class WifiNetworkSuggestionsManager {
     private void saveToStore() {
         // Set the flag to let WifiConfigStore that we have new data to write.
         mHasNewDataToSerialize = true;
-        if (!mWifiConfigManager.saveToStore(true)) {
+        if (!mWifiConfigManager.saveToStore()) {
             Log.w(TAG, "Failed to save to store");
         }
     }

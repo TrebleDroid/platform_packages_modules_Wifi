@@ -115,7 +115,7 @@ public class WifiDialogManager {
                                         dialogHandle.cancelDialog();
                                     }
                                 }
-                            });
+                            }, TAG + "#onReceive");
                 }
             };
 
@@ -232,9 +232,11 @@ public class WifiDialogManager {
         @AnyThread
         public void launchDialog() {
             if (mInternalHandle != null) {
-                mWifiThreadRunner.post(() -> mInternalHandle.launchDialog(0));
+                mWifiThreadRunner.post(() -> mInternalHandle.launchDialog(0),
+                        TAG + "#launchDialog");
             } else if (mLegacyHandle != null) {
-                mWifiThreadRunner.post(() -> mLegacyHandle.launchDialog(0));
+                mWifiThreadRunner.post(() -> mLegacyHandle.launchDialog(0),
+                        TAG + "#launchDialog");
             }
         }
 
@@ -246,9 +248,11 @@ public class WifiDialogManager {
         @AnyThread
         public void launchDialog(long timeoutMs) {
             if (mInternalHandle != null) {
-                mWifiThreadRunner.post(() -> mInternalHandle.launchDialog(timeoutMs));
+                mWifiThreadRunner.post(() -> mInternalHandle.launchDialog(timeoutMs),
+                        TAG + "#launchDialogTimeout");
             } else if (mLegacyHandle != null) {
-                mWifiThreadRunner.post(() -> mLegacyHandle.launchDialog(timeoutMs));
+                mWifiThreadRunner.post(() -> mLegacyHandle.launchDialog(timeoutMs),
+                        TAG + "#launchDialogTimeout");
             }
         }
 
@@ -259,9 +263,11 @@ public class WifiDialogManager {
         @AnyThread
         public void dismissDialog() {
             if (mInternalHandle != null) {
-                mWifiThreadRunner.post(() -> mInternalHandle.dismissDialog());
+                mWifiThreadRunner.post(() -> mInternalHandle.dismissDialog(),
+                        TAG + "#dismissDialog");
             } else if (mLegacyHandle != null) {
-                mWifiThreadRunner.post(() -> mLegacyHandle.dismissDialog());
+                mWifiThreadRunner.post(() -> mLegacyHandle.dismissDialog(),
+                        TAG + "#dismissDialog");
             }
         }
     }
@@ -393,6 +399,7 @@ public class WifiDialogManager {
     private class SimpleDialogHandle extends DialogHandleInternal {
         @Nullable private final SimpleDialogCallback mCallback;
         @Nullable private final WifiThreadRunner mCallbackThreadRunner;
+        private final String mTitle;
 
         SimpleDialogHandle(
                 final String title,
@@ -405,6 +412,7 @@ public class WifiDialogManager {
                 final String neutralButtonText,
                 @Nullable final SimpleDialogCallback callback,
                 @Nullable final WifiThreadRunner callbackThreadRunner) {
+            mTitle = title;
             Intent intent = getBaseLaunchIntent(WifiManager.DIALOG_TYPE_SIMPLE);
             if (intent != null) {
                 intent.putExtra(WifiManager.EXTRA_DIALOG_TITLE, title)
@@ -424,28 +432,32 @@ public class WifiDialogManager {
 
         void notifyOnPositiveButtonClicked() {
             if (mCallbackThreadRunner != null && mCallback != null) {
-                mCallbackThreadRunner.post(mCallback::onPositiveButtonClicked);
+                mCallbackThreadRunner.post(mCallback::onPositiveButtonClicked,
+                        mTitle + "#onPositiveButtonClicked");
             }
             unregisterDialog();
         }
 
         void notifyOnNegativeButtonClicked() {
             if (mCallbackThreadRunner != null && mCallback != null) {
-                mCallbackThreadRunner.post(mCallback::onNegativeButtonClicked);
+                mCallbackThreadRunner.post(mCallback::onNegativeButtonClicked,
+                        mTitle + "#onNegativeButtonClicked");
             }
             unregisterDialog();
         }
 
         void notifyOnNeutralButtonClicked() {
             if (mCallbackThreadRunner != null && mCallback != null) {
-                mCallbackThreadRunner.post(mCallback::onNeutralButtonClicked);
+                mCallbackThreadRunner.post(mCallback::onNeutralButtonClicked,
+                        mTitle + "#onNeutralButtonClicked");
             }
             unregisterDialog();
         }
 
         void notifyOnCancelled() {
             if (mCallbackThreadRunner != null && mCallback != null) {
-                mCallbackThreadRunner.post(mCallback::onCancelled);
+                mCallbackThreadRunner.post(mCallback::onCancelled,
+                        mTitle + "#onCancelled");
             }
             unregisterDialog();
         }
@@ -534,7 +546,8 @@ public class WifiDialogManager {
                             Log.v(TAG, "Positive button pressed for legacy simple dialog");
                         }
                         if (mCallbackThreadRunner != null && mCallback != null) {
-                            mCallbackThreadRunner.post(mCallback::onPositiveButtonClicked);
+                            mCallbackThreadRunner.post(mCallback::onPositiveButtonClicked,
+                                    mTitle + "#onPositiveButtonClicked");
                         }
                     })
                     .setNegativeButton(mNegativeButtonText, (dialogNegative, which) -> {
@@ -542,7 +555,8 @@ public class WifiDialogManager {
                             Log.v(TAG, "Negative button pressed for legacy simple dialog");
                         }
                         if (mCallbackThreadRunner != null && mCallback != null) {
-                            mCallbackThreadRunner.post(mCallback::onNegativeButtonClicked);
+                            mCallbackThreadRunner.post(mCallback::onNegativeButtonClicked,
+                                    mTitle + "#onNegativeButtonClicked");
                         }
                     })
                     .setNeutralButton(mNeutralButtonText, (dialogNeutral, which) -> {
@@ -550,7 +564,8 @@ public class WifiDialogManager {
                             Log.v(TAG, "Neutral button pressed for legacy simple dialog");
                         }
                         if (mCallbackThreadRunner != null && mCallback != null) {
-                            mCallbackThreadRunner.post(mCallback::onNeutralButtonClicked);
+                            mCallbackThreadRunner.post(mCallback::onNeutralButtonClicked,
+                                    mTitle + "#onNeutralButtonClicked");
                         }
                     })
                     .setOnCancelListener((dialogCancel) -> {
@@ -558,7 +573,8 @@ public class WifiDialogManager {
                             Log.v(TAG, "Legacy simple dialog cancelled.");
                         }
                         if (mCallbackThreadRunner != null && mCallback != null) {
-                            mCallbackThreadRunner.post(mCallback::onCancelled);
+                            mCallbackThreadRunner.post(mCallback::onCancelled,
+                                    mTitle + "#onCancelled");
                         }
                     })
                     .setOnDismissListener((dialogDismiss) -> {
@@ -569,7 +585,7 @@ public class WifiDialogManager {
                             }
                             mAlertDialog = null;
                             mActiveLegacySimpleDialogs.remove(this);
-                        });
+                        }, mTitle + "#onDismiss");
                     })
                     .create();
             mAlertDialog.setCanceledOnTouchOutside(mContext.getResources().getBoolean(
@@ -595,7 +611,8 @@ public class WifiDialogManager {
             }
             if (mTimeoutMs > 0) {
                 mTimeoutRunnable = mAlertDialog::cancel;
-                mWifiThreadRunner.postDelayed(mTimeoutRunnable, mTimeoutMs);
+                mWifiThreadRunner.postDelayed(mTimeoutRunnable, mTimeoutMs,
+                        TAG + "#cancelDialog");
             }
             mActiveLegacySimpleDialogs.add(this);
         }
@@ -897,14 +914,16 @@ public class WifiDialogManager {
 
         void notifyOnAccepted(@Nullable String optionalPin) {
             if (mCallbackThreadRunner != null && mCallback != null) {
-                mCallbackThreadRunner.post(() -> mCallback.onAccepted(optionalPin));
+                mCallbackThreadRunner.post(() -> mCallback.onAccepted(optionalPin),
+                        "P2pInvitationReceivedDialogHandle" + "#notifyOnAccepted");
             }
             unregisterDialog();
         }
 
         void notifyOnDeclined() {
             if (mCallbackThreadRunner != null && mCallback != null) {
-                mCallbackThreadRunner.post(mCallback::onDeclined);
+                mCallbackThreadRunner.post(mCallback::onDeclined,
+                        "P2pInvitationReceivedDialogHandle" + "#notifyOnDeclined");
             }
             unregisterDialog();
         }

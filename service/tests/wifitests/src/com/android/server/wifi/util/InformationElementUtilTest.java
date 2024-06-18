@@ -1309,8 +1309,8 @@ public class InformationElementUtilTest extends WifiBaseTest {
         extendedCap.from(ie);
         assertFalse(extendedCap.isStrictUtf8());
         assertFalse(extendedCap.is80211McRTTResponder());
-        assertFalse(extendedCap.isTriggerBasedRangingRespSupported());
-        assertFalse(extendedCap.isNonTriggerBasedRangingRespSupported());
+        assertFalse(extendedCap.is80211azTbResponder());
+        assertFalse(extendedCap.is80211azNtbResponder());
         assertFalse(extendedCap.isTwtRequesterSupported());
         assertFalse(extendedCap.isTwtResponderSupported());
         assertFalse(extendedCap.isFilsCapable());
@@ -1368,8 +1368,8 @@ public class InformationElementUtilTest extends WifiBaseTest {
         InformationElementUtil.ExtendedCapabilities extendedCap =
                 new InformationElementUtil.ExtendedCapabilities();
         extendedCap.from(ie);
-        assertTrue(extendedCap.isTriggerBasedRangingRespSupported());
-        assertTrue(extendedCap.isNonTriggerBasedRangingRespSupported());
+        assertTrue(extendedCap.is80211azTbResponder());
+        assertTrue(extendedCap.is80211azNtbResponder());
         assertTrue(extendedCap.isTwtRequesterSupported());
         assertTrue(extendedCap.isTwtResponderSupported());
         assertTrue(extendedCap.isFilsCapable());

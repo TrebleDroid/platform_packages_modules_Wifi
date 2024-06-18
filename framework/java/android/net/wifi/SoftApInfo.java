@@ -37,7 +37,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A class representing information about SoftAp.
+ * A class representing information about a specific SoftAP instance. A SoftAP instance may be a
+ * single band AP or a bridged AP (across multiple bands). To get the state of the AP interface
+ * itself, use {@link android.net.wifi.WifiManager.SoftApCallback#onStateChanged(SoftApState)}.
  * {@see WifiManager}
  *
  * @hide

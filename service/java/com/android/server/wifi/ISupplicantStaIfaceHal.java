@@ -840,6 +840,13 @@ interface ISupplicantStaIfaceHal {
     default void enableMscs(@NonNull MscsParams mscsParams, String ifaceName) {}
 
     /**
+     * Resend the previously configured MSCS parameters on this interface, if any exist.
+     *
+     * @param ifaceName Name of the interface.
+     */
+    default void resendMscs(String ifaceName) {};
+
+    /**
      * Disable Mirrored Stream Classification Service (MSCS).
      *
      * @param ifaceName Name of the interface.

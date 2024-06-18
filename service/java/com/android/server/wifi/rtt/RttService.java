@@ -55,7 +55,7 @@ public class RttService extends SystemService {
                 return;
             }
 
-            HandlerThread handlerThread = wifiInjector.getRttHandlerThread();
+            HandlerThread handlerThread = wifiInjector.getWifiHandlerThread();
             WifiPermissionsUtil wifiPermissionsUtil = wifiInjector.getWifiPermissionsUtil();
             RttMetrics rttMetrics = wifiInjector.getWifiMetrics().getRttMetrics();
             WifiAwareManager awareManager = getContext().getSystemService(WifiAwareManager.class);
