@@ -1,0 +1,1137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.4.0-alpha08" type="baseline" client="" dependencies="true" name="" variant="all" version="8.4.0-alpha08">
+
+    <issue
+        id="FlaggedApi"
+        message="Class `OuiKeyedData` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `readOuiKeyedDataList` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            in.readList(dataList, OuiKeyedData.class.getClassLoader(), OuiKeyedData.class);"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/ParcelUtil.java"
+            line="176"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Class `OuiKeyedData` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `readOuiKeyedDataList` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            in.readList(dataList, OuiKeyedData.class.getClassLoader(), OuiKeyedData.class);"
+        errorLine2="                                                                       ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/ParcelUtil.java"
+            line="176"
+            column="72"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Class `OuiKeyedData` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `readOuiKeyedDataList` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            in.readList(dataList, OuiKeyedData.class.getClassLoader());"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/ParcelUtil.java"
+            line="178"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `validate()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `validate` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        if (mQosCharacteristics != null &amp;&amp; !mQosCharacteristics.validate()) {"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/QosPolicyParams.java"
+            line="324"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Class `QosCharacteristics` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `QosPolicyParams` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    QosCharacteristics.class.getClassLoader(), QosCharacteristics.class);"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/QosPolicyParams.java"
+            line="639"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Class `QosCharacteristics` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `QosPolicyParams` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    QosCharacteristics.class.getClassLoader(), QosCharacteristics.class);"
+        errorLine2="                                                               ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/QosPolicyParams.java"
+            line="639"
+            column="64"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `is80211azNtbResponder()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `addNon80211mcCapableAccessPoint` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            if (apInfo.is80211mcResponder() || apInfo.is80211azNtbResponder()) {"
+        errorLine2="                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingRequest.java"
+            line="401"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `is80211azNtbResponder()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `addNon80211mcCapableAccessPoints` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                if (scanResult.is80211mcResponder() || scanResult.is80211azNtbResponder()) {"
+        errorLine2="                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingRequest.java"
+            line="439"
+            column="56"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mStatus` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mStatus = builder.mStatus;"
+        errorLine2="                          ~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="519"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mMac` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mMac = builder.mMac;"
+        errorLine2="                       ~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="520"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mPeerHandle` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mPeerHandle = builder.mPeerHandle;"
+        errorLine2="                              ~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="521"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mDistanceMm` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mDistanceMm = builder.mDistanceMm;"
+        errorLine2="                              ~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="522"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mDistanceStdDevMm` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mDistanceStdDevMm = builder.mDistanceStdDevMm;"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="523"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mRssi` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mRssi = builder.mRssi;"
+        errorLine2="                        ~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="524"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mNumAttemptedMeasurements` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mNumAttemptedMeasurements = builder.mNumAttemptedMeasurements;"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="525"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mNumSuccessfulMeasurements` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mNumSuccessfulMeasurements = builder.mNumSuccessfulMeasurements;"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="526"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mLci` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mLci = (builder.mLci == null) ? EMPTY_BYTE_ARRAY : builder.mLci;"
+        errorLine2="                        ~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="527"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mLci` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mLci = (builder.mLci == null) ? EMPTY_BYTE_ARRAY : builder.mLci;"
+        errorLine2="                                                                   ~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="527"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mLcr` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mLcr = (builder.mLcr == null) ? EMPTY_BYTE_ARRAY : builder.mLcr;"
+        errorLine2="                        ~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="528"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mLcr` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mLcr = (builder.mLcr == null) ? EMPTY_BYTE_ARRAY : builder.mLcr;"
+        errorLine2="                                                                   ~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="528"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mResponderLocation` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mResponderLocation = builder.mResponderLocation;"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="529"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mTimestamp` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mTimestamp = builder.mTimestamp;"
+        errorLine2="                             ~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="530"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mIs80211mcMeasurement` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mIs80211mcMeasurement = builder.mIs80211mcMeasurement;"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="531"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mFrequencyMHz` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mFrequencyMHz = builder.mFrequencyMHz;"
+        errorLine2="                                ~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="532"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mPacketBw` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mPacketBw = builder.mPacketBw;"
+        errorLine2="                            ~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="533"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mIs80211azNtbMeasurement` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mIs80211azNtbMeasurement = builder.mIs80211azNtbMeasurement;"
+        errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="534"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mNtbMinMeasurementTime` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mNtbMinMeasurementTime = builder.mNtbMinMeasurementTime;"
+        errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="535"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mNtbMaxMeasurementTime` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mNtbMaxMeasurementTime = builder.mNtbMaxMeasurementTime;"
+        errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="536"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mI2rTxLtfRepetitions` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mI2rTxLtfRepetitions = builder.mI2rTxLtfRepetitions;"
+        errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="537"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mR2iTxLtfRepetitions` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mR2iTxLtfRepetitions = builder.mR2iTxLtfRepetitions;"
+        errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="538"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mNumRxSpatialStreams` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mNumRxSpatialStreams = builder.mNumRxSpatialStreams;"
+        errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="539"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mNumTxSpatialStreams` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mNumTxSpatialStreams = builder.mNumTxSpatialStreams;"
+        errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="540"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `mVendorData` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `RangingResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        mVendorData = builder.mVendorData;"
+        errorLine2="                              ~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="541"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `null()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `set80211azInitiatorTxLtfRepetitionsCount()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `set80211azNtbMeasurement()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `set80211azNumberOfRxSpatialStreams()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `set80211azNumberOfTxSpatialStreams()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `set80211azResponderTxLtfRepetitionsCount()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `set80211mcMeasurement()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setDistanceMm()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setDistanceStdDevMm()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setLci()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setLcr()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setMacAddress()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setMaxTimeBetweenNtbMeasurementsMicros()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setMeasurementBandwidth()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setMeasurementChannelFrequencyMHz()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setMinTimeBetweenNtbMeasurementsMicros()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setNumAttemptedMeasurements()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setNumSuccessfulMeasurements()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setPeerHandle()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setRangingTimestampMillis()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setRssi()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setStatus()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setUnverifiedResponderLocation()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    RangingResult.Builder builder = new Builder()"
+        errorLine2="                                                    ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="960"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setVendorData()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                        builder.setVendorData(ParcelUtil.readOuiKeyedDataList(in));"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="987"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `build()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    return builder.build();"
+        errorLine2="                           ~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/RangingResult.java"
+            line="989"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `ResponderConfig` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        this.supports80211azNtb = builder.mSupports80211azNtb;"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="282"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `ResponderConfig` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        this.supports80211azNtb = false;"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="332"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `ResponderConfig` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        this.supports80211azNtb = false;"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="372"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `ResponderConfig` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        this.supports80211azNtb = false;"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="416"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `is80211azNtbResponder()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `fromScanResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        boolean supports80211azNtbRanging = scanResult.is80211azNtbResponder();"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="430"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `set80211azNtbSupported()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `fromScanResult` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        return new ResponderConfig.Builder()"
+        errorLine2="               ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="478"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `writeToParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        dest.writeBoolean(supports80211azNtb);"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="955"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `set80211azNtbSupported()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            return new ResponderConfig.Builder()"
+        errorLine2="                   ^">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="984"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `equals` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                &amp;&amp; supports80211azNtb == lhs.supports80211azNtb"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="1018"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `equals` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                &amp;&amp; supports80211azNtb == lhs.supports80211azNtb"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="1018"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `hashCode` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                frequency, centerFreq0, centerFreq1, preamble, supports80211azNtb,"
+        errorLine2="                                                               ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="1026"
+            column="64"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `supports80211azNtb` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `toString` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                .append(&quot;, supports80211azNtb=&quot;).append(supports80211azNtb)"
+        errorLine2="                                                        ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/rtt/ResponderConfig.java"
+            line="1041"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Class `OuiKeyedData` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `readOuiKeyedDataList` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            in.readList(dataList, OuiKeyedData.class.getClassLoader(), OuiKeyedData.class);"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/SoftApConfiguration.java"
+            line="710"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Class `OuiKeyedData` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `readOuiKeyedDataList` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            in.readList(dataList, OuiKeyedData.class.getClassLoader(), OuiKeyedData.class);"
+        errorLine2="                                                                       ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/SoftApConfiguration.java"
+            line="710"
+            column="72"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Class `OuiKeyedData` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `readOuiKeyedDataList` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            in.readList(dataList, OuiKeyedData.class.getClassLoader());"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/SoftApConfiguration.java"
+            line="712"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `DISABLED_UNWANTED_LOW_RSSI` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `buildDisableReasonInfos` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            reasons.append(DISABLED_UNWANTED_LOW_RSSI,"
+        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiConfiguration.java"
+            line="2430"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onStateChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onStateChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                mCallback.onStateChanged(state);"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiManager.java"
+            line="6800"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onActivatedStateChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onActivatedStateChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onActivatedStateChanged(activated));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiManager.java"
+            line="8089"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onOwnershipChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onOwnershipChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onOwnershipChanged(ownerUids));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiManager.java"
+            line="8096"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onActiveUsersChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onActiveUsersChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onActiveUsersChanged(activeUids));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiManager.java"
+            line="8103"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onFailure()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onFailure` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mCallback.onFailure(errorCode));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiManager.java"
+            line="12652"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onTeardown()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onTeardown` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mCallback.onTeardown(reasonCode));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiManager.java"
+            line="12662"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onCreate()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onCreate` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mCallback.onCreate(wifiTwtSession));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiManager.java"
+            line="12675"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setWifi7Enabled()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `buildWifiConfiguration` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            wifiConfiguration.setWifi7Enabled(mIsWifi7Enabled);"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiNetworkSuggestion.java"
+            line="1102"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setWifi7Enabled()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `buildWifiConfigurationForPasspoint` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            wifiConfiguration.setWifi7Enabled(mIsWifi7Enabled);"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiNetworkSuggestion.java"
+            line="1142"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `getVendorData()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `WifiP2pGroup` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                mVendorData = new ArrayList&lt;>(source.getVendorData());"
+        errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pGroup.java"
+            line="468"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `setVendorData()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `createFromParcel` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="                    group.setVendorData(ParcelUtil.readOuiKeyedDataList(in));"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pGroup.java"
+            line="508"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onP2pStateChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onP2pStateChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onP2pStateChanged(state));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1484"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onDiscoveryStateChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onDiscoveryStateChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onDiscoveryStateChanged(state));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1490"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onListenStateChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onListenStateChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onListenStateChanged(state));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1496"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onDeviceConfigurationChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onDeviceConfigurationChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onDeviceConfigurationChanged(p2pDevice));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1502"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onPeerListChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onPeerListChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onPeerListChanged(p2pDeviceList));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1508"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onPersistentGroupsChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onPersistentGroupsChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onPersistentGroupsChanged(p2pGroupList));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1514"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onGroupCreating()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onGroupCreating` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onGroupCreating());"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1520"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onGroupNegotiationRejectedByUser()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onGroupNegotiationRejectedByUser` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onGroupNegotiationRejectedByUser());"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1526"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onGroupCreationFailed()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onGroupCreationFailed` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onGroupCreationFailed(reason));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1532"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onGroupCreated()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onGroupCreated` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onGroupCreated(p2pInfo, p2pGroup));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1538"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onPeerClientJoined()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onPeerClientJoined` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onPeerClientJoined(p2pInfo, p2pGroup));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1544"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onPeerClientDisconnected()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onPeerClientDisconnected` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onPeerClientDisconnected(p2pInfo, p2pGroup));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1550"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onFrequencyChanged()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onFrequencyChanged` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onFrequencyChanged(p2pInfo, p2pGroup));"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1556"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Method `onGroupRemoved()` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `onGroupRemoved` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="            mExecutor.execute(() -> mListener.onGroupRemoved());"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="1562"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `WIFI_P2P_SCAN_FULL` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `discoverPeers` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        channel.mAsyncChannel.sendMessage(prepareMessage(DISCOVER_PEERS, WIFI_P2P_SCAN_FULL,"
+        errorLine2="                                                                         ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="2129"
+            column="74"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `WIFI_P2P_SCAN_SOCIAL` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `discoverPeersOnSocialChannels` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        channel.mAsyncChannel.sendMessage(prepareMessage(DISCOVER_PEERS, WIFI_P2P_SCAN_SOCIAL,"
+        errorLine2="                                                                         ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="2174"
+            column="74"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="Field `WIFI_P2P_SCAN_SINGLE_FREQ` is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `discoverPeersOnSpecificFrequency` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="        channel.mAsyncChannel.sendMessage(prepareMessage(DISCOVER_PEERS, WIFI_P2P_SCAN_SINGLE_FREQ,"
+        errorLine2="                                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/p2p/WifiP2pManager.java"
+            line="2224"
+            column="74"/>
+    </issue>
+
+    <issue
+        id="FlaggedApi"
+        message="This is a flagged API and should be inside an `if (Flags.androidVWifiApi())` check (or annotate the surrounding method `?` with `@FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API) to transfer requirement to caller`)"
+        errorLine1="public class WifiTwtSession implements TwtSession {"
+        errorLine2="                                       ~~~~~~~~~~">
+        <location
+            file="packages/modules/Wifi/framework/java/android/net/wifi/WifiTwtSession.java"
+            line="34"
+            column="40"/>
+    </issue>
+
+</issues>
