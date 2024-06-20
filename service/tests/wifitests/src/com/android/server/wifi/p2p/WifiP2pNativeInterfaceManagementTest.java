@@ -108,19 +108,9 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
                 .thenReturn(TEST_P2P_IFACE_NAME);
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfigFacade);
         when(mDeviceConfigFacade.getFeatureFlags()).thenReturn(mFeatureFlags);
-        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(true);
         mWifiP2pNative = new WifiP2pNative(mWifiNl80211Manager, mWifiNative, mWifiMetrics,
                 mWifiVendorHal, mSupplicantP2pIfaceHal, mHalDeviceManager, mPropertyService,
                 mWifiInjector);
-    }
-
-    /**
-     * Verifies the setup of a p2p interface.
-     */
-    @Test
-    public void testSetUpInterfaceByHDM() throws Exception {
-        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
-        testSetUpInterface(false);
     }
 
     /**
@@ -169,15 +159,6 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
      * Verifies the teardown of a p2p interface.
      */
     @Test
-    public void testTeardownInterfaceWhenD2dWithoutSTADisabled() throws Exception {
-        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
-        testTeardownInterface(false);
-    }
-
-    /**
-     * Verifies the teardown of a p2p interface.
-     */
-    @Test
     public void testTeardownInterface() throws Exception {
         testTeardownInterface(true);
     }
@@ -201,14 +182,6 @@ public class WifiP2pNativeInterfaceManagementTest extends WifiBaseTest {
     @Test
     public void testTeardownInterfaceWithNoVendorHalWhenD2dAloneFeatureEnabled() throws Exception {
         testTeardownInterfaceWithNoVendorHal(true);
-    }
-    /**
-     * Verifies the teardown of a p2p interface with no HAL (HIDL) support.
-     */
-    @Test
-    public void testTeardownInterfaceWithNoVendorHalD2dAloneFeatureDisabled() throws Exception {
-        when(mFeatureFlags.d2dWhenInfraStaOff()).thenReturn(false);
-        testTeardownInterfaceWithNoVendorHal(false);
     }
 
     private void testTeardownInterfaceWithNoVendorHal(boolean isD2dAloneFeatureEnabled)

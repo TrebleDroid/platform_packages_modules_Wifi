@@ -158,7 +158,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             if (mChannelHelper == null) return new ChannelSpec[0][0];
             mChannelHelper.updateChannels();
             return mChannelHelper.getAvailableScanChannels(band);
-        }, new ChannelSpec[0][0]);
+        }, new ChannelSpec[0][0], TAG + "#getAvailableChannels");
         if (channelSpecs == null) {
             channelSpecs = new ChannelSpec[0][0];
         }
@@ -219,7 +219,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             mPnoScanStateMachine.sendMessage(Message.obtain(msg));
             mLastCallerInfoManager.put(WifiManager.API_SCANNING_ENABLED, tid,
                     Binder.getCallingUid(), Binder.getCallingPid(), packageName, enable);
-        });
+        }, TAG + "#setScanningEnabled");
         return true;
     }
 
@@ -250,7 +250,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             logScanRequest("registerScanListener", client, null, null, null);
             mSingleScanListeners.addRequest(client, null, null);
             client.replySucceeded();
-        });
+        }, TAG + "#registerScanListener");
     }
 
     @Override
@@ -277,7 +277,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             logScanRequest("deregisterScanListener", client, null, null, null);
             mSingleScanListeners.removeRequest(client);
             client.cleanup();
-        });
+        }, TAG + "#unregisterScanListener");
     }
 
     @Override
@@ -307,7 +307,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             msg.obj = new ScanParams(listener, settings, workSource);
             msg.sendingUid = uid;
             mBackgroundScanStateMachine.sendMessage(msg);
-        });
+        }, TAG + "#startBackgroundScan");
     }
 
     @Override
@@ -409,7 +409,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             msg.obj = new ScanParams(listener, settings, workSource);
             msg.sendingUid = uid;
             mSingleScanStateMachine.sendMessage(msg);
-        });
+        }, TAG + "#startScan");
     }
 
     @Override
@@ -437,7 +437,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             msg.obj = new ScanParams(listener, null, null);
             msg.sendingUid = uid;
             mSingleScanStateMachine.sendMessage(msg);
-        });
+        }, TAG + "#stopScan");
     }
 
     @Override
@@ -455,7 +455,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             return new ArrayList<>();
         }
         return mWifiThreadRunner.call(() -> mSingleScanStateMachine.filterCachedScanResultsByAge(),
-                new ArrayList<ScanResult>());
+                new ArrayList<ScanResult>(), TAG + "#getSingleScanResults");
     }
 
 
@@ -477,7 +477,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             } catch (RemoteException e) {
                 Log.e(TAG, e.getMessage(), e);
             }
-        });
+        }, TAG + "#getCachedScanData");
     }
 
     @Override
@@ -507,7 +507,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             msg.obj = new ScanParams(listener, scanSettings, pnoSettings, null, packageName, null);
             msg.sendingUid = uid;
             mPnoScanStateMachine.sendMessage(msg);
-        });
+        }, TAG + "#startPnoScan");
     }
 
     @Override
@@ -539,7 +539,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             msg.obj = new ScanParams(listener, null, null);
             msg.sendingUid = uid;
             mPnoScanStateMachine.sendMessage(msg);
-        });
+        }, TAG + "#stopPnoScan");
     }
 
     @Override
@@ -728,7 +728,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             mBackgroundScanStateMachine.start();
             mSingleScanStateMachine.start();
             mPnoScanStateMachine.start();
-        });
+        }, TAG + "#startService");
     }
 
     /**
@@ -3083,7 +3083,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
                         Log.i(TAG, "binder died: client listener: " + mListener);
                     }
                     cleanup();
-                });
+                }, TAG + "#binderDied");
             }
         };
 

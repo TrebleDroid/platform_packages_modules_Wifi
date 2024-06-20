@@ -97,6 +97,7 @@ public class WrongPasswordNotifier {
         Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS)
                 .setPackage(settingsPackage)
                 .putExtra("wifi_start_connect_ssid", utf8Ssid.toString());
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         CharSequence title = mContext.getString(
                 com.android.wifi.resources.R.string.wifi_available_title_failed_to_connect);
         Notification.Builder builder = mFrameworkFacade.makeNotificationBuilder(mContext,

@@ -21,11 +21,8 @@ import static java.lang.Math.toIntExact;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.app.AlarmManager;
-import android.content.Context;
 import android.net.wifi.WifiMigration;
 import android.net.wifi.util.Environment;
-import android.os.Handler;
 import android.os.UserHandle;
 import android.util.AtomicFile;
 import android.util.Log;
@@ -74,7 +71,7 @@ import java.util.stream.Stream;
  * NOTE:
  * <li>Modules can register their {@StoreData} using
  * {@link WifiConfigStore#registerStoreData(StoreData)} directly, but should
- * use {@link WifiConfigManager#saveToStore(boolean)} for any writes.</li>
+ * use {@link WifiConfigManager#saveToStore()} for any writes.</li>
  * <li>{@link WifiConfigManager} controls {@link WifiConfigStore} and initiates read at bootup and
  * store file changes on user switch.</li>
  * <li>Not thread safe!</li>
@@ -150,10 +147,6 @@ public class WifiConfigStore {
      */
     private static final String TAG = "WifiConfigStore";
     /**
-     * Time interval for buffering file writes for non-forced writes
-     */
-    private static final int BUFFERED_WRITE_ALARM_INTERVAL_MS = 10 * 1000;
-    /**
      * Config store file name for general shared store file.
      */
     private static final String STORE_FILE_NAME_SHARED_GENERAL = "WifiConfigStore.xml";
@@ -181,14 +174,6 @@ public class WifiConfigStore {
                 put(STORE_FILE_USER_NETWORK_SUGGESTIONS, STORE_FILE_NAME_USER_NETWORK_SUGGESTIONS);
             }};
     /**
-     * Handler instance to post alarm timeouts to
-     */
-    private final Handler mEventHandler;
-    /**
-     * Alarm manager instance to start buffer timeout alarms.
-     */
-    private final AlarmManager mAlarmManager;
-    /**
      * Clock instance to retrieve timestamps for alarms.
      */
     private final Clock mClock;
@@ -207,23 +192,6 @@ public class WifiConfigStore {
      * Verbose logging flag.
      */
     private boolean mVerboseLoggingEnabled = false;
-    /**
-     * Flag to indicate if there is a buffered write pending.
-     */
-    private boolean mBufferedWritePending = false;
-    /**
-     * Alarm listener for flushing out any buffered writes.
-     */
-    private final AlarmManager.OnAlarmListener mBufferedWriteListener =
-            new AlarmManager.OnAlarmListener() {
-                public void onAlarm() {
-                    try {
-                        writeBufferedData();
-                    } catch (IOException e) {
-                        Log.wtf(TAG, "Buffered write failed", e);
-                    }
-                }
-            };
 
     /**
      * List of data containers.
@@ -234,19 +202,14 @@ public class WifiConfigStore {
      * Create a new instance of WifiConfigStore.
      * Note: The store file instances have been made inputs to this class to ease unit-testing.
      *
-     * @param context     context to use for retrieving the alarm manager.
-     * @param handler     handler instance to post alarm timeouts to.
-     * @param clock       clock instance to retrieve timestamps for alarms.
-     * @param wifiMetrics Metrics instance.
+     * @param clock        clock instance to retrieve timestamps for alarms.
+     * @param wifiMetrics  Metrics instance.
      * @param sharedStores List of {@link StoreFile} instances pointing to the shared store files.
      *                     This should be retrieved using {@link #createSharedFiles(boolean)}
      *                     method.
      */
-    public WifiConfigStore(Context context, Handler handler, Clock clock, WifiMetrics wifiMetrics,
+    public WifiConfigStore(Clock clock, WifiMetrics wifiMetrics,
             List<StoreFile> sharedStores) {
-
-        mAlarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        mEventHandler = handler;
         mClock = clock;
         mWifiMetrics = wifiMetrics;
         mStoreDataList = new ArrayList<>();
@@ -397,11 +360,8 @@ public class WifiConfigStore {
      * API to write the data provided by registered store data to config stores.
      * The method writes the user specific configurations to user specific config store and the
      * shared configurations to shared config store.
-     *
-     * @param forceSync boolean to force write the config stores now. if false, the writes are
-     *                  buffered and written after the configured interval.
      */
-    public void write(boolean forceSync)
+    public void write()
             throws XmlPullParserException, IOException {
         boolean hasAnyNewData = false;
         // Serialize the provided data and send it to the respective stores. The actual write will
@@ -422,18 +382,7 @@ public class WifiConfigStore {
                 }
             }
         }
-
         if (hasAnyNewData) {
-            // Every write provides a new snapshot to be persisted, so |forceSync| flag overrides
-            // any pending buffer writes.
-            if (forceSync) {
-                writeBufferedData();
-            } else {
-                startBufferedWriteAlarm();
-            }
-        } else if (forceSync && mBufferedWritePending) {
-            // no new data to write, but there is a pending buffered write. So, |forceSync| should
-            // flush that out.
             writeBufferedData();
         }
     }
@@ -473,34 +422,10 @@ public class WifiConfigStore {
     }
 
     /**
-     * Helper method to start a buffered write alarm if one doesn't already exist.
-     */
-    private void startBufferedWriteAlarm() {
-        if (!mBufferedWritePending) {
-            mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                    mClock.getElapsedSinceBootMillis() + BUFFERED_WRITE_ALARM_INTERVAL_MS,
-                    BUFFERED_WRITE_ALARM_TAG, mBufferedWriteListener, mEventHandler);
-            mBufferedWritePending = true;
-        }
-    }
-
-    /**
-     * Helper method to stop a buffered write alarm if one exists.
-     */
-    private void stopBufferedWriteAlarm() {
-        if (mBufferedWritePending) {
-            mAlarmManager.cancel(mBufferedWriteListener);
-            mBufferedWritePending = false;
-        }
-    }
-
-    /**
      * Helper method to actually perform the writes to the file. This flushes out any write data
      * being buffered in the respective stores and cancels any pending buffer write alarms.
      */
     private void writeBufferedData() throws IOException {
-        stopBufferedWriteAlarm();
-
         long writeStartTime = mClock.getElapsedSinceBootMillis();
         for (StoreFile sharedStoreFile : mSharedStores) {
             sharedStoreFile.writeBufferedRawData();
@@ -687,8 +612,6 @@ public class WifiConfigStore {
             }
         }
 
-        // Stop any pending buffered writes, if any.
-        stopBufferedWriteAlarm();
         mUserStores = userStores;
 
         // Now read from the user store files.

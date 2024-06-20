@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -38,6 +39,7 @@ import androidx.test.filters.SmallTest;
 import com.android.internal.util.FastXmlSerializer;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.net.module.util.MacAddressUtils;
+import com.android.server.wifi.OuiKeyedDataUtil;
 import com.android.server.wifi.WifiBaseTest;
 import com.android.server.wifi.WifiConfigurationTestUtil;
 import com.android.server.wifi.util.XmlUtil.IpConfigurationXmlUtil;
@@ -968,5 +970,17 @@ public class XmlUtilTest extends WifiBaseTest {
     public void testConfigurationSerializeForConfigStoreWithEncryptedPreSharedKeyShouldEncrypt()
             throws IOException, XmlPullParserException {
         testConfigStoreWithEncryptedPreSharedKey(true, true);
+    }
+
+    /**
+     * Verify that the vendor data field is serialized and deserialized correctly
+     * when provided.
+     */
+    @Test
+    public void testWifiConfigurationWithVendorData() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastV());
+        WifiConfiguration config = WifiConfigurationTestUtil.createOpenNetwork();
+        config.setVendorData(OuiKeyedDataUtil.createTestOuiKeyedDataList(10));
+        serializeDeserializeWifiConfiguration(config);
     }
 }

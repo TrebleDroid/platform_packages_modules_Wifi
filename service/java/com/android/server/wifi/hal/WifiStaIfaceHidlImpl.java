@@ -78,6 +78,7 @@ public class WifiStaIfaceHidlImpl implements IWifiStaIface {
     private SsidTranslator mSsidTranslator;
     private static final int DEFAULT_LINK = 0;
     private static final int NUM_OF_LINKS = 1;
+    private final boolean mWifiLinkLayerAllRadiosStatsAggregationEnabled;
 
     public WifiStaIfaceHidlImpl(@NonNull android.hardware.wifi.V1_0.IWifiStaIface staIface,
             @NonNull Context context, @NonNull SsidTranslator ssidTranslator) {
@@ -85,6 +86,8 @@ public class WifiStaIfaceHidlImpl implements IWifiStaIface {
         mContext = context;
         mSsidTranslator = ssidTranslator;
         mHalCallback = new StaIfaceEventCallback();
+        mWifiLinkLayerAllRadiosStatsAggregationEnabled = mContext.getResources()
+                .getBoolean(R.bool.config_wifiLinkLayerAllRadiosStatsAggregationEnabled);
     }
 
     /**
@@ -1285,9 +1288,7 @@ public class WifiStaIfaceHidlImpl implements IWifiStaIface {
     private void aggregateFrameworkRadioStatsFromHidl_1_3(int radioIndex,
             WifiLinkLayerStats stats,
             android.hardware.wifi.V1_3.StaLinkLayerRadioStats hidlRadioStats) {
-        if (!mContext.getResources()
-                .getBoolean(R.bool.config_wifiLinkLayerAllRadiosStatsAggregationEnabled)
-                && radioIndex > 0) {
+        if (!mWifiLinkLayerAllRadiosStatsAggregationEnabled && radioIndex > 0) {
             return;
         }
         // Aggregate the radio stats from all the radios
@@ -1334,9 +1335,7 @@ public class WifiStaIfaceHidlImpl implements IWifiStaIface {
     private void aggregateFrameworkRadioStatsFromHidl_1_6(int radioIndex,
             WifiLinkLayerStats stats,
             android.hardware.wifi.V1_6.StaLinkLayerRadioStats hidlRadioStats) {
-        if (!mContext.getResources()
-                .getBoolean(R.bool.config_wifiLinkLayerAllRadiosStatsAggregationEnabled)
-                && radioIndex > 0) {
+        if (!mWifiLinkLayerAllRadiosStatsAggregationEnabled && radioIndex > 0) {
             return;
         }
         // Aggregate the radio stats from all the radios

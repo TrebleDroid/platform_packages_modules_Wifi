@@ -99,6 +99,7 @@ public class InsecureEapNetworkHandlerTest extends WifiBaseTest {
     private static final int TEST_GEN_SERVER_CERT = 2;
     private static final int TEST_GEN_SELF_SIGNED_CERT = 3;
     private static final int TEST_GEN_FAKE_CA_CERT = 4;
+    private static final int TEST_GEN_SERVER_CERTIFICATE_WITHOUT_COMMON_NAME = 5;
 
     private static final String TEST_SERVER_CERTIFICATE = "-----BEGIN CERTIFICATE-----\n"
             + "MIIGPjCCBCagAwIBAgIUN2Ss1JmvjveRe97iWoNh4V+Y5LYwDQYJKoZIhvcNAQEM\n"
@@ -277,6 +278,42 @@ public class InsecureEapNetworkHandlerTest extends WifiBaseTest {
             + "GRbMvqDhmzrV0yG+sIyW+aEjBl44bVjWQnFhGjtNr1BOOftSyjnseYiioLbiiaYG\n"
             + "9Mqu78VmTWJzfxyOP2QPK5K00jnVBZ+jQH0NyIE9yf2Cg/llfYRoHsz80cfY/DNt\n"
             + "jUR49A==\n"
+            + "-----END CERTIFICATE-----";
+
+    private static final String TEST_SERVER_CERTIFICATE_WITHOUT_COMMON_NAME =
+            "-----BEGIN CERTIFICATE-----\n"
+            + "MIIF+zCCA+OgAwIBAgIUCvmbTyLRy+5/Tt8iSpBB+xmZTfUwDQYJKoZIhvcNAQEM\n"
+            + "BQAwgZcxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRswGQYDVQQK\n"
+            + "DBJBbmRyb2lkIFdpLUZpIFRlc3QxGDAWBgNVBAsMD2FuZHJvaWR3aWZpLm9lbTE8\n"
+            + "MDoGA1UEAwwzQW5kcm9pZCBQYXJ0bmVyIFJvb3QgQ0EgZm9yIHRlc3RpbmcgYW5k\n"
+            + "IGRldmVsb3BtZW50MB4XDTI0MDMxMzE3NTIwMFoXDTI2MDMxMzE3NTIwMFowQTEL\n"
+            + "MAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExHTAbBgNVBAoMFEFuZHJv\n"
+            + "aWQgV2ktRmkgVGVzdGVyMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA\n"
+            + "uVNdRG1M/DVcfqi1Cl1FRXxZ2eeKe/IM6OA4KhkR0aymZtjmsoTO52JFVoTykCrj\n"
+            + "bnDp6wOTDaglwbClip/Be5Oj//6LS+A5J3PqUfQsOI+s8ZeAu6s4Kur4g0oPhfNz\n"
+            + "msRyQvhIUkwYCXEum+uQ3INLpy38JggEbTRR4nnn2UUh4+Shv9xYA/SiYrV/sd/f\n"
+            + "Vj++lAmOUQu/CLCWtpfBFTeiyg/DhypbHQVPnr+k1QBy7DKZlBXQb7POjE4M6Ed/\n"
+            + "/st11tB8qHZnM8Xe4CdM3xSJj9qs2BQyT228z7SCmA3r3P1CMvSRYqWu1mn4iMO1\n"
+            + "t0sShF/OfUkihE1ADA0q6GRHDLQ3T/TSnuYWyH4/iMMygHl+yfDeECaLOn/KEQM9\n"
+            + "hOBlXo5iKB/GMkFKeoGQQePwWllHK7HjNEAOOPyXS4nzRA1VUq0gVvhFpQX7ZK9X\n"
+            + "OWdNdcnof4wzOEJse96I7v3A1C0FYg57f1HKOnx195hb1wQfi0MOyE/mgqvtVWbP\n"
+            + "90Vd2nFMlNSVc38DUT7jyYTygUAl5eQDRZo/npNs32nf8YW4cWmN1r+LCHUkK22v\n"
+            + "y8bmSVTts7WHzx9K1kg5+XvaTxpgmmFneuh0XIFvTcGFwMPrHzwaa5pOCYjUvlSy\n"
+            + "GXOmRuSqFipufxxlRKM0cJhMUqI/vmYJ5byx5Wb1N+MCAwEAAaOBkzCBkDAdBgNV\n"
+            + "HQ4EFgQUz4BlPUEPOANhQ74NbClj0CrdiHswHwYDVR0jBBgwFoAUyWVsWmPxPCB6\n"
+            + "D7hRF7K2vyVzKOMwCQYDVR0TBAIwADALBgNVHQ8EBAMCBaAwEwYDVR0lBAwwCgYI\n"
+            + "KwYBBQUHAwEwIQYDVR0RBBowGIIWc2VydmVyLmFuZHJvaWR3aWZpLm9lbTANBgkq\n"
+            + "hkiG9w0BAQwFAAOCAgEAkf5CHaqzDsQKn8udsA9/fIKSOEqr0LUfwP20JzFe0HBA\n"
+            + "F3cWoMrEVoAJFfi5NFQJOjlEib7kvu2MI92lL6ch3D3iW5mnY5Ncnm2eyqi1kvii\n"
+            + "uueKnH4a9jsolWgcsGiw5vUhsodgxWzFr/yDURYZEWkzP4uiW3+0K6eoc11DPiDr\n"
+            + "16LS4xAINHVeEDhhkuZG2Bqo1ctbcQWR7Leb5JGpfkC7xNGyVNUwJYjI5vow5GzR\n"
+            + "Af2SvJuG3mMxBfM+8TMx4wf4Sgq80FmaJLNAOlfKlYIN0u/NV/pq6nWb0B4u3K0u\n"
+            + "ytH3BRJsuKg35fZEy4qRpBZL1Us9FzwPkRaUK+Sgtz9BLRPL5my3xUwnZaqw+ZRp\n"
+            + "Gw+vwErnSc3md9DhYMeGc0JdA141/pxc/P20hoLG7cDK/tO4PwBzNrF57XLEFC7v\n"
+            + "bww0rQoADGCIk48n2gZX/wh1XeHWJhk7C+lGGbA/qrs5zZbzDaMi/N3C74eiQJOH\n"
+            + "KdQk10pt2nU8xwC/RsfL7W+2K4c4/mZvaroxQvIxs8tRB3glbpwQe4HntpE0LdvH\n"
+            + "7hotzbIt0YtGtzIdOwpR277a73qT09pmYL97+rwPGWMviCkb9QNvFHBKc0MsgxXz\n"
+            + "15THXfttbGruZySMyj9kMox0NbhsVKiSEEiqMMHvJMbn4FDI1O9U5IDZdUplI0A=\n"
             + "-----END CERTIFICATE-----";
 
     @Mock WifiContext mContext;
@@ -660,6 +697,8 @@ public class InsecureEapNetworkHandlerTest extends WifiBaseTest {
             certString = TEST_SELF_SIGNED_CERTIFICATE;
         } else if (type == TEST_GEN_FAKE_CA_CERT) {
             certString = TEST_FAKE_CA_CERTIFICATE;
+        } else if (type == TEST_GEN_SERVER_CERTIFICATE_WITHOUT_COMMON_NAME) {
+            certString = TEST_SERVER_CERTIFICATE_WITHOUT_COMMON_NAME;
         } else {
             throw (new Exception());
         }
@@ -910,6 +949,31 @@ public class InsecureEapNetworkHandlerTest extends WifiBaseTest {
         // Fake Root CA that didn't sign the server cert
         CertificateEventInfo mockCaCert = generateMockCertEventInfo(TEST_GEN_FAKE_CA_CERT);
         CertificateEventInfo mockServerCert = generateMockCertEventInfo(TEST_GEN_SERVER_CERT);
+        mInsecureEapNetworkHandler.addPendingCertificate(config.networkId, 1, mockCaCert);
+        mInsecureEapNetworkHandler.addPendingCertificate(config.networkId, 0, mockServerCert);
+
+        mInsecureEapNetworkHandler.startUserApprovalIfNecessary(isUserSelected);
+        verify(mCallbacks).onError(eq(config.SSID));
+        verify(mWifiConfigManager, atLeastOnce()).updateNetworkSelectionStatus(eq(config.networkId),
+                eq(WifiConfiguration.NetworkSelectionStatus
+                        .DISABLED_BY_WIFI_MANAGER));
+    }
+
+    /**
+     * Verify that is reports errors if the server certificate doesn't contain the common name
+     */
+    @Test
+    public void verifyOnErrorWithServerCertificateWithoutCommonName() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastT());
+        boolean isAtLeastT = true, isTrustOnFirstUseSupported = true, isUserSelected = true;
+
+        WifiConfiguration config = prepareWifiConfiguration(isAtLeastT);
+        setupTest(config, isAtLeastT, isTrustOnFirstUseSupported);
+
+        CertificateEventInfo mockCaCert = generateMockCertEventInfo(TEST_GEN_CA2_CERT);
+        // Server certificate without common name
+        CertificateEventInfo mockServerCert =
+                generateMockCertEventInfo(TEST_GEN_SERVER_CERTIFICATE_WITHOUT_COMMON_NAME);
         mInsecureEapNetworkHandler.addPendingCertificate(config.networkId, 1, mockCaCert);
         mInsecureEapNetworkHandler.addPendingCertificate(config.networkId, 0, mockServerCert);
 

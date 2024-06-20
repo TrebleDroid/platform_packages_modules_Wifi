@@ -619,7 +619,7 @@ interface ISupplicantP2pIfaceHal {
      * Note: Aidl only.
      */
     default boolean registerDeathHandler(@NonNull WifiNative.SupplicantDeathEventHandler handler) {
-        return false;
+        return true;
     };
 
     /**
@@ -629,6 +629,6 @@ interface ISupplicantP2pIfaceHal {
      * Note: Aidl only.
      */
     default boolean deregisterDeathHandler() {
-        return false;
+        return true;
     };
 }

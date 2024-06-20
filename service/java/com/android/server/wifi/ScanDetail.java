@@ -61,6 +61,7 @@ public class ScanDetail {
         boolean isPasspoint = false;
         boolean is80211McResponder = false;
         boolean isTwtResponder = false;
+        boolean is11azNtbResponder = false;
         if (networkDetail != null) {
             hessid = networkDetail.getHESSID();
             anqpDomainId = networkDetail.getAnqpDomainID();
@@ -75,6 +76,7 @@ public class ScanDetail {
                             && networkDetail.getHSRelease() != null;
             is80211McResponder = networkDetail.is80211McResponderSupport();
             isTwtResponder = networkDetail.isIndividualTwtSupported();
+            is11azNtbResponder = networkDetail.is80211azNtbResponder();
         }
         sBuilder.clear();
         mScanResult = sBuilder
@@ -88,6 +90,7 @@ public class ScanDetail {
                 .setFrequency(frequency)
                 .setTsf(tsf)
                 .setIsTwtResponder(isTwtResponder)
+                .setIs80211azNtbRTTResponder(is11azNtbResponder)
                 .build();
         mSeen = System.currentTimeMillis();
         mScanResult.seen = mSeen;

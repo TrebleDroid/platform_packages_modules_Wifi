@@ -155,9 +155,9 @@
     <string name="wifi_ca_cert_notification_preT_message" msgid="4565553176090475724">"Тармактын <xliff:g id="SSID">%1$s</xliff:g> тастыктамасы жок. Тастыктамаларды кошконду үйрөнүп алыңыз."</string>
     <string name="wifi_ca_cert_notification_preT_continue_text" msgid="1525418430746943670">"Баары бир туташуу"</string>
     <string name="wifi_ca_cert_notification_preT_abort_text" msgid="8307996031461071854">"Туташпасын"</string>
-    <string name="wifi_enable_request_dialog_title" msgid="3577459145316177148">"<xliff:g id="APP_NAME">%1$s</xliff:g> колдонмосуна Wi‑Fi\'ды күйгүзүүгө уруксат берилсинби?"</string>
+    <string name="wifi_enable_request_dialog_title" msgid="3577459145316177148">"<xliff:g id="APP_NAME">%1$s</xliff:g> колдонмосуна Wi‑Fi\'ды күйгүзүүгө уруксат бересизби?"</string>
     <string name="wifi_enable_request_dialog_message" msgid="6395169178524938278">"Wi‑Fi\'ды Ыкчам жөндөөлөрдөн өчүрсөңүз болот"</string>
-    <string name="wifi_enable_request_dialog_positive_button" msgid="6050832555821470466">"Уруксат берүү"</string>
+    <string name="wifi_enable_request_dialog_positive_button" msgid="6050832555821470466">"Ооба"</string>
     <string name="wifi_enable_request_dialog_negative_button" msgid="4754219902374918882">"Тыюу салуу"</string>
     <string name="wifi_enabled_apm_first_time_title" msgid="4814302384637588804">"Wi‑Fi учак режиминде күйгүзүлөт"</string>
     <string name="wifi_enabled_apm_first_time_message" msgid="6416193199042203037">"Эгер Wi-Fi күйүк бойдон калса, кийинки жолу учак режимине өткөнүңүздө түзмөгүңүз аны эстеп калат"</string>

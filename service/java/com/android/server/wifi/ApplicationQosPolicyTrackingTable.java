@@ -19,6 +19,8 @@ package com.android.server.wifi;
 import android.net.wifi.QosPolicyParams;
 import android.net.wifi.WifiManager;
 
+import com.android.modules.utils.build.SdkLevel;
+
 import java.io.PrintWriter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -26,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.stream.Stream;
 
 /**
  * Table containing application-added QoS policies that are being tracked by the framework.
@@ -214,18 +217,20 @@ public class ApplicationQosPolicyTrackingTable {
     /**
      * Get all policies that are tracked by this table.
      *
-     * @param direction Direction of the policies to retrieve.
+     * @param shouldContainQosChars Whether the returned policies should contain QosCharacteristics.
+     *                              Only applicable if SDK >= V.
      * @return List of policies, or empty list if there are no policies in the table.
      */
-    public List<QosPolicyParams> getAllPolicies(@QosPolicyParams.Direction int direction) {
+    public List<QosPolicyParams> getAllPolicies(boolean shouldContainQosChars) {
         if (mPolicyHashToPolicyMap.isEmpty()) {
             return new ArrayList<>();
         }
-        return mPolicyHashToPolicyMap
-                .values()
-                .stream()
-                .filter(p -> p.getDirection() == direction)
-                .toList();
+        Stream<QosPolicyParams> policyStream = mPolicyHashToPolicyMap.values().stream();
+        if (SdkLevel.isAtLeastV()) {
+            policyStream = policyStream.filter(p ->
+                    shouldContainQosChars == (p.getQosCharacteristics() != null));
+        }
+        return policyStream.toList();
     }
 
     /**

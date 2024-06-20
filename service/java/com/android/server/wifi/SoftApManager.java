@@ -39,6 +39,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
+import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -840,6 +841,9 @@ public class SoftApManager implements ActiveModeManager {
             Log.d(getTag(), "startSoftAp: band " + mCurrentSoftApConfiguration.getBand());
         }
 
+        updateApState(WifiManager.WIFI_AP_STATE_ENABLING,
+                WifiManager.WIFI_AP_STATE_DISABLED, 0);
+
         int startResult = setMacAddress();
         if (startResult != START_RESULT_SUCCESS) {
             return startResult;
@@ -1039,9 +1043,7 @@ public class SoftApManager implements ActiveModeManager {
         private final InterfaceCallback mWifiNativeInterfaceCallback = new InterfaceCallback() {
             @Override
             public void onDestroyed(String ifaceName) {
-                if (mApInterfaceName != null && mApInterfaceName.equals(ifaceName)) {
-                    sendMessage(CMD_INTERFACE_DESTROYED);
-                }
+                    sendMessage(CMD_INTERFACE_DESTROYED, ifaceName);
             }
 
             @Override
@@ -1170,6 +1172,7 @@ public class SoftApManager implements ActiveModeManager {
                         break;
                     case CMD_START:
                         boolean isCountryCodeChanged = false;
+                        boolean shouldwaitForDriverCountryCodeIfNoCountryToSet = false;
                         mRequestorWs = (WorkSource) message.obj;
                         WifiSsid wifiSsid = mCurrentSoftApConfiguration != null
                                 ? mCurrentSoftApConfiguration.getWifiSsid() : null;
@@ -1177,6 +1180,12 @@ public class SoftApManager implements ActiveModeManager {
                             Log.e(getTag(), "Unable to start soft AP without valid configuration");
                             handleStartSoftApFailure(START_RESULT_FAILURE_GENERAL);
                             break;
+                        }
+                        if (TextUtils.isEmpty(mCountryCode) && mContext.getResources().getBoolean(
+                                R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)) {
+                            Log.i(getTag(), "No country code set in the framework."
+                                    + " Should Wait for driver country code update to start AP");
+                            shouldwaitForDriverCountryCodeIfNoCountryToSet = true;
                         }
                         if (!TextUtils.isEmpty(mCountryCode)
                                 && !TextUtils.equals(
@@ -1304,16 +1313,6 @@ public class SoftApManager implements ActiveModeManager {
                             break;
                         }
 
-                        if (SdkLevel.isAtLeastT()
-                                && mCurrentSoftApConfiguration.isIeee80211beEnabled()
-                                && !mCurrentSoftApCapability.areFeaturesSupported(
-                                SoftApCapability.SOFTAP_FEATURE_IEEE80211_BE)) {
-                            Log.d(getTag(), "11BE is not supported, removing from configuration");
-                            mCurrentSoftApConfiguration = new SoftApConfiguration
-                                    .Builder(mCurrentSoftApConfiguration)
-                                    .setIeee80211beEnabled(false)
-                                    .build();
-                        }
                         mApInterfaceName = mWifiNative.setupInterfaceForSoftApMode(
                                 mWifiNativeInterfaceCallback, mRequestorWs,
                                 mCurrentSoftApConfiguration.getBand(), isBridgeRequired(),
@@ -1329,14 +1328,31 @@ public class SoftApManager implements ActiveModeManager {
                             }
                             break;
                         }
+
+                        if (SdkLevel.isAtLeastT()
+                                && mCurrentSoftApConfiguration.isIeee80211beEnabled()) {
+                            DeviceWiphyCapabilities capabilities =
+                                    mWifiNative.getDeviceWiphyCapabilities(
+                                            mApInterfaceName, isBridgeRequired());
+                            if (!ApConfigUtil.is11beAllowedForThisConfiguration(capabilities,
+                                    mContext, mCurrentSoftApConfiguration, isBridgedMode())) {
+                                Log.d(getTag(), "11BE is not allowed,"
+                                        + " removing from configuration");
+                                mCurrentSoftApConfiguration = new SoftApConfiguration.Builder(
+                                        mCurrentSoftApConfiguration).setIeee80211beEnabled(
+                                        false).build();
+                            }
+                        }
+
                         mSoftApNotifier.dismissSoftApShutdownTimeoutExpiredNotification();
-                        updateApState(WifiManager.WIFI_AP_STATE_ENABLING,
-                                WifiManager.WIFI_AP_STATE_DISABLED, 0);
-                        if (!setCountryCode()) {
+
+                        if (!shouldwaitForDriverCountryCodeIfNoCountryToSet && !setCountryCode()) {
                             handleStartSoftApFailure(START_RESULT_FAILURE_SET_COUNTRY_CODE);
                             break;
                         }
-                        if (isCountryCodeChanged) {
+                        // Wait for driver country code if driver supports regulatory change event.
+                        if (isCountryCodeChanged
+                                || shouldwaitForDriverCountryCodeIfNoCountryToSet) {
                             Log.i(getTag(), "Need to wait for driver country code update before"
                                     + " starting");
                             transitionTo(mWaitingForDriverCountryCodeChangedState);
@@ -1410,12 +1426,14 @@ public class SoftApManager implements ActiveModeManager {
             @Override
             public boolean processMessageImpl(Message message) {
                 if (message.what == CMD_DRIVER_COUNTRY_CODE_CHANGED) {
-                    if (!TextUtils.equals(mCountryCode, (String) message.obj)) {
+                    if (!TextUtils.isEmpty(mCountryCode)
+                            && !TextUtils.equals(mCountryCode, (String) message.obj)) {
                         Log.i(getTag(), "Ignore country code changed: " + message.obj);
                         return HANDLED;
                     }
                     Log.i(getTag(), "Driver country code change to " + message.obj
                             + ", continue starting.");
+                    mCountryCode = (String) message.obj;
                     mCurrentSoftApCapability.setCountryCode(mCountryCode);
                     mCurrentSoftApCapability =
                             ApConfigUtil.updateSoftApCapabilityWithAvailableChannelList(
@@ -2017,7 +2035,17 @@ public class SoftApManager implements ActiveModeManager {
                         removeIfaceInstanceFromBridgedApIface(idleInstance);
                         break;
                     case CMD_INTERFACE_DESTROYED:
-                        Log.d(getTag(), "Interface was cleanly destroyed.");
+                        String ifaceName = (String) message.obj;
+                        Log.d(getTag(), "Interface: " + ifaceName + " was cleanly destroyed.");
+                        if (mApInterfaceName == null) {
+                            Log.e(getTag(), "softAp interface is null"
+                                    + " - Drop interface destroyed message");
+                            break;
+                        }
+                        if (!mApInterfaceName.equals(ifaceName)) {
+                            Log.d(getTag(), "Drop stale interface destroyed message");
+                            break;
+                        }
                         updateApState(WifiManager.WIFI_AP_STATE_DISABLING,
                                 WifiManager.WIFI_AP_STATE_ENABLED, 0);
                         mIfaceIsDestroyed = true;

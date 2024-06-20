@@ -2162,4 +2162,17 @@ public class WifiVendorHal {
             return wifiStaIface.getStatsTwtSession(cmdId, sessionId);
         }
     }
+
+    /**
+     * Sets the wifi VoIP mode.
+     *
+     * @param mode Voip mode as defined by the enum |WifiVoipMode|
+     * @return true if successful, false otherwise.
+     */
+    public boolean setVoipMode(@WifiChip.WifiVoipMode int mode) {
+        synchronized (sLock) {
+            if (mWifiChip == null) return false;
+            return mWifiChip.setVoipMode(mode);
+        }
+    }
 }

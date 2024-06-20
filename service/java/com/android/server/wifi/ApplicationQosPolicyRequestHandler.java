@@ -30,6 +30,7 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.modules.utils.build.SdkLevel;
 import com.android.wifi.resources.R;
 
 import java.io.PrintWriter;
@@ -353,23 +354,33 @@ public class ApplicationQosPolicyRequestHandler {
      * Request to send all tracked policies to the specified interface.
      *
      * @param ifaceName Interface name to send the policies to.
-     * @param includeUplink Whether stored uplink policies should be queued on this interface.
+     * @param apSupportsQosChars Whether the AP connected on this interface
+     *                           supports QosCharacteristics.
      */
-    public void queueAllPoliciesOnIface(String ifaceName, boolean includeUplink) {
-        List<QosPolicyParams> policyList = new ArrayList<>(mPolicyTrackingTable
-                .getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK));
-        if (includeUplink) {
-            Log.i(TAG, "Including uplink policies");
-            policyList.addAll(
-                    mPolicyTrackingTable.getAllPolicies(QosPolicyParams.DIRECTION_UPLINK));
-        }
-        Log.i(TAG, "Queueing all policies on iface=" + ifaceName + ". numPolicies="
-                + policyList.size());
-        if (policyList.isEmpty()) return;
+    public void queueAllPoliciesOnIface(String ifaceName, boolean apSupportsQosChars) {
+        List<QosPolicyParams> policiesWithoutQosChars =
+                mPolicyTrackingTable.getAllPolicies(false);
+        List<QosPolicyParams> policiesWithQosChars = SdkLevel.isAtLeastV() && apSupportsQosChars
+                ? mPolicyTrackingTable.getAllPolicies(true) : Collections.emptyList();
+        int totalNumPolicies = policiesWithoutQosChars.size() + policiesWithQosChars.size();
 
-        // Divide policyList into batches of size MAX_POLICIES_PER_TRANSACTION,
-        // and queue each batch on the specified interface.
-        List<List<QosPolicyParams>> batches = divideRequestIntoBatches(policyList);
+        Log.i(TAG, "Queueing all policies on iface=" + ifaceName + ". numPolicies="
+                + totalNumPolicies);
+        Log.i(TAG, policiesWithQosChars.size() + " policies contain QosCharacteristics");
+        if (totalNumPolicies == 0) return;
+
+        // Divide policies into batches of size MAX_POLICIES_PER_TRANSACTION. Separate batches
+        // should be created for policies that contain QosCharacteristics, and those that do
+        // not contain them.
+        List<List<QosPolicyParams>> batches = new ArrayList<>();
+        if (!policiesWithoutQosChars.isEmpty()) {
+            batches.addAll(divideRequestIntoBatches(policiesWithoutQosChars));
+        }
+        if (!policiesWithQosChars.isEmpty()) {
+            batches.addAll(divideRequestIntoBatches(policiesWithQosChars));
+        }
+
+        // Queue all batches on the specified interface.
         for (List<QosPolicyParams> batch : batches) {
             QueuedRequest request = new QueuedRequest(
                     REQUEST_TYPE_ADD, batch, null, null, null, DEFAULT_UID);

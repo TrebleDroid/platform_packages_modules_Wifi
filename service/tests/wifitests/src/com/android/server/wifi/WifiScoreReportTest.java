@@ -1198,6 +1198,11 @@ public class WifiScoreReportTest extends WifiBaseTest {
         verify(mExternalScoreUpdateObserverProxy).registerCallback(
                 mExternalScoreUpdateObserverCbCaptor.capture());
         when(mNetwork.getNetId()).thenReturn(TEST_NETWORK_ID);
+
+        WifiSignalPollResults signalPollResults = new WifiSignalPollResults();
+        signalPollResults.addEntry(0, -42, 65, 54, 2437);
+        when(mWifiNative.signalPoll(TEST_IFACE_NAME)).thenReturn(signalPollResults);
+
         mWifiScoreReport.startConnectedNetworkScorer(TEST_NETWORK_ID, TEST_USER_SELECTED);
 
         mExternalScoreUpdateObserverCbCaptor.getValue().triggerUpdateOfWifiUsabilityStats(
@@ -1205,6 +1210,21 @@ public class WifiScoreReportTest extends WifiBaseTest {
         mLooper.dispatchAll();
         verify(mWifiNative).getWifiLinkLayerStats(TEST_IFACE_NAME);
         verify(mWifiNative).signalPoll(TEST_IFACE_NAME);
+        assertEquals(-42, mWifiInfo.getRssi());
+
+        // Verify valid RSSI poll is updated to WifiInfo
+        signalPollResults.addEntry(0, -55, 65, 54, 2437);
+        mExternalScoreUpdateObserverCbCaptor.getValue().triggerUpdateOfWifiUsabilityStats(
+                scorerImpl.mSessionId);
+        mLooper.dispatchAll();
+        assertEquals(-55, mWifiInfo.getRssi());
+
+        // Verify invalid RSSI poll is ignored
+        signalPollResults.addEntry(0, -999, 65, 54, 2437);
+        mExternalScoreUpdateObserverCbCaptor.getValue().triggerUpdateOfWifiUsabilityStats(
+                scorerImpl.mSessionId);
+        mLooper.dispatchAll();
+        assertEquals(-55, mWifiInfo.getRssi());
     }
 
     /**

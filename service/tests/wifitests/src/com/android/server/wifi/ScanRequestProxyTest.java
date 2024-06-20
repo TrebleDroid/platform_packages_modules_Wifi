@@ -151,10 +151,11 @@ public class ScanRequestProxyTest extends WifiBaseTest {
 
         // Scan throttling is enabled by default.
         when(mWifiSettingsConfigStore.get(eq(WIFI_SCAN_THROTTLE_ENABLED))).thenReturn(true);
+        WifiThreadRunner threadRunner = new WifiThreadRunner(new Handler(mLooper.getLooper()));
         mScanRequestProxy =
             new ScanRequestProxy(mContext, mAppOps, mActivityManager, mWifiInjector,
                     mWifiConfigManager, mWifiPermissionsUtil, mWifiMetrics, mClock,
-                    new Handler(mLooper.getLooper()), mWifiSettingsConfigStore);
+                    threadRunner, mWifiSettingsConfigStore);
         mScanRequestProxy.enableVerboseLogging(true);
         when(mScanResultsCallback.asBinder()).thenReturn(mBinder);
         when(mAnotherScanResultsCallback.asBinder()).thenReturn(mAnotherBinder);

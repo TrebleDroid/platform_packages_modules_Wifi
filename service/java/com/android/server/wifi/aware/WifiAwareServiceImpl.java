@@ -198,7 +198,8 @@ public class WifiAwareServiceImpl extends IWifiAwareManager.Stub {
     public AwareResources getAvailableAwareResources() {
         enforceAccessPermission();
         return new WifiThreadRunner(mHandler)
-                .call(() -> mStateManager.getAvailableAwareResources(), null);
+                .call(() -> mStateManager.getAvailableAwareResources(), null,
+                        TAG + "#getAvailableAwareResources");
     }
 
     @Override

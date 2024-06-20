@@ -155,32 +155,12 @@ public class ANQPRequestManager {
      *              Roaming Consortium ANQP element will be requested
      * @param hsReleaseVer Indicates Hotspot 2.0 Release version. When set to R2 or higher,
      *              the Release 2 ANQP elements {@link #R2_ANQP_BASE_SET} will be requested
-     * @return true if a request was sent successfully
      */
-    public boolean requestANQPElements(long bssid, ANQPNetworkKey anqpNetworkKey, boolean rcOIs,
+    public void requestANQPElements(long bssid, ANQPNetworkKey anqpNetworkKey, boolean rcOIs,
             NetworkDetail.HSRelease hsReleaseVer) {
-        if (mFeatureFlags.anqpRequestWaitForResponse()) {
-            // Put the new request in the queue, process it if possible(no more pending request)
-            mPendingRequest.offer(new AnqpRequest(bssid, rcOIs, hsReleaseVer, anqpNetworkKey));
-            processNextRequest();
-            return true;
-        }
-        // Check if we are allow to send the request now.
-        if (!canSendRequestNow(bssid)) {
-            return false;
-        }
-
-        // No need to hold off future requests for send failures.
-        if (!mPasspointHandler.requestANQP(bssid, getRequestElementIDs(rcOIs, hsReleaseVer))) {
-            return false;
-        }
-
-        // Update hold off info on when we are allowed to send the next ANQP request to
-        // the given AP.
-        updateHoldOffInfo(bssid);
-
-        mPendingQueries.put(bssid, anqpNetworkKey);
-        return true;
+        // Put the new request in the queue, process it if possible(no more pending request)
+        mPendingRequest.offer(new AnqpRequest(bssid, rcOIs, hsReleaseVer, anqpNetworkKey));
+        processNextRequest();
     }
 
     private void processNextRequest() {
