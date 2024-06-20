@@ -67,12 +67,14 @@ import com.android.server.wifi.hotspot2.PasspointManager;
 import com.android.server.wifi.proto.WifiStatsLog;
 import com.android.server.wifi.scanner.WifiScannerInternal;
 import com.android.server.wifi.util.WifiPermissionsUtil;
+import com.android.wifi.flags.FeatureFlags;
 import com.android.wifi.resources.R;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -180,6 +182,7 @@ public class WifiConnectivityManager {
     private final WifiChannelUtilization mWifiChannelUtilization;
     private final PowerManager mPowerManager;
     private final DeviceConfigFacade mDeviceConfigFacade;
+    private final FeatureFlags mFeatureFlags;
     private final ActiveModeWarden mActiveModeWarden;
     private final FrameworkFacade mFrameworkFacade;
     private final WifiPermissionsUtil mWifiPermissionsUtil;
@@ -220,7 +223,7 @@ public class WifiConnectivityManager {
     private boolean mPeriodicScanTimerSet = false;
     private Object mPeriodicScanTimerToken = new Object();
     private Object mDelayedStartPeriodicScanToken = new Object();
-    private boolean mDelayedPartialScanTimerSet = false;
+    private boolean mHighMvmtDelayedPartialScanTimerSet = false;
     private boolean mWatchdogScanTimerSet = false;
     private boolean mIsLocationModeEnabled;
 
@@ -264,6 +267,11 @@ public class WifiConnectivityManager {
     private CachedWifiCandidates mCachedWifiCandidates = null;
     private @DeviceMobilityState int mDeviceMobilityState =
             WifiManager.DEVICE_MOBILITY_STATE_UNKNOWN;
+
+    // Cached WifiCandidate timestamps for delayed carrier network selection
+    private Map<WifiCandidates.Key, Long> mDelayedCarrierCandidateTimestamps = new HashMap<>();
+    private Set<Integer> mDelayedSelectionCarrierIds = new HashSet<>();
+    private long mDelayedCarrierSelectionTimeMs;
 
     // A helper to log debugging information in the local log buffer, which can
     // be retrieved in bugreport.
@@ -312,7 +320,7 @@ public class WifiConnectivityManager {
                 }
             };
 
-    private final AlarmManager.OnAlarmListener mDelayedPartialScanTimerListener =
+    private final AlarmManager.OnAlarmListener mHighMvmtDelayedPartialScanListener =
             new AlarmManager.OnAlarmListener() {
                 public void onAlarm() {
                     if (mCachedWifiCandidates == null
@@ -320,25 +328,29 @@ public class WifiConnectivityManager {
                             || mCachedWifiCandidates.frequencies.size() == 0) {
                         return;
                     }
-                    ScanSettings settings = new ScanSettings();
-                    settings.type = WifiScanner.SCAN_TYPE_HIGH_ACCURACY;
-                    settings.band = getScanBand(false);
-                    settings.reportEvents = WifiScanner.REPORT_EVENT_FULL_SCAN_RESULT
-                            | WifiScanner.REPORT_EVENT_AFTER_EACH_SCAN;
-                    settings.numBssidsPerScan = 0;
-                    int index = 0;
-                    settings.channels =
-                            new WifiScanner.ChannelSpec[mCachedWifiCandidates.frequencies.size()];
-                    for (Integer freq : mCachedWifiCandidates.frequencies) {
-                        settings.channels[index++] = new WifiScanner.ChannelSpec(freq);
-                    }
-                    SingleScanListener singleScanListener = new SingleScanListener(false);
-                    mScanner.startScan(settings,
-                            new WifiScannerInternal.ScanListener(singleScanListener,
-                                    mWifiThreadRunner));
-                    mWifiMetrics.incrementConnectivityOneshotScanCount();
+                    startPartialScan(mCachedWifiCandidates.frequencies);
+                    mHighMvmtDelayedPartialScanTimerSet = false;
                 }
             };
+
+    private void startPartialScan(Set<Integer> frequencies) {
+        ScanSettings settings = new ScanSettings();
+        settings.type = WifiScanner.SCAN_TYPE_HIGH_ACCURACY;
+        settings.band = getScanBand(false);
+        settings.reportEvents = WifiScanner.REPORT_EVENT_FULL_SCAN_RESULT
+                | WifiScanner.REPORT_EVENT_AFTER_EACH_SCAN;
+        settings.numBssidsPerScan = 0;
+        int index = 0;
+        settings.channels = new WifiScanner.ChannelSpec[frequencies.size()];
+        for (Integer freq : frequencies) {
+            settings.channels[index++] = new WifiScanner.ChannelSpec(freq);
+        }
+        SingleScanListener singleScanListener = new SingleScanListener(false);
+        mScanner.startScan(settings,
+                new WifiScannerInternal.ScanListener(singleScanListener,
+                        mWifiThreadRunner));
+        mWifiMetrics.incrementConnectivityOneshotScanCount();
+    }
 
     /**
      * Interface for callback from handling scan results.
@@ -649,6 +661,12 @@ public class WifiConnectivityManager {
                 scanDetails, bssidBlocklist, cmmStates, mUntrustedConnectionAllowed,
                 mOemPaidConnectionAllowed, mOemPrivateConnectionAllowed,
                 mRestrictedConnectionAllowedUids, skipSufficiencyCheck);
+
+        // Filter candidates before caching to avoid reconnecting on failure
+        if (mFeatureFlags.delayedCarrierNetworkSelection()) {
+            candidates = filterDelayedCarrierSelectionCandidates(candidates, listenerName,
+                    isFullScan);
+        }
         mLatestCandidates = candidates;
         mLatestCandidatesTimestampMs = mClock.getElapsedSinceBootMillis();
 
@@ -875,10 +893,83 @@ public class WifiConnectivityManager {
                     candidates);
             localLog("Found " + candidates.size() + " candidates at high mobility state. "
                     + "Re-doing scan to confirm network quality.");
-            scheduleDelayedPartialScan(minimumTimeBetweenScansMs);
+            scheduleHighMvmtDelayedPartialScan(minimumTimeBetweenScansMs);
         }
         mWifiMetrics.incrementNumHighMovementConnectionSkipped();
         return null;
+    }
+
+    /**
+     * Filter carrier candidates affected by the delayed carrier selection optimization.
+     */
+    private List<WifiCandidates.Candidate> filterDelayedCarrierSelectionCandidates(
+            List<WifiCandidates.Candidate> candidates, String listenerName, boolean isFullScan) {
+        if (mDelayedSelectionCarrierIds == null || mDelayedSelectionCarrierIds.isEmpty()) {
+            // No carrier IDs apply to this filter
+            return candidates;
+        }
+
+        boolean isNotPartialScan = isFullScan || listenerName.equals(PNO_SCAN_LISTENER);
+        if (candidates == null || candidates.isEmpty()) {
+            // No connectable networks nearby or network selection is unnecessary
+            if (isNotPartialScan) {
+                mDelayedCarrierCandidateTimestamps.clear();
+            }
+            return null;
+        }
+
+        List<WifiCandidates.Candidate> delayedCarrierCandidates = new ArrayList<>();
+        List<WifiCandidates.Candidate> nonAffectedCandidates = new ArrayList<>();
+        for (WifiCandidates.Candidate candidate : candidates) {
+            WifiConfiguration configuration =
+                    mConfigManager.getConfiguredNetwork(candidate.getNetworkConfigId());
+            if (configuration != null
+                    && mDelayedSelectionCarrierIds.contains(configuration.carrierId)) {
+                delayedCarrierCandidates.add(candidate);
+            } else {
+                nonAffectedCandidates.add(candidate);
+            }
+        }
+
+        if (isNotPartialScan) {
+            updateDelayedCarrierCandidateTimestamps(delayedCarrierCandidates);
+        }
+        if (delayedCarrierCandidates.isEmpty()) {
+            return candidates;
+        }
+
+        // Include delayed carrier candidates that were first seen
+        // at least mDelayedCarrierSelectionTimeMs ago
+        long currentTimeMs = mClock.getElapsedSinceBootMillis();
+        List<WifiCandidates.Candidate> filteredCandidates = new ArrayList<>();
+        for (WifiCandidates.Candidate candidate : delayedCarrierCandidates) {
+            long firstSeenTimeMs = mDelayedCarrierCandidateTimestamps
+                    .getOrDefault(candidate.getKey(), currentTimeMs);
+            if ((currentTimeMs - firstSeenTimeMs) > mDelayedCarrierSelectionTimeMs) {
+                filteredCandidates.add(candidate);
+            }
+        }
+        Log.i(TAG, filteredCandidates.size() + " of " + delayedCarrierCandidates.size()
+                + " delayed carrier candidates are eligible for network selection");
+        filteredCandidates.addAll(nonAffectedCandidates);
+        return filteredCandidates;
+    }
+
+    /**
+     * Update the first seen timestamp for all delayed carrier scan candidates.
+     */
+    private void updateDelayedCarrierCandidateTimestamps(
+            List<WifiCandidates.Candidate> delayedCarrierCandidates) {
+        Map<WifiCandidates.Key, Long> updatedTimestamps = new HashMap<>();
+        long currentTimeMs = mClock.getElapsedSinceBootMillis();
+        for (WifiCandidates.Candidate candidate : delayedCarrierCandidates) {
+            WifiCandidates.Key candidateKey = candidate.getKey();
+            // Use the existing first-seen time if this candidate has been seen before
+            long firstSeenTimestamp = mDelayedCarrierCandidateTimestamps.getOrDefault(
+                    candidateKey, currentTimeMs);
+            updatedTimestamps.put(candidateKey, firstSeenTimestamp);
+        }
+        mDelayedCarrierCandidateTimestamps = updatedTimestamps;
     }
 
     private void updateUserDisabledList(List<ScanDetail> scanDetails) {
@@ -1375,6 +1466,7 @@ public class WifiConnectivityManager {
         mPasspointManager = passpointManager;
         mMultiInternetManager = multiInternetManager;
         mDeviceConfigFacade = deviceConfigFacade;
+        mFeatureFlags = mDeviceConfigFacade.getFeatureFlags();
         mActiveModeWarden = activeModeWarden;
         mFrameworkFacade = frameworkFacade;
         mWifiGlobals = wifiGlobals;
@@ -1387,6 +1479,16 @@ public class WifiConnectivityManager {
         mWifiCarrierInfoManager = wifiCarrierInfoManager;
         mWifiCountryCode = wifiCountryCode;
         mWifiDialogManager = wifiDialogManager;
+
+        mDelayedCarrierSelectionTimeMs = mContext.getResources().getInteger(
+                R.integer.config_wifiDelayedCarrierSelectionTimeMs);
+        int[] delayedSelectionCarrierIds = mContext.getResources().getIntArray(
+                R.array.config_wifiDelayedSelectionCarrierIds);
+        if (delayedSelectionCarrierIds != null && delayedSelectionCarrierIds.length != 0) {
+            for (Integer carrierId : delayedSelectionCarrierIds) {
+                mDelayedSelectionCarrierIds.add(carrierId);
+            }
+        }
 
         // Listen to WifiConfigManager network update events
         mEventHandler.postToFront(() ->
@@ -2710,18 +2812,18 @@ public class WifiConnectivityManager {
     }
 
     // Schedules a delayed partial scan, which will scan the frequencies in mCachedWifiCandidates.
-    private void scheduleDelayedPartialScan(long delayMillis) {
+    private void scheduleHighMvmtDelayedPartialScan(long delayMillis) {
         mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 mClock.getElapsedSinceBootMillis() + delayMillis, DELAYED_PARTIAL_SCAN_TIMER_TAG,
-                mDelayedPartialScanTimerListener, mEventHandler);
-        mDelayedPartialScanTimerSet = true;
+                mHighMvmtDelayedPartialScanListener, mEventHandler);
+        mHighMvmtDelayedPartialScanTimerSet = true;
     }
 
-    // Cancel the delayed partial scan timer.
-    private void cancelDelayedPartialScan() {
-        if (mDelayedPartialScanTimerSet) {
-            mAlarmManager.cancel(mDelayedPartialScanTimerListener);
-            mDelayedPartialScanTimerSet = false;
+    // Cancel all scheduled delayed partial scans.
+    private void cancelDelayedPartialScans() {
+        if (mHighMvmtDelayedPartialScanTimerSet) {
+            mAlarmManager.cancel(mHighMvmtDelayedPartialScanListener);
+            mHighMvmtDelayedPartialScanTimerSet = false;
         }
     }
 
@@ -2825,7 +2927,7 @@ public class WifiConnectivityManager {
         // Due to b/28020168, timer based single scan will be scheduled
         // to provide periodic scan in an exponential backoff fashion.
         cancelPeriodicScanTimer();
-        cancelDelayedPartialScan();
+        cancelDelayedPartialScans();
         stopPnoScan();
     }
 

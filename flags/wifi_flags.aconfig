@@ -86,3 +86,14 @@ flag {
     bug: "336109216"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "delayed_carrier_network_selection"
+    namespace: "wifi"
+    description: "Delay network selection for some carrier networks until a delay period has passed"
+    bug: "329142362"
+    is_fixed_read_only: true
+    metadata {
+        purpose: PURPOSE_BUGFIX
+    }
+}
