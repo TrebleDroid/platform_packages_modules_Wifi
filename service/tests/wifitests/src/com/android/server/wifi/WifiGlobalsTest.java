@@ -110,10 +110,12 @@ public class WifiGlobalsTest extends WifiBaseTest {
     @Test
     public void testSaeH2eSupportOverlay() {
         mResources.setBoolean(R.bool.config_wifiSaeH2eSupported, false);
+        mWifiGlobals = new WifiGlobals(mContext);
         assertFalse(mWifiGlobals.isWpa3SaeH2eSupported());
 
         mResources.setBoolean(R.bool.config_wifiSaeH2eSupported, true);
         mWifiResourceCache.reset();
+        mWifiGlobals = new WifiGlobals(mContext);
         assertTrue(mWifiGlobals.isWpa3SaeH2eSupported());
     }
 
