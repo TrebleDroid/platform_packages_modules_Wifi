@@ -193,7 +193,7 @@ public class WifiUriParser {
         boolean hiddenSsid = "true".equalsIgnoreCase(hiddenSsidString);
         boolean isTransitionDisabled = "1".equalsIgnoreCase(transitionDisabledValue);
         if (isValidConfig(security, ssid, password)) {
-            config = generatetWifiConfiguration(
+            config = generateWifiConfiguration(
                         security, ssid, password, hiddenSsid, WifiConfiguration.INVALID_NETWORK_ID,
                         isTransitionDisabled);
         }
@@ -290,13 +290,15 @@ public class WifiUriParser {
         return sb.toString();
     }
 
-    private static String addQuotationIfNeeded(String input) {
+    private static String addQuotation(String input) {
         if (TextUtils.isEmpty(input)) {
             return "";
         }
 
-        if (input.length() >= 2 && input.startsWith("\"") && input.endsWith("\"")) {
-            return input;
+        if (!mockableIsFlagNewUriParsingForEscapeCharacterEnabled()) {
+            if (input.length() >= 2 && input.startsWith("\"") && input.endsWith("\"")) {
+                return input;
+            }
         }
 
         StringBuilder sb = new StringBuilder();
@@ -323,11 +325,11 @@ public class WifiUriParser {
      *
      * @return WifiConfiguration from parsing result
      */
-    private static WifiConfiguration generatetWifiConfiguration(
+    private static WifiConfiguration generateWifiConfiguration(
             String security, String ssid, String preSharedKey, boolean hiddenSsid, int networkId,
             boolean isTransitionDisabled) {
         final WifiConfiguration wifiConfiguration = new WifiConfiguration();
-        wifiConfiguration.SSID = addQuotationIfNeeded(ssid);
+        wifiConfiguration.SSID = addQuotation(ssid);
         wifiConfiguration.hiddenSSID = hiddenSsid;
         wifiConfiguration.networkId = networkId;
 
@@ -350,7 +352,7 @@ public class WifiUriParser {
                     && preSharedKey.matches("[0-9A-Fa-f]*")) {
                 wifiConfiguration.wepKeys[0] = preSharedKey;
             } else {
-                wifiConfiguration.wepKeys[0] = addQuotationIfNeeded(preSharedKey);
+                wifiConfiguration.wepKeys[0] = addQuotation(preSharedKey);
             }
         } else if (security.startsWith(SECURITY_WPA_PSK)) {
             List<SecurityParams> securityParamsList = new ArrayList<>();
@@ -368,17 +370,17 @@ public class WifiUriParser {
             if (preSharedKey.matches("[0-9A-Fa-f]{64}")) {
                 wifiConfiguration.preSharedKey = preSharedKey;
             } else {
-                wifiConfiguration.preSharedKey = addQuotationIfNeeded(preSharedKey);
+                wifiConfiguration.preSharedKey = addQuotation(preSharedKey);
             }
         } else if (security.startsWith(SECURITY_SAE)) {
             wifiConfiguration.setSecurityParams(WifiConfiguration.SECURITY_TYPE_SAE);
             if (preSharedKey.length() != 0) {
-                wifiConfiguration.preSharedKey = addQuotationIfNeeded(preSharedKey);
+                wifiConfiguration.preSharedKey = addQuotation(preSharedKey);
             }
         } else if (security.startsWith(SECURITY_ADB)) {
             Log.i(TAG, "Specific security key: ADB");
             if (preSharedKey.length() != 0) {
-                wifiConfiguration.preSharedKey = addQuotationIfNeeded(preSharedKey);
+                wifiConfiguration.preSharedKey = addQuotation(preSharedKey);
             }
         } else {
             throw new IllegalArgumentException("Unsupported security");

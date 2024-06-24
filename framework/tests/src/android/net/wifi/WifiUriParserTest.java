@@ -184,6 +184,18 @@ public class WifiUriParserTest {
                 expectedSecurityParamsList,
                 "\"3#=3j9 asicla\"",
                 false);
+
+        if (isNewParserSupported) {
+            // The " in the start and end of ssid but it should work.
+            uri = WifiUriParser.parseUri("WIFI:S:\"\"\"\"; T:WPA; P:\"\"");
+            verifyZxParsing(
+                    uri,
+                    "\"\"\"\"\"\"",
+                    expectedSecurityParamsList,
+                    "\"\"\"\"",
+                    false);
+        }
+
         // invalid code but it should work.
         uri = WifiUriParser.parseUri("WIFI: S:anotherone;T:WPA;P:abcdefghihklmn");
         verifyZxParsing(
