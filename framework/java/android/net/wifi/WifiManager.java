@@ -340,9 +340,14 @@ public class WifiManager {
      */
     public static final int STATUS_LOCAL_ONLY_CONNECTION_FAILURE_NOT_FOUND = 4;
     /**
-     * Reason code if local-only network connection attempt failed with AP not responding
+     * Reason code if local-only network connection attempt failed with AP not responding.
      */
     public static final int STATUS_LOCAL_ONLY_CONNECTION_FAILURE_NO_RESPONSE = 5;
+    /**
+     * Reason code if local-only network request rejected by the user.
+     */
+    @FlaggedApi(Flags.FLAG_LOCAL_ONLY_CONNECTION_OPTIMIZATION)
+    public static final int STATUS_LOCAL_ONLY_CONNECTION_FAILURE_USER_REJECT = 6;
 
     /** @hide */
     @IntDef(prefix = {"STATUS_LOCAL_ONLY_CONNECTION_FAILURE_"},
@@ -351,7 +356,8 @@ public class WifiManager {
                     STATUS_LOCAL_ONLY_CONNECTION_FAILURE_AUTHENTICATION,
                     STATUS_LOCAL_ONLY_CONNECTION_FAILURE_IP_PROVISIONING,
                     STATUS_LOCAL_ONLY_CONNECTION_FAILURE_NOT_FOUND,
-                    STATUS_LOCAL_ONLY_CONNECTION_FAILURE_NO_RESPONSE
+                    STATUS_LOCAL_ONLY_CONNECTION_FAILURE_NO_RESPONSE,
+                    STATUS_LOCAL_ONLY_CONNECTION_FAILURE_USER_REJECT
             })
     @Retention(RetentionPolicy.SOURCE)
     public @interface LocalOnlyConnectionStatusCode {}

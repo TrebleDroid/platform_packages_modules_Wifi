@@ -97,3 +97,11 @@ flag {
         purpose: PURPOSE_BUGFIX
     }
 }
+
+flag {
+    name: "local_only_connection_optimization"
+    namespace: "wifi"
+    description: "optimize local-only connection API"
+    bug: "347117408"
+    is_fixed_read_only: true
+}
