@@ -12266,6 +12266,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         verify(mActiveModeWarden).notifyShuttingDown();
         verify(mWifiScoreCard).resetAllConnectionStates();
         verify(mWifiConfigManager).writeDataToStorage();
+        verify(mWifiNetworkSuggestionsManager).handleShutDown();
     }
 
     @Test(expected = SecurityException.class)
