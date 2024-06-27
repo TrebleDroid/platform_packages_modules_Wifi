@@ -93,6 +93,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.HandlerExecutor;
 import com.android.modules.utils.ParceledListSlice;
+import com.android.modules.utils.StringParceledListSlice;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.wifi.flags.Flags;
 
@@ -2388,13 +2389,15 @@ public class WifiManager {
         List<Pair<WifiConfiguration, Map<Integer, List<ScanResult>>>> configs = new ArrayList<>();
         try {
             Map<String, Map<Integer, List<ScanResult>>> results =
-                    mService.getAllMatchingPasspointProfilesForScanResults(scanResults);
+                    mService.getAllMatchingPasspointProfilesForScanResults(
+                            new ParceledListSlice<>(scanResults));
             if (results.isEmpty()) {
                 return configs;
             }
             List<WifiConfiguration> wifiConfigurations =
                     mService.getWifiConfigsForPasspointProfiles(
-                            new ArrayList<>(results.keySet()));
+                            new StringParceledListSlice(new ArrayList<>(results.keySet())))
+                            .getList();
             for (WifiConfiguration configuration : wifiConfigurations) {
                 Map<Integer, List<ScanResult>> scanResultsPerNetworkType =
                         results.get(configuration.getProfileKey());
@@ -2695,7 +2698,8 @@ public class WifiManager {
     public List<WifiConfiguration> getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
             @NonNull List<ScanResult> scanResults) {
         try {
-            return mService.getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(scanResults);
+            return mService.getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
+                    new ParceledListSlice<>(scanResults)).getList();
         } catch (RemoteException e) {
             throw e.rethrowAsRuntimeException();
         }
@@ -2722,7 +2726,8 @@ public class WifiManager {
             throw new IllegalArgumentException(TAG + ": ssids can not be null");
         }
         try {
-            mService.setSsidsAllowlist(mContext.getOpPackageName(), new ArrayList<>(ssids));
+            mService.setSsidsAllowlist(mContext.getOpPackageName(),
+                    new ParceledListSlice<>(new ArrayList<>(ssids)));
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -2743,7 +2748,7 @@ public class WifiManager {
     public @NonNull Set<WifiSsid> getSsidsAllowlist() {
         try {
             return new ArraySet<WifiSsid>(
-                    mService.getSsidsAllowlist(mContext.getOpPackageName()));
+                    mService.getSsidsAllowlist(mContext.getOpPackageName()).getList());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -2771,7 +2776,7 @@ public class WifiManager {
             return new HashMap<>();
         }
         try {
-            return mService.getMatchingOsuProviders(scanResults);
+            return mService.getMatchingOsuProviders(new ParceledListSlice<>(scanResults));
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -2799,7 +2804,7 @@ public class WifiManager {
             @NonNull Set<OsuProvider> osuProviders) {
         try {
             return mService.getMatchingPasspointConfigsForOsuProviders(
-                    new ArrayList<>(osuProviders));
+                    new ParceledListSlice<>(new ArrayList<>(osuProviders)));
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -3402,8 +3407,8 @@ public class WifiManager {
     public @NetworkSuggestionsStatusCode int addNetworkSuggestions(
             @NonNull List<WifiNetworkSuggestion> networkSuggestions) {
         try {
-            return mService.addNetworkSuggestions(
-                    networkSuggestions, mContext.getOpPackageName(), mContext.getAttributionTag());
+            return mService.addNetworkSuggestions(new ParceledListSlice<>(networkSuggestions),
+                    mContext.getOpPackageName(), mContext.getAttributionTag());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -3455,7 +3460,7 @@ public class WifiManager {
             @NonNull List<WifiNetworkSuggestion> networkSuggestions,
             @ActionAfterRemovingSuggestion int action) {
         try {
-            return mService.removeNetworkSuggestions(networkSuggestions,
+            return mService.removeNetworkSuggestions(new ParceledListSlice<>(networkSuggestions),
                     mContext.getOpPackageName(), action);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -3471,7 +3476,7 @@ public class WifiManager {
     @RequiresPermission(ACCESS_WIFI_STATE)
     public @NonNull List<WifiNetworkSuggestion> getNetworkSuggestions() {
         try {
-            return mService.getNetworkSuggestions(mContext.getOpPackageName());
+            return mService.getNetworkSuggestions(mContext.getOpPackageName()).getList();
         } catch (RemoteException e) {
             throw e.rethrowAsRuntimeException();
         }
@@ -3570,7 +3575,7 @@ public class WifiManager {
     @Deprecated
     public List<PasspointConfiguration> getPasspointConfigurations() {
         try {
-            return mService.getPasspointConfigurations(mContext.getOpPackageName());
+            return mService.getPasspointConfigurations(mContext.getOpPackageName()).getList();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -4567,7 +4572,8 @@ public class WifiManager {
         }
         try {
             return mService.getMatchingScanResults(
-                    networkSuggestionsToMatch, scanResults,
+                    new ParceledListSlice<>(networkSuggestionsToMatch),
+                    new ParceledListSlice<>(scanResults),
                     mContext.getOpPackageName(), mContext.getAttributionTag());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -11320,8 +11326,8 @@ public class WifiManager {
         }
         try {
             if (policy != null) {
-                mService.notifyWifiSsidPolicyChanged(
-                        policy.getPolicyType(), new ArrayList<>(policy.getSsids()));
+                mService.notifyWifiSsidPolicyChanged(policy.getPolicyType(),
+                        new ParceledListSlice<>(new ArrayList<>(policy.getSsids())));
             }
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -11634,7 +11640,7 @@ public class WifiManager {
     public void addCustomDhcpOptions(@NonNull WifiSsid ssid, @NonNull byte[] oui,
             @NonNull List<DhcpOption> options) {
         try {
-            mService.addCustomDhcpOptions(ssid, oui, options);
+            mService.addCustomDhcpOptions(ssid, oui, new ParceledListSlice<>(options));
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -11894,7 +11900,8 @@ public class WifiManager {
         Objects.requireNonNull(executor, "executor cannot be null");
         Objects.requireNonNull(resultsCallback, "resultsCallback cannot be null");
         try {
-            mService.addQosPolicies(policyParamsList, new Binder(), mContext.getOpPackageName(),
+            mService.addQosPolicies(new ParceledListSlice<>(policyParamsList),
+                    new Binder(), mContext.getOpPackageName(),
                     new IListListener.Stub() {
                         @Override
                         public void onResult(List value) {

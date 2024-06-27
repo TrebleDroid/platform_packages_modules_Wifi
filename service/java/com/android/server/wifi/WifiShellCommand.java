@@ -1123,7 +1123,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         return -1;
                     }
                     int errorCode = mWifiService.addNetworkSuggestions(
-                            Arrays.asList(suggestion), SHELL_PACKAGE_NAME, null);
+                            new ParceledListSlice(List.of(suggestion)), SHELL_PACKAGE_NAME, null);
                     if (errorCode != WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS) {
                         pw.println("Add network suggestion failed with error code: " + errorCode);
                         return -1;
@@ -1164,7 +1164,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         actionCode = ACTION_REMOVE_SUGGESTION_LINGER;
                     }
                     List<WifiNetworkSuggestion> suggestions =
-                            mWifiService.getNetworkSuggestions(SHELL_PACKAGE_NAME);
+                            mWifiService.getNetworkSuggestions(SHELL_PACKAGE_NAME).getList();
                     WifiNetworkSuggestion suggestion = suggestions.stream()
                             .filter(s -> s.getSsid().equals(ssid))
                             .findAny()
@@ -1174,7 +1174,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                         return -1;
                     }
                     mWifiService.removeNetworkSuggestions(
-                            Arrays.asList(suggestion), SHELL_PACKAGE_NAME, actionCode);
+                            new ParceledListSlice<>(List.of(suggestion)),
+                            SHELL_PACKAGE_NAME, actionCode);
                     // untrusted/oem-paid networks need a corresponding NetworkRequest.
                     if (suggestion.isUntrusted()
                             || (SdkLevel.isAtLeastS()
@@ -1192,12 +1193,12 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 }
                 case "remove-all-suggestions":
                     mWifiService.removeNetworkSuggestions(
-                            Collections.emptyList(), SHELL_PACKAGE_NAME,
+                            new ParceledListSlice<>(Collections.emptyList()), SHELL_PACKAGE_NAME,
                             WifiManager.ACTION_REMOVE_SUGGESTION_DISCONNECT);
                     return 0;
                 case "list-suggestions": {
                     List<WifiNetworkSuggestion> suggestions =
-                            mWifiService.getNetworkSuggestions(SHELL_PACKAGE_NAME);
+                            mWifiService.getNetworkSuggestions(SHELL_PACKAGE_NAME).getList();
                     printWifiNetworkSuggestions(pw, suggestions);
                     return 0;
                 }
@@ -1210,7 +1211,7 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 case "list-suggestions-from-app": {
                     String packageName = getNextArgRequired();
                     List<WifiNetworkSuggestion> suggestions =
-                            mWifiService.getNetworkSuggestions(packageName);
+                            mWifiService.getNetworkSuggestions(packageName).getList();
                     printWifiNetworkSuggestions(pw, suggestions);
                     return 0;
                 }
