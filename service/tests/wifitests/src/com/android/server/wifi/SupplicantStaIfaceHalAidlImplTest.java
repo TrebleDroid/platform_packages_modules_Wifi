@@ -27,6 +27,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_PASSPOINT_TERMS_AND_COND
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WAPI;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SAE;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
+import static android.os.Build.VERSION.SDK_INT;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -52,9 +53,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.validateMockitoUsage;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -114,7 +117,9 @@ import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.net.wifi.WifiManager;
+import android.net.wifi.WifiMigration;
 import android.net.wifi.WifiSsid;
+import android.net.wifi.flags.Flags;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -124,6 +129,7 @@ import android.text.TextUtils;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.dx.mockito.inline.extended.ExtendedMockito;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.MboOceController.BtmFrameData;
 import com.android.server.wifi.hal.HalTestUtils;
@@ -132,6 +138,7 @@ import com.android.server.wifi.hotspot2.IconEvent;
 import com.android.server.wifi.hotspot2.WnmData;
 import com.android.server.wifi.util.NativeUtil;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -139,6 +146,7 @@ import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.MockitoSession;
 import org.mockito.stubbing.Answer;
 
 import java.net.InetAddress;
@@ -200,6 +208,7 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
     IfaceInfo[] mIfaceInfoList;
     ISupplicantStaIfaceCallback mISupplicantStaIfaceCallback;
 
+    private MockitoSession mSession;
     private TestLooper mLooper = new TestLooper();
     private Handler mHandler = null;
     private SupplicantStaIfaceHalSpy mDut;
@@ -244,6 +253,11 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        // Mock WifiMigration to avoid calling into its static methods
+        mSession = ExtendedMockito.mockitoSession()
+                .mockStatic(Flags.class, withSettings().lenient())
+                .mockStatic(WifiMigration.class, withSettings().lenient())
+                .startMocking();
         mIfaceInfoList = new IfaceInfo[3];
         mIfaceInfoList[0] = createIfaceInfo(IfaceType.STA, WLAN0_IFACE_NAME);
         mIfaceInfoList[1] = createIfaceInfo(IfaceType.STA, WLAN1_IFACE_NAME);
@@ -263,7 +277,16 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
                     return ssids;
                 });
         when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
+        when(Flags.legacyKeystoreToWifiBlobstoreMigration()).thenReturn(true);
         mDut = new SupplicantStaIfaceHalSpy();
+    }
+
+    @After
+    public void cleanup() {
+        validateMockitoUsage();
+        if (mSession != null) {
+            mSession.finishMocking();
+        }
     }
 
     /**
@@ -3395,5 +3418,16 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         mDut.disableMscs(WLAN0_IFACE_NAME);
         mDut.resendMscs(WLAN0_IFACE_NAME);
         verify(mISupplicantStaIfaceMock, times(2)).configureMscs(halParamsCaptor.capture());
+    }
+
+    /**
+     * Verify that the Legacy Keystore migration only occurs once during the initial setup.
+     */
+    @Test
+    public void testLegacyKeystoreMigration() throws Exception {
+        assumeTrue(SDK_INT >= 36);
+        assertFalse(mDut.mHasMigratedLegacyKeystoreAliases);
+        executeAndValidateInitializationSequence();
+        assertTrue(mDut.mHasMigratedLegacyKeystoreAliases);
     }
 }
