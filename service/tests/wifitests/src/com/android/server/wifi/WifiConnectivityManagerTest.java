@@ -2280,6 +2280,14 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         }
     }
 
+    private void setAllScanCandidatesToDelayedCarrierCandidates() {
+        WifiConfiguration delayedCarrierSelectionConfig =
+                getTestWifiConfig(CANDIDATE_NETWORK_ID, "DelayedSelectionCarrier");
+        delayedCarrierSelectionConfig.carrierId = DELAYED_SELECTION_CARRIER_IDS[0];
+        when(mWifiConfigManager.getConfiguredNetwork(anyInt()))
+                .thenReturn(delayedCarrierSelectionConfig);
+    }
+
     /**
      * Verify that candidates with a carrier ID in the delayed selection list are only considered
      * for network selection after the specified delay.
@@ -2287,11 +2295,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
     @Test
     public void testDelayedCarrierCandidateSelection() {
         ScanData[] scanDatas = new ScanData[]{mScanData};
-        WifiConfiguration delayedCarrierSelectionConfig =
-                getTestWifiConfig(CANDIDATE_NETWORK_ID, "DelayedSelectionCarrier");
-        delayedCarrierSelectionConfig.carrierId = DELAYED_SELECTION_CARRIER_IDS[0];
-        when(mWifiConfigManager.getConfiguredNetwork(anyInt()))
-                .thenReturn(delayedCarrierSelectionConfig);
+        setAllScanCandidatesToDelayedCarrierCandidates();
 
         // Produce results for the initial scan. Expect no connection,
         // since this is the first time we're seeing the carrier network.
@@ -2323,11 +2327,7 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
     @Test
     public void testDelayedCarrierSelectionEmptyPartialScan() {
         ScanData[] scanDatas = new ScanData[]{mScanData};
-        WifiConfiguration delayedCarrierSelectionConfig =
-                getTestWifiConfig(CANDIDATE_NETWORK_ID, "DelayedSelectionCarrier");
-        delayedCarrierSelectionConfig.carrierId = DELAYED_SELECTION_CARRIER_IDS[0];
-        when(mWifiConfigManager.getConfiguredNetwork(anyInt()))
-                .thenReturn(delayedCarrierSelectionConfig);
+        setAllScanCandidatesToDelayedCarrierCandidates();
 
         // Issue a full scan to add the carrier candidate to the cache.
         when(mClock.getElapsedSinceBootMillis()).thenReturn(0L);
@@ -2357,6 +2357,51 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         mAllSingleScanListenerCaptor.getValue().getWifiScannerListener().onResults(scanDatas);
         verify(mPrimaryClientModeManager).startConnectToNetwork(
                 CANDIDATE_NETWORK_ID, Process.WIFI_UID, CANDIDATE_BSSID);
+    }
+
+    /**
+     * Verify that a partial scan is scheduled when a full scan locates delayed carrier
+     * selection candidates.
+     */
+    @Test
+    public void testDelayedCarrierSelectionSchedulePartialScan() {
+        ScanData[] scanDatas = new ScanData[]{mScanData};
+        setAllScanCandidatesToDelayedCarrierCandidates();
+
+        // Initial full scan with a delayed carrier candidate should schedule a partial scan.
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(0L);
+        mAllSingleScanListenerCaptor.getValue().getWifiScannerListener().onResults(scanDatas);
+
+        // Move time forward and verify that the delayed partial scan is started.
+        when(mClock.getElapsedSinceBootMillis())
+                .thenReturn(DELAYED_CARRIER_SELECTION_TIME_MS + 1L);
+        mLooper.dispatchAll();
+        verify(mWifiScanner).startScan(
+                (ScanSettings) argThat(new WifiPartialScanSettingMatcher()),  any());
+    }
+
+    /**
+     * Verify that if a delayed carrier partial scan is cancelled, no scan is triggered
+     * at the end of the delay period.
+     */
+    @Test
+    public void testDelayedCarrierSelectionCancelPartialScan() {
+        ScanData[] scanDatas = new ScanData[]{mScanData};
+        setAllScanCandidatesToDelayedCarrierCandidates();
+
+        // Initial full scan with a delayed carrier candidate should schedule a partial scan.
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(0L);
+        mAllSingleScanListenerCaptor.getValue().getWifiScannerListener().onResults(scanDatas);
+
+        // Turn off Wifi to cancel the partial scan.
+        setWifiEnabled(false);
+
+        // Move time forward and verify that a delayed partial scan is not started.
+        when(mClock.getElapsedSinceBootMillis())
+                .thenReturn(DELAYED_CARRIER_SELECTION_TIME_MS + 1L);
+        mLooper.dispatchAll();
+        verify(mWifiScanner, never()).startScan(
+                (ScanSettings) argThat(new WifiPartialScanSettingMatcher()), any());
     }
 
     /**

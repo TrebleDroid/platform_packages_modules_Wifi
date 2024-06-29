@@ -33,6 +33,7 @@ import static android.net.wifi.WifiManager.WIFI_FEATURE_WAPI;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WFD_R2;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SAE;
 import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
+import static android.os.Build.VERSION.SDK_INT;
 
 import android.annotation.NonNull;
 import android.content.Context;
@@ -87,7 +88,9 @@ import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiAnnotations;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiKeystore;
+import android.net.wifi.WifiMigration;
 import android.net.wifi.WifiSsid;
+import android.net.wifi.flags.Flags;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.IBinder.DeathRecipient;
@@ -175,6 +178,9 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
     private INonStandardCertCallback mNonStandardCertCallback;
     private SupplicantStaIfaceHal.QosScsResponseCallback mQosScsResponseCallback;
     private MscsParams mLastMscsParams;
+
+    @VisibleForTesting
+    protected boolean mHasMigratedLegacyKeystoreAliases = false;
 
     private class SupplicantDeathRecipient implements DeathRecipient {
         @Override
@@ -4036,6 +4042,13 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
             } else if (mNonStandardCertCallback != null) {
                 Log.i(TAG, "Non-standard cert callback has already been registered");
                 return;
+            }
+
+            // TODO: Use SdkLevel API when it exists, rather than the SDK_INT
+            if (!mHasMigratedLegacyKeystoreAliases && SDK_INT >= 36
+                    && Flags.legacyKeystoreToWifiBlobstoreMigration()) {
+                WifiMigration.migrateLegacyKeystoreToWifiBlobstore();
+                mHasMigratedLegacyKeystoreAliases = true;
             }
 
             try {
