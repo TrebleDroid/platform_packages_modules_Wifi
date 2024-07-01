@@ -26,6 +26,8 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
 
+import androidx.annotation.Keep;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.wifi.util.GeneralUtil.Mutable;
 
@@ -40,6 +42,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * their corresponding main thread for servicing incoming AIDL calls.
  */
 @ThreadSafe
+@Keep
 public class WifiThreadRunner {
     private static final String TAG = "WifiThreadRunner";
 
