@@ -44,6 +44,7 @@ public class GenericNetlinkMsg {
     private static final String TAG = "GenericNetlinkMsg";
     public static final int MIN_STRUCT_SIZE =
             StructNlMsgHdr.STRUCT_SIZE + StructGenNlMsgHdr.STRUCT_SIZE;
+    private static final int SHORT_ATTRIBUTE_SIZE = StructNlAttr.NLA_HEADERLEN + Short.BYTES;
 
     public final StructNlMsgHdr nlHeader;
     public final StructGenNlMsgHdr genNlHeader;
@@ -95,7 +96,39 @@ public class GenericNetlinkMsg {
     }
 
     /**
-     * Write this GenericNetlinkMsg to a new byte array.
+     * Retrieve the value of a short attribute, if it exists.
+     *
+     * @param attributeId of the attribute to retrieve
+     * @return value if it exists, or null if an error was encountered
+     */
+    public Short getAttributeValueAsShort(short attributeId) {
+        StructNlAttr attribute = getAttribute(attributeId);
+        if (attribute == null || attribute.nla_len != SHORT_ATTRIBUTE_SIZE) return null;
+        // StructNlAttr does not support retrieving shorts directly
+        ByteBuffer buffer = attribute.getValueAsByteBuffer();
+        return buffer.getShort();
+    }
+
+    /**
+     * Check that this message contains the expected fields.
+     */
+    public boolean verifyFields(short command, short... attributeIds) {
+        if (command != genNlHeader.command) {
+            Log.e(TAG, "Found unexpected command. expected=" + command
+                    + ", actual=" + genNlHeader.command);
+            return false;
+        }
+        for (short attributeId : attributeIds) {
+            if (!attributes.containsKey(attributeId)) {
+                Log.e(TAG, "Message does not contain any attribute with id=" + attributeId);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Write this StructNl80211Msg to a new byte array.
      */
     public byte[] toByteArray() {
         byte[] bytes = new byte[nlHeader.nlmsg_len];
