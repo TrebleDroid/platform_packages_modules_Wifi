@@ -19,15 +19,11 @@ package com.android.server.wifi.util;
 import static junit.framework.Assert.assertEquals;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import android.hardware.wifi.common.OuiKeyedData;
 import android.net.wifi.util.PersistableBundleUtils;
 import android.os.PersistableBundle;
 
-import com.android.modules.utils.build.SdkLevel;
-
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -38,11 +34,6 @@ import java.util.List;
  */
 public class HalAidlUtilTest {
     private static final int TEST_VENDOR_DATA_LIST_SIZE = 10;
-
-    @Before
-    public void setUp() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastV());
-    }
 
     private static PersistableBundle createTestPersistableBundle() {
         PersistableBundle bundle = new PersistableBundle();

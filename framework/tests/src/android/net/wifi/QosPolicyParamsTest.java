@@ -20,14 +20,12 @@ package android.net.wifi;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import android.net.DscpPolicy;
 import android.os.Parcel;
 
 import com.android.modules.utils.build.SdkLevel;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -46,11 +44,6 @@ public class QosPolicyParamsTest {
     private static final int TEST_DESTINATION_PORT = 17;
     private static final String TEST_SOURCE_ADDRESS = "127.0.0.1";
     private static final String TEST_DESTINATION_ADDRESS = "127.0.0.2";
-
-    @Before
-    public void setUp() {
-        assumeTrue(SdkLevel.isAtLeastU());
-    }
 
     private InetAddress getInetAddress(String addr) {
         try {

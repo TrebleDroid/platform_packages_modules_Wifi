@@ -18,7 +18,6 @@ package com.android.server.wifi;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.validateMockitoUsage;
 import static org.mockito.Mockito.verify;
@@ -30,7 +29,6 @@ import android.util.Xml;
 import androidx.test.filters.SmallTest;
 
 import com.android.internal.util.FastXmlSerializer;
-import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.util.XmlUtil;
 
 import org.junit.After;
@@ -78,7 +76,6 @@ public class WifiRoamingConfigStoreTest extends WifiBaseTest {
 
     @Test
     public void testRoamingModeByDeviceAdmin() {
-        assumeTrue(SdkLevel.isAtLeastV());
         assertTrue(mWifiRoamingConfigStore.getRoamingMode(TEST_SSID) == TEST_DEFAULT_ROAMING_MODE);
         mWifiRoamingConfigStore.addRoamingMode(TEST_SSID, TEST_ROAMING_MODE, true);
         assertTrue(mWifiRoamingConfigStore.getRoamingMode(TEST_SSID) == TEST_ROAMING_MODE);
@@ -95,7 +92,6 @@ public class WifiRoamingConfigStoreTest extends WifiBaseTest {
 
     @Test
     public void testRoamingModeByNonAdmin() {
-        assumeTrue(SdkLevel.isAtLeastV());
         assertTrue(mWifiRoamingConfigStore.getRoamingMode(TEST_SSID) == TEST_DEFAULT_ROAMING_MODE);
         mWifiRoamingConfigStore.addRoamingMode(TEST_SSID, TEST_ROAMING_MODE, false);
         assertTrue(mWifiRoamingConfigStore.getRoamingMode(TEST_SSID) == TEST_ROAMING_MODE);
@@ -112,7 +108,6 @@ public class WifiRoamingConfigStoreTest extends WifiBaseTest {
 
     @Test
     public void testSaveAndLoadFromStore() throws Exception {
-        assumeTrue(SdkLevel.isAtLeastV());
         ArgumentCaptor<WifiConfigStore.StoreData> storeDataCaptor = ArgumentCaptor.forClass(
                 WifiConfigStore.StoreData.class);
         verify(mWifiConfigStore).registerStoreData(storeDataCaptor.capture());
@@ -140,7 +135,6 @@ public class WifiRoamingConfigStoreTest extends WifiBaseTest {
     private XmlPullParser createRoamingPolicyTestXmlForParsing(String ssid, Integer roamingMode,
             boolean isDeviceOwner)
             throws Exception {
-        assumeTrue(SdkLevel.isAtLeastV());
         Map<String, Integer> roamingPolicies = new ArrayMap<>();
         // Serialize
         roamingPolicies.put(ssid, roamingMode);

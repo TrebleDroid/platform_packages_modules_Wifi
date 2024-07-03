@@ -25,13 +25,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import android.os.Parcel;
 
-import com.android.modules.utils.build.SdkLevel;
-
-import org.junit.Before;
 import org.junit.Test;
 
 public class QosCharacteristicsTest {
@@ -48,10 +44,6 @@ public class QosCharacteristicsTest {
     private static final int TEST_DELIVERY_RATIO = QosCharacteristics.DELIVERY_RATIO_99;
     private static final int TEST_COUNT_EXPONENT = 5;
 
-    @Before
-    public void setUp() {
-        assumeTrue(SdkLevel.isAtLeastV());
-    }
 
     /**
      * Get a Builder with the mandatory fields set to the default test values.
