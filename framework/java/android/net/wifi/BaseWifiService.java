@@ -32,6 +32,7 @@ import android.os.RemoteException;
 import android.os.WorkSource;
 
 import com.android.modules.utils.ParceledListSlice;
+import com.android.modules.utils.StringParceledListSlice;
 
 import java.util.List;
 import java.util.Map;
@@ -123,24 +124,24 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public void setSsidsAllowlist(String packageName, List<WifiSsid> ssids) {
+    public void setSsidsAllowlist(String packageName, ParceledListSlice<WifiSsid> ssids) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<WifiSsid> getSsidsAllowlist(String packageName) {
+    public ParceledListSlice<WifiSsid> getSsidsAllowlist(String packageName) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public Map<OsuProvider, List<ScanResult>> getMatchingOsuProviders(
-            List<ScanResult> scanResults) {
+            ParceledListSlice<ScanResult> scanResults) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public Map<OsuProvider, PasspointConfiguration> getMatchingPasspointConfigsForOsuProviders(
-            List<OsuProvider> osuProviders) {
+            ParceledListSlice<OsuProvider> osuProviders) {
         throw new UnsupportedOperationException();
     }
 
@@ -167,12 +168,14 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public List<PasspointConfiguration> getPasspointConfigurations(String packageName) {
+    public ParceledListSlice<PasspointConfiguration> getPasspointConfigurations(
+            String packageName) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<WifiConfiguration> getWifiConfigsForPasspointProfiles(List<String> fqdnList) {
+    public ParceledListSlice<WifiConfiguration> getWifiConfigsForPasspointProfiles(
+            StringParceledListSlice fqdnList) {
         throw new UnsupportedOperationException();
     }
 
@@ -723,19 +726,20 @@ public class BaseWifiService extends IWifiManager.Stub {
 
     @Override
     public int addNetworkSuggestions(
-            List<WifiNetworkSuggestion> networkSuggestions, String callingPackageName,
+            ParceledListSlice<WifiNetworkSuggestion> networkSuggestions, String callingPackageName,
             String callingFeatureId) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public int removeNetworkSuggestions(
-            List<WifiNetworkSuggestion> networkSuggestions, String callingPackageName, int action) {
+            ParceledListSlice<WifiNetworkSuggestion> networkSuggestions, String callingPackageName,
+            int action) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<WifiNetworkSuggestion> getNetworkSuggestions(String packageName) {
+    public ParceledListSlice<WifiNetworkSuggestion> getNetworkSuggestions(String packageName) {
         throw new UnsupportedOperationException();
     }
 
@@ -875,8 +879,9 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public List<WifiConfiguration> getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
-            List<ScanResult> scanResults) {
+    public ParceledListSlice<WifiConfiguration>
+            getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
+                    ParceledListSlice<ScanResult> scanResults) {
         throw new UnsupportedOperationException();
     }
 
@@ -911,8 +916,8 @@ public class BaseWifiService extends IWifiManager.Stub {
 
     @Override
     public Map<WifiNetworkSuggestion, List<ScanResult>> getMatchingScanResults(
-            List<WifiNetworkSuggestion> networkSuggestions,
-            List<ScanResult> scanResults,
+            ParceledListSlice<WifiNetworkSuggestion> networkSuggestions,
+            ParceledListSlice<ScanResult> scanResults,
             String callingPackage, String callingFeatureId) {
         throw new UnsupportedOperationException();
     }
@@ -929,7 +934,8 @@ public class BaseWifiService extends IWifiManager.Stub {
 
     @Override
     public Map<String, Map<Integer, List<ScanResult>>>
-            getAllMatchingPasspointProfilesForScanResults(List<ScanResult> scanResults) {
+            getAllMatchingPasspointProfilesForScanResults(
+                    ParceledListSlice<ScanResult> scanResults) {
         throw new UnsupportedOperationException();
     }
 
@@ -1014,7 +1020,8 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public void notifyWifiSsidPolicyChanged(int policyType, @NonNull List<WifiSsid> ssids) {
+    public void notifyWifiSsidPolicyChanged(int policyType,
+            @NonNull ParceledListSlice<WifiSsid> ssids) {
         throw new UnsupportedOperationException();
     }
 
@@ -1035,7 +1042,8 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public void addCustomDhcpOptions(WifiSsid ssid, byte[] oui, @NonNull List<DhcpOption> options) {
+    public void addCustomDhcpOptions(WifiSsid ssid, byte[] oui,
+            @NonNull ParceledListSlice<DhcpOption> options) {
         throw new UnsupportedOperationException();
     }
 
@@ -1056,7 +1064,7 @@ public class BaseWifiService extends IWifiManager.Stub {
     }
 
     @Override
-    public void addQosPolicies(@NonNull List<QosPolicyParams> policyParamsList,
+    public void addQosPolicies(@NonNull ParceledListSlice<QosPolicyParams> policyParamsList,
             @NonNull IBinder binder, @NonNull String packageName, @NonNull IListListener listener) {
         throw new UnsupportedOperationException();
     }

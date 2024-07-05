@@ -244,6 +244,7 @@ import androidx.test.filters.SmallTest;
 
 import com.android.internal.os.PowerProfile;
 import com.android.modules.utils.ParceledListSlice;
+import com.android.modules.utils.StringParceledListSlice;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.WifiServiceImpl.LocalOnlyRequestorCallback;
 import com.android.server.wifi.WifiServiceImpl.SoftApCallbackInternal;
@@ -3467,7 +3468,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.startAutoDispatch();
         Map<WifiNetworkSuggestion, List<ScanResult>> retrievedScanResults =
                 mWifiServiceImpl.getMatchingScanResults(
-                        matchingSuggestions, null, packageName, featureId);
+                        new ParceledListSlice<>(matchingSuggestions),
+                        new ParceledListSlice<>(null), packageName, featureId);
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         ScanTestUtil.assertScanResultsEquals(scanResults,
@@ -3498,7 +3500,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.startAutoDispatch();
         Map<WifiNetworkSuggestion, List<ScanResult>> retrievedScanResults =
                 mWifiServiceImpl.getMatchingScanResults(
-                        matchingSuggestions, scanResultList, packageName, featureId);
+                        new ParceledListSlice<>(matchingSuggestions),
+                        new ParceledListSlice<>(scanResultList), packageName, featureId);
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         ScanTestUtil.assertScanResultsEquals(scanResults,
@@ -3532,7 +3535,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.startAutoDispatch();
         Map<WifiNetworkSuggestion, List<ScanResult>> retrievedScanResults =
                 mWifiServiceImpl.getMatchingScanResults(
-                        matchingSuggestions, null, packageName, featureId);
+                        new ParceledListSlice<>(matchingSuggestions), null, packageName, featureId);
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         assertTrue(retrievedScanResults.isEmpty());
@@ -4846,7 +4849,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test(expected = SecurityException.class)
     public void testGetAllMatchingPasspointProfilesForScanResultsWithoutPermissions() {
-        mWifiServiceImpl.getAllMatchingPasspointProfilesForScanResults(new ArrayList<>());
+        mWifiServiceImpl.getAllMatchingPasspointProfilesForScanResults(
+                new ParceledListSlice<>(Collections.emptyList()));
     }
 
     /**
@@ -4859,7 +4863,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
         mLooper.startAutoDispatch();
-        mWifiServiceImpl.getAllMatchingPasspointProfilesForScanResults(createScanResultList());
+        mWifiServiceImpl.getAllMatchingPasspointProfilesForScanResults(
+                new ParceledListSlice<>(createScanResultList()));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
         verify(mPasspointManager).getAllMatchingPasspointProfilesForScanResults(any());
     }
@@ -4874,7 +4879,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
         mLooper.startAutoDispatch();
-        mWifiServiceImpl.getAllMatchingPasspointProfilesForScanResults(new ArrayList<>());
+        mWifiServiceImpl.getAllMatchingPasspointProfilesForScanResults(
+                new ParceledListSlice<>(Collections.emptyList()));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
         verify(mPasspointManager, never()).getAllMatchingPasspointProfilesForScanResults(any());
     }
@@ -4886,7 +4892,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test(expected = SecurityException.class)
     public void testGetWifiConfigsForPasspointProfilesWithoutPermissions() {
-        mWifiServiceImpl.getWifiConfigsForPasspointProfiles(new ArrayList<>());
+        mWifiServiceImpl.getWifiConfigsForPasspointProfiles(
+                new StringParceledListSlice(Collections.emptyList()));
     }
 
     /**
@@ -4896,7 +4903,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test(expected = SecurityException.class)
     public void testGetMatchingOsuProvidersWithoutPermissions() {
-        mWifiServiceImpl.getMatchingOsuProviders(new ArrayList<>());
+        mWifiServiceImpl.getMatchingOsuProviders(new ParceledListSlice<>(Collections.emptyList()));
     }
 
     /**
@@ -4909,7 +4916,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
         mLooper.startAutoDispatch();
-        mWifiServiceImpl.getMatchingOsuProviders(createScanResultList());
+        mWifiServiceImpl.getMatchingOsuProviders(new ParceledListSlice<>(createScanResultList()));
         mLooper.stopAutoDispatch();
         verify(mPasspointManager).getMatchingOsuProviders(any());
     }
@@ -4922,7 +4929,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testGetMatchingOsuProvidersWithInvalidScanResult() {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
-        mWifiServiceImpl.getMatchingOsuProviders(new ArrayList<>());
+        mWifiServiceImpl.getMatchingOsuProviders(new ParceledListSlice<>(Collections.emptyList()));
         mLooper.dispatchAll();
         verify(mPasspointManager, never()).getMatchingOsuProviders(any());
     }
@@ -4934,7 +4941,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test(expected = SecurityException.class)
     public void testGetMatchingPasspointConfigsForOsuProvidersWithoutPermissions() {
-        mWifiServiceImpl.getMatchingPasspointConfigsForOsuProviders(new ArrayList<>());
+        mWifiServiceImpl.getMatchingPasspointConfigsForOsuProviders(
+                new ParceledListSlice<>(Collections.emptyList()));
     }
 
     /**
@@ -5039,14 +5047,15 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mPasspointManager.getProviderConfigs(anyInt(), anyBoolean()))
                 .thenReturn(expectedConfigs);
         mLooper.startAutoDispatch();
-        assertEquals(expectedConfigs, mWifiServiceImpl.getPasspointConfigurations(TEST_PACKAGE));
+        assertEquals(expectedConfigs,
+                mWifiServiceImpl.getPasspointConfigurations(TEST_PACKAGE).getList());
         mLooper.stopAutoDispatchAndIgnoreExceptions();
         reset(mPasspointManager);
 
         when(mPasspointManager.getProviderConfigs(anyInt(), anyBoolean()))
                 .thenReturn(new ArrayList<PasspointConfiguration>());
         mLooper.startAutoDispatch();
-        assertTrue(mWifiServiceImpl.getPasspointConfigurations(TEST_PACKAGE).isEmpty());
+        assertTrue(mWifiServiceImpl.getPasspointConfigurations(TEST_PACKAGE).getList().isEmpty());
         mLooper.stopAutoDispatchAndIgnoreExceptions();
     }
 
@@ -7278,8 +7287,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 nullable(String.class))).thenReturn(WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS);
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS,
-                mWifiServiceImpl.addNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        TEST_FEATURE_ID));
+                mWifiServiceImpl.addNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         when(mWifiNetworkSuggestionsManager.add(any(), anyInt(), anyString(),
@@ -7287,8 +7296,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_ADD_DUPLICATE);
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_ADD_DUPLICATE,
-                mWifiServiceImpl.addNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        TEST_FEATURE_ID));
+                mWifiServiceImpl.addNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager, times(2)).add(
@@ -7311,8 +7320,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS,
-                mWifiServiceImpl.addNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        TEST_FEATURE_ID));
+                mWifiServiceImpl.addNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager).add(
@@ -7335,8 +7344,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS,
-                mWifiServiceImpl.addNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        TEST_FEATURE_ID));
+                mWifiServiceImpl.addNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager).add(
@@ -7358,8 +7367,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS,
-                mWifiServiceImpl.addNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        TEST_FEATURE_ID));
+                mWifiServiceImpl.addNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager).add(
@@ -7381,8 +7390,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS,
-                mWifiServiceImpl.addNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        TEST_FEATURE_ID));
+                mWifiServiceImpl.addNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager).add(
@@ -7403,8 +7412,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_RESTRICTED_BY_ADMIN,
-                mWifiServiceImpl.addNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        TEST_FEATURE_ID));
+                mWifiServiceImpl.addNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager, never()).add(any(), eq(Binder.getCallingUid()),
@@ -7421,8 +7430,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_INTERNAL,
-                mWifiServiceImpl.addNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        TEST_FEATURE_ID));
+                mWifiServiceImpl.addNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, TEST_FEATURE_ID));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager, never()).add(any(), eq(Binder.getCallingUid()),
@@ -7439,8 +7448,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .thenReturn(WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_REMOVE_INVALID);
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_REMOVE_INVALID,
-                mWifiServiceImpl.removeNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        ACTION_REMOVE_SUGGESTION_DISCONNECT));
+                mWifiServiceImpl.removeNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, ACTION_REMOVE_SUGGESTION_DISCONNECT));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         when(mWifiNetworkSuggestionsManager.remove(any(), anyInt(), anyString(),
@@ -7448,8 +7457,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .thenReturn(WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS);
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS,
-                mWifiServiceImpl.removeNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                        ACTION_REMOVE_SUGGESTION_DISCONNECT));
+                mWifiServiceImpl.removeNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, ACTION_REMOVE_SUGGESTION_DISCONNECT));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager, times(2)).remove(any(), anyInt(),
@@ -7466,8 +7475,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_INTERNAL,
-                mWifiServiceImpl.removeNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME,
-                ACTION_REMOVE_SUGGESTION_DISCONNECT));
+                mWifiServiceImpl.removeNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, ACTION_REMOVE_SUGGESTION_DISCONNECT));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager, never()).remove(any(), anyInt(),
@@ -7482,7 +7491,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testRemoveNetworkSuggestionsFailureWithInvalidAction() {
         mLooper.startAutoDispatch();
         assertEquals(WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_REMOVE_INVALID,
-                mWifiServiceImpl.removeNetworkSuggestions(mock(List.class), TEST_PACKAGE_NAME, 0));
+                mWifiServiceImpl.removeNetworkSuggestions(mock(ParceledListSlice.class),
+                        TEST_PACKAGE_NAME, 0));
         mLooper.stopAutoDispatchAndIgnoreExceptions();
         verify(mWifiNetworkSuggestionsManager, never()).remove(any(), anyInt(),
                 eq(TEST_PACKAGE_NAME), anyInt());
@@ -7522,7 +7532,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         List<WifiNetworkSuggestion> testList = new ArrayList<>();
         when(mWifiNetworkSuggestionsManager.get(anyString(), anyInt())).thenReturn(testList);
         mLooper.startAutoDispatch();
-        assertEquals(testList, mWifiServiceImpl.getNetworkSuggestions(TEST_PACKAGE_NAME));
+        assertEquals(testList, mWifiServiceImpl.getNetworkSuggestions(TEST_PACKAGE_NAME).getList());
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager).get(eq(TEST_PACKAGE_NAME), anyInt());
@@ -7537,7 +7547,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mWifiServiceImpl = makeWifiServiceImplWithMockRunnerWhichTimesOut();
 
         mLooper.startAutoDispatch();
-        assertTrue(mWifiServiceImpl.getNetworkSuggestions(TEST_PACKAGE_NAME).isEmpty());
+        assertTrue(mWifiServiceImpl.getNetworkSuggestions(TEST_PACKAGE_NAME).getList().isEmpty());
         mLooper.stopAutoDispatchAndIgnoreExceptions();
 
         verify(mWifiNetworkSuggestionsManager, never()).get(eq(TEST_PACKAGE_NAME), anyInt());
@@ -7551,7 +7561,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testDisableEphemeralNetworkWithNetworkSettingsPerm() throws Exception {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
-        mWifiServiceImpl.disableEphemeralNetwork(new String(), TEST_PACKAGE_NAME);
+        mWifiServiceImpl.disableEphemeralNetwork("", TEST_PACKAGE_NAME);
         mLooper.dispatchAll();
         verify(mWifiConfigManager).userTemporarilyDisabledNetwork(anyString(), anyInt());
     }
@@ -7564,7 +7574,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testDisableEphemeralNetworkWithoutNetworkSettingsPerm() throws Exception {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_DENIED);
-        mWifiServiceImpl.disableEphemeralNetwork(new String(), TEST_PACKAGE_NAME);
+        mWifiServiceImpl.disableEphemeralNetwork("", TEST_PACKAGE_NAME);
         mLooper.dispatchAll();
         verify(mWifiConfigManager, never()).userTemporarilyDisabledNetwork(anyString(), anyInt());
     }
@@ -8528,7 +8538,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testSetSsidsDoNotBlocklist_NoPermission() throws Exception {
         // by default no permissions are given so the call should fail.
         mWifiServiceImpl.setSsidsAllowlist(TEST_PACKAGE_NAME,
-                Collections.EMPTY_LIST);
+                new ParceledListSlice<>(Collections.emptyList()));
     }
 
     @Test
@@ -8537,14 +8547,15 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         // verify setting an empty list
         mWifiServiceImpl.setSsidsAllowlist(TEST_PACKAGE_NAME,
-                Collections.EMPTY_LIST);
+                new ParceledListSlice<>(Collections.emptyList()));
         mLooper.dispatchAll();
-        verify(mWifiBlocklistMonitor).setSsidsAllowlist(Collections.EMPTY_LIST);
+        verify(mWifiBlocklistMonitor).setSsidsAllowlist(Collections.emptyList());
 
         // verify setting a list of valid SSIDs
         List<WifiSsid> expectedSsids = new ArrayList<>();
         expectedSsids.add(WifiSsid.fromString(TEST_SSID_WITH_QUOTES));
-        mWifiServiceImpl.setSsidsAllowlist(TEST_PACKAGE_NAME, expectedSsids);
+        mWifiServiceImpl.setSsidsAllowlist(TEST_PACKAGE_NAME,
+                new ParceledListSlice<>(expectedSsids));
         mLooper.dispatchAll();
         verify(mWifiBlocklistMonitor).setSsidsAllowlist(expectedSsids);
     }
@@ -8558,7 +8569,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         List<WifiSsid> expectedSsids = new ArrayList<>();
         expectedSsids.add(WifiSsid.fromString(TEST_SSID_WITH_QUOTES));
-        mWifiServiceImpl.setSsidsAllowlist(TEST_PACKAGE_NAME, expectedSsids);
+        mWifiServiceImpl.setSsidsAllowlist(TEST_PACKAGE_NAME,
+                new ParceledListSlice<>(expectedSsids));
         mLooper.dispatchAll();
         verify(mWifiBlocklistMonitor).setSsidsAllowlist(expectedSsids);
     }
@@ -9002,7 +9014,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test(expected = SecurityException.class)
     public void testGetWifiConfigsForMatchedNetworkSuggestionsWithoutPermissions() {
-        mWifiServiceImpl.getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(new ArrayList<>());
+        mWifiServiceImpl.getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
+                new ParceledListSlice<>(Collections.emptyList()));
     }
 
     /**
@@ -9016,7 +9029,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
         mLooper.startAutoDispatch();
         mWifiServiceImpl
-                .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(createScanResultList());
+                .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
+                        new ParceledListSlice<>(createScanResultList()));
         mLooper.stopAutoDispatch();
         verify(mWifiNetworkSuggestionsManager)
                 .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(any());
@@ -9033,7 +9047,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
         mLooper.startAutoDispatch();
         mWifiServiceImpl
-                .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(createScanResultList());
+                .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
+                        new ParceledListSlice<>(createScanResultList()));
         mLooper.stopAutoDispatch();
         verify(mWifiNetworkSuggestionsManager)
                 .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(any());
@@ -9044,7 +9059,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
                 anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
         mWifiServiceImpl
-                .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(new ArrayList<>());
+                .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
+                        new ParceledListSlice<>(Collections.emptyList()));
         mLooper.dispatchAll();
         verify(mWifiNetworkSuggestionsManager, never())
                 .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(any());
@@ -9133,7 +9149,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 .thenReturn(PackageManager.PERMISSION_DENIED);
         try {
             mWifiServiceImpl.addCustomDhcpOptions(WifiSsid.fromString(TEST_SSID_WITH_QUOTES),
-                    TEST_OUI, new ArrayList<DhcpOption>());
+                    TEST_OUI, new ParceledListSlice<>(Collections.emptyList()));
             fail("expected SecurityException");
         } catch (SecurityException expected) {
         }
@@ -9166,7 +9182,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     public void testAddCustomDhcpOptionsAndVerify() throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
         mWifiServiceImpl.addCustomDhcpOptions(WifiSsid.fromString(TEST_SSID_WITH_QUOTES), TEST_OUI,
-                new ArrayList<DhcpOption>());
+                new ParceledListSlice<>(Collections.emptyList()));
         mLooper.dispatchAll();
         verify(mWifiConfigManager).addCustomDhcpOptions(
                 WifiSsid.fromString(TEST_SSID_WITH_QUOTES), TEST_OUI, new ArrayList<DhcpOption>());
@@ -11291,7 +11307,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mClientModeManager.getConnectionInfo()).thenReturn(wifiInfo);
 
         mWifiServiceImpl.notifyWifiSsidPolicyChanged(WifiSsidPolicy.WIFI_SSID_POLICY_TYPE_ALLOWLIST,
-                Arrays.asList(WifiSsid.fromUtf8Text("SSID")));
+                new ParceledListSlice<>(List.of(WifiSsid.fromUtf8Text("SSID"))));
         mLooper.dispatchAll();
 
         verify(mClientModeManager).disconnect();
@@ -11319,7 +11335,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mClientModeManager.getConnectionInfo()).thenReturn(wifiInfo);
 
         mWifiServiceImpl.notifyWifiSsidPolicyChanged(WifiSsidPolicy.WIFI_SSID_POLICY_TYPE_DENYLIST,
-                Arrays.asList(WifiSsid.fromUtf8Text(TEST_SSID)));
+                new ParceledListSlice<>(List.of(WifiSsid.fromUtf8Text(TEST_SSID))));
         mLooper.dispatchAll();
 
         verify(mClientModeManager).disconnect();
@@ -11344,7 +11360,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mClientModeManager.getConnectionInfo()).thenReturn(wifiInfo);
 
         mWifiServiceImpl.notifyWifiSsidPolicyChanged(WifiSsidPolicy.WIFI_SSID_POLICY_TYPE_ALLOWLIST,
-                Arrays.asList(WifiSsid.fromUtf8Text("SSID")));
+                new ParceledListSlice<>(List.of(WifiSsid.fromUtf8Text("SSID"))));
         mLooper.dispatchAll();
 
         verify(mClientModeManager, never()).disconnect();
@@ -11373,7 +11389,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mClientModeManager.getConnectionInfo()).thenReturn(wifiInfo);
 
         mWifiServiceImpl.notifyWifiSsidPolicyChanged(WifiSsidPolicy.WIFI_SSID_POLICY_TYPE_DENYLIST,
-                Arrays.asList(WifiSsid.fromUtf8Text(TEST_SSID)));
+                new ParceledListSlice<>(List.of(WifiSsid.fromUtf8Text("SSID"))));
         mLooper.dispatchAll();
 
         verify(mClientModeManager, never()).disconnect();
@@ -11862,13 +11878,15 @@ public class WifiServiceImplTest extends WifiBaseTest {
         List<QosPolicyParams> paramsList = createDownlinkQosPolicyParamsList(5, true);
         IBinder binder = mock(IBinder.class);
         IListListener listener = mock(IListListener.class);
-        mWifiServiceImpl.addQosPolicies(paramsList, binder, TEST_PACKAGE_NAME, listener);
+        mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(paramsList), binder,
+                TEST_PACKAGE_NAME, listener);
         int expectedNumCalls = 1;
 
         if (SdkLevel.isAtLeastV()) {
             // Uplink policies are supported on SDK >= V
             paramsList = createUplinkQosPolicyParamsList(5);
-            mWifiServiceImpl.addQosPolicies(paramsList, binder, TEST_PACKAGE_NAME, listener);
+            mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(paramsList), binder,
+                    TEST_PACKAGE_NAME, listener);
             expectedNumCalls += 1;
         }
 
@@ -11891,7 +11909,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         // Feature disabled
         when(mApplicationQosPolicyRequestHandler.isFeatureEnabled()).thenReturn(false);
-        mWifiServiceImpl.addQosPolicies(paramsList, binder, TEST_PACKAGE_NAME, listener);
+        mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(paramsList), binder,
+                TEST_PACKAGE_NAME, listener);
         enableQosPolicyFeature();
 
         verify(listener).onResult(mListCaptor.capture());
@@ -11902,11 +11921,14 @@ public class WifiServiceImplTest extends WifiBaseTest {
 
         // Null argument
         assertThrows(NullPointerException.class, () ->
-                mWifiServiceImpl.addQosPolicies(null, binder, TEST_PACKAGE_NAME, listener));
+                mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(null), binder,
+                        TEST_PACKAGE_NAME, listener));
         assertThrows(NullPointerException.class, () ->
-                mWifiServiceImpl.addQosPolicies(paramsList, null, TEST_PACKAGE_NAME, listener));
+                mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(paramsList), null,
+                        TEST_PACKAGE_NAME, listener));
         assertThrows(NullPointerException.class, () ->
-                mWifiServiceImpl.addQosPolicies(paramsList, binder, TEST_PACKAGE_NAME, null));
+                mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(paramsList), binder,
+                        TEST_PACKAGE_NAME, null));
 
         // Invalid QoS policy params list
         List<QosPolicyParams> emptyList = createDownlinkQosPolicyParamsList(0, true);
@@ -11914,14 +11936,14 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 WifiManager.getMaxNumberOfPoliciesPerQosRequest() + 1, true);
         List<QosPolicyParams> duplicatePolicyList = createDownlinkQosPolicyParamsList(5, false);
         assertThrows(IllegalArgumentException.class, () ->
-                mWifiServiceImpl.addQosPolicies(emptyList, binder, TEST_PACKAGE_NAME,
-                        listener));
+                mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(emptyList), binder,
+                        TEST_PACKAGE_NAME, listener));
         assertThrows(IllegalArgumentException.class, () ->
-                mWifiServiceImpl.addQosPolicies(largeList, binder, TEST_PACKAGE_NAME,
-                        listener));
+                mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(largeList), binder,
+                        TEST_PACKAGE_NAME, listener));
         assertThrows(IllegalArgumentException.class, () ->
-                mWifiServiceImpl.addQosPolicies(
-                        duplicatePolicyList, binder, TEST_PACKAGE_NAME, listener));
+                mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(duplicatePolicyList),
+                        binder, TEST_PACKAGE_NAME, listener));
 
         if (SdkLevel.isAtLeastV()) {
             List<QosPolicyParams> mixedDirectionList = createDownlinkQosPolicyParamsList(1, true);
@@ -11932,8 +11954,8 @@ public class WifiServiceImplTest extends WifiBaseTest {
                             .setQosCharacteristics(mockQosCharacteristics)
                             .build());
             assertThrows(IllegalArgumentException.class, () ->
-                    mWifiServiceImpl.addQosPolicies(
-                            mixedDirectionList, binder, TEST_PACKAGE_NAME, listener));
+                    mWifiServiceImpl.addQosPolicies(new ParceledListSlice<>(mixedDirectionList),
+                            binder, TEST_PACKAGE_NAME, listener));
         }
     }
 

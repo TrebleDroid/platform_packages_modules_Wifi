@@ -79,6 +79,7 @@ import android.os.ResultReceiver;
 import android.os.WorkSource;
 
 import com.android.modules.utils.ParceledListSlice;
+import com.android.modules.utils.StringParceledListSlice;
 
 /**
  * Interface that allows controlling and querying Wi-Fi connectivity.
@@ -111,13 +112,13 @@ interface IWifiManager
 
     Map getAllMatchingFqdnsForScanResults(in List<ScanResult> scanResult);
 
-    void setSsidsAllowlist(String packageName, in List<WifiSsid> ssids);
+    void setSsidsAllowlist(String packageName, in ParceledListSlice<WifiSsid> ssids);
 
-    List getSsidsAllowlist(String packageName);
+    ParceledListSlice getSsidsAllowlist(String packageName);
 
-    Map getMatchingOsuProviders(in List<ScanResult> scanResult);
+    Map getMatchingOsuProviders(in ParceledListSlice<ScanResult> scanResult);
 
-    Map getMatchingPasspointConfigsForOsuProviders(in List<OsuProvider> osuProviders);
+    Map getMatchingPasspointConfigsForOsuProviders(in ParceledListSlice<OsuProvider> osuProviders);
 
     int addOrUpdateNetwork(in WifiConfiguration config, String packageName, in Bundle extras);
 
@@ -127,9 +128,9 @@ interface IWifiManager
 
     boolean removePasspointConfiguration(in String fqdn, String packageName);
 
-    List<PasspointConfiguration> getPasspointConfigurations(in String packageName);
+    ParceledListSlice<PasspointConfiguration> getPasspointConfigurations(in String packageName);
 
-    List<WifiConfiguration> getWifiConfigsForPasspointProfiles(in List<String> fqdnList);
+    ParceledListSlice<WifiConfiguration> getWifiConfigsForPasspointProfiles(in StringParceledListSlice fqdnList);
 
     void queryPasspointIcon(long bssid, String fileName);
 
@@ -332,12 +333,12 @@ interface IWifiManager
 
     void unregisterNetworkRequestMatchCallback(in INetworkRequestMatchCallback callback);
 
-    int addNetworkSuggestions(in List<WifiNetworkSuggestion> networkSuggestions, in String packageName,
+    int addNetworkSuggestions(in ParceledListSlice<WifiNetworkSuggestion> networkSuggestions, in String packageName,
         in String featureId);
 
-    int removeNetworkSuggestions(in List<WifiNetworkSuggestion> networkSuggestions, in String packageName, int action);
+    int removeNetworkSuggestions(in ParceledListSlice<WifiNetworkSuggestion> networkSuggestions, in String packageName, int action);
 
-    List<WifiNetworkSuggestion> getNetworkSuggestions(in String packageName);
+    ParceledListSlice<WifiNetworkSuggestion> getNetworkSuggestions(in String packageName);
 
     String[] getFactoryMacAddresses();
 
@@ -376,7 +377,7 @@ interface IWifiManager
 
     int calculateSignalLevel(int rssi);
 
-    List<WifiConfiguration> getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(in List<ScanResult> scanResults);
+    ParceledListSlice<WifiConfiguration> getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(in ParceledListSlice<ScanResult> scanResults);
 
     boolean setWifiConnectedNetworkScorer(in IBinder binder, in IWifiConnectedNetworkScorer scorer);
 
@@ -393,13 +394,13 @@ interface IWifiManager
     /**
      * Return the Map of {@link WifiNetworkSuggestion} and the list of <ScanResult>
      */
-    Map getMatchingScanResults(in List<WifiNetworkSuggestion> networkSuggestions, in List<ScanResult> scanResults, String callingPackage, String callingFeatureId);
+    Map getMatchingScanResults(in ParceledListSlice<WifiNetworkSuggestion> networkSuggestions, in ParceledListSlice<ScanResult> scanResults, String callingPackage, String callingFeatureId);
 
     void setScanThrottleEnabled(boolean enable);
 
     boolean isScanThrottleEnabled();
 
-    Map getAllMatchingPasspointProfilesForScanResults(in List<ScanResult> scanResult);
+    Map getAllMatchingPasspointProfilesForScanResults(in ParceledListSlice<ScanResult> scanResult);
 
     void setAutoWakeupEnabled(boolean enable);
 
@@ -443,7 +444,7 @@ interface IWifiManager
 
     void notifyMinimumRequiredWifiSecurityLevelChanged(int level);
 
-    void notifyWifiSsidPolicyChanged(int policyType, in List<WifiSsid> ssids);
+    void notifyWifiSsidPolicyChanged(int policyType, in ParceledListSlice<WifiSsid> ssids);
 
     String[] getOemPrivilegedWifiAdminPackages();
 
@@ -451,7 +452,7 @@ interface IWifiManager
 
     void replyToSimpleDialog(int dialogId, int reply);
 
-    void addCustomDhcpOptions(in WifiSsid ssid, in byte[] oui, in List<DhcpOption> options);
+    void addCustomDhcpOptions(in WifiSsid ssid, in byte[] oui, in ParceledListSlice<DhcpOption> options);
 
     void removeCustomDhcpOptions(in WifiSsid ssid, in byte[] oui);
 
@@ -459,7 +460,7 @@ interface IWifiManager
 
     int getMaxNumberOfChannelsPerRequest();
 
-    void addQosPolicies(in List<QosPolicyParams> policyParamsList, in IBinder binder, String packageName, in IListListener callback);
+    void addQosPolicies(in ParceledListSlice<QosPolicyParams> policyParamsList, in IBinder binder, String packageName, in IListListener callback);
 
     void removeQosPolicies(in int[] policyIdList, String packageName);
 
