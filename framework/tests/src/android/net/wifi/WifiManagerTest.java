@@ -30,6 +30,7 @@ import static android.net.wifi.WifiManager.LocalOnlyHotspotCallback.ERROR_NO_CHA
 import static android.net.wifi.WifiManager.LocalOnlyHotspotCallback.ERROR_TETHERING_DISALLOWED;
 import static android.net.wifi.WifiManager.LocalOnlyHotspotCallback.REQUEST_REGISTERED;
 import static android.net.wifi.WifiManager.OnWifiActivityEnergyInfoListener;
+import static android.net.wifi.WifiManager.PASSPOINT_HOME_NETWORK;
 import static android.net.wifi.WifiManager.SAP_START_FAILURE_GENERAL;
 import static android.net.wifi.WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS;
 import static android.net.wifi.WifiManager.STATUS_SUGGESTION_CONNECTION_FAILURE_AUTHENTICATION;
@@ -138,6 +139,7 @@ import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.HandlerExecutor;
 import com.android.modules.utils.build.SdkLevel;
+import com.android.wifi.x.com.android.modules.utils.ParceledListSlice;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -778,12 +780,12 @@ public class WifiManagerTest {
         List<WifiSsid> expectedSsids = new ArrayList<>();
         expectedSsids.add(WifiSsid.fromString("\"TEST_SSID\""));
         mWifiManager.setSsidsAllowlist(new ArraySet<>(expectedSsids));
-        verify(mWifiService).setSsidsAllowlist(any(), eq(expectedSsids));
+        verify(mWifiService).setSsidsAllowlist(any(),
+                argThat(a -> a.getList().equals(expectedSsids)));
 
         // test empty set
-        mWifiManager.setSsidsAllowlist(Collections.EMPTY_SET);
-        verify(mWifiService).setSsidsAllowlist(any(),
-                eq(Collections.EMPTY_LIST));
+        mWifiManager.setSsidsAllowlist(Collections.emptySet());
+        verify(mWifiService).setSsidsAllowlist(any(), argThat(a -> a.getList().isEmpty()));
     }
 
     /**
@@ -2367,16 +2369,20 @@ public class WifiManagerTest {
      */
     @Test
     public void testGetAllMatchingWifiConfigs() throws Exception {
-        Map<String, List<ScanResult>> passpointProfiles = new HashMap<>();
-        passpointProfiles.put("www.test.com_987a69bca26", new ArrayList<>());
+        Map<String, Map<Integer, List<ScanResult>>> passpointProfiles = new HashMap<>();
+        Map<Integer, List<ScanResult>> matchingResults = new HashMap<>();
+        matchingResults.put(PASSPOINT_HOME_NETWORK, new ArrayList<>());
+        passpointProfiles.put("www.test.com_987a69bca26", matchingResults);
         when(mWifiService.getAllMatchingPasspointProfilesForScanResults(
-                any(List.class))).thenReturn(passpointProfiles);
+                any())).thenReturn(passpointProfiles);
+        when(mWifiService.getWifiConfigsForPasspointProfiles(any()))
+                .thenReturn(new ParceledListSlice<>(Collections.emptyList()));
         InOrder inOrder = inOrder(mWifiService);
 
         mWifiManager.getAllMatchingWifiConfigs(new ArrayList<>());
 
-        inOrder.verify(mWifiService).getAllMatchingPasspointProfilesForScanResults(any(List.class));
-        inOrder.verify(mWifiService).getWifiConfigsForPasspointProfiles(any(List.class));
+        inOrder.verify(mWifiService).getAllMatchingPasspointProfilesForScanResults(any());
+        inOrder.verify(mWifiService).getWifiConfigsForPasspointProfiles(any());
     }
 
     /**
@@ -2387,7 +2393,7 @@ public class WifiManagerTest {
     public void testGetMatchingOsuProviders() throws Exception {
         mWifiManager.getMatchingOsuProviders(new ArrayList<>());
 
-        verify(mWifiService).getMatchingOsuProviders(any(List.class));
+        verify(mWifiService).getMatchingOsuProviders(any());
     }
 
     /**
@@ -2398,16 +2404,16 @@ public class WifiManagerTest {
     @Test
     public void addGetRemoveNetworkSuggestions() throws Exception {
         List<WifiNetworkSuggestion> testList = new ArrayList<>();
-        when(mWifiService.addNetworkSuggestions(any(List.class), anyString(),
+        when(mWifiService.addNetworkSuggestions(any(), anyString(),
                 nullable(String.class))).thenReturn(STATUS_NETWORK_SUGGESTIONS_SUCCESS);
-        when(mWifiService.removeNetworkSuggestions(any(List.class), anyString(), anyInt()))
+        when(mWifiService.removeNetworkSuggestions(any(), anyString(), anyInt()))
                 .thenReturn(STATUS_NETWORK_SUGGESTIONS_SUCCESS);
         when(mWifiService.getNetworkSuggestions(anyString()))
-                .thenReturn(testList);
+                .thenReturn(new ParceledListSlice<>(testList));
 
         assertEquals(STATUS_NETWORK_SUGGESTIONS_SUCCESS,
                 mWifiManager.addNetworkSuggestions(testList));
-        verify(mWifiService).addNetworkSuggestions(anyList(), eq(TEST_PACKAGE_NAME),
+        verify(mWifiService).addNetworkSuggestions(any(), eq(TEST_PACKAGE_NAME),
                 nullable(String.class));
 
         assertEquals(testList, mWifiManager.getNetworkSuggestions());
@@ -2415,17 +2421,17 @@ public class WifiManagerTest {
 
         assertEquals(STATUS_NETWORK_SUGGESTIONS_SUCCESS,
                 mWifiManager.removeNetworkSuggestions(new ArrayList<>()));
-        verify(mWifiService).removeNetworkSuggestions(anyList(), eq(TEST_PACKAGE_NAME),
+        verify(mWifiService).removeNetworkSuggestions(any(), eq(TEST_PACKAGE_NAME),
                 eq(ACTION_REMOVE_SUGGESTION_DISCONNECT));
     }
 
     @Test
     public void testRemoveNetworkSuggestionWithAction() throws Exception {
-        when(mWifiService.removeNetworkSuggestions(anyList(), anyString(), anyInt()))
+        when(mWifiService.removeNetworkSuggestions(any(), anyString(), anyInt()))
                 .thenReturn(STATUS_NETWORK_SUGGESTIONS_SUCCESS);
         assertEquals(STATUS_NETWORK_SUGGESTIONS_SUCCESS, mWifiManager
                 .removeNetworkSuggestions(new ArrayList<>(), ACTION_REMOVE_SUGGESTION_LINGER));
-        verify(mWifiService).removeNetworkSuggestions(any(List.class),
+        verify(mWifiService).removeNetworkSuggestions(any(),
                 eq(TEST_PACKAGE_NAME), eq(ACTION_REMOVE_SUGGESTION_LINGER));
     }
 
@@ -3314,8 +3320,8 @@ public class WifiManagerTest {
         List<WifiConfiguration> testResults = new ArrayList<>();
         testResults.add(new WifiConfiguration());
 
-        when(mWifiService.getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(any(List.class)))
-                .thenReturn(testResults);
+        when(mWifiService.getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(any()))
+                .thenReturn(new ParceledListSlice<>(testResults));
         assertEquals(testResults, mWifiManager
                 .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(new ArrayList<>()));
     }
@@ -3402,7 +3408,7 @@ public class WifiManagerTest {
         mWifiManager.addCustomDhcpOptions(
                 WifiSsid.fromString(TEST_SSID), TEST_OUI, new ArrayList<DhcpOption>());
         verify(mWifiService).addCustomDhcpOptions(
-                WifiSsid.fromString(TEST_SSID), TEST_OUI, new ArrayList<DhcpOption>());
+                eq(WifiSsid.fromString(TEST_SSID)), eq(TEST_OUI), any());
     }
 
     /**
