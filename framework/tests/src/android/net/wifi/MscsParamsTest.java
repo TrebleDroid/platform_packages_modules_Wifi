@@ -21,13 +21,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import android.os.Parcel;
 
-import com.android.modules.utils.build.SdkLevel;
-
-import org.junit.Before;
 import org.junit.Test;
 
 public class MscsParamsTest {
@@ -36,11 +32,6 @@ public class MscsParamsTest {
     private static final int TEST_USER_PRIORITY_BITMAP = 1 << 7;
     private static final int TEST_USER_PRIORITY_LIMIT = 5;
     private static final int TEST_STREAM_TIMEOUT_US = 5550;
-
-    @Before
-    public void setUp() {
-        assumeTrue(SdkLevel.isAtLeastV());
-    }
 
     /** Create an MscsParams object with all fields set to the test values. */
     private MscsParams createTestMscsParams() {

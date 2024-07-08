@@ -21,12 +21,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import android.os.Parcel;
 import android.os.PersistableBundle;
-
-import com.android.modules.utils.build.SdkLevel;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -47,7 +44,6 @@ public class OuiKeyedDataTest {
 
     @Before
     public void setUp() {
-        assumeTrue(SdkLevel.isAtLeastV());
         mTestData = createTestBundle();
     }
 
