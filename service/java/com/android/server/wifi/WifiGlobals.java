@@ -345,8 +345,8 @@ public class WifiGlobals {
      * @return boolean true if WEP networks are deprecated, false otherwise.
      */
     public boolean isWepDeprecated() {
-        return mWifiResourceCache.getBoolean(R.bool.config_wifiWepDeprecated,
-                "config_wifiWepDeprecated")
+        return mWifiResourceCache.getBoolean(R.bool.config_wifiWepDeprecated
+        )
                 || (mWepAllowedControlSupported && !mIsWepAllowed.get());
     }
 
@@ -356,8 +356,8 @@ public class WifiGlobals {
      * @return boolean true if WEP networks are supported, false otherwise.
      */
     public boolean isWepSupported() {
-        return !mWifiResourceCache.getBoolean(R.bool.config_wifiWepDeprecated,
-                "config_wifiWepDeprecated");
+        return !mWifiResourceCache.getBoolean(R.bool.config_wifiWepDeprecated
+        );
     }
 
     /**
@@ -591,8 +591,8 @@ public class WifiGlobals {
      */
     public boolean isBackgroundScanSupported() {
         return mWifiResourceCache
-                .getBoolean(R.bool.config_wifi_background_scan_support,
-                        "config_wifi_background_scan_support");
+                .getBoolean(R.bool.config_wifi_background_scan_support
+                );
     };
 
     /**
