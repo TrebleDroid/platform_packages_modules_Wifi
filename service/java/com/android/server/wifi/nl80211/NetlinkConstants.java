@@ -34,6 +34,14 @@ public class NetlinkConstants {
     public static final short CTRL_ATTR_FAMILY_ID = 1;
     public static final short CTRL_ATTR_FAMILY_NAME = 2;
 
+    public static final short CTRL_ATTR_MCAST_GRP_NAME = 1;
+    public static final short CTRL_ATTR_MCAST_GRP_ID = 2;
+
+    public static final short CTRL_ATTR_MCAST_GROUPS = 7;
+
     // Nl80211 strings for initialization. See kernel/uapi/linux/nl80211.h
     public static final String NL80211_GENL_NAME = "nl80211";
+    public static final String NL80211_MULTICAST_GROUP_SCAN = "scan";
+    public static final String NL80211_MULTICAST_GROUP_REG = "regulatory";
+    public static final String NL80211_MULTICAST_GROUP_MLME = "mlme";
 }

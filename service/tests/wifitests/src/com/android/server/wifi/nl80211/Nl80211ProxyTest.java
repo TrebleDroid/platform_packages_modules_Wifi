@@ -19,6 +19,9 @@ package com.android.server.wifi.nl80211;
 import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_FAMILY_ID;
 import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_CMD_NEWFAMILY;
 import static com.android.server.wifi.nl80211.NetlinkConstants.GENL_ID_CTRL;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_MLME;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_REG;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_SCAN;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -47,6 +50,7 @@ import org.mockito.quality.Strictness;
 
 import java.io.FileDescriptor;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * Unit tests for {@link Nl80211Proxy}.
@@ -86,6 +90,7 @@ public class Nl80211ProxyTest {
                 CTRL_CMD_NEWFAMILY, GENL_ID_CTRL, (short) 0, 0);
         familyResponse.addAttribute(
                 new StructNlAttr(CTRL_ATTR_FAMILY_ID, TEST_FAMILY_ID));
+        familyResponse.addAttribute(Nl80211TestUtils.createMulticastGroupsAttribute());
         setResponseMessage(familyResponse);
         assertTrue(mDut.initialize());
     }
@@ -132,5 +137,20 @@ public class Nl80211ProxyTest {
         initializeDut();
         GenericNetlinkMsg message = mDut.createNl80211Request(Nl80211TestUtils.TEST_COMMAND);
         assertEquals(TEST_FAMILY_ID, message.nlHeader.nlmsg_type);
+    }
+
+    /**
+     * Test that {@link Nl80211Proxy#parseMulticastGroupsAttribute(StructNlAttr)} can parse
+     * a valid multicast groups attribute.
+     */
+    @Test
+    public void testParseMulticastGroupsAttribute() {
+        StructNlAttr multicastGroupsAttribute = Nl80211TestUtils.createMulticastGroupsAttribute();
+        Map<String, Integer> parsedMulticastGroups =
+                Nl80211Proxy.parseMulticastGroupsAttribute(multicastGroupsAttribute);
+        // Result is expected to contain all the required groups
+        assertTrue(parsedMulticastGroups.containsKey(NL80211_MULTICAST_GROUP_SCAN));
+        assertTrue(parsedMulticastGroups.containsKey(NL80211_MULTICAST_GROUP_REG));
+        assertTrue(parsedMulticastGroups.containsKey(NL80211_MULTICAST_GROUP_MLME));
     }
 }
