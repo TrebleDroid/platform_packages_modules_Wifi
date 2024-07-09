@@ -48,8 +48,8 @@
     <string name="wifi_watchdog_network_disabled" msgid="5769226742956006362">"Impossible de se connecter au Wi-Fi."</string>
     <string name="wifi_watchdog_network_disabled_detailed" msgid="1725243835135539125">" dispose d\'une connexion Internet faible."</string>
     <string name="wifi_connect_alert_title" msgid="2368200646665663612">"Autoriser la connexion?"</string>
-    <string name="wifi_connect_alert_message" msgid="7226456300982080746">"L\'application %1$s souhaite se connecter au réseau Wi-Fi %2$s."</string>
-    <string name="wifi_connect_default_application" msgid="8917703737222707062">"Une application"</string>
+    <string name="wifi_connect_alert_message" msgid="7226456300982080746">"L\'appli %1$s souhaite se connecter au réseau Wi-Fi %2$s."</string>
+    <string name="wifi_connect_default_application" msgid="8917703737222707062">"Une appli"</string>
     <string name="accept" msgid="8346431649376483879">"Accepter"</string>
     <string name="decline" msgid="4172251727603762084">"Refuser"</string>
     <string name="ok" msgid="847575529546290102">"OK"</string>
@@ -122,7 +122,7 @@
     <string name="wifi_sim_required_message" msgid="284812212346125745">"Pour vous connecter à <xliff:g id="SSID">%1$s</xliff:g>, insérez une carte SIM de <xliff:g id="CARRIER_NAME">%2$s</xliff:g>"</string>
     <string name="wifi_interface_priority_title" msgid="5117627874976875544">"<xliff:g id="APP">%1$s</xliff:g> souhaite utiliser une ressource de réseautage"</string>
     <string name="wifi_interface_priority_message" msgid="4253391172756140313">"Cela peut causer des problèmes pour <xliff:g id="APPS">%3$s</xliff:g>."</string>
-    <string name="wifi_interface_priority_message_plural" msgid="8178086373318831859">"Cela peut entraîner des problèmes pour ces applications : <xliff:g id="APPS">%3$s</xliff:g>."</string>
+    <string name="wifi_interface_priority_message_plural" msgid="8178086373318831859">"Cela peut entraîner des problèmes pour ces applis : <xliff:g id="APPS">%3$s</xliff:g>."</string>
     <string name="wifi_interface_priority_approve" msgid="7877379614986261096">"Autoriser"</string>
     <string name="wifi_interface_priority_reject" msgid="1378461018835886777">"Ne pas autoriser"</string>
     <string name="wifi_interface_priority_interface_name_sta" msgid="5107477901500010776">"STA"</string>
