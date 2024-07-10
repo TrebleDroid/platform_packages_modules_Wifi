@@ -1632,13 +1632,14 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Test
     public void testRegisterSubsystemRestartThrowsSecurityExceptionOnMissingPermissions() {
         assumeTrue(SdkLevel.isAtLeastS());
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.registerSubsystemRestartCallback(null));
+
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(ACCESS_WIFI_STATE),
                         eq("WifiService"));
-        try {
-            mWifiServiceImpl.registerSubsystemRestartCallback(mSubsystemRestartCallback);
-            fail("expected SecurityException");
-        } catch (SecurityException expected) { }
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.registerSubsystemRestartCallback(mSubsystemRestartCallback));
     }
 
     /**
@@ -1648,13 +1649,15 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Test
     public void testUnregisterSubsystemRestartThrowsSecurityExceptionOnMissingPermissions() {
         assumeTrue(SdkLevel.isAtLeastS());
+        assertThrows(IllegalArgumentException.class,
+                () -> mWifiServiceImpl.unregisterSubsystemRestartCallback(null));
+
         doThrow(new SecurityException()).when(mContext)
                 .enforceCallingOrSelfPermission(eq(ACCESS_WIFI_STATE),
                         eq("WifiService"));
-        try {
-            mWifiServiceImpl.unregisterSubsystemRestartCallback(mSubsystemRestartCallback);
-            fail("expected SecurityException");
-        } catch (SecurityException expected) { }
+        assertThrows(SecurityException.class,
+                () -> mWifiServiceImpl.unregisterSubsystemRestartCallback(
+                        mSubsystemRestartCallback));
     }
 
 
