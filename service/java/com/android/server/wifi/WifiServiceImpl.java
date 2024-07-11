@@ -1447,6 +1447,9 @@ public class WifiServiceImpl extends BaseWifiService {
         if (!SdkLevel.isAtLeastS()) {
             throw new UnsupportedOperationException();
         }
+        if (callback == null) {
+            throw new IllegalArgumentException("Callback is null");
+        }
         enforceAccessPermission();
         if (mVerboseLoggingEnabled) {
             mLog.info("registerSubsystemRestartCallback uid=%").c(Binder.getCallingUid()).flush();
@@ -1464,6 +1467,9 @@ public class WifiServiceImpl extends BaseWifiService {
     public void unregisterSubsystemRestartCallback(ISubsystemRestartCallback callback) {
         if (!SdkLevel.isAtLeastS()) {
             throw new UnsupportedOperationException();
+        }
+        if (callback == null) {
+            throw new IllegalArgumentException("Callback is null");
         }
         enforceAccessPermission();
         if (mVerboseLoggingEnabled) {
