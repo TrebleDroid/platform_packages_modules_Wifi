@@ -18,6 +18,7 @@ package com.android.server.wifi;
 
 import static android.net.wifi.WifiManager.STATUS_LOCAL_ONLY_CONNECTION_FAILURE_AUTHENTICATION;
 import static android.net.wifi.WifiManager.STATUS_LOCAL_ONLY_CONNECTION_FAILURE_IP_PROVISIONING;
+import static android.net.wifi.WifiManager.STATUS_LOCAL_ONLY_CONNECTION_FAILURE_USER_REJECT;
 
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession;
 import static com.android.server.wifi.WifiNetworkFactory.PERIODIC_SCAN_INTERVAL_MS;
@@ -1688,7 +1689,8 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
     @Test
     public void testNetworkSpecifierHandleUserSelectionReject() throws Exception {
         sendNetworkRequestAndSetupForUserSelection();
-
+        mWifiNetworkFactory.addLocalOnlyConnectionStatusListener(mLocalOnlyConnectionStatusListener,
+                TEST_PACKAGE_NAME_1, null);
         INetworkRequestUserSelectionCallback networkRequestUserSelectionCallback =
                 mNetworkRequestUserSelectionCallback.getValue();
         assertNotNull(networkRequestUserSelectionCallback);
@@ -1703,6 +1705,9 @@ public class WifiNetworkFactoryTest extends WifiBaseTest {
         verify(mConnectivityManager).declareNetworkRequestUnfulfillable(eq(mNetworkRequest));
 
         verify(mWifiMetrics).incrementNetworkRequestApiNumUserReject();
+        verify(mLocalOnlyConnectionStatusListener).onConnectionStatus(
+                eq((WifiNetworkSpecifier) mNetworkRequest.getNetworkSpecifier()),
+                eq(STATUS_LOCAL_ONLY_CONNECTION_FAILURE_USER_REJECT));
 
         // Verify we did not attempt to trigger a connection.
         verifyNoMoreInteractions(mClientModeManager, mWifiConfigManager);
