@@ -76,6 +76,9 @@ flag {
     description: "Detect VoIP over Wifi and execute optimization"
     bug: "295885471"
     is_fixed_read_only: true
+    metadata {
+        purpose: PURPOSE_BUGFIX
+    }
 }
 
 flag {
