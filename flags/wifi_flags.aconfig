@@ -79,7 +79,7 @@ flag {
 }
 
 flag {
-    name: "voip_detection"
+    name: "voip_detection_bugfix"
     namespace: "wifi"
     description: "Detect VoIP over Wifi and execute optimization"
     bug: "295885471"

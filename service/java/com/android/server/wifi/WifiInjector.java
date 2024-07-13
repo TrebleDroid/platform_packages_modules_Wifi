@@ -623,7 +623,7 @@ public class WifiInjector {
         mTwtManager = new TwtManager(this, mCmiMonitor, mWifiNative, wifiHandler, mClock,
                 WifiTwtSession.MAX_TWT_SESSIONS, 1);
         mBackupRestoreController = new BackupRestoreController(mWifiSettingsBackupRestore, mClock);
-        if (mFeatureFlags.voipDetection() && SdkLevel.isAtLeastV()) {
+        if (mFeatureFlags.voipDetectionBugfix() && SdkLevel.isAtLeastV()) {
             mWifiVoipDetector = new WifiVoipDetector(mContext, wifiHandler, this,
                     mWifiCarrierInfoManager);
         } else {
