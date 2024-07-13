@@ -1228,6 +1228,10 @@ public class WifiNetworkFactory extends NetworkFactory {
 
     private void handleRejectUserSelection() {
         Log.w(TAG, "User dismissed notification, cancelling " + mActiveSpecificNetworkRequest);
+        sendConnectionFailureIfAllowed(mActiveSpecificNetworkRequest.getRequestorPackageName(),
+                mActiveSpecificNetworkRequest.getRequestorUid(),
+                mActiveSpecificNetworkRequestSpecifier,
+                WifiManager.STATUS_LOCAL_ONLY_CONNECTION_FAILURE_USER_REJECT);
         teardownForActiveRequest();
         mWifiMetrics.incrementNetworkRequestApiNumUserReject();
     }
@@ -1326,7 +1330,8 @@ public class WifiNetworkFactory extends NetworkFactory {
         }
         sendConnectionFailureIfAllowed(mActiveSpecificNetworkRequest.getRequestorPackageName(),
                 mActiveSpecificNetworkRequest.getRequestorUid(),
-                mActiveSpecificNetworkRequestSpecifier, failureCode);
+                mActiveSpecificNetworkRequestSpecifier,
+                internalConnectionEventToLocalOnlyFailureCode(failureCode));
         teardownForActiveRequest();
     }
 
@@ -2127,7 +2132,8 @@ public class WifiNetworkFactory extends NetworkFactory {
     }
 
     private void sendConnectionFailureIfAllowed(String packageName,
-            int uid, @NonNull WifiNetworkSpecifier networkSpecifier, int connectionEvent) {
+            int uid, @NonNull WifiNetworkSpecifier networkSpecifier,
+            @WifiManager.LocalOnlyConnectionStatusCode int failureReason) {
         RemoteCallbackList<ILocalOnlyConnectionStatusListener> listenersTracker =
                 mLocalOnlyStatusListenerPerApp.get(packageName);
         if (listenersTracker == null || listenersTracker.getRegisteredCallbackCount() == 0) {
@@ -2141,7 +2147,7 @@ public class WifiNetworkFactory extends NetworkFactory {
         for (int i = 0; i < n; i++) {
             try {
                 listenersTracker.getBroadcastItem(i).onConnectionStatus(networkSpecifier,
-                        internalConnectionEventToLocalOnlyFailureCode(connectionEvent));
+                        failureReason);
             } catch (RemoteException e) {
                 Log.e(TAG, "sendNetworkCallback: remote exception -- " + e);
             }

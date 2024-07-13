@@ -9,6 +9,14 @@ flag {
 }
 
 flag {
+    name: "p2p_ownership"
+    namespace: "wifi"
+    description: "Control the P2P group ownership feature"
+    bug: "215045910"
+    is_fixed_read_only: true
+}
+
+flag {
     name: "delay_save_to_store"
     namespace: "wifi"
     description: "Control the feature delay the save to store in batch to reduce the blocking time"
@@ -76,6 +84,9 @@ flag {
     description: "Detect VoIP over Wifi and execute optimization"
     bug: "295885471"
     is_fixed_read_only: true
+    metadata {
+        purpose: PURPOSE_BUGFIX
+    }
 }
 
 flag {
@@ -96,4 +107,12 @@ flag {
     metadata {
         purpose: PURPOSE_BUGFIX
     }
+}
+
+flag {
+    name: "local_only_connection_optimization"
+    namespace: "wifi"
+    description: "optimize local-only connection API"
+    bug: "347117408"
+    is_fixed_read_only: true
 }
