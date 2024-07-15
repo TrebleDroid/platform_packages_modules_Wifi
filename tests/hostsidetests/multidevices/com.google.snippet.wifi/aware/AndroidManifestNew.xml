@@ -19,6 +19,9 @@
     <meta-data
         android:name="mobly-snippets"
         android:value="com.google.snippet.wifi.aware.WifiAwareManagerSnippet" />
+    <meta-data
+        android:name="mobly-object-converter"
+        android:value="com.google.snippet.wifi.aware.WifiAwareSnippetConverter" />
     </application>
     <!-- Add an instrumentation tag so that the app can be launched through an
          instrument command. The runner `com.google.android.mobly.snippet.SnippetRunner`
