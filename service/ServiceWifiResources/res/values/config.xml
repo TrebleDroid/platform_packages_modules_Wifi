@@ -1362,5 +1362,5 @@
     <!-- Delay time in milliseconds for delayed carrier network selection.
          See also config_wifiDelayedSelectionCarrierIds.
      -->
-    <integer translatable="false" name="config_wifiDelayedCarrierSelectionTimeMs">120000</integer>
+    <integer translatable="false" name="config_wifiDelayedCarrierSelectionTimeMs">90000</integer>
 </resources>
