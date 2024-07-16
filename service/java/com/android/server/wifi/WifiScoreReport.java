@@ -43,6 +43,7 @@ import androidx.annotation.RequiresApi;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.ActiveModeManager.ClientRole;
+import com.android.server.wifi.proto.WifiStatsLog;
 import com.android.server.wifi.util.RssiUtil;
 import com.android.server.wifi.util.StringUtil;
 import com.android.wifi.resources.R;
@@ -85,6 +86,10 @@ public class WifiScoreReport {
     private int mLegacyIntScore = ConnectedScore.WIFI_INITIAL_SCORE;
     // Cache of the last usability status
     private boolean mIsUsable = true;
+    private int mExternalScorerPredictionStatusForEvaluation =
+            WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE;
+    private int mAospScorerPredictionStatusForEvaluation =
+            WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE;
 
     /**
      * If true, indicates that the associated {@link ClientModeImpl} instance is lingering
@@ -257,6 +262,8 @@ public class WifiScoreReport {
                         + " isUsable=" + isUsable);
                 return;
             }
+            mExternalScorerPredictionStatusForEvaluation =
+                    convertToPredictionStatusForEvaluation(isUsable);
             if (mNetworkAgent == null) {
                 return;
             }
@@ -600,6 +607,7 @@ public class WifiScoreReport {
      */
     public void reset() {
         mSessionNumber++;
+        clearScorerPredictionStatusForEvaluation();
         mLegacyIntScore = isPrimary() ? ConnectedScore.WIFI_INITIAL_SCORE
                 : ConnectedScore.WIFI_SECONDARY_INITIAL_SCORE;
         mIsUsable = true;
@@ -634,11 +642,6 @@ public class WifiScoreReport {
      * Called periodically (POLL_RSSI_INTERVAL_MSECS) about every 3 seconds.
      */
     public void calculateAndReportScore() {
-        // Bypass AOSP scorer if Wifi connected network scorer is set
-        if (mWifiConnectedNetworkScorerHolder != null) {
-            return;
-        }
-
         if (mWifiInfo.getRssi() == mWifiInfo.INVALID_RSSI) {
             Log.d(TAG, "Not reporting score because RSSI is invalid");
             return;
@@ -694,6 +697,13 @@ public class WifiScoreReport {
         }
         if (score < 0) {
             score = 0;
+        }
+
+        mAospScorerPredictionStatusForEvaluation = convertToPredictionStatusForEvaluation(
+                score >= transitionScore);
+        // Bypass AOSP scorer if Wifi connected network scorer is set
+        if (mWifiConnectedNetworkScorerHolder != null) {
+            return;
         }
 
         if (score < mWifiGlobals.getWifiLowConnectedScoreThresholdToTriggerScanForMbb()
@@ -993,8 +1003,6 @@ public class WifiScoreReport {
         // Register to receive updates from external scorer.
         mExternalScoreUpdateObserverProxy.registerCallback(mScoreUpdateObserverCallback);
 
-        // Disable AOSP scorer
-        mVelocityBasedConnectedScore = null;
         mWifiMetrics.setIsExternalWifiScorerOn(true, callerUid);
         // If there is already a connection, start a new session
         final int netId = getCurrentNetId();
@@ -1178,7 +1186,6 @@ public class WifiScoreReport {
 
     private void revertToDefaultConnectedScorer() {
         Log.d(TAG, "Using VelocityBasedConnectedScore");
-        mVelocityBasedConnectedScore = new VelocityBasedConnectedScore(mScoringParams, mClock);
         mWifiConnectedNetworkScorerHolder = null;
         mWifiGlobals.setUsingExternalScorer(false);
         mExternalScoreUpdateObserverProxy.unregisterCallback(mScoreUpdateObserverCallback);
@@ -1199,6 +1206,43 @@ public class WifiScoreReport {
         } else {
             mNetworkAgent.sendNetworkScore(getLegacyIntScore());
         }
+    }
+
+    private int convertToPredictionStatusForEvaluation(boolean isUsable) {
+        return isUsable
+                ? WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE
+                : WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_UNUSABLE;
+    }
+
+    /**
+     * Get whether an external scorer is registered.
+     */
+    public boolean isExternalScorerRegistered() {
+        return mWifiConnectedNetworkScorerHolder != null;
+    }
+
+    /**
+     * Get wifi predicted state for metrics
+     */
+    public int getExternalScorerPredictionStatusForEvaluation() {
+        return mExternalScorerPredictionStatusForEvaluation;
+    }
+
+    /**
+     * Get wifi predicted state for metrics
+     */
+    public int getAospScorerPredictionStatusForEvaluation() {
+        return mAospScorerPredictionStatusForEvaluation;
+    }
+
+    /**
+     * Clear the predicted states for metrics
+     */
+    public void clearScorerPredictionStatusForEvaluation() {
+        mExternalScorerPredictionStatusForEvaluation =
+                WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE;
+        mAospScorerPredictionStatusForEvaluation =
+                WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE;
     }
 
     /** Called when the owner {@link ConcreteClientModeManager}'s role changes. */

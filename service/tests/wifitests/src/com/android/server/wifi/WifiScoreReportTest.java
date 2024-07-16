@@ -61,6 +61,7 @@ import android.os.test.TestLooper;
 import androidx.test.filters.SmallTest;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.server.wifi.proto.WifiStatsLog;
 import com.android.wifi.resources.R;
 
 import org.junit.After;
@@ -347,10 +348,18 @@ public class WifiScoreReportTest extends WifiBaseTest {
         verifySentAnyNetworkScore();
 
         mWifiInfo.setRssi(-77);
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE,
+                mWifiScoreReport.getAospScorerPredictionStatusForEvaluation());
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE,
+                mWifiScoreReport.getExternalScorerPredictionStatusForEvaluation());
         mWifiScoreReport.calculateAndReportScore();
         // called again after calculateAndReportScore()
         verifySentAnyNetworkScore(times(2));
         verify(mWifiMetrics).incrementWifiScoreCount(eq(TEST_IFACE_NAME), anyInt());
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                mWifiScoreReport.getAospScorerPredictionStatusForEvaluation());
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE,
+                mWifiScoreReport.getExternalScorerPredictionStatusForEvaluation());
     }
 
     @Test
@@ -962,19 +971,28 @@ public class WifiScoreReportTest extends WifiBaseTest {
         mWifiScoreReport.enableVerboseLogging(true);
         mWifiInfo.setFrequency(5220);
 
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE,
+                mWifiScoreReport.getAospScorerPredictionStatusForEvaluation());
         // Reduce RSSI value to fall below the transition score
         for (int rssi = -60; rssi >= -83; rssi -= 1) {
             mWifiInfo.setRssi(rssi);
             mWifiScoreReport.calculateAndReportScore();
         }
         assertTrue(mWifiInfo.getScore() < getTransitionScore());
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_UNUSABLE,
+                mWifiScoreReport.getAospScorerPredictionStatusForEvaluation());
 
         // Then, set high RSSI value to exceed the transition score
         mWifiInfo.setRssi(-50);
         // Reset the internal timer so that no need to wait for 9 seconds
         mWifiScoreReport.reset();
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE,
+                mWifiScoreReport.getAospScorerPredictionStatusForEvaluation());
+
         mWifiScoreReport.calculateAndReportScore();
         assertTrue(mWifiInfo.getScore() > getTransitionScore());
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                mWifiScoreReport.getAospScorerPredictionStatusForEvaluation());
     }
 
     /**
@@ -1721,9 +1739,13 @@ public class WifiScoreReportTest extends WifiBaseTest {
         when(mNetwork.getNetId()).thenReturn(TEST_NETWORK_ID);
         mWifiScoreReport.startConnectedNetworkScorer(TEST_NETWORK_ID, TEST_USER_SELECTED);
 
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_NONE,
+                mWifiScoreReport.getExternalScorerPredictionStatusForEvaluation());
         mExternalScoreUpdateObserverCbCaptor.getValue().notifyStatusUpdate(
                 scorerImpl.mSessionId, true);
         mLooper.dispatchAll();
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                mWifiScoreReport.getExternalScorerPredictionStatusForEvaluation());
 
         {
             ArgumentCaptor<NetworkScore> scoreCaptor = ArgumentCaptor.forClass(NetworkScore.class);
@@ -1738,6 +1760,8 @@ public class WifiScoreReportTest extends WifiBaseTest {
         mExternalScoreUpdateObserverCbCaptor.getValue().notifyStatusUpdate(
                 scorerImpl.mSessionId, false);
         mLooper.dispatchAll();
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_UNUSABLE,
+                mWifiScoreReport.getExternalScorerPredictionStatusForEvaluation());
 
         {
             ArgumentCaptor<NetworkScore> scoreCaptor = ArgumentCaptor.forClass(NetworkScore.class);
@@ -1753,6 +1777,8 @@ public class WifiScoreReportTest extends WifiBaseTest {
         mExternalScoreUpdateObserverCbCaptor.getValue().notifyStatusUpdate(
                 scorerImpl.mSessionId, true);
         mLooper.dispatchAll();
+        assertEquals(WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_PREDICTED_USABILITY_STATE__WIFI_USABILITY_PREDICTED_USABLE,
+                mWifiScoreReport.getExternalScorerPredictionStatusForEvaluation());
         verify(mWifiConnectivityManager).disableNetworkSwitchDialog(
                 TEST_NETWORK_SWITCH_DIALOG_DISABLED_MS);
     }
