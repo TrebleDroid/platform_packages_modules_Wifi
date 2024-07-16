@@ -116,3 +116,14 @@ flag {
     bug: "347117408"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "softap_config_store_max_channel_width"
+    namespace: "wifi"
+    description: "Store MaxChannelBandwidth to SoftAP config"
+    bug: "344450923"
+    is_fixed_read_only: true
+    metadata {
+        purpose: PURPOSE_BUGFIX
+    }
+}

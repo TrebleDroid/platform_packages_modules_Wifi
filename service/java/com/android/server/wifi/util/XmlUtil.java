@@ -16,6 +16,8 @@
 
 package com.android.server.wifi.util;
 
+import static com.android.wifi.flags.Flags.softapConfigStoreMaxChannelWidth;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.compat.CompatChanges;
@@ -1972,6 +1974,7 @@ public class XmlUtil {
         public static final String XML_TAG_VENDOR_ELEMENTS = "VendorElements";
         public static final String XML_TAG_PERSISTENT_RANDOMIZED_MAC_ADDRESS =
                 "PersistentRandomizedMacAddress";
+        public static final String XML_TAG_MAX_CHANNEL_WIDTH = "MaxChannelWidth";
 
 
         /**
@@ -2195,6 +2198,10 @@ public class XmlUtil {
                     XmlUtil.writeNextValue(out, XML_TAG_PERSISTENT_RANDOMIZED_MAC_ADDRESS,
                             softApConfig.getPersistentRandomizedMacAddress().toString());
                 }
+                if (softapConfigStoreMaxChannelWidth()) {
+                    XmlUtil.writeNextValue(out, XML_TAG_MAX_CHANNEL_WIDTH,
+                            softApConfig.getMaxChannelBandwidth());
+                }
             }
             if (SdkLevel.isAtLeastV()) {
                 writeVendorDataListToXml(out, softApConfig.getVendorData());
@@ -2346,6 +2353,12 @@ public class XmlUtil {
                                 if (SdkLevel.isAtLeastT()) {
                                     softApConfigBuilder.setRandomizedMacAddress(
                                             MacAddress.fromString((String) value));
+                                }
+                                break;
+                            case XML_TAG_MAX_CHANNEL_WIDTH:
+                                if (SdkLevel.isAtLeastT()
+                                        && softapConfigStoreMaxChannelWidth()) {
+                                    softApConfigBuilder.setMaxChannelBandwidth((int) value);
                                 }
                                 break;
                             default:
