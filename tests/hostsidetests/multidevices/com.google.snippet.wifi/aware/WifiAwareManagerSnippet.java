@@ -20,6 +20,7 @@ import android.Manifest;
 import android.content.Context;
 import android.net.wifi.aware.AttachCallback;
 import android.net.wifi.aware.Characteristics;
+import android.net.wifi.aware.DiscoverySession;
 import android.net.wifi.aware.DiscoverySessionCallback;
 import android.net.wifi.aware.PeerHandle;
 import android.net.wifi.aware.PublishConfig;
@@ -45,7 +46,9 @@ import com.google.android.mobly.snippet.util.Log;
 
 import org.json.JSONException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+
 
 /**
  * Snippet class for exposing {@link WifiAwareManager} APIs.
@@ -56,6 +59,8 @@ public class WifiAwareManagerSnippet implements Snippet {
     private final Handler mHandler;
     // WifiAwareSession will be initialized after attach.
     private WifiAwareSession mWifiAwareSession;
+    // DiscoverySession will be initialized after publish or subscribe
+    private DiscoverySession mDiscoverySession;
     private PeerHandle mPeerHandle;
     private final Object mLock = new Object();
 
@@ -74,13 +79,13 @@ public class WifiAwareManagerSnippet implements Snippet {
 
     public WifiAwareManagerSnippet() throws WifiAwareManagerSnippetException {
         mContext = ApplicationProvider.getApplicationContext();
-        mWifiAwareManager = mContext.getSystemService(WifiAwareManager.class);
         PermissionUtils.checkPermissions(mContext,
                 Manifest.permission.ACCESS_WIFI_STATE,
                 Manifest.permission.CHANGE_WIFI_STATE,
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.NEARBY_WIFI_DEVICES
         );
+        mWifiAwareManager = mContext.getSystemService(WifiAwareManager.class);
         checkWifiAwareManager();
         HandlerThread handlerThread = new HandlerThread("Snippet-Aware");
         handlerThread.start();
@@ -224,6 +229,7 @@ public class WifiAwareManagerSnippet implements Snippet {
 
         @Override
         public void onPublishStarted(PublishDiscoverySession session) {
+            mDiscoverySession = session;
             SnippetEvent snippetEvent = new SnippetEvent(mCallBackId, "discoveryResult");
             snippetEvent.getData().putString("callbackName", "onPublishStarted");
             snippetEvent.getData().putBoolean("isSessionInitialized", session != null);
@@ -232,6 +238,7 @@ public class WifiAwareManagerSnippet implements Snippet {
 
         @Override
         public void onSubscribeStarted(SubscribeDiscoverySession session) {
+            mDiscoverySession = session;
             SnippetEvent snippetEvent = new SnippetEvent(mCallBackId, "discoveryResult");
             snippetEvent.getData().putString("callbackName", "onSubscribeStarted");
             snippetEvent.getData().putBoolean("isSessionInitialized", session != null);
@@ -412,5 +419,77 @@ public class WifiAwareManagerSnippet implements Snippet {
                 new WifiAwareDiscoverySessionCallback(callbackId);
         mWifiAwareSession.publish(publishConfig, myDiscoverySessionCallback, mHandler);
     }
+
+    private void checkPeerHandler() throws WifiAwareManagerSnippetException {
+        if (mPeerHandle == null) {
+            throw new WifiAwareManagerSnippetException("Please call publish or subscribe method");
+        }
+    }
+
+    private void checkDiscoverySession() throws WifiAwareManagerSnippetException {
+        if (mDiscoverySession == null) {
+            throw new WifiAwareManagerSnippetException("Please call publish or subscribe method");
+        }
+    }
+
+    /**
+     * Sends a message to a peer using Wi-Fi Aware.
+     *
+     * <p>This method sends a specified message to a peer device identified by a peer handle
+     * in an ongoing Wi-Fi Aware discovery session. The message is sent asynchronously,
+     * and the method waits for the send status to confirm whether the message was
+     * successfully sent or if any errors occurred.</p>
+     *
+     * <p>Before sending the message, this method checks if there is an active discovery
+     * session. If there is no active session, it throws a
+     * {@link WifiAwareManagerSnippetException}.</p>
+     *
+     * @param messageId an integer representing the message ID, which is used to track the message.
+     * @param message   a {@link String} containing the message to be sent.
+     * @throws WifiAwareManagerSnippetException if there is no active discovery session or
+     *                                          if sending the message fails.
+     * @see android.net.wifi.aware.DiscoverySession#sendMessage
+     * @see android.net.wifi.aware.PeerHandle
+     * @see java.nio.charset.StandardCharsets#UTF_8
+     */
+    @Rpc(description = "Send a message to a peer using Wi-Fi Aware.")
+    public void wifiAwareSendMessage(int messageId, String message)
+            throws WifiAwareManagerSnippetException {
+        // 4. send message & wait for send status
+        checkDiscoverySession();
+        mDiscoverySession.sendMessage(mPeerHandle, messageId,
+                message.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Closes the current Wi-Fi Aware discovery session if it is active.
+     *
+     * <p>This method checks if there is an active discovery session. If so,
+     * it closes the session and sets the session object to null. This ensures
+     * that resources are properly released and the session is cleanly terminated.</p>
+     */
+    @Rpc(description = "Close the current Wi-Fi Aware discovery session.")
+    public void wifiAwareCloseDiscoverSession() {
+        if (mDiscoverySession != null) {
+            mDiscoverySession.close();
+            mDiscoverySession = null;
+        }
+    }
+
+    /**
+     * Closes the current Wi-Fi Aware session if it is active.
+     *
+     * <p>This method checks if there is an active Wi-Fi Aware session. If so,
+     * it closes the session and sets the session object to null. This ensures
+     * that resources are properly released and the session is cleanly terminated.</p>
+     */
+    @Rpc(description = "Close the current Wi-Fi Aware session.")
+    public void wifiAwareCloseWifiAwareSession() {
+        if (mWifiAwareSession != null) {
+            mWifiAwareSession.close();
+            mWifiAwareSession = null;
+        }
+    }
+
 }
 

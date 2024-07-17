@@ -115,7 +115,26 @@ class WifiAwareManagerTest(base_test.BaseTestClass):
         )
         # Wait for discovery.
         self._wait_for_discovery(subscribe_handler, is_ranging_required)
-        # TODO:  check if the subscriber received the message.
+
+        #  Check if the subscriber received the message.
+        self.subscriber.wifi_aware_snippet.wifiAwareSendMessage(
+            constants.WifiAwareTestConstants.MESSAGE_ID,
+            constants.WifiAwareTestConstants.TEST_MESSAGE,
+        )
+        discover_data =publish_handler.waitAndGet(
+            event_name=constants.DiscoverySessionCallbackMethodType.MESSAGE_RECEIVED,
+            timeout=DEFAULT_TIMEOUT,
+        )
+        message = discover_data.data[
+            constants.WifiAwareSnippetParams.RECEIVED_MESSAGE
+        ]
+        str_message = bytes(message).decode('utf-8')
+        asserts.assert_equal(
+            str_message,
+            constants.WifiAwareTestConstants.TEST_MESSAGE,
+            'Message received by publisher does not match the message sent by subscriber.'
+        )
+
 
     def _wait_for_discovery(
         self,
@@ -273,7 +292,19 @@ class WifiAwareManagerTest(base_test.BaseTestClass):
         self.publisher.log.info('Publish succeeded.')
         return publish_handler
 
+    def _tardown_test(self, ad: android_device.AndroidDevice) -> None:
+        """Test completed, release resources."""
+        ad.wifi_aware_snippet.wifiAwareDetach()
+        ad.wifi_aware_snippet.wifiAwareCloseDiscoverSession()
+
+
     def teardown_test(self):
+        utils.concurrent_exec(
+            self._tardown_test,
+            ((self.publisher,), (self.subscriber,)),
+            max_workers=2,
+            raise_on_exception=True,
+        )
         utils.concurrent_exec(
             lambda d: d.services.create_output_excerpts_all(self.current_test_info),
             param_list=[[ad] for ad in self.ads],
