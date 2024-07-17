@@ -28,6 +28,8 @@ import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_MAC_ADDRESS_CUSTO
 import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_OWE;
 import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_OWE_TRANSITION;
 import static android.net.wifi.SoftApCapability.SOFTAP_FEATURE_WPA3_SAE;
+import static android.net.wifi.SoftApConfiguration.BAND_2GHZ;
+import static android.net.wifi.SoftApConfiguration.BAND_5GHZ;
 
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
@@ -693,6 +695,58 @@ public class ApConfigUtil {
         }
 
         return builder.build();
+    }
+
+    /**
+     * Upgrades a single band config to 2 + 5 GHz dual band if the overlay is configured and
+     * there are no non-2GHz/5GHz bands that are configured and available with the current
+     * capabilities.
+     * </p>
+     * This is intended for configurations that were previously set with single band in a different
+     * country code that didn't support 2 + 5 GHz dual band, but the current country code does
+     * support 2 + 5 GHz dual band.
+     */
+    public static SoftApConfiguration upgradeTo2g5gBridgedIfAvailableBandsAreSubset(
+            SoftApConfiguration config, SoftApCapability capability, @NonNull WifiContext context) {
+        // DBS requires SdkLevel S or above.
+        if (!SdkLevel.isAtLeastS()) {
+            return config;
+        }
+
+        // Skip if overlay isn't set.
+        if (!context.getResourceCache().getBoolean(
+                R.bool.config_wifiSoftapUpgradeTetheredTo2g5gBridgedIfBandsAreSubset)) {
+            return config;
+        }
+
+        // Skip if config is already multi-band.
+        if (config.getBands().length != 1) {
+            return config;
+        }
+
+        // Skip if 2 or 5 GHz aren't supported.
+        if (capability.getSupportedChannelList(BAND_2GHZ).length == 0
+                || capability.getSupportedChannelList(BAND_5GHZ).length == 0) {
+            return config;
+        }
+
+        // Skip if any non-2GHz/5GHz band is specified and supported.
+        int configuredBand = config.getBand();
+        for (int band : SoftApConfiguration.BAND_TYPES) {
+            if (band == BAND_2GHZ || band == BAND_5GHZ) {
+                continue;
+            }
+            if ((configuredBand & band) != 0
+                    && capability.getSupportedChannelList(band).length > 0) {
+                return config;
+            }
+        }
+
+        Log.i(TAG, "Temporarily upgrading config with band " + config.getBands()[0]
+                + " to 2 + 5GHz bridged.");
+        return new SoftApConfiguration.Builder(config)
+                .setBands(new int[]{BAND_2GHZ, BAND_2GHZ | BAND_5GHZ})
+                .build();
     }
 
     /**
