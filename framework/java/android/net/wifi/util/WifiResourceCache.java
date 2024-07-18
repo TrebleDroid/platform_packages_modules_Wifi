@@ -272,11 +272,9 @@ public class WifiResourceCache {
      * Remove all override value and set to default
      */
     public void reset() {
-        mBooleanResourceMap.clear();
-        mIntegerResourceMap.clear();
-        mStringArrayResourceMap.clear();
-        mIntArrayResourceMap.clear();
-        mStringResourceMap.clear();
+        for (Map m : mValueMapList) {
+            m.clear();
+        }
         mResourceNameMap.clear();
     }
 }

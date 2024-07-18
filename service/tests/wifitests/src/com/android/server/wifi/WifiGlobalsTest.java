@@ -47,6 +47,7 @@ public class WifiGlobalsTest extends WifiBaseTest {
 
     private WifiGlobals mWifiGlobals;
     private MockResources mResources;
+    private WifiResourceCache mWifiResourceCache;
 
     @Mock private WifiContext mContext;
 
@@ -65,7 +66,8 @@ public class WifiGlobalsTest extends WifiBaseTest {
                 new String[] {TEST_SSID});
         mResources.setStringArray(R.array.config_wifiAfcServerUrlsForCountry, new String[] {});
         when(mContext.getResources()).thenReturn(mResources);
-        when(mContext.getResourceCache()).thenReturn(new WifiResourceCache(mContext));
+        mWifiResourceCache = new WifiResourceCache(mContext);
+        when(mContext.getResourceCache()).thenReturn(mWifiResourceCache);
 
         mWifiGlobals = new WifiGlobals(mContext);
     }
@@ -75,6 +77,7 @@ public class WifiGlobalsTest extends WifiBaseTest {
     public void testPollRssiIntervalIsSetCorrectly() throws Exception {
         assertEquals(3000, mWifiGlobals.getPollRssiIntervalMillis());
         mResources.setInteger(R.integer.config_wifiPollRssiIntervalMilliseconds, 9000);
+        mWifiResourceCache.reset();
         assertEquals(9000, new WifiGlobals(mContext).getPollRssiIntervalMillis());
     }
 
@@ -107,11 +110,10 @@ public class WifiGlobalsTest extends WifiBaseTest {
     @Test
     public void testSaeH2eSupportOverlay() {
         mResources.setBoolean(R.bool.config_wifiSaeH2eSupported, false);
-        mWifiGlobals = new WifiGlobals(mContext);
         assertFalse(mWifiGlobals.isWpa3SaeH2eSupported());
 
         mResources.setBoolean(R.bool.config_wifiSaeH2eSupported, true);
-        mWifiGlobals = new WifiGlobals(mContext);
+        mWifiResourceCache.reset();
         assertTrue(mWifiGlobals.isWpa3SaeH2eSupported());
     }
 
@@ -169,18 +171,21 @@ public class WifiGlobalsTest extends WifiBaseTest {
         // Test config with too few items don't get added.
         mResources.setStringArray(R.array.config_wifiEapFailureConfig,
                 new String[] {"1, 2, 3"});
+        mWifiResourceCache.reset();
         mWifiGlobals = new WifiGlobals(mContext);
         assertEquals(0, mWifiGlobals.getCarrierSpecificEapFailureConfigMapSize());
 
         // Test config that fail to parse to int don't get added.
         mResources.setStringArray(R.array.config_wifiEapFailureConfig,
                 new String[] {"1839, bad_config,  1, 1, 1440"});
+        mWifiResourceCache.reset();
         mWifiGlobals = new WifiGlobals(mContext);
         assertEquals(0, mWifiGlobals.getCarrierSpecificEapFailureConfigMapSize());
 
         // Test correct config
         mResources.setStringArray(R.array.config_wifiEapFailureConfig,
                 new String[] {"1839, 1031,  1, 1, 1440"});
+        mWifiResourceCache.reset();
         mWifiGlobals = new WifiGlobals(mContext);
         assertEquals(1, mWifiGlobals.getCarrierSpecificEapFailureConfigMapSize());
         WifiBlocklistMonitor.CarrierSpecificEapFailureConfig config =
@@ -242,8 +247,8 @@ public class WifiGlobalsTest extends WifiBaseTest {
         String afcServerUS3 = "https://www.android.com/";
         mResources.setStringArray(R.array.config_wifiAfcServerUrlsForCountry,
                 new String[] {"US," + afcServerUS1 + "," + afcServerUS2 + "," + afcServerUS3});
+        mWifiResourceCache.reset();
         mWifiGlobals = new WifiGlobals(mContext);
-
         List<String> afcServersForUS = mWifiGlobals.getAfcServerUrlsForCountry("US");
         assertEquals(3, afcServersForUS.size());
         assertEquals(afcServerUS1, afcServersForUS.get(0));
@@ -281,7 +286,6 @@ public class WifiGlobalsTest extends WifiBaseTest {
     @Test
     public void testSetWepAllowedWhenWepIsNotDeprecated() {
         mResources.setBoolean(R.bool.config_wifiWepAllowedControlSupported, true);
-        mWifiGlobals = new WifiGlobals(mContext);
         assertTrue(mWifiGlobals.isWepSupported());
         // Default is not allow
         assertFalse(mWifiGlobals.isWepAllowed());
@@ -296,7 +300,7 @@ public class WifiGlobalsTest extends WifiBaseTest {
 
         // Test WEP allowed control is NOT supported.
         mResources.setBoolean(R.bool.config_wifiWepAllowedControlSupported, false);
-        mWifiGlobals = new WifiGlobals(mContext);
+        mWifiResourceCache.reset();
         // Default is not allow, but don't care it since control is not supported.
         assertFalse(mWifiGlobals.isWepAllowed());
         // But we won't consider WEP is allowed since control is NOT supported.
@@ -308,10 +312,9 @@ public class WifiGlobalsTest extends WifiBaseTest {
     @Test
     public void isSwPnoEnabled() {
         mResources.setBoolean(R.bool.config_wifiSwPnoEnabled, true);
-        mWifiGlobals = new WifiGlobals(mContext);
         assertTrue(mWifiGlobals.isSwPnoEnabled());
         mResources.setBoolean(R.bool.config_wifiSwPnoEnabled, false);
-        mWifiGlobals = new WifiGlobals(mContext);
+        mWifiResourceCache.reset();
         assertFalse(mWifiGlobals.isSwPnoEnabled());
     }
 
@@ -319,7 +322,6 @@ public class WifiGlobalsTest extends WifiBaseTest {
     public void testIsD2dSupportedWhenInfraStaDisabled() {
         mResources.setBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled,
                 false);
-        mWifiGlobals = new WifiGlobals(mContext);
         mWifiGlobals.setD2dStaConcurrencySupported(true);
         assertFalse(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled());
         mWifiGlobals.setD2dStaConcurrencySupported(false);
@@ -327,7 +329,7 @@ public class WifiGlobalsTest extends WifiBaseTest {
 
         mResources.setBoolean(R.bool.config_wifiD2dAllowedControlSupportedWhenInfraStaDisabled,
                 true);
-        mWifiGlobals = new WifiGlobals(mContext);
+        mWifiResourceCache.reset();
         mWifiGlobals.setD2dStaConcurrencySupported(true);
         assertFalse(mWifiGlobals.isD2dSupportedWhenInfraStaDisabled());
         mWifiGlobals.setD2dStaConcurrencySupported(false);
