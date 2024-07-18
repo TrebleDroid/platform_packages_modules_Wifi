@@ -1859,6 +1859,8 @@ public class InformationElementUtil {
         private static final int WPS_VENDOR_OUI_TYPE = 0x04f25000;
         private static final short WPA_VENDOR_OUI_VERSION = 0x0001;
         private static final int OWE_VENDOR_OUI_TYPE = 0x1c9a6f50;
+        private static final int RSNE_OVERRIDE_VENDOR_OUI_TYPE = 0x299a6f50;
+        private static final int RSNE_OVERRIDE2_VENDOR_OUI_TYPE = 0x2A9a6f50;
         private static final short RSNE_VERSION = 0x0001;
 
         private static final int WPA_AKM_EAP = 0x01f25000;
@@ -1910,8 +1912,23 @@ public class InformationElementUtil {
         public boolean isWPS;
         public boolean isManagementFrameProtectionRequired;
         public boolean isManagementFrameProtectionCapable;
+        private boolean mHasPmfRequiredBitSetToFalseOccurred;
+        public boolean isRSNEOverrideElementPresent;
 
         public Capabilities() {
+        }
+
+        private static boolean isRsneOverrideElement(InformationElement ie) {
+            ByteBuffer buf = ByteBuffer.wrap(ie.bytes).order(ByteOrder.LITTLE_ENDIAN);
+            try {
+                int vendorOuiType = buf.getInt();
+                // Wi-Fi Alliance specific OUI and OUI type identifying RSNE Override element.
+                return (vendorOuiType == RSNE_OVERRIDE_VENDOR_OUI_TYPE
+                        || vendorOuiType == RSNE_OVERRIDE2_VENDOR_OUI_TYPE);
+            } catch (BufferUnderflowException e) {
+                Log.e("IE_Capabilities", "Couldn't parse VSA IE, buffer underflow");
+                return false;
+            }
         }
 
         // RSNE format (size unit: byte)
@@ -1927,8 +1944,7 @@ public class InformationElementUtil {
         //
         // Note: InformationElement.bytes has 'Element ID' and 'Length'
         //       stripped off already
-        private void parseRsnElement(InformationElement ie, SparseIntArray unknownAkmMap) {
-            ByteBuffer buf = ByteBuffer.wrap(ie.bytes).order(ByteOrder.LITTLE_ENDIAN);
+        private void parseRsnElement(ByteBuffer buf, SparseIntArray unknownAkmMap) {
 
             try {
                 // version
@@ -2027,9 +2043,17 @@ public class InformationElementUtil {
                 // see section 9.4.2.25 - RSNE - In IEEE Std 802.11-2016
                 if (buf.remaining() < 2) return;
                 int rsnCaps = buf.getShort();
-                isManagementFrameProtectionRequired =
-                        0 != (RSN_CAP_MANAGEMENT_FRAME_PROTECTION_REQUIRED & rsnCaps);
-                isManagementFrameProtectionCapable =
+                // This method gets called multiple times if the AP and STA supports RSN overriding.
+                // The PMF required bit should be set to false if one of the RSN fields PMF
+                // required bit is ever false. The PMF capable bit should be set to true if one of
+                // the RSN fields PMF capable bit is ever true.
+                if ((RSN_CAP_MANAGEMENT_FRAME_PROTECTION_REQUIRED & rsnCaps) == 0) {
+                    mHasPmfRequiredBitSetToFalseOccurred = true;
+                    isManagementFrameProtectionRequired = false;
+                } else if (!mHasPmfRequiredBitSetToFalseOccurred) {
+                    isManagementFrameProtectionRequired = true;
+                }
+                isManagementFrameProtectionCapable |=
                         0 != (RSN_CAP_MANAGEMENT_FRAME_PROTECTION_CAPABLE & rsnCaps);
 
                 if (buf.remaining() < 2) return;
@@ -2218,6 +2242,8 @@ public class InformationElementUtil {
          * @param ies -- Information Element array
          * @param beaconCap -- 16-bit Beacon Capability Information field
          * @param isOweSupported -- Boolean flag to indicate if OWE is supported by the device
+         * @param isRsnOverridingSupported -- Boolean flag to indicate if RSN Overriding is
+         *                                 supported by the device
          * @param freq -- Frequency on which frame/beacon was transmitted. Some parsing may be
          *     affected such as DMG parameters in DMG (60GHz) beacon.
          * @param unknownAkmMap -- unknown AKM to known AKM mapping (Internally converted to
@@ -2228,6 +2254,7 @@ public class InformationElementUtil {
                 InformationElement[] ies,
                 int beaconCap,
                 boolean isOweSupported,
+                boolean isRsnOverridingSupported,
                 int freq,
                 SparseIntArray unknownAkmMap) {
             protocol = new ArrayList<>();
@@ -2265,10 +2292,22 @@ public class InformationElementUtil {
                 }
 
                 if (ie.id == InformationElement.EID_RSN) {
-                    parseRsnElement(ie, unknownAkmMap);
+                    parseRsnElement(ByteBuffer.wrap(ie.bytes).order(ByteOrder.LITTLE_ENDIAN),
+                            unknownAkmMap);
                 }
 
                 if (ie.id == InformationElement.EID_VSA) {
+                    if (isRsnOverridingSupported && isRsneOverrideElement(ie)) {
+                        ByteBuffer buf = ByteBuffer.wrap(ie.bytes).order(ByteOrder.LITTLE_ENDIAN);
+                        // RSN Override and RSN Override 2 vendor specific element begins
+                        // with 3 bytes of Wi-Fi Alliance specific OUI and 1 byte of OUI type.
+                        // The Payload field of the RSNE Override element and the RSNE Override 2
+                        // element uses the same format as the Information field of the RSNE.
+                        // So skip the 4 byte OUI field and proceed to parse the RSN element.
+                        buf.getInt();
+                        parseRsnElement(buf, unknownAkmMap);
+                        isRSNEOverrideElementPresent = true;
+                    }
                     if (isWpaOneElement(ie)) {
                         parseWpaOneElement(ie, unknownAkmMap);
                     }
@@ -2473,6 +2512,9 @@ public class InformationElementUtil {
             }
             if (isManagementFrameProtectionCapable) {
                 capabilities.append("[MFPC]");
+            }
+            if (isRSNEOverrideElementPresent) {
+                capabilities.append("[RSNO]");
             }
 
             return capabilities.toString();

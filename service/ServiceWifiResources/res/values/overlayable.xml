@@ -348,6 +348,7 @@
           <item type="bool" name="config_wifiWepAllowedControlSupported" />
           <item type="array" name="config_wifiDelayedSelectionCarrierIds" />
           <item type="integer" name="config_wifiDelayedCarrierSelectionTimeMs" />
+          <item type="bool" name="config_wifiRsnOverridingEnabled" />
 
           <!-- Params from config.xml that can be overlayed -->
 
