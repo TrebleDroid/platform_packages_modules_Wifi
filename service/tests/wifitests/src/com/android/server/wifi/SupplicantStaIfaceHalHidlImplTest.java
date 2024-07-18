@@ -136,6 +136,7 @@ public class SupplicantStaIfaceHalHidlImplTest extends WifiBaseTest {
     private static final long PMK_CACHE_EXPIRATION_IN_SEC = 1024;
     private static final byte[] CONNECTED_MAC_ADDRESS_BYTES =
             {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+    private static final long TIME_START_MS = 0L;
 
     private @Mock IServiceManager mServiceManagerMock;
     private @Mock ISupplicant mISupplicantMock;
@@ -312,6 +313,7 @@ public class SupplicantStaIfaceHalHidlImplTest extends WifiBaseTest {
                     ssids.add(TRANSLATED_SUPPLICANT_SSID);
                     return ssids;
                 });
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(TIME_START_MS);
         mDut = new SupplicantStaIfaceHalSpy();
     }
 
@@ -3861,8 +3863,16 @@ public class SupplicantStaIfaceHalHidlImplTest extends WifiBaseTest {
         setupMocksForHalV1_4();
         executeAndValidateInitializationSequenceV1_4();
         assertNotNull(mISupplicantStaIfaceCallbackV14);
-        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(SUPPLICANT_SSID));
 
+        // Do not broadcast NETWORK_NOT_FOUND for the specified duration.
+        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(SUPPLICANT_SSID));
+        verify(mWifiMonitor, never()).broadcastNetworkNotFoundEvent(
+                eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
+
+        // NETWORK_NOT_FOUND should be broadcasted after the duration.
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(TIME_START_MS
+                + SupplicantStaIfaceHalHidlImpl.IGNORE_NETWORK_NOT_FOUND_DURATION_MS + 1);
+        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(SUPPLICANT_SSID));
         verify(mWifiMonitor).broadcastNetworkNotFoundEvent(
                 eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
     }
@@ -3886,26 +3896,40 @@ public class SupplicantStaIfaceHalHidlImplTest extends WifiBaseTest {
                 });
         executeAndValidateConnectSequence(SUPPLICANT_NETWORK_ID, false,
                 TRANSLATED_SUPPLICANT_SSID.toString());
-        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(SUPPLICANT_SSID));
 
-        // Validate that we initiated another connect sequence to the fallback SUPPLICANT_SSID.
+        // SSID was not found, but don't broadcast NETWORK_NOT_FOUND since we're still in
+        // the ignore duration.
+        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(SUPPLICANT_SSID));
+        verify(mWifiMonitor, never()).broadcastNetworkNotFoundEvent(
+                eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
+        validateConnectSequence(false, 1, TRANSLATED_SUPPLICANT_SSID.toString());
+
+        // Receive NETWORK_NOT_FOUND after the ignore duration. This should trigger a connection
+        // to the fallback without broadcasting NETWORK_NOT_FOUND yet.
+        long time = TIME_START_MS
+                + SupplicantStaIfaceHalHidlImpl.IGNORE_NETWORK_NOT_FOUND_DURATION_MS;
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(time);
+        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(
+                TRANSLATED_SUPPLICANT_SSID.toString()));
         verify(mWifiMonitor, never()).broadcastNetworkNotFoundEvent(
                 eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
         validateConnectSequence(false, 2, SUPPLICANT_SSID);
 
-        // Fallback SSID was not found, finally broadcast NETWORK_NOT_FOUND and try the first SSID
-        // again.
+        // Fallback SSID was not found, but don't broadcast NETWORK_NOT_FOUND because we're in the
+        // ignore duration for the fallback connection.
+        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(SUPPLICANT_SSID));
+        verify(mWifiMonitor, never()).broadcastNetworkNotFoundEvent(
+                eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
+        validateConnectSequence(false, 2, SUPPLICANT_SSID);
+
+        // Receive NETWORK_NOT_FOUND after the new ignore duration. This should trigger a connection
+        // to the first SSID and finally broadcast the NETWORK_NOT_FOUND.
+        time += SupplicantStaIfaceHalHidlImpl.IGNORE_NETWORK_NOT_FOUND_DURATION_MS;
+        when(mClock.getElapsedSinceBootMillis()).thenReturn(time);
         mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(SUPPLICANT_SSID));
         verify(mWifiMonitor).broadcastNetworkNotFoundEvent(
                 eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
         validateConnectSequence(false, 3, TRANSLATED_SUPPLICANT_SSID.toString());
-
-        // First SSID not found, try the fallback without broadcasting NETWORK_NOT_FOUND.
-        mISupplicantStaIfaceCallbackV14.onNetworkNotFound(NativeUtil.decodeSsid(
-                TRANSLATED_SUPPLICANT_SSID.toString()));
-        verify(mWifiMonitor, times(1)).broadcastNetworkNotFoundEvent(
-                eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
-        validateConnectSequence(false, 4, SUPPLICANT_SSID);
     }
 
     /**
