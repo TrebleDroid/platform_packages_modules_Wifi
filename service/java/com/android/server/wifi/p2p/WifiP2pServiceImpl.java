@@ -5728,6 +5728,11 @@ public class WifiP2pServiceImpl extends IWifiP2pManager.Stub {
                         } else {
                             loge("Connect on null device address, ignore");
                         }
+                        if (!mAutonomousGroup && mGroup.getClientList().size() == 1) {
+                            onGroupCreated(new WifiP2pInfo(mWifiP2pInfo),
+                                    eraseOwnDeviceAddress(mGroup),
+                                    generateCallbackList(mGroup));
+                        }
                         onPeerClientJoined(new WifiP2pInfo(mWifiP2pInfo),
                                 eraseOwnDeviceAddress(mGroup),
                                 generateCallbackList(mGroup));

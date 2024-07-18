@@ -25,13 +25,16 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.validateMockitoUsage;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import android.app.test.MockAnswerUtil;
 import android.content.Context;
 import android.net.MacAddress;
 import android.net.wifi.SoftApConfiguration;
+import android.net.wifi.SoftApInfo;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiMigration;
 import android.net.wifi.WifiSsid;
@@ -40,12 +43,14 @@ import android.util.Xml;
 
 import androidx.test.filters.SmallTest;
 
+import com.android.dx.mockito.inline.extended.ExtendedMockito;
 import com.android.internal.util.FastXmlSerializer;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.util.EncryptedData;
 import com.android.server.wifi.util.InformationElementUtil;
 import com.android.server.wifi.util.SettingsMigrationDataHolder;
 import com.android.server.wifi.util.WifiConfigStoreEncryptionUtil;
+import com.android.wifi.flags.Flags;
 
 import org.junit.After;
 import org.junit.Before;
@@ -53,6 +58,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.MockitoSession;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlSerializer;
 
@@ -108,6 +114,9 @@ public class SoftApStoreDataTest extends WifiBaseTest {
     private static final boolean TEST_80211BE_ENABLED = false;
     private static final boolean TEST_USER_CONFIGURATION = false;
     private static final String TEST_TWO_VENDOR_ELEMENTS_HEX = "DD04AABBCCDDDD0401020304";
+    private static final int TEST_MAX_CHANNEL_WIDTH = SoftApInfo.CHANNEL_WIDTH_40MHZ;
+    private MockitoSession mSession;
+
 
     private static final String TEST_CONFIG_STRING_FROM_WIFICONFIGURATION =
             "<string name=\"WifiSsid\">"
@@ -293,6 +302,11 @@ public class SoftApStoreDataTest extends WifiBaseTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        // Mock WifiMigration to avoid calling into its static methods
+        mSession = ExtendedMockito.mockitoSession()
+                .mockStatic(Flags.class, withSettings().lenient())
+                .mockStatic(WifiMigration.class, withSettings().lenient())
+                .startMocking();
         when(mSettingsMigrationDataHolder.retrieveData())
                 .thenReturn(mOemMigrationData);
         when(mOemMigrationData.isSoftApTimeoutEnabled()).thenReturn(true);
@@ -312,6 +326,7 @@ public class SoftApStoreDataTest extends WifiBaseTest {
                 return mEncryptedDataMap.get(data);
             }
         }).when(mWifiConfigStoreEncryptionUtil).decrypt(any());
+        when(Flags.softapConfigStoreMaxChannelWidth()).thenReturn(false);
     }
 
     /**
@@ -321,6 +336,10 @@ public class SoftApStoreDataTest extends WifiBaseTest {
     public void cleanup() {
         TEST_BLOCKEDLIST.clear();
         TEST_ALLOWEDLIST.clear();
+        validateMockitoUsage();
+        if (mSession != null) {
+            mSession.finishMocking();
+        }
     }
 
     /**
@@ -623,18 +642,16 @@ public class SoftApStoreDataTest extends WifiBaseTest {
         assertEquals(softApConfig.getBand(), TEST_BAND);
     }
 
-    /**
-     * Verify that the store data is serialized/deserialized correctly.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void serializeDeserializeSoftAp() throws Exception {
+    private void serializeDeserializeSoftAp(int expectedMaxChannelWidth, int actualMaxChannelWidth)
+            throws Exception {
         SoftApConfiguration.Builder softApConfigBuilder = new SoftApConfiguration.Builder();
         softApConfigBuilder.setSsid(TEST_SSID);
         softApConfigBuilder.setPassphrase(TEST_PASSPHRASE,
                 SoftApConfiguration.SECURITY_TYPE_WPA2_PSK);
         softApConfigBuilder.setBand(TEST_BAND);
+        if (SdkLevel.isAtLeastT()) {
+            softApConfigBuilder.setMaxChannelBandwidth(actualMaxChannelWidth);
+        }
         SoftApConfiguration softApConfig = softApConfigBuilder.build();
 
         // Serialize first.
@@ -657,6 +674,30 @@ public class SoftApStoreDataTest extends WifiBaseTest {
         assertEquals(softApConfig.isHiddenSsid(), softApConfigDeserialized.isHiddenSsid());
         assertEquals(softApConfig.getBand(), softApConfigDeserialized.getBand());
         assertEquals(softApConfig.getChannel(), softApConfigDeserialized.getChannel());
+        if (SdkLevel.isAtLeastT()) {
+            assertEquals(expectedMaxChannelWidth,
+                    softApConfigDeserialized.getMaxChannelBandwidth());
+        }
+    }
+
+    /**
+     * Verify that the store data is serialized/deserialized correctly with the feature
+     * Flags.softapConfigStoreMaxChannelWidth() disabled.
+     */
+    @Test
+    public void serializeDeserializeSoftAp() throws Exception {
+        when(Flags.softapConfigStoreMaxChannelWidth()).thenReturn(false);
+        serializeDeserializeSoftAp(SoftApInfo.CHANNEL_WIDTH_AUTO, TEST_MAX_CHANNEL_WIDTH);
+    }
+
+    /**
+     * Verify that the store data is serialized/deserialized correctly with the feature
+     * Flags.softapConfigStoreMaxChannelWidth() enabled.
+     */
+    @Test
+    public void serializeDeserializeSoftApWithMaxChannelWidth() throws Exception {
+        when(Flags.softapConfigStoreMaxChannelWidth()).thenReturn(true);
+        serializeDeserializeSoftAp(TEST_MAX_CHANNEL_WIDTH, TEST_MAX_CHANNEL_WIDTH);
     }
 
     /**
