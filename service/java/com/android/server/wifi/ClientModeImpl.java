@@ -2430,6 +2430,12 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             case WifiMonitor.BSS_FREQUENCY_CHANGED_EVENT:
                 sb.append(" frequency=" + msg.arg1);
                 break;
+            case WifiMonitor.AUXILIARY_SUPPLICANT_EVENT:
+                SupplicantEventInfo eventInfo = (SupplicantEventInfo) msg.obj;
+                if (eventInfo != null) {
+                    sb.append(" ").append(eventInfo.toString());
+                }
+                break;
             default:
                 sb.append(" ");
                 sb.append(Integer.toString(msg.arg1));
