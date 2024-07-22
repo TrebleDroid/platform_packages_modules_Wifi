@@ -128,8 +128,8 @@
     <string name="wifi_interface_priority_approve" msgid="7877379614986261096">"Permitir"</string>
     <string name="wifi_interface_priority_reject" msgid="1378461018835886777">"No permitir"</string>
     <string name="wifi_interface_priority_interface_name_sta" msgid="5107477901500010776">"STA"</string>
-    <string name="wifi_interface_priority_interface_name_ap" msgid="161777054136866061">"Hotspot Wi-Fi"</string>
-    <string name="wifi_interface_priority_interface_name_ap_bridge" msgid="1270364818879977821">"Hotspot Wi-Fi"</string>
+    <string name="wifi_interface_priority_interface_name_ap" msgid="161777054136866061">"Hotspot de Wi-Fi"</string>
+    <string name="wifi_interface_priority_interface_name_ap_bridge" msgid="1270364818879977821">"Hotspot de Wi-Fi"</string>
     <string name="wifi_interface_priority_interface_name_p2p" msgid="1278122698099149708">"Wi-Fi directo"</string>
     <string name="wifi_interface_priority_interface_name_nan" msgid="8812888073122966870">"Reconocimiento de Wi-Fi"</string>
     <string name="wifi_ca_cert_dialog_title" msgid="3872340345882915806">"¿Es una red segura?"</string>
@@ -154,7 +154,7 @@
     <string name="wifi_ca_cert_dialog_preT_message_hint" msgid="5682518783200852031">"A la red <xliff:g id="SSID">%1$s</xliff:g> le falta un certificado."</string>
     <string name="wifi_ca_cert_dialog_preT_message_link" msgid="6325483132538546884">"Obtén más información para agregar certificados"</string>
     <string name="wifi_ca_cert_notification_preT_title" msgid="7255129934648316663">"No se pudo verificar esta red"</string>
-    <string name="wifi_ca_cert_notification_preT_message" msgid="4565553176090475724">"A la red <xliff:g id="SSID">%1$s</xliff:g> le falta un certificado. Presiona a fin de obtener más información para agregar certificados."</string>
+    <string name="wifi_ca_cert_notification_preT_message" msgid="4565553176090475724">"A la red <xliff:g id="SSID">%1$s</xliff:g> le falta un certificado. Presiona para obtener más información sobre cómo agregar certificados."</string>
     <string name="wifi_ca_cert_notification_preT_continue_text" msgid="1525418430746943670">"Conectar de todos modos"</string>
     <string name="wifi_ca_cert_notification_preT_abort_text" msgid="8307996031461071854">"No conectar"</string>
     <string name="wifi_enable_request_dialog_title" msgid="3577459145316177148">"¿Deseas permitir que <xliff:g id="APP_NAME">%1$s</xliff:g> desactive el Wi‑Fi?"</string>
