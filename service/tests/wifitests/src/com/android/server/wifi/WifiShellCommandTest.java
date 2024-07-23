@@ -192,7 +192,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"set-poll-rssi-interval-msecs", "5"});
-        verify(mWifiGlobals, never()).setPollRssiIntervalMillis(anyInt());
+        verify(mPrimaryClientModeManager, never()).setLinkLayerStatsPollingInterval(anyInt());
         assertFalse(mWifiShellCommand.getErrPrintWriter().toString().isEmpty());
 
         BinderUtil.setUid(Process.ROOT_UID);
@@ -200,13 +200,38 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"set-poll-rssi-interval-msecs", "5"});
-        verify(mWifiGlobals).setPollRssiIntervalMillis(5);
+        verify(mPrimaryClientModeManager).setLinkLayerStatsPollingInterval(5);
 
         // invalid arg
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"set-poll-rssi-interval-msecs", "0"});
         verifyNoMoreInteractions(mWifiGlobals);
+        verifyNoMoreInteractions(mPrimaryClientModeManager);
+        assertFalse(mWifiShellCommand.getErrPrintWriter().toString().isEmpty());
+
+        mWifiShellCommand.exec(
+                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
+                new String[]{"set-poll-rssi-interval-msecs", "4", "8"});
+        verify(mWifiGlobals).setPollRssiShortIntervalMillis(4);
+        verify(mWifiGlobals).setPollRssiLongIntervalMillis(8);
+        verify(mWifiGlobals).setPollRssiIntervalMillis(4);
+        verify(mPrimaryClientModeManager).setLinkLayerStatsPollingInterval(0);
+
+        // invalid arg
+        mWifiShellCommand.exec(
+                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
+                new String[]{"set-poll-rssi-interval-msecs", "8", "4"});
+        verifyNoMoreInteractions(mWifiGlobals);
+        verifyNoMoreInteractions(mPrimaryClientModeManager);
+        assertFalse(mWifiShellCommand.getErrPrintWriter().toString().isEmpty());
+
+        // invalid arg
+        mWifiShellCommand.exec(
+                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
+                new String[]{"set-poll-rssi-interval-msecs", "4", "8", "12"});
+        verifyNoMoreInteractions(mWifiGlobals);
+        verifyNoMoreInteractions(mPrimaryClientModeManager);
         assertFalse(mWifiShellCommand.getErrPrintWriter().toString().isEmpty());
     }
 
