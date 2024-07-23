@@ -3811,11 +3811,12 @@ public class WifiServiceImpl extends BaseWifiService {
             Log.w(TAG, "Attempt to retrieve WifiConfiguration with invalid scanResult List");
             return new ParceledListSlice<>(Collections.emptyList());
         }
-        return new ParceledListSlice<>(mWifiThreadRunner.call(
+        return new ParceledListSlice<>(WifiConfigurationUtil.convertMultiTypeConfigsToLegacyConfigs(
+                mWifiThreadRunner.call(
                 () -> mWifiNetworkSuggestionsManager
                         .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
                                 scanResults.getList()), Collections.emptyList(),
-                TAG + "#getWifiConfigForMatchedNetworkSuggestionsSharedWithUser"));
+                TAG + "#getWifiConfigForMatchedNetworkSuggestionsSharedWithUser"), true));
     }
 
     /**
