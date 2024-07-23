@@ -6997,6 +6997,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                 case CMD_IPCLIENT_CREATED: {
                     if (!isFromCurrentIpClientCallbacks(message)) break;
                     mIpClient = (IpClientManager) message.obj;
+                    setMulticastFilter(true);
                     transitionTo(mL3ProvisioningState);
                     break;
                 }
