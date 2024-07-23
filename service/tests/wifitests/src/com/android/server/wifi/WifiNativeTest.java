@@ -43,6 +43,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.validateMockitoUsage;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import android.net.MacAddress;
 import android.net.wifi.CoexUnsafeChannel;
@@ -52,6 +53,7 @@ import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
+import android.net.wifi.WifiMigration;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiScanner.ScanData;
 import android.net.wifi.WifiSsid;
@@ -73,6 +75,7 @@ import com.android.server.wifi.hal.WifiChip;
 import com.android.server.wifi.proto.WifiStatsLog;
 import com.android.server.wifi.util.NativeUtil;
 import com.android.server.wifi.util.NetdWrapper;
+import com.android.wifi.flags.Flags;
 import com.android.wifi.resources.R;
 
 import org.junit.After;
@@ -344,7 +347,11 @@ public class WifiNativeTest extends WifiBaseTest {
         mSession = ExtendedMockito.mockitoSession()
                 .strictness(Strictness.LENIENT)
                 .mockStatic(WifiStatsLog.class)
+                .mockStatic(Flags.class, withSettings().lenient())
+                .mockStatic(WifiMigration.class, withSettings().lenient())
                 .startMocking();
+
+        when(Flags.rsnOverriding()).thenReturn(false);
 
         mWifiNative = new WifiNative(
                 mWifiVendorHal, mStaIfaceHal, mHostapdHal, mWificondControl,
@@ -1819,5 +1826,19 @@ public class WifiNativeTest extends WifiBaseTest {
         assertEquals(status, mWifiNative.setRoamingMode(WIFI_IFACE_NAME,
                 WifiManager.ROAMING_MODE_NORMAL));
         verify(mWifiVendorHal).setRoamingMode(WIFI_IFACE_NAME, WifiManager.ROAMING_MODE_NORMAL);
+    }
+
+    @Test
+    public void testRsnOverridingFeatureFlag() throws Exception {
+        mResources.setBoolean(R.bool.config_wifiRsnOverridingEnabled, true);
+        when(Flags.rsnOverriding()).thenReturn(false);
+        mWifiNative.setupInterfaceForClientInScanMode(null, TEST_WORKSOURCE,
+                mConcreteClientModeManager);
+        assertFalse(mWifiNative.mIsRsnOverridingSupported);
+        mWifiNative.teardownAllInterfaces();
+        when(Flags.rsnOverriding()).thenReturn(true);
+        mWifiNative.setupInterfaceForClientInScanMode(null, TEST_WORKSOURCE,
+                mConcreteClientModeManager);
+        assertTrue(mWifiNative.mIsRsnOverridingSupported);
     }
 }
