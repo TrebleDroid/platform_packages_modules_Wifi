@@ -466,11 +466,13 @@ public class InformationElementUtilTest extends WifiBaseTest {
             InformationElement[] ies,
             int beaconCap,
             boolean isOweSupported,
+            boolean isRsnOverridingSupported,
             String capsStr,
             SparseIntArray unknownAkmMap) {
         InformationElementUtil.Capabilities capabilities =
                 new InformationElementUtil.Capabilities();
-        capabilities.from(ies, beaconCap, isOweSupported, 2400, unknownAkmMap);
+        capabilities.from(ies, beaconCap, isOweSupported, isRsnOverridingSupported, 2400,
+                unknownAkmMap);
         String result = capabilities.generateCapabilitiesString();
 
         assertEquals(capsStr, result);
@@ -484,7 +486,8 @@ public class InformationElementUtilTest extends WifiBaseTest {
             SparseIntArray unknownAkmMap) {
         InformationElement[] ies = new InformationElement[] { ie };
         verifyCapabilityStringFromIes(
-                new InformationElement[] {ie}, beaconCap, isOweSupported, capsStr, unknownAkmMap);
+                new InformationElement[] {ie}, beaconCap, isOweSupported, false, capsStr,
+                unknownAkmMap);
     }
 
     private void verifyCapabilityStringFromIeWithoutOweSupported(
@@ -800,6 +803,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
         verifyCapabilityStringFromIes(
                 ies,
                 0x1 << 4,
+                false,
                 false,
                 "[WPA-PSK-CCMP+TKIP][WPA2-PSK-CCMP+TKIP][RSN-PSK-CCMP+TKIP]",
                 null);
@@ -1130,6 +1134,210 @@ public class InformationElementUtilTest extends WifiBaseTest {
     }
 
     /**
+     * Test Capabilities.generateCapabilitiesString() with RSN, RSNO & RSNO2 element
+     * This configuration is same as a Wi-Fi 7 supported AP configured in
+     * WPA3-Compatibility Mode operating on the 2.4GHz/5GHz.
+     * Expect the function to return a string with the proper security information.
+     */
+    @Test
+    public void buildCapabilities_rsnRsnoAndRsno2Element() {
+        //RSNE Element carries WPA-PSK (AKM: 2)
+        InformationElement ieRsn = new InformationElement();
+        ieRsn.id = InformationElement.EID_RSN;
+        ieRsn.bytes = new byte[] {
+                // RSNE Version (0x0001)
+                (byte) 0x01, (byte) 0x00,
+                // Group cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of pairwise cipher suites (1)
+                (byte) 0x01, (byte) 0x00,
+                // Pairwise Cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of AKMs (1)
+                (byte) 0x01, (byte) 0x00,
+                // PSK AKM
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x02,
+                // RSN capabilities
+                (byte) 0x00, (byte) 0x00,
+        };
+
+        //RSNE Override Element carries SAE (AKM: 8)
+        InformationElement ieRsno = new InformationElement();
+        ieRsno.id = InformationElement.EID_VSA;
+        ieRsno.bytes = new byte[] {
+                // RSNO (OUI type - 0x29) WFA vendor specific IE header
+                (byte) 0x50, (byte) 0x6F, (byte) 0x9A, (byte) 0x29,
+                // RSNE Version (0x0001)
+                (byte) 0x01, (byte) 0x00,
+                // Group cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of pairwise cipher suites (1)
+                (byte) 0x01, (byte) 0x00,
+                // Pairwise Cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of AKMs (1)
+                (byte) 0x01, (byte) 0x00,
+                // SAE AKM
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x08,
+                // RSN capabilities
+                (byte) 0xC0, (byte) 0x00 };
+
+        //RSNE Override Element 2 Element carries SAE_EXT_KEY (AKM: 24)
+        InformationElement ieRsno2 = new InformationElement();
+        ieRsno2.id = InformationElement.EID_VSA;
+        ieRsno2.bytes = new byte[]{
+                // RSNO2 (OUI type - 0x2A) WFA vendor specific IE header
+                (byte) 0x50, (byte) 0x6F, (byte) 0x9A, (byte) 0x2A,
+                // RSNE Version (0x0001)
+                (byte) 0x01, (byte) 0x00,
+                // Group cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of pairwise cipher suites (1)
+                (byte) 0x01, (byte) 0x00,
+                // Cipher suite: GCMP-256
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x09,
+                // Number of AKMs (1)
+                (byte) 0x01, (byte) 0x00,
+                // SAE-EXT-KEY AKM
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x18,
+                // Padding
+                // RSN capabilities
+                (byte) 0xC0, (byte) 0x00,
+        };
+
+        InformationElement[] ies = new InformationElement[] { ieRsn, ieRsno, ieRsno2 };
+
+        verifyCapabilityStringFromIes(
+                ies,
+                0x1 << 4,
+                true,
+                true,
+                "[WPA2-PSK-CCMP][RSN-PSK-CCMP][RSN-SAE-CCMP][RSN-SAE_EXT_KEY-GCMP-256][MFPC][RSNO]",
+                null);
+    }
+
+    /**
+     * Test Capabilities.generateCapabilitiesString() with RSN, RSNO & RSNO2 element
+     * This configuration is same as a Wi-Fi 7 supported AP configured in
+     * WPA3-Compatibility Mode operating on the 6GHz band.
+     * Expect the function to return a string with the proper security information.
+     */
+    @Test
+    public void buildCapabilities_rsnAndRsno2Element() {
+        //RSNE Element carries SAE (AKM: 8)
+        InformationElement ieRsn = new InformationElement();
+        ieRsn.id = InformationElement.EID_RSN;
+        ieRsn.bytes = new byte[] {
+                // RSNE Version (0x0001)
+                (byte) 0x01, (byte) 0x00,
+                // Group cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of pairwise cipher suites (1)
+                (byte) 0x01, (byte) 0x00,
+                // Pairwise Cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of AKMs (1)
+                (byte) 0x01, (byte) 0x00,
+                // SAE AKM
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x08,
+                // RSN capabilities
+                (byte) 0xC0, (byte) 0x00,
+        };
+
+        //RSNE Override Element 2 Element carries SAE_EXT_KEY (AKM: 24)
+        InformationElement ieRsno2 = new InformationElement();
+        ieRsno2.id = InformationElement.EID_VSA;
+        ieRsno2.bytes = new byte[]{
+                // RSNO2 (OUI type - 0x2A) WFA vendor specific IE header
+                (byte) 0x50, (byte) 0x6F, (byte) 0x9A, (byte) 0x2A,
+                // RSNE Version (0x0001)
+                (byte) 0x01, (byte) 0x00,
+                // Group cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of pairwise cipher suites (1)
+                (byte) 0x01, (byte) 0x00,
+                // Cipher suite: GCMP-256
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x09,
+                // Number of AKMs (1)
+                (byte) 0x01, (byte) 0x00,
+                // SAE-EXT-KEY AKM
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x18,
+                // Padding
+                // RSN capabilities
+                (byte) 0xC0, (byte) 0x00,
+        };
+
+        InformationElement[] ies = new InformationElement[] { ieRsn, ieRsno2 };
+
+        verifyCapabilityStringFromIes(
+                ies,
+                0x1 << 4,
+                true,
+                true,
+                "[RSN-SAE-CCMP][RSN-SAE_EXT_KEY-GCMP-256][MFPR][MFPC][RSNO]",
+                null);
+    }
+
+    /**
+     * Test Capabilities.generateCapabilitiesString() without RSN Overriding support.
+     * The AP advertise WPA2 security params in RSN IE and WPA3 security params in RSNO element.
+     * But without the RSN Overriding support, it is expected to return a capabilities string
+     * which contains only WPA2 security params.
+     */
+    @Test
+    public void buildCapabilities_rsnAndRsnoElementWithoutRsnOverridingSupport() {
+        //RSNE Element carries WPA-PSK (AKM: 2)
+        InformationElement ieRsn = new InformationElement();
+        ieRsn.id = InformationElement.EID_RSN;
+        ieRsn.bytes = new byte[] {
+                // RSNE Version (0x0001)
+                (byte) 0x01, (byte) 0x00,
+                // Group cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of pairwise cipher suites (1)
+                (byte) 0x01, (byte) 0x00,
+                // Pairwise Cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of AKMs (1)
+                (byte) 0x01, (byte) 0x00,
+                // PSK AKM
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x02,
+                // RSN capabilities
+                (byte) 0x00, (byte) 0x00,
+        };
+
+        //RSNE Override Element carries SAE (AKM: 8)
+        InformationElement ieRsno = new InformationElement();
+        ieRsno.id = InformationElement.EID_VSA;
+        ieRsno.bytes = new byte[] {
+                // RSNO (OUI type - 0x29) WFA vendor specific IE header
+                (byte) 0x50, (byte) 0x6F, (byte) 0x9A, (byte) 0x29,
+                // RSNE Version (0x0001)
+                (byte) 0x01, (byte) 0x00,
+                // Group cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of pairwise cipher suites (1)
+                (byte) 0x01, (byte) 0x00,
+                // Pairwise Cipher suite: CCMP
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x04,
+                // Number of AKMs (1)
+                (byte) 0x01, (byte) 0x00,
+                // SAE AKM
+                (byte) 0x00, (byte) 0x0F, (byte) 0xAC, (byte) 0x08,
+                // RSN capabilities
+                (byte) 0xC0, (byte) 0x00 };
+        InformationElement[] ies = new InformationElement[] { ieRsn, ieRsno };
+
+        verifyCapabilityStringFromIes(
+                ies,
+                0x1 << 4,
+                true,
+                false,
+                "[WPA2-PSK-CCMP][RSN-PSK-CCMP]",
+                null);
+    }
+
+    /**
      * Test Capabilities.generateCapabilitiesString() with both RSN and WPA1 IE which are malformed.
      * Expect the function to return a string with empty key management & pairswise cipher security
      * information.
@@ -1148,7 +1356,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
                 (byte) 0xF2, (byte) 0x02, (byte) 0x02, (byte) 0x00,
                 (byte) 0x00, (byte) 0x50 };
         InformationElement[] ies = new InformationElement[] { ieWpa, ieRsn };
-        verifyCapabilityStringFromIes(ies, 0x1 << 4, false, "[WPA][RSN]", null);
+        verifyCapabilityStringFromIes(ies, 0x1 << 4, false, false, "[WPA][RSN]", null);
     }
 
     /**
@@ -1172,7 +1380,8 @@ public class InformationElementUtilTest extends WifiBaseTest {
         ieWps.bytes = new byte[] { (byte) 0x00, (byte) 0x50, (byte) 0xF2, (byte) 0x04 };
 
         InformationElement[] ies = new InformationElement[] { ieWpa, ieWps };
-        verifyCapabilityStringFromIes(ies, 0x1 << 4, false, "[WPA-PSK-CCMP+TKIP][WPS]", null);
+        verifyCapabilityStringFromIes(ies, 0x1 << 4, false, false, "[WPA-PSK-CCMP+TKIP][WPS]",
+                null);
     }
 
     /**
@@ -1253,7 +1462,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
 
         InformationElementUtil.Capabilities capabilities =
                 new InformationElementUtil.Capabilities();
-        capabilities.from(new InformationElement[0], beaconCap, false, 2400, null);
+        capabilities.from(new InformationElement[0], beaconCap, false, false, 2400, null);
         String result = capabilities.generateCapabilitiesString();
 
         assertEquals("[IBSS]", result);
@@ -1270,7 +1479,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
 
         InformationElementUtil.Capabilities capabilities =
                 new InformationElementUtil.Capabilities();
-        capabilities.from(new InformationElement[0], beaconCap, false, 58320, null);
+        capabilities.from(new InformationElement[0], beaconCap, false, false, 58320, null);
         String result = capabilities.generateCapabilitiesString();
 
         assertEquals("[IBSS]", result);
@@ -1287,7 +1496,7 @@ public class InformationElementUtilTest extends WifiBaseTest {
 
         InformationElementUtil.Capabilities capabilities =
                 new InformationElementUtil.Capabilities();
-        capabilities.from(new InformationElement[0], beaconCap, false, 58320, null);
+        capabilities.from(new InformationElement[0], beaconCap, false, false, 58320, null);
         String result = capabilities.generateCapabilitiesString();
 
         assertEquals("[ESS]", result);

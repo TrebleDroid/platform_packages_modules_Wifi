@@ -363,6 +363,33 @@ public class ScanResultUtilTest {
     }
 
     /**
+     * Test that a network configured in WPA3-Compatibility mode is detected as WPA3-transition mode
+     */
+    @Test
+    public void testWPA3CompatibilityModeNetwork() {
+        final String ssid = "WPA3-Compatibility";
+        String caps = "[WPA2-PSK-CCMP][RSN-PSK-CCMP][RSN-SAE-CCMP][MFPC][RSNO]";
+
+        ScanResult input = new ScanResult.Builder(WifiSsid.fromUtf8Text(ssid),
+                "ab:cd:01:ef:45:89")
+                .setHessid(1245)
+                .setCaps(caps)
+                .setRssi(-78)
+                .setFrequency(2450)
+                .setTsf(1025)
+                .setDistanceCm(22)
+                .setDistanceSdCm(33)
+                .setIs80211McRTTResponder(true)
+                .build();
+
+        input.informationElements = new InformationElement[] {
+                createIE(InformationElement.EID_SSID, ssid.getBytes(StandardCharsets.UTF_8))
+        };
+
+        assertTrue(ScanResultUtil.isScanResultForPskSaeTransitionNetwork(input));
+    }
+
+    /**
      * Test that a PSK network is not detected as transition mode
      */
     @Test
