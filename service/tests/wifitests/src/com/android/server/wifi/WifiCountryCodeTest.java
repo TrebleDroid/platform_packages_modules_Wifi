@@ -17,6 +17,7 @@
 package com.android.server.wifi;
 
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_PRIMARY;
+import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SCAN_ONLY;
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_LONG_LIVED;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_DEFAULT_COUNTRY_CODE;
 
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -283,7 +285,6 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         verify(mClientModeManager, times(2)).setCountryCode(anyString());
         assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
     }
-
 
     /**
      * Test if we receive country code from Telephony after supplicant stop.
@@ -770,5 +771,57 @@ public class WifiCountryCodeTest extends WifiBaseTest {
         when(mSettingsConfigStore.get(WIFI_DEFAULT_COUNTRY_CODE)).thenReturn(mDefaultCountryCode);
         mWifiCountryCode.updateCountryCodeFromScanResults(mScanDetails);
         assertEquals(mDefaultCountryCode, mWifiCountryCode.getCountryCode());
+    }
+
+    /**
+     * Test if we receive country code from Telephony after supplicant stop.
+     */
+    @Test
+    public void testCountryCodeDoesntChangeWhenIfClientModeChanged() {
+        // Start in scan only mode.
+        mModeChangeCallbackCaptor.getValue().onActiveModeManagerAdded(mClientModeManager);
+        assertEquals(mDefaultCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
+        // Supplicant starts.
+        when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
+        mModeChangeCallbackCaptor.getValue().onActiveModeManagerRoleChanged(mClientModeManager);
+        assertEquals(mDefaultCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
+        verify(mClientModeManager).setCountryCode(mDefaultCountryCode);
+        assertEquals(mDefaultCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
+
+        reset(mClientModeManager);
+        when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
+        // Wifi is connected and disconnected but there is no CC changed again
+        mClientModeImplListenerCaptor.getValue().onConnectionStart(mClientModeManager);
+        mClientModeImplListenerCaptor.getValue().onConnectionEnd(mClientModeManager);
+        verify(mClientModeManager, never()).setCountryCode(anyString());
+
+        when(mClientModeManager.setCountryCode(anyString())).thenReturn(false);
+        when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_SCAN_ONLY);
+        // Telephony country code arrives but set country code fail due to mode is being
+        // changed to scan mode.
+        mModeChangeCallbackCaptor.getValue().onActiveModeManagerRoleChanged(mClientModeManager);
+        mWifiCountryCode.setTelephonyCountryCodeAndUpdate(mTelephonyCountryCode);
+        verify(mClientModeManager).setCountryCode(mTelephonyCountryCode);
+        assertEquals(mDefaultCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
+
+        reset(mClientModeManager);
+        when(mClientModeManager.setCountryCode(anyString())).thenReturn(true);
+        when(mClientModeManager.getRole()).thenReturn(ROLE_CLIENT_PRIMARY);
+        doAnswer((invocation) -> {
+            if (SdkLevel.isAtLeastS()) {
+                mChangeListenerCaptor.getValue()
+                        .onSetCountryCodeSucceeded(mSetCountryCodeCaptor.getValue());
+            }
+            if (mDriverSupportedNl80211RegChangedEvent) {
+                mChangeListenerCaptor.getValue()
+                        .onDriverCountryCodeChanged(mSetCountryCodeCaptor.getValue());
+            }
+            return true;
+        }).when(mClientModeManager).setCountryCode(
+                    mSetCountryCodeCaptor.capture());
+        // Mode is added back, country code should update to telephony country code.
+        mModeChangeCallbackCaptor.getValue().onActiveModeManagerRoleChanged(mClientModeManager);
+        verify(mClientModeManager).setCountryCode(mTelephonyCountryCode);
+        assertEquals(mTelephonyCountryCode, mWifiCountryCode.getCurrentDriverCountryCode());
     }
 }
