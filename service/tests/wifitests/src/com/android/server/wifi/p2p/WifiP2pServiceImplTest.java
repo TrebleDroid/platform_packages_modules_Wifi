@@ -7609,6 +7609,33 @@ public class WifiP2pServiceImplTest extends WifiBaseTest {
                 WpsInfo.PBC, WifiP2pManager.CONNECTION_REQUEST_ACCEPT);
     }
 
+    /**
+     * Verify sunny scenario for setConnectionRequestResult show pin event.
+     */
+    @Test
+    public void testSetConnectionRequestResultSuccessShowPin() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        forceP2pEnabled(mClient1);
+        Binder binder = new Binder();
+        verifyAddExternalApprover(binder, true, true,
+                MacAddress.fromString(mTestWifiP2pDevice.deviceAddress));
+
+        WifiP2pProvDiscEvent pdEvent = new WifiP2pProvDiscEvent();
+        pdEvent.device = mTestWifiP2pDevice;
+        pdEvent.pin = "pin";
+        sendSimpleMsg(null,
+                WifiP2pMonitor.P2P_PROV_DISC_SHOW_PIN_EVENT,
+                pdEvent);
+        mLooper.dispatchAll();
+
+        sendSetConnectionRequestResultMsg(mClientMessenger,
+                MacAddress.fromString(mTestWifiP2pDevice.deviceAddress),
+                WifiP2pManager.CONNECTION_REQUEST_ACCEPT, binder);
+
+        verify(mWifiNative).p2pConnect(any(), anyBoolean());
+        verify(mWifiNative, never()).p2pStopFind();
+    }
+
     private void verifyMultiApproverMatch(List<MacAddress> addresses, MacAddress expectedMatch)
             throws Exception {
         when(mWifiPermissionsUtil.checkManageWifiNetworkSelectionPermission(anyInt()))
