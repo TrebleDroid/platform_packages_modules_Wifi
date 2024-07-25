@@ -16,7 +16,13 @@
 
 package com.android.server.wifi.nl80211;
 
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_FAMILY_ID;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_FAMILY_NAME;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_CMD_GETFAMILY;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_CMD_NEWFAMILY;
+import static com.android.server.wifi.nl80211.NetlinkConstants.GENL_ID_CTRL;
 import static com.android.server.wifi.nl80211.NetlinkConstants.NETLINK_GENERIC;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_GENL_NAME;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -24,6 +30,8 @@ import android.system.ErrnoException;
 import android.util.Log;
 
 import com.android.net.module.util.netlink.NetlinkUtils;
+import com.android.net.module.util.netlink.StructNlAttr;
+import com.android.net.module.util.netlink.StructNlMsgHdr;
 
 import java.io.FileDescriptor;
 import java.io.InterruptedIOException;
@@ -40,8 +48,14 @@ public class Nl80211Proxy {
 
     private boolean mIsInitialized;
     private FileDescriptor mNetlinkFd;
+    private short mNl80211FamilyId;
+    private int mSequenceNumber;
 
     public Nl80211Proxy() {}
+
+    private int getSequenceNumber() {
+        return mSequenceNumber++;
+    }
 
     protected static FileDescriptor createNetlinkFileDescriptor() {
         try {
@@ -103,10 +117,12 @@ public class Nl80211Proxy {
      */
     public boolean initialize() {
         mNetlinkFd = createNetlinkFileDescriptor();
-        if (mNetlinkFd != null) {
-            mIsInitialized = true;
-        }
-        return mIsInitialized;
+        if (mNetlinkFd == null) return false;
+        if (!retrieveNl80211FamilyInfo()) return false;
+
+        Log.i(TAG, "Initialization was successful");
+        mIsInitialized = true;
+        return true;
     }
 
     /**
@@ -148,5 +164,51 @@ public class Nl80211Proxy {
             return null;
         }
         return responses.get(0);
+    }
+
+    /**
+     * Retrieve and store the family information for Nl80211.
+     *
+     * @return true if the information was retrieved successfully, false otherwise
+     */
+    private boolean retrieveNl80211FamilyInfo() {
+        GenericNetlinkMsg request = new GenericNetlinkMsg(
+                CTRL_CMD_GETFAMILY, GENL_ID_CTRL, StructNlMsgHdr.NLM_F_REQUEST,
+                getSequenceNumber());
+        request.addAttribute(new StructNlAttr(CTRL_ATTR_FAMILY_NAME, NL80211_GENL_NAME));
+
+        GenericNetlinkMsg response = sendMessageAndReceiveResponse(request);
+        if (response == null || !response.verifyFields(CTRL_CMD_NEWFAMILY, CTRL_ATTR_FAMILY_ID)) {
+            Log.e(TAG, "Unable to request family information");
+            return false;
+        }
+
+        Short familyId = response.getAttributeValueAsShort(CTRL_ATTR_FAMILY_ID);
+        if (familyId == null) {
+            Log.e(TAG, "Unable to retrieve the Nl80211 family id");
+            return false;
+        }
+        mNl80211FamilyId = familyId;
+        return true;
+    }
+
+    /**
+     * Wrapper to construct an Nl80211 request message.
+     *
+     * @param command Command ID for this request.
+     * @return Nl80211 message, or null if the Nl80211Proxy has not been initialized
+     */
+    public @Nullable GenericNetlinkMsg createNl80211Request(
+            short command, StructNlAttr... attributes) {
+        if (!mIsInitialized) {
+            Log.e(TAG, "Instance has not been initialized");
+            return null;
+        }
+        GenericNetlinkMsg request = new GenericNetlinkMsg(
+                command, mNl80211FamilyId, StructNlMsgHdr.NLM_F_REQUEST, getSequenceNumber());
+        for (StructNlAttr attribute : attributes) {
+            request.addAttribute(attribute);
+        }
+        return request;
     }
 }

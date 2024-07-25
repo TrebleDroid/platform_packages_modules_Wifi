@@ -16,6 +16,12 @@
 
 package com.android.server.wifi.nl80211;
 
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_FAMILY_ID;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_CMD_NEWFAMILY;
+import static com.android.server.wifi.nl80211.NetlinkConstants.GENL_ID_CTRL;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -29,6 +35,7 @@ import android.system.Os;
 
 import com.android.dx.mockito.inline.extended.ExtendedMockito;
 import com.android.net.module.util.netlink.NetlinkUtils;
+import com.android.net.module.util.netlink.StructNlAttr;
 
 import org.junit.After;
 import org.junit.Before;
@@ -45,6 +52,8 @@ import java.nio.ByteBuffer;
  * Unit tests for {@link Nl80211Proxy}.
  */
 public class Nl80211ProxyTest {
+    private static final short TEST_FAMILY_ID = 25;
+
     private Nl80211Proxy mDut;
     private MockitoSession mSession;
 
@@ -61,7 +70,7 @@ public class Nl80211ProxyTest {
                 .startMocking();
         when(NetlinkUtils.netlinkSocketForProto(anyInt())).thenReturn(mFileDescriptor);
         mDut = new Nl80211Proxy();
-        assertTrue(mDut.initialize());
+        initializeDut();
     }
 
     @After
@@ -70,6 +79,15 @@ public class Nl80211ProxyTest {
         if (mSession != null) {
             mSession.finishMocking();
         }
+    }
+
+    private void initializeDut() throws Exception {
+        GenericNetlinkMsg familyResponse = new GenericNetlinkMsg(
+                CTRL_CMD_NEWFAMILY, GENL_ID_CTRL, (short) 0, 0);
+        familyResponse.addAttribute(
+                new StructNlAttr(CTRL_ATTR_FAMILY_ID, TEST_FAMILY_ID));
+        setResponseMessage(familyResponse);
+        assertTrue(mDut.initialize());
     }
 
     /**
@@ -98,5 +116,21 @@ public class Nl80211ProxyTest {
         GenericNetlinkMsg requestMsg = Nl80211TestUtils.createTestMessage();
         GenericNetlinkMsg receivedResponse = mDut.sendMessageAndReceiveResponse(requestMsg);
         assertTrue(expectedResponse.equals(receivedResponse));
+    }
+
+    /**
+     * Test that an Nl80211 request can be created once the Nl80211Proxy has been initialized.
+     */
+    @Test
+    public void testCreateNl80211Request() throws Exception {
+        // Expect failure if the Nl80211Proxy has not been initialized
+        mDut = new Nl80211Proxy();
+        assertNull(mDut.createNl80211Request(Nl80211TestUtils.TEST_COMMAND));
+
+        // Expect that the message can be created after initialization,
+        // since the Nl80211 family ID has been retrieved
+        initializeDut();
+        GenericNetlinkMsg message = mDut.createNl80211Request(Nl80211TestUtils.TEST_COMMAND);
+        assertEquals(TEST_FAMILY_ID, message.nlHeader.nlmsg_type);
     }
 }
