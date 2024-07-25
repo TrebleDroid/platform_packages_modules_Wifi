@@ -2178,6 +2178,31 @@ public class WifiCarrierInfoManager {
         return enabled;
     }
 
+    /**
+     * Return true if there is one or more SIMs' mobile data is enabled.
+     */
+    public boolean isMobileDataEnabled() {
+        if (mActiveSubInfos == null) {
+            return false;
+        }
+        for (SubscriptionInfo info : mActiveSubInfos) {
+            if (isMobileDataEnabled(info.getSubscriptionId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Return true if there is one or more active SubInfo.
+     */
+    public boolean hasActiveSubInfo() {
+        if (mActiveSubInfos == null || mActiveSubInfos.isEmpty()) {
+            return false;
+        }
+        return true;
+    }
+
     private void saveToStore() {
         // Set the flag to let WifiConfigStore that we have new data to write.
         mHasNewUserDataToSerialize = true;

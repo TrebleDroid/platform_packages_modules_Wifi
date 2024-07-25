@@ -34,6 +34,12 @@ import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_LO
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_SECONDARY_TRANSIENT;
 import static com.android.server.wifi.WifiSettingsConfigStore.SECONDARY_WIFI_STA_FACTORY_MAC_ADDRESS;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_STA_FACTORY_MAC_ADDRESS;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_LOCAL_ONLY;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_OTHERS;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_PRIMARY;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_INTERNET;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_LONG_LIVED;
+import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_TRANSIENT;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_DISCONNECT_REPORTED__FAILURE_CODE__SUPPLICANT_DISCONNECTED;
 
 import android.annotation.IntDef;
@@ -696,7 +702,6 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
     @VisibleForTesting
     public static final int EAP_FAILURE_CODE_CERTIFICATE_EXPIRED = 32768;
     private boolean mCurrentConnectionReportedCertificateExpired = false;
-
 
     /** Note that this constructor will also start() the StateMachine. */
     public ClientModeImpl(
@@ -2898,6 +2903,9 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         mWifiInfo.setSuccessfulRxPacketsPerSecond(0);
         mWifiScoreReport.reset();
         mLastLinkLayerStats = null;
+        if (isPrimary()) {
+            mWifiMetrics.resetWifiUnusableEvent();
+        }
         updateCurrentConnectionInfo();
     }
 
@@ -3747,19 +3755,18 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         ActiveModeManager.ClientRole clientRole = mClientModeManager.getRole();
         if (clientRole == ROLE_CLIENT_PRIMARY) {
             return config != null && config.fromWifiNetworkSpecifier
-                    ? WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_LOCAL_ONLY
-                    : WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_PRIMARY;
+                    ? WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_LOCAL_ONLY
+                    : WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_PRIMARY;
         } else if (clientRole == ROLE_CLIENT_LOCAL_ONLY) {
-            return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_LOCAL_ONLY;
+            return WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_LOCAL_ONLY;
         } else if (clientRole == ROLE_CLIENT_SECONDARY_LONG_LIVED) {
             return mClientModeManager.isSecondaryInternet()
-                    ? WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_INTERNET
-                    : WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_LONG_LIVED;
+                    ? WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_INTERNET
+                    : WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_LONG_LIVED;
         } else if (clientRole == ROLE_CLIENT_SECONDARY_TRANSIENT) {
-            return WifiStatsLog
-                    .WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_TRANSIENT;
+            return WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_SECONDARY_TRANSIENT;
         }
-        return WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_OTHERS;
+        return WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_OTHERS;
     }
 
     /**
@@ -6909,6 +6916,17 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
             int statusDataStall = mWifiDataStall.checkDataStallAndThroughputSufficiency(
                     mInterfaceName, mLastConnectionCapabilities, mLastLinkLayerStats, stats,
                     mWifiInfo, txBytes, rxBytes);
+            if (getClientRoleForMetrics(getConnectedWifiConfiguration())
+                    == WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_PRIMARY) {
+                mWifiMetrics.logScorerPredictionResult(mWifiInjector.hasActiveModem(),
+                        mWifiCarrierInfoManager.hasActiveSubInfo(),
+                        mWifiCarrierInfoManager.isMobileDataEnabled(),
+                        mWifiGlobals.getPollRssiIntervalMillis(),
+                        mWifiScoreReport.getAospScorerPredictionStatusForEvaluation(),
+                        mWifiScoreReport.getExternalScorerPredictionStatusForEvaluation());
+                mWifiScoreReport.clearScorerPredictionStatusForEvaluation();
+            }
+
             if (mDataStallTriggerTimeMs == -1
                     && statusDataStall != WifiIsUnusableEvent.TYPE_UNKNOWN) {
                 mDataStallTriggerTimeMs = mClock.getElapsedSinceBootMillis();

@@ -21,6 +21,18 @@ import static android.net.wifi.WifiConfiguration.MeteredOverride;
 import static com.android.server.wifi.ActiveModeManager.ROLE_CLIENT_PRIMARY;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_CONFIG_SAVED;
 import static com.android.server.wifi.proto.WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_SIM_INSERTED;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_SCORING_DISABLED;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_OFF;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_UNAVAILABLE;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_OTHERS;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FRAMEWORK_DATA_STALL;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FIRMWARE_ALERT;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_IP_REACHABILITY_LOST;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE;
+
 
 import static java.lang.StrictMath.toIntExact;
 
@@ -301,6 +313,8 @@ public class WifiMetrics {
     private boolean mFirstConnectionAfterBoot = true;
     private long mLastTotalBeaconRx = 0;
     private int mScorerUid = Process.WIFI_UID;
+    @VisibleForTesting
+    int mUnusableEventType = WifiIsUnusableEvent.TYPE_UNKNOWN;
 
     /**
      * Wi-Fi usability state per interface as predicted by the network scorer.
@@ -6936,6 +6950,7 @@ public class WifiMetrics {
 
         WifiIsUnusableEvent event = new WifiIsUnusableEvent();
         event.type = triggerType;
+        mUnusableEventType = triggerType;
         if (triggerType == WifiIsUnusableEvent.TYPE_FIRMWARE_ALERT) {
             event.firmwareAlertCode = firmwareAlertCode;
         }
@@ -8768,6 +8783,87 @@ public class WifiMetrics {
         synchronized (mLock) {
             mAdaptiveConnectivityEnabled = adaptiveConnectivityEnabled;
         }
+    }
+
+    @VisibleForTesting
+    int getDeviceStateForScorer(boolean hasActiveModem, boolean hasActiveSubInfo,
+            boolean isMobileDataEnabled, boolean isCellularDataAvailable,
+            boolean adaptiveConnectivityEnabled) {
+        if (!hasActiveModem) {
+            return SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_CELLULAR_MODEM;
+        }
+        if (!hasActiveSubInfo) {
+            return SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_NO_SIM_INSERTED;
+        }
+        if (!adaptiveConnectivityEnabled) {
+            return SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_SCORING_DISABLED;
+        }
+        if (!isMobileDataEnabled) {
+            return SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_OFF;
+        }
+        if (!isCellularDataAvailable) {
+            return SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_UNAVAILABLE;
+        }
+        return SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_OTHERS;
+    }
+
+    @VisibleForTesting
+    int convertWifiUnusableTypeForScorer(int triggerType) {
+        switch (triggerType) {
+            case WifiIsUnusableEvent.TYPE_DATA_STALL_BAD_TX:
+            case WifiIsUnusableEvent.TYPE_DATA_STALL_TX_WITHOUT_RX:
+            case WifiIsUnusableEvent.TYPE_DATA_STALL_BOTH:
+                return SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FRAMEWORK_DATA_STALL;
+            case WifiIsUnusableEvent.TYPE_FIRMWARE_ALERT:
+                return SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FIRMWARE_ALERT;
+            case WifiIsUnusableEvent.TYPE_IP_REACHABILITY_LOST:
+                return SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_IP_REACHABILITY_LOST;
+            default:
+                return SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE;
+        }
+    }
+
+    /**
+     * Log a ScorerPredictionResultReported atom.
+     */
+    public void logScorerPredictionResult(boolean hasActiveModem,
+            boolean hasActiveSubInfo,
+            boolean isMobileDataEnabled,
+            int pollingIntervalMs,
+            int aospScorerPrediction,
+            int externalScorerPrediction) {
+        boolean isCellularDataAvailable = mWifiDataStall.isCellularDataAvailable();
+        boolean isThroughputSufficient = mWifiDataStall.isThroughputSufficient();
+        int deviceState = getDeviceStateForScorer(
+                hasActiveModem,
+                hasActiveSubInfo, isMobileDataEnabled, isCellularDataAvailable,
+                mAdaptiveConnectivityEnabled);
+
+        int scorerUnusableEvent = convertWifiUnusableTypeForScorer(mUnusableEventType);
+        WifiStatsLog.write_non_chained(SCORER_PREDICTION_RESULT_REPORTED,
+                    Process.WIFI_UID,
+                    null,
+                    aospScorerPrediction,
+                    scorerUnusableEvent,
+                    isThroughputSufficient, deviceState, pollingIntervalMs);
+        if (mScorerUid != Process.WIFI_UID) {
+            WifiStatsLog.write_non_chained(SCORER_PREDICTION_RESULT_REPORTED,
+                    mScorerUid,
+                    null, // TODO(b/354737760): log the attribution tag
+                    externalScorerPrediction,
+                    scorerUnusableEvent,
+                    isThroughputSufficient, deviceState, pollingIntervalMs);
+        }
+
+        // We'd better reset to TYPE_NONE if it is defined in the future.
+        mUnusableEventType = WifiIsUnusableEvent.TYPE_UNKNOWN;
+    }
+
+    /**
+     * Clear the saved unusable event type.
+     */
+    public void resetWifiUnusableEvent() {
+        mUnusableEventType = WifiIsUnusableEvent.TYPE_UNKNOWN;
     }
 
     /**
