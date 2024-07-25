@@ -115,6 +115,8 @@ java_defaults {
         "app-compat-annotations",
         // Add aconfig-annotations-lib as a dependency for the optimization
         "aconfig-annotations-lib",
+        // library for generated flag code read new storage
+        "aconfig_storage_reader_java",
         "framework-configinfrastructure",
     ],
     aidl: {
