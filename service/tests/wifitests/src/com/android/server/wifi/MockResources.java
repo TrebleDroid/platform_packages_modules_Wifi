@@ -95,6 +95,11 @@ public class MockResources extends android.test.mock.MockResources {
         return 0;
     }
 
+    @Override
+    public String getResourceEntryName(int id) {
+        return String.valueOf(id);
+    }
+
     public void setBoolean(int id, boolean value) {
         mBooleanValues.put(id, value);
     }
