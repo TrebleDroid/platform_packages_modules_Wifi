@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 import android.net.wifi.WifiContext;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.Handler;
 import android.os.test.TestLooper;
 
@@ -63,6 +64,7 @@ public class RssiMonitorTest extends WifiBaseTest {
     private TestLooper mLooper;
     @Mock WifiContext mContext;
     MockResources mMockResources = new MockResources();
+    WifiResourceCache mWifiResourceCache;
     private final WifiInfo mWifiInfo = new ExtendedWifiInfo(mWifiGlobals, TEST_INTERFACE_NAME);
     @Mock WifiNative mWifiNative;
     @Mock Runnable mUpdateCapabilityRunnable;
@@ -76,6 +78,8 @@ public class RssiMonitorTest extends WifiBaseTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         when(mContext.getResources()).thenReturn(mMockResources);
+        mWifiResourceCache = new WifiResourceCache(mContext);
+        when(mContext.getResourceCache()).thenReturn(mWifiResourceCache);
         when(mDeviceConfigFacade.isAdjustPollRssiIntervalEnabled()).thenReturn(true);
 
         mMockResources.setInteger(R.integer.config_wifiPollRssiIntervalMilliseconds,
