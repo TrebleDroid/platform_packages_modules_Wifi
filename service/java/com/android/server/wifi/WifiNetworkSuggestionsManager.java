@@ -1946,13 +1946,6 @@ public class WifiNetworkSuggestionsManager {
      */
     public @NonNull List<WifiConfiguration> getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
             List<ScanResult> scanResults) {
-        // Create a temporary look-up table.
-        // As they are all single type configurations, they should have unique keys.
-        Map<String, WifiConfiguration> wifiConfigMap = new HashMap<>();
-        WifiConfigurationUtil.convertMultiTypeConfigsToLegacyConfigs(
-                mWifiConfigManager.getConfiguredNetworks(), true)
-                        .forEach(c -> wifiConfigMap.put(c.getProfileKey(), c));
-
         // Create a HashSet to avoid return multiple result for duplicate ScanResult.
         Set<String> networkKeys = new HashSet<>();
         List<WifiConfiguration> sharedWifiConfigs = new ArrayList<>();
@@ -1996,7 +1989,8 @@ public class WifiNetworkSuggestionsManager {
                         config, ewns.perAppInfo.packageName)) {
                     continue;
                 }
-                WifiConfiguration wCmWifiConfig = wifiConfigMap.get(config.getProfileKey());
+                WifiConfiguration wCmWifiConfig = mWifiConfigManager
+                        .getConfiguredNetwork(config.getProfileKey());
                 if (wCmWifiConfig == null) {
                     continue;
                 }
