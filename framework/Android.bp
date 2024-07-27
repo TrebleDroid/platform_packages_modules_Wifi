@@ -105,6 +105,7 @@ java_defaults {
     defaults: ["wifi-module-sdk-version-defaults"],
     static_libs: [
         "framework-wifi-util-lib",
+        "net-utils-framework-wifi",
         "android.hardware.wifi-V1.0-java-constants",
         "wifi-modules-utils",
         "PlatformProperties",
@@ -115,6 +116,8 @@ java_defaults {
         "app-compat-annotations",
         // Add aconfig-annotations-lib as a dependency for the optimization
         "aconfig-annotations-lib",
+        // library for generated flag code read new storage
+        "aconfig_storage_reader_java",
         "framework-configinfrastructure",
     ],
     aidl: {

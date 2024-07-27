@@ -40,6 +40,7 @@ public class WifiResourceCache {
     private final Map<String, Integer> mResourceNameMap;
 
     private int mTempId = -1;
+    private final Object mLock = new Object();
 
     public WifiResourceCache(Context context) {
         mContext = context;
@@ -57,110 +58,120 @@ public class WifiResourceCache {
      * Get and cache the boolean value as {@link android.content.res.Resources#getBoolean(int)}
      */
     public boolean getBoolean(int resourceId) {
-        if (mBooleanResourceMap.containsKey(resourceId)) {
-            return mBooleanResourceMap.get(resourceId);
-        }
+        synchronized (mLock) {
+            if (mBooleanResourceMap.containsKey(resourceId)) {
+                return mBooleanResourceMap.get(resourceId);
+            }
 
-        String resourceName = mContext.getResources().getResourceEntryName(resourceId);
-        if (mResourceNameMap.containsKey(resourceName)) {
-            int tempId = mResourceNameMap.get(resourceName);
-            boolean value = mBooleanResourceMap.get(tempId);
-            mBooleanResourceMap.put(resourceId, value);
-            mBooleanResourceMap.remove(tempId);
+            String resourceName = mContext.getResources().getResourceEntryName(resourceId);
+            if (mResourceNameMap.containsKey(resourceName)) {
+                int tempId = mResourceNameMap.get(resourceName);
+                boolean value = mBooleanResourceMap.get(tempId);
+                mBooleanResourceMap.put(resourceId, value);
+                mBooleanResourceMap.remove(tempId);
+                mResourceNameMap.put(resourceName, resourceId);
+                return value;
+            }
             mResourceNameMap.put(resourceName, resourceId);
-            return value;
+            return mBooleanResourceMap.computeIfAbsent(resourceId,
+                    v -> mContext.getResources().getBoolean(resourceId));
         }
-        mResourceNameMap.put(resourceName, resourceId);
-        return mBooleanResourceMap.computeIfAbsent(resourceId,
-                v -> mContext.getResources().getBoolean(resourceId));
     }
 
     /**
      * Get and cache the integer value as {@link android.content.res.Resources#getInteger(int)}
      */
     public int getInteger(int resourceId) {
-        if (mIntegerResourceMap.containsKey(resourceId)) {
-            return mIntegerResourceMap.get(resourceId);
-        }
+        synchronized (mLock) {
+            if (mIntegerResourceMap.containsKey(resourceId)) {
+                return mIntegerResourceMap.get(resourceId);
+            }
 
-        String resourceName = mContext.getResources().getResourceEntryName(resourceId);
-        if (mResourceNameMap.containsKey(resourceName)) {
-            int tempId = mResourceNameMap.get(resourceName);
-            int value = mIntegerResourceMap.get(tempId);
-            mIntegerResourceMap.put(resourceId, value);
-            mIntegerResourceMap.remove(tempId);
+            String resourceName = mContext.getResources().getResourceEntryName(resourceId);
+            if (mResourceNameMap.containsKey(resourceName)) {
+                int tempId = mResourceNameMap.get(resourceName);
+                int value = mIntegerResourceMap.get(tempId);
+                mIntegerResourceMap.put(resourceId, value);
+                mIntegerResourceMap.remove(tempId);
+                mResourceNameMap.put(resourceName, resourceId);
+                return value;
+            }
             mResourceNameMap.put(resourceName, resourceId);
-            return value;
+            return mIntegerResourceMap.computeIfAbsent(resourceId,
+                    v -> mContext.getResources().getInteger(resourceId));
         }
-        mResourceNameMap.put(resourceName, resourceId);
-        return mIntegerResourceMap.computeIfAbsent(resourceId,
-                v -> mContext.getResources().getInteger(resourceId));
     }
 
     /**
      * Get and cache the integer value as {@link android.content.res.Resources#getString(int)}
      */
     public String getString(int resourceId) {
-        if (mStringResourceMap.containsKey(resourceId)) {
-            return mStringResourceMap.get(resourceId);
-        }
+        synchronized (mLock) {
+            if (mStringResourceMap.containsKey(resourceId)) {
+                return mStringResourceMap.get(resourceId);
+            }
 
-        String resourceName = mContext.getResources().getResourceEntryName(resourceId);
-        if (mResourceNameMap.containsKey(resourceName)) {
-            int tempId = mResourceNameMap.get(resourceName);
-            String value = mStringResourceMap.get(tempId);
-            mStringResourceMap.put(resourceId, value);
-            mStringResourceMap.remove(tempId);
+            String resourceName = mContext.getResources().getResourceEntryName(resourceId);
+            if (mResourceNameMap.containsKey(resourceName)) {
+                int tempId = mResourceNameMap.get(resourceName);
+                String value = mStringResourceMap.get(tempId);
+                mStringResourceMap.put(resourceId, value);
+                mStringResourceMap.remove(tempId);
+                mResourceNameMap.put(resourceName, resourceId);
+                return value;
+            }
             mResourceNameMap.put(resourceName, resourceId);
-            return value;
+            return mStringResourceMap.computeIfAbsent(resourceId,
+                    v -> mContext.getResources().getString(resourceId));
         }
-        mResourceNameMap.put(resourceName, resourceId);
-        return mStringResourceMap.computeIfAbsent(resourceId,
-                v -> mContext.getResources().getString(resourceId));
     }
 
     /**
      * Get and cache the integer value as {@link android.content.res.Resources#getStringArray(int)}
      */
     public String[] getStringArray(int resourceId) {
-        if (mStringArrayResourceMap.containsKey(resourceId)) {
-            return mStringArrayResourceMap.get(resourceId);
-        }
+        synchronized (mLock) {
+            if (mStringArrayResourceMap.containsKey(resourceId)) {
+                return mStringArrayResourceMap.get(resourceId);
+            }
 
-        String resourceName = mContext.getResources().getResourceEntryName(resourceId);
-        if (mResourceNameMap.containsKey(resourceName)) {
-            int tempId = mResourceNameMap.get(resourceName);
-            String[] value = mStringArrayResourceMap.get(tempId);
-            mStringArrayResourceMap.put(resourceId, value);
-            mStringArrayResourceMap.remove(tempId);
+            String resourceName = mContext.getResources().getResourceEntryName(resourceId);
+            if (mResourceNameMap.containsKey(resourceName)) {
+                int tempId = mResourceNameMap.get(resourceName);
+                String[] value = mStringArrayResourceMap.get(tempId);
+                mStringArrayResourceMap.put(resourceId, value);
+                mStringArrayResourceMap.remove(tempId);
+                mResourceNameMap.put(resourceName, resourceId);
+                return value;
+            }
             mResourceNameMap.put(resourceName, resourceId);
-            return value;
+            return mStringArrayResourceMap.computeIfAbsent(resourceId,
+                    v -> mContext.getResources().getStringArray(resourceId));
         }
-        mResourceNameMap.put(resourceName, resourceId);
-        return mStringArrayResourceMap.computeIfAbsent(resourceId,
-                v -> mContext.getResources().getStringArray(resourceId));
     }
 
     /**
      * Get and cache the integer value as {@link android.content.res.Resources#getIntArray(int)}
      */
     public int[] getIntArray(int resourceId) {
-        if (mIntArrayResourceMap.containsKey(resourceId)) {
-            return mIntArrayResourceMap.get(resourceId);
-        }
+        synchronized (mLock) {
+            if (mIntArrayResourceMap.containsKey(resourceId)) {
+                return mIntArrayResourceMap.get(resourceId);
+            }
 
-        String resourceName = mContext.getResources().getResourceEntryName(resourceId);
-        if (mResourceNameMap.containsKey(resourceName)) {
-            int tempId = mResourceNameMap.get(resourceName);
-            int[] value = mIntArrayResourceMap.get(tempId);
-            mIntArrayResourceMap.put(resourceId, value);
-            mIntArrayResourceMap.remove(tempId);
+            String resourceName = mContext.getResources().getResourceEntryName(resourceId);
+            if (mResourceNameMap.containsKey(resourceName)) {
+                int tempId = mResourceNameMap.get(resourceName);
+                int[] value = mIntArrayResourceMap.get(tempId);
+                mIntArrayResourceMap.put(resourceId, value);
+                mIntArrayResourceMap.remove(tempId);
+                mResourceNameMap.put(resourceName, resourceId);
+                return value;
+            }
             mResourceNameMap.put(resourceName, resourceId);
-            return value;
+            return mIntArrayResourceMap.computeIfAbsent(resourceId,
+                    v -> mContext.getResources().getIntArray(resourceId));
         }
-        mResourceNameMap.put(resourceName, resourceId);
-        return mIntArrayResourceMap.computeIfAbsent(resourceId,
-                v -> mContext.getResources().getIntArray(resourceId));
     }
 
     /**
@@ -170,15 +181,19 @@ public class WifiResourceCache {
      * @param value        override to this value
      */
     public void overrideBooleanValue(String resourceName, boolean value) {
-        int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
-        mBooleanResourceMap.put(resourceId, value);
+        synchronized (mLock) {
+            int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
+            mBooleanResourceMap.put(resourceId, value);
+        }
     }
 
     /**
      * Override the target boolean value
      */
     public void restoreBooleanValue(String resourceName) {
-        mBooleanResourceMap.remove(mResourceNameMap.remove(resourceName));
+        synchronized (mLock) {
+            mBooleanResourceMap.remove(mResourceNameMap.remove(resourceName));
+        }
     }
 
     /**
@@ -187,15 +202,19 @@ public class WifiResourceCache {
      * @param value override to this value
      */
     public void overrideIntegerValue(String resourceName, int value) {
-        int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
-        mIntegerResourceMap.put(resourceId, value);
+        synchronized (mLock) {
+            int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
+            mIntegerResourceMap.put(resourceId, value);
+        }
     }
 
     /**
      * Override the target integer value
      */
     public void restoreIntegerValue(String resourceName) {
-        mIntegerResourceMap.remove(mResourceNameMap.remove(resourceName));
+        synchronized (mLock) {
+            mIntegerResourceMap.remove(mResourceNameMap.remove(resourceName));
+        }
     }
 
     /**
@@ -204,15 +223,19 @@ public class WifiResourceCache {
      * @param value override to this value
      */
     public void overrideStringValue(String resourceName, String value) {
-        int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
-        mStringResourceMap.put(resourceId, value);
+        synchronized (mLock) {
+            int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
+            mStringResourceMap.put(resourceId, value);
+        }
     }
 
     /**
      * Override the target integer value
      */
     public void restoreStringValue(String resourceName) {
-        mStringResourceMap.remove(mResourceNameMap.remove(resourceName));
+        synchronized (mLock) {
+            mStringResourceMap.remove(mResourceNameMap.remove(resourceName));
+        }
     }
 
     /**
@@ -221,15 +244,19 @@ public class WifiResourceCache {
      * @param value override to this value
      */
     public void overrideStringArrayValue(String resourceName, String[] value) {
-        int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
-        mStringArrayResourceMap.put(resourceId, value);
+        synchronized (mLock) {
+            int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
+            mStringArrayResourceMap.put(resourceId, value);
+        }
     }
 
     /**
      * Override the target string array value
      */
     public void restoreStringArrayValue(String resourceName) {
-        mStringArrayResourceMap.remove(mResourceNameMap.remove(resourceName));
+        synchronized (mLock) {
+            mStringArrayResourceMap.remove(mResourceNameMap.remove(resourceName));
+        }
     }
 
     /**
@@ -238,15 +265,19 @@ public class WifiResourceCache {
      * @param value override to this value
      */
     public void overrideIntArrayValue(String resourceName, int[] value) {
-        int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
-        mIntArrayResourceMap.put(resourceId, value);
+        synchronized (mLock) {
+            int resourceId = mResourceNameMap.computeIfAbsent(resourceName, v -> mTempId--);
+            mIntArrayResourceMap.put(resourceId, value);
+        }
     }
 
     /**
      * Override the target int array value
      */
     public void restoreIntArrayValue(String resourceName) {
-        mIntArrayResourceMap.remove(mResourceNameMap.remove(resourceName));
+        synchronized (mLock) {
+            mIntArrayResourceMap.remove(mResourceNameMap.remove(resourceName));
+        }
     }
 
     /**
@@ -255,13 +286,14 @@ public class WifiResourceCache {
     public void dump(PrintWriter pw) {
         pw.println("Dump of WifiResourceCache");
         pw.println("WifiResourceCache - resource value Begin ----");
-
-        for (Map.Entry<String, Integer> resourceEntry : mResourceNameMap.entrySet()) {
-            for (Map m : mValueMapList) {
-                if (m.containsKey(resourceEntry.getValue())) {
-                    pw.println("Resource Name: " + resourceEntry.getKey()
-                            + ", value: " + m.get(resourceEntry.getValue()));
-                    break;
+        synchronized (mLock) {
+            for (Map.Entry<String, Integer> resourceEntry : mResourceNameMap.entrySet()) {
+                for (Map m : mValueMapList) {
+                    if (m.containsKey(resourceEntry.getValue())) {
+                        pw.println("Resource Name: " + resourceEntry.getKey()
+                                + ", value: " + m.get(resourceEntry.getValue()));
+                        break;
+                    }
                 }
             }
         }
@@ -272,9 +304,11 @@ public class WifiResourceCache {
      * Remove all override value and set to default
      */
     public void reset() {
-        for (Map m : mValueMapList) {
-            m.clear();
+        synchronized (mLock) {
+            for (Map m : mValueMapList) {
+                m.clear();
+            }
+            mResourceNameMap.clear();
         }
-        mResourceNameMap.clear();
     }
 }

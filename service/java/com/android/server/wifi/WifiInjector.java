@@ -269,6 +269,7 @@ public class WifiInjector {
     private final WifiRoamingModeManager mWifiRoamingModeManager;
     private final TwtManager mTwtManager;
     private final WifiVoipDetector mWifiVoipDetector;
+    private final boolean mHasActiveModem;
 
     public WifiInjector(WifiContext context) {
         if (context == null) {
@@ -629,6 +630,7 @@ public class WifiInjector {
         } else {
             mWifiVoipDetector = null;
         }
+        mHasActiveModem = makeTelephonyManager().getActiveModemCount() > 0;
     }
 
     /**
@@ -1294,5 +1296,12 @@ public class WifiInjector {
     @Nullable
     public WifiVoipDetector getWifiVoipDetector() {
         return mWifiVoipDetector;
+    }
+
+    /**
+     * Return true if there is any active modem on the device.
+     */
+    public boolean hasActiveModem() {
+        return mHasActiveModem;
     }
 }
