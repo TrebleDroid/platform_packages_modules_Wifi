@@ -378,9 +378,10 @@ public class WifiUriParser {
                 wifiConfiguration.preSharedKey = addQuotation(preSharedKey);
             }
         } else if (security.startsWith(SECURITY_ADB)) {
-            Log.i(TAG, "Specific security key: ADB");
+            Log.i(TAG, "Security key: ADB, the ssid and passphrase should NOT add quotation");
+            wifiConfiguration.SSID = ssid;
             if (preSharedKey.length() != 0) {
-                wifiConfiguration.preSharedKey = addQuotation(preSharedKey);
+                wifiConfiguration.preSharedKey = preSharedKey;
             }
         } else {
             throw new IllegalArgumentException("Unsupported security");
