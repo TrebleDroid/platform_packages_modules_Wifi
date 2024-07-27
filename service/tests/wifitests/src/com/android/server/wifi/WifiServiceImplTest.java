@@ -12854,4 +12854,32 @@ public class WifiServiceImplTest extends WifiBaseTest {
         // Only WEP disconnect
         verify(cmmWep).disconnect();
     }
+
+    @Test
+    public void testGetWifiConfigForMatchedNetworkSuggestionsSharedWithUserForMultiTypeConfigs() {
+        long featureFlags = WifiManager.WIFI_FEATURE_WPA3_SAE | WifiManager.WIFI_FEATURE_OWE;
+        List<WifiConfiguration> testConfigs = setupMultiTypeConfigs(featureFlags, true, true);
+        when(mWifiNetworkSuggestionsManager
+                .getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(anyList()))
+                .thenReturn(testConfigs);
+        when(mContext.checkPermission(eq(android.Manifest.permission.NETWORK_SETTINGS),
+                anyInt(), anyInt())).thenReturn(PackageManager.PERMISSION_GRANTED);
+        ScanResult[] scanResults =
+                ScanTestUtil.createScanDatas(new int[][]{{2417, 2427, 5180, 5170}})[0]
+                        .getResults();
+        List<ScanResult> scanResultList =
+                new ArrayList<>(Arrays.asList(scanResults));
+
+        mLooper.startAutoDispatch();
+        ParceledListSlice<WifiConfiguration> configs =
+                mWifiServiceImpl.getWifiConfigForMatchedNetworkSuggestionsSharedWithUser(
+                        new ParceledListSlice<>(scanResultList));
+        mLooper.stopAutoDispatchAndIgnoreExceptions();
+
+        List<WifiConfiguration> expectedConfigs = generateExpectedConfigs(
+                testConfigs, true, true);
+        WifiConfigurationTestUtil.assertConfigurationsEqualForBackup(
+                expectedConfigs, configs.getList());
+    }
+
 }
