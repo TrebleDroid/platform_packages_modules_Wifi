@@ -338,7 +338,7 @@ public class WifiServiceImpl extends BaseWifiService {
     private static final String CERT_INSTALLER_PKG = "com.android.certinstaller";
 
     private final WifiSettingsConfigStore mSettingsConfigStore;
-    private final WifiResourceCache mWifiResourceCache;
+    private final WifiResourceCache mResourceCache;
 
     /**
      * Callback for use with LocalOnlyHotspot to unregister requesting applications upon death.
@@ -519,7 +519,7 @@ public class WifiServiceImpl extends BaseWifiService {
 
     public WifiServiceImpl(WifiContext context, WifiInjector wifiInjector) {
         mContext = context;
-        mWifiResourceCache = mContext.getResourceCache();
+        mResourceCache = mContext.getResourceCache();
         mWifiInjector = wifiInjector;
         mClock = wifiInjector.getClock();
 
@@ -1609,7 +1609,7 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public boolean isDefaultCoexAlgorithmEnabled() {
-        return mContext.getResources().getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled);
+        return mResourceCache.getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled);
     }
 
     /**
@@ -1630,7 +1630,7 @@ public class WifiServiceImpl extends BaseWifiService {
         if (unsafeChannels == null) {
             throw new IllegalArgumentException("unsafeChannels cannot be null");
         }
-        if (mContext.getResources().getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled)) {
+        if (mResourceCache.getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled)) {
             Log.e(TAG, "setCoexUnsafeChannels called but default coex algorithm is enabled");
             return;
         }
@@ -1997,7 +1997,6 @@ public class WifiServiceImpl extends BaseWifiService {
                                 + mCountryCode.getCurrentDriverCountryCode());
                     }
                     // Store Soft AP channels for reference after a reboot before the driver is up.
-                    Resources res = mContext.getResources();
                     mSettingsConfigStore.put(WifiSettingsConfigStore.WIFI_SOFT_AP_COUNTRY_CODE,
                             countryCode);
                     List<Integer> freqs = new ArrayList<>();
@@ -2008,7 +2007,7 @@ public class WifiServiceImpl extends BaseWifiService {
                             continue;
                         }
                         List<Integer> freqsForBand = ApConfigUtil.getAvailableChannelFreqsForBand(
-                                band, mWifiNative, res, true);
+                                band, mWifiNative, mResourceCache, true);
                         if (freqsForBand != null) {
                             freqs.addAll(freqsForBand);
                             int[] channel = new int[freqsForBand.size()];
@@ -2301,7 +2300,7 @@ public class WifiServiceImpl extends BaseWifiService {
             if (carrierConfig == null) return;
             int carrierMaxClient = carrierConfig.getInt(
                     CarrierConfigManager.Wifi.KEY_HOTSPOT_MAX_CLIENT_COUNT);
-            int finalSupportedClientNumber = mContext.getResources().getInteger(
+            int finalSupportedClientNumber = mResourceCache.getInteger(
                     R.integer.config_wifiHardwareSoftapMaxClientCount);
             if (carrierMaxClient > 0) {
                 finalSupportedClientNumber = Math.min(finalSupportedClientNumber,
@@ -3545,7 +3544,7 @@ public class WifiServiceImpl extends BaseWifiService {
             // API was called to override the overlay value.
             return mSettingsConfigStore.get(SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI);
         } else {
-            return mContext.getResources().getBoolean(
+            return mResourceCache.getBoolean(
                     R.bool.config_showConfirmationDialogForThirdPartyAppsEnablingWifi);
         }
     }
@@ -5044,7 +5043,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     private boolean is24GhzBandSupportedInternal() {
-        if (mContext.getResources().getBoolean(R.bool.config_wifi24ghzSupport)) {
+        if (mResourceCache.getBoolean(R.bool.config_wifi24ghzSupport)) {
             return true;
         }
         return mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_24_GHZ);
@@ -5061,7 +5060,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     private boolean is5GhzBandSupportedInternal() {
-        if (mContext.getResources().getBoolean(R.bool.config_wifi5ghzSupport)) {
+        if (mResourceCache.getBoolean(R.bool.config_wifi5ghzSupport)) {
             return true;
         }
         return mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_5_GHZ);
@@ -5077,7 +5076,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     private boolean is6GhzBandSupportedInternal() {
-        if (mContext.getResources().getBoolean(R.bool.config_wifi6ghzSupport)) {
+        if (mResourceCache.getBoolean(R.bool.config_wifi6ghzSupport)) {
             return true;
         }
         return mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_6_GHZ);
@@ -5097,7 +5096,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     private boolean is60GhzBandSupportedInternal() {
-        if (mContext.getResources().getBoolean(R.bool.config_wifi60ghzSupport)) {
+        if (mResourceCache.getBoolean(R.bool.config_wifi60ghzSupport)) {
             return true;
         }
         return mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_60_GHZ);
@@ -5626,7 +5625,7 @@ public class WifiServiceImpl extends BaseWifiService {
                     mWifiInjector.getWifiVoipDetector().dump(fd, pw, args);
                 }
                 pw.println();
-                mWifiResourceCache.dump(pw);
+                mResourceCache.dump(pw);
             }
         }, TAG + "#dump");
     }
@@ -5761,7 +5760,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     private void updateVerboseLoggingEnabled() {
-        final int verboseAlwaysOnLevel = mContext.getResources().getInteger(
+        final int verboseAlwaysOnLevel = mResourceCache.getInteger(
                 R.integer.config_wifiVerboseLoggingAlwaysOnLevel);
         mVerboseLoggingEnabled = WifiManager.VERBOSE_LOGGING_LEVEL_ENABLED == mVerboseLoggingLevel
                 || WifiManager.VERBOSE_LOGGING_LEVEL_ENABLED_SHOW_KEY == mVerboseLoggingLevel
@@ -7901,7 +7900,7 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public String[] getOemPrivilegedWifiAdminPackages() {
-        return mContext.getResources()
+        return mResourceCache
                 .getStringArray(R.array.config_oemPrivilegedWifiAdminPackages);
     }
 
@@ -7983,7 +7982,7 @@ public class WifiServiceImpl extends BaseWifiService {
     }
     @Override
     public int getMaxNumberOfChannelsPerRequest() {
-        return mContext.getResources()
+        return mResourceCache
                 .getInteger(R.integer.config_wifiNetworkSpecifierMaxPreferredChannels);
     }
 

@@ -42,8 +42,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import android.content.Context;
-import android.content.res.Resources;
 import android.net.MacAddress;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.ScanResult;
@@ -51,9 +49,11 @@ import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.nl80211.DeviceWiphyCapabilities;
+import android.net.wifi.util.WifiResourceCache;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 
@@ -166,8 +166,8 @@ public class ApConfigUtilTest extends WifiBaseTest {
     private static final int[] ALLOWED_60G_CHANS = {1, 2}; // ch# 1, 2
     private static final int[] TEST_5G_DFS_FREQS = {5280, 5520}; // ch#56, 104
 
-    @Mock Context mContext;
-    @Mock Resources mResources;
+    @Mock WifiContext mContext;
+    @Mock WifiResourceCache mResources;
     @Mock WifiNative mWifiNative;
     @Mock CoexManager mCoexManager;
     @Mock WifiSettingsConfigStore mConfigStore;
@@ -189,7 +189,7 @@ public class ApConfigUtilTest extends WifiBaseTest {
         mCapability.setSupportedChannelList(SoftApConfiguration.BAND_2GHZ, ALLOWED_2G_CHANS);
         mCapability.setSupportedChannelList(SoftApConfiguration.BAND_5GHZ, ALLOWED_5G_CHANS);
         mCapability.setSupportedChannelList(SoftApConfiguration.BAND_60GHZ, ALLOWED_60G_CHANS);
-        when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(mResources);
         when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
         when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
         when(mResources.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(true);

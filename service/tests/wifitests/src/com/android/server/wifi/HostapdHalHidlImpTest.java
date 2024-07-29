@@ -15,16 +15,30 @@
  */
 package com.android.server.wifi;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.anyShort;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import android.app.test.MockAnswerUtil;
-import android.content.Context;
 import android.hardware.wifi.hostapd.V1_0.HostapdStatus;
 import android.hardware.wifi.hostapd.V1_0.HostapdStatusCode;
 import android.hardware.wifi.hostapd.V1_0.IHostapd;
@@ -37,6 +51,7 @@ import android.hidl.manager.V1_0.IServiceNotification;
 import android.net.MacAddress;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.IHwBinder;
@@ -75,7 +90,7 @@ public class HostapdHalHidlImpTest extends WifiBaseTest {
     private final int mBand256G = SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
             | SoftApConfiguration.BAND_6GHZ;
 
-    private @Mock Context mContext;
+    private @Mock WifiContext mContext;
     private @Mock IServiceManager mServiceManagerMock;
     private @Mock IHostapd mIHostapdMock;
     private @Mock WifiNative.HostapdDeathEventHandler mHostapdHalDeathHandler;
@@ -86,7 +101,7 @@ public class HostapdHalHidlImpTest extends WifiBaseTest {
     private android.hardware.wifi.hostapd.V1_3.IHostapd mIHostapdMockV13;
     private IHostapdCallback mIHostapdCallback;
     private android.hardware.wifi.hostapd.V1_3.IHostapdCallback mIHostapdCallback13;
-    private MockResources mResources;
+    private MockResourceCache mResources;
     HostapdStatus mStatusSuccess;
     HostapdStatus mStatusFailure;
     android.hardware.wifi.hostapd.V1_2.HostapdStatus mStatusSuccess12;
@@ -158,7 +173,7 @@ public class HostapdHalHidlImpTest extends WifiBaseTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        mResources = new MockResources();
+        mResources = new MockResourceCache(mContext);
         mResources.setBoolean(R.bool.config_wifi_softap_acs_supported, false);
         mResources.setBoolean(R.bool.config_wifi_softap_ieee80211ac_supported, false);
         mResources.setBoolean(R.bool.config_wifiSoftapIeee80211axSupported, false);
@@ -175,7 +190,7 @@ public class HostapdHalHidlImpTest extends WifiBaseTest {
         mStatusSuccess12 = createHostapdStatus_1_2(HostapdStatusCode.SUCCESS);
         mStatusFailure12 = createHostapdStatus_1_2(HostapdStatusCode.FAILURE_UNKNOWN);
 
-        when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(mResources);
         when(mServiceManagerMock.linkToDeath(any(IHwBinder.DeathRecipient.class),
                 anyLong())).thenReturn(true);
         when(mServiceManagerMock.registerForNotifications(anyString(), anyString(),

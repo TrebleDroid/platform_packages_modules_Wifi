@@ -28,10 +28,10 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import android.content.Context;
 import android.net.MacAddress;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.test.TestLooper;
@@ -53,7 +53,7 @@ public class HostapdHalTest extends WifiBaseTest {
     private IHostapdHal mIHostapd;
     private @Mock HostapdHalAidlImp mIHostapdAidlMock;
     private @Mock HostapdHalHidlImp mIHostapdHidlMock;
-    private @Mock Context mContext;
+    private @Mock WifiContext mContext;
     private @Mock WifiNative.HostapdDeathEventHandler mHostapdHalDeathHandler;
     private @Mock WifiNative.SoftApHalCallback mSoftApHalCallback;
     private TestLooper mLooper = new TestLooper();

@@ -103,8 +103,8 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.ignoreStubs;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -506,7 +506,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Captor ArgumentCaptor<Intent> mIntentCaptor;
     @Captor ArgumentCaptor<List> mListCaptor;
     @Mock TwtManager mTwtManager;
-    @Mock WifiResourceCache mWifiResourceCache;
+    @Mock WifiResourceCache mResourceCache;
 
     @Rule
     // For frameworks
@@ -529,8 +529,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper = new TestLooper();
         mApplicationInfo = new ApplicationInfo();
         mApplicationInfo.targetSdkVersion = Build.VERSION_CODES.CUR_DEVELOPMENT;
-        when(mResources.getInteger(
-                eq(R.integer.config_wifiHardwareSoftapMaxClientCount)))
+        when(mResourceCache.getInteger(R.integer.config_wifiHardwareSoftapMaxClientCount))
                 .thenReturn(10);
         WifiInjector.sWifiInjector = mWifiInjector;
         when(mRequestInfo.getPid()).thenReturn(mPid);
@@ -567,7 +566,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mHandlerThread.getThreadHandler()).thenReturn(new Handler(mLooper.getLooper()));
         when(mHandlerThread.getLooper()).thenReturn(mLooper.getLooper());
         when(mContext.getResources()).thenReturn(mResources);
-        when(mContext.getResourceCache()).thenReturn(mWifiResourceCache);
+        when(mContext.getResourceCache()).thenReturn(mResourceCache);
         when(mContext.getContentResolver()).thenReturn(mContentResolver);
         when(mContext.getPackageManager()).thenReturn(mPackageManager);
         when(mPackageManager.getPackageInfo(anyString(), anyInt())).thenReturn(mPackageInfo);
@@ -862,7 +861,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
                 WifiDiagnostics.REPORT_REASON_USER_ACTION);
         verify(mWifiDiagnostics).dump(any(), any(), any());
         verify(mPasspointNetworkNominateHelper).dump(any());
-        verify(mWifiResourceCache).dump(any());
+        verify(mResourceCache).dump(any());
     }
 
     @Test
@@ -1192,7 +1191,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetWifiEnabledDialogForThirdPartyAppsTargetingBelowQSdk() throws Exception {
-        when(mResources.getBoolean(
+        when(mResourceCache.getBoolean(
                 R.bool.config_showConfirmationDialogForThirdPartyAppsEnablingWifi))
                 .thenReturn(true);
         doReturn(AppOpsManager.MODE_ALLOWED).when(mAppOpsManager)
@@ -1358,7 +1357,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testSetWifiEnabledNoDialogForNonThirdPartyAppsTargetingBelowQSdk() {
-        when(mResources.getBoolean(
+        when(mResourceCache.getBoolean(
                 R.bool.config_showConfirmationDialogForThirdPartyAppsEnablingWifi))
                 .thenReturn(true);
         doReturn(AppOpsManager.MODE_ALLOWED).when(mAppOpsManager)
@@ -2083,7 +2082,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Test
     public void testSetCoexUnsafeChannelsDefaultAlgorithmDisabled() {
         assumeTrue(SdkLevel.isAtLeastS());
-        when(mResources.getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled))
+        when(mResourceCache.getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled))
                 .thenReturn(false);
         List<CoexUnsafeChannel> unsafeChannels = new ArrayList<>();
         unsafeChannels.addAll(Arrays.asList(new CoexUnsafeChannel(WIFI_BAND_24_GHZ, 6),
@@ -2102,7 +2101,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Test
     public void testSetCoexUnsafeChannelsDefaultAlgorithmEnabled() {
         assumeTrue(SdkLevel.isAtLeastS());
-        when(mResources.getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled))
+        when(mResourceCache.getBoolean(R.bool.config_wifiDefaultCoexAlgorithmEnabled))
                 .thenReturn(true);
         List<CoexUnsafeChannel> unsafeChannels = new ArrayList<>();
         unsafeChannels.add(new CoexUnsafeChannel(WIFI_BAND_24_GHZ, 6));
@@ -2460,7 +2459,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported24gWithOverride() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
         assertTrue(mWifiServiceImpl.is24GHzBandSupported());
         verify(mActiveModeWarden, never()).isBandSupportedForSta(anyInt());
     }
@@ -2470,7 +2469,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported5gWithOverride() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
         assertTrue(mWifiServiceImpl.is5GHzBandSupported());
         verify(mActiveModeWarden, never()).isBandSupportedForSta(anyInt());
     }
@@ -2480,7 +2479,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported6gWithOverride() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(true);
         assertTrue(mWifiServiceImpl.is6GHzBandSupported());
         verify(mActiveModeWarden, never()).isBandSupportedForSta(anyInt());
     }
@@ -2490,7 +2489,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported24gNoOverrideNoChannels() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(false);
         when(mActiveModeWarden.isBandSupportedForSta(WIFI_BAND_24_GHZ)).thenReturn(false);
         assertFalse(mWifiServiceImpl.is24GHzBandSupported());
         verify(mActiveModeWarden).isBandSupportedForSta(WifiScanner.WIFI_BAND_24_GHZ);
@@ -2501,7 +2500,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported5gNoOverrideNoChannels() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(false);
         when(mActiveModeWarden.isBandSupportedForSta(WIFI_BAND_5_GHZ)).thenReturn(false);
         assertFalse(mWifiServiceImpl.is5GHzBandSupported());
         verify(mActiveModeWarden).isBandSupportedForSta(WifiScanner.WIFI_BAND_5_GHZ);
@@ -2512,7 +2511,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported24gNoOverrideWithChannels() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(false);
         when(mActiveModeWarden.isBandSupportedForSta(WIFI_BAND_24_GHZ)).thenReturn(true);
         assertTrue(mWifiServiceImpl.is24GHzBandSupported());
         verify(mActiveModeWarden).isBandSupportedForSta(WifiScanner.WIFI_BAND_24_GHZ);
@@ -2523,7 +2522,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported5gNoOverrideWithChannels() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(false);
         when(mActiveModeWarden.isBandSupportedForSta(WIFI_BAND_5_GHZ)).thenReturn(true);
         assertTrue(mWifiServiceImpl.is5GHzBandSupported());
         verify(mActiveModeWarden).isBandSupportedForSta(WifiScanner.WIFI_BAND_5_GHZ);
@@ -2534,7 +2533,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported6gNoOverrideNoChannels() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(false);
         when(mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_6_GHZ)).thenReturn(
                 false);
         assertFalse(mWifiServiceImpl.is6GHzBandSupported());
@@ -2546,7 +2545,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
      */
     @Test
     public void testIsWifiBandSupported6gNoOverrideWithChannels() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(false);
         when(mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_6_GHZ)).thenReturn(
                 true);
         assertTrue(mWifiServiceImpl.is6GHzBandSupported());
@@ -2554,56 +2553,56 @@ public class WifiServiceImplTest extends WifiBaseTest {
     }
 
     private void setup24GhzSupported() {
-        when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(true);
     }
 
     private void setup24GhzUnsupported(boolean isOnlyUnsupportedSoftAp) {
-        when(mResources.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(false);
         if (!isOnlyUnsupportedSoftAp) {
-            when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(false);
+            when(mResourceCache.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(false);
             when(mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_24_GHZ))
                     .thenReturn(false);
         }
     }
 
     private void setup5GhzSupported() {
-        when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(true);
     }
 
     private void setup5GhzUnsupported(boolean isOnlyUnsupportedSoftAp) {
-        when(mResources.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(false);
         if (!isOnlyUnsupportedSoftAp) {
-            when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(false);
+            when(mResourceCache.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(false);
             when(mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_5_GHZ))
                     .thenReturn(false);
         }
     }
 
     private void setup6GhzSupported() {
-        when(mResources.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(true);
     }
 
     private void setup6GhzUnsupported(boolean isOnlyUnsupportedSoftAp) {
-        when(mResources.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(false);
         if (!isOnlyUnsupportedSoftAp) {
-            when(mResources.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(false);
+            when(mResourceCache.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(false);
             when(mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_6_GHZ))
                     .thenReturn(false);
         }
     }
 
     private void setup60GhzSupported() {
-        when(mResources.getBoolean(R.bool.config_wifi60ghzSupport)).thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiSoftap60ghzSupported)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi60ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap60ghzSupported)).thenReturn(true);
     }
 
     private void setup60GhzUnsupported(boolean isOnlyUnsupportedSoftAp) {
-        when(mResources.getBoolean(R.bool.config_wifiSoftap60ghzSupported)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap60ghzSupported)).thenReturn(false);
         if (!isOnlyUnsupportedSoftAp) {
-            when(mResources.getBoolean(R.bool.config_wifi60ghzSupport)).thenReturn(false);
+            when(mResourceCache.getBoolean(R.bool.config_wifi60ghzSupport)).thenReturn(false);
             when(mActiveModeWarden.isBandSupportedForSta(WifiScanner.WIFI_BAND_60_GHZ))
                     .thenReturn(false);
         }
@@ -5111,7 +5110,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     private void testRestoreNetworkConfiguration(int configNum, int batchNum,
             boolean allowOverride) {
         List<WifiConfiguration> configurations = new ArrayList<>();
-        when(mResources.getInteger(
+        when(mResourceCache.getInteger(
                 eq(R.integer.config_wifiConfigurationRestoreNetworksBatchNum)))
                 .thenReturn(batchNum);
         WifiConfiguration config = new WifiConfiguration();
@@ -8408,7 +8407,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         when(mWifiSettingsConfigStore.get(
                 eq(SHOW_DIALOG_WHEN_THIRD_PARTY_APPS_ENABLE_WIFI_SET_BY_API)))
                 .thenReturn(false);
-        when(mResources.getBoolean(
+        when(mResourceCache.getBoolean(
                 R.bool.config_showConfirmationDialogForThirdPartyAppsEnablingWifi))
                 .thenReturn(false);
         assertFalse(mWifiServiceImpl.isThirdPartyAppEnablingWifiConfirmationDialogEnabled());
@@ -9456,7 +9455,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
         mLooper.stopAutoDispatchAndIgnoreExceptions();
         verify(mWakeupController).dump(any(), any(), any());
         verify(mPasspointNetworkNominateHelper).dump(any());
-        verify(mWifiResourceCache).dump(any());
+        verify(mResourceCache).dump(any());
     }
 
     /**
@@ -10745,7 +10744,7 @@ public class WifiServiceImplTest extends WifiBaseTest {
     @Test
     public void testFailureCallbacksTriggeredWhenSoftApFailsBecauseNonSupportedConfiguration()
             throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(false);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(false);
         setupForCustomLohs();
         SoftApConfiguration lohsConfig = createValidSoftApConfiguration();
         SoftApConfiguration customizedConfig = new SoftApConfiguration.Builder(lohsConfig)

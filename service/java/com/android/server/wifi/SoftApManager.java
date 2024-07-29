@@ -40,6 +40,7 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
 import android.net.wifi.nl80211.DeviceWiphyCapabilities;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -181,6 +182,7 @@ public class SoftApManager implements ActiveModeManager {
     private final SoftApNotifier mSoftApNotifier;
     private final InterfaceConflictManager mInterfaceConflictManager;
     private final WifiInjector mWifiInjector;
+    private final WifiResourceCache mResourceCache;
 
     @VisibleForTesting
     static final long SOFT_AP_PENDING_DISCONNECTION_CHECK_DELAY_MS = 1000;
@@ -448,6 +450,7 @@ public class SoftApManager implements ActiveModeManager {
         mWifiInjector = wifiInjector;
         mCoexManager = coexManager;
         mInterfaceConflictManager = interfaceConflictManager;
+        mResourceCache = mContext.getResourceCache();
         if (SdkLevel.isAtLeastS()) {
             mCoexListener = new CoexListener() {
                 @Override
@@ -494,12 +497,12 @@ public class SoftApManager implements ActiveModeManager {
         mWifiDiagnostics = wifiDiagnostics;
         mStateMachine = new SoftApStateMachine(looper);
         configureInternalConfiguration();
-        mDefaultShutdownTimeoutMillis = mContext.getResources().getInteger(
+        mDefaultShutdownTimeoutMillis = mResourceCache.getInteger(
                 R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
-        mDefaultShutdownIdleInstanceInBridgedModeTimeoutMillis = mContext.getResources().getInteger(
-                R.integer
+        mDefaultShutdownIdleInstanceInBridgedModeTimeoutMillis = mResourceCache
+                .getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
-        mIsDisableShutDownBridgedModeIdleInstanceTimerWhenPlugged = mContext.getResources()
+        mIsDisableShutDownBridgedModeIdleInstanceTimerWhenPlugged = mResourceCache
                 .getBoolean(R.bool
                 .config_wifiFrameworkSoftApDisableBridgedModeShutdownIdleInstanceWhenCharging);
         mCmiMonitor = cmiMonitor;
@@ -854,7 +857,7 @@ public class SoftApManager implements ActiveModeManager {
                 new SoftApConfiguration.Builder(mCurrentSoftApConfiguration);
 
         startResult = ApConfigUtil.updateApChannelConfig(
-                mWifiNative, mCoexManager, mContext.getResources(), mCountryCode,
+                mWifiNative, mCoexManager, mResourceCache, mCountryCode,
                 localConfigBuilder, mCurrentSoftApConfiguration, mCurrentSoftApCapability);
         if (startResult != START_RESULT_SUCCESS) {
             Log.e(getTag(), "Failed to update AP band and channel");
@@ -1064,7 +1067,7 @@ public class SoftApManager implements ActiveModeManager {
         SoftApStateMachine(Looper looper) {
             super(TAG, looper);
 
-            final int threshold =  mContext.getResources().getInteger(
+            final int threshold =  mResourceCache.getInteger(
                     R.integer.config_wifiConfigurationWifiRunnerThresholdInMs);
             mIdleState = new IdleState(threshold);
             mWaitingForDriverCountryCodeChangedState =
@@ -1181,8 +1184,9 @@ public class SoftApManager implements ActiveModeManager {
                             handleStartSoftApFailure(START_RESULT_FAILURE_GENERAL);
                             break;
                         }
-                        if (TextUtils.isEmpty(mCountryCode) && mContext.getResources().getBoolean(
-                                R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)) {
+                        if (TextUtils.isEmpty(mCountryCode) && mResourceCache
+                                .getBoolean(
+                                        R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)) {
                             Log.i(getTag(), "No country code set in the framework."
                                     + " Should Wait for driver country code update to start AP");
                             shouldwaitForDriverCountryCodeIfNoCountryToSet = true;
@@ -1227,7 +1231,7 @@ public class SoftApManager implements ActiveModeManager {
                                 }
                             }
                             if (isCountryCodeChanged && mCountryCode.equalsIgnoreCase(
-                                    mContext.getResources().getString(
+                                    mResourceCache.getString(
                                             R.string.config_wifiDriverWorldModeCountryCode))) {
                                 Log.i(getTag(), "Country code changed to world mode"
                                         + " - fallback to single AP");
@@ -1285,7 +1289,7 @@ public class SoftApManager implements ActiveModeManager {
                         // Note: 6GHz only band is already handled by initial validation
                         SoftApConfiguration tempConfig =
                                 ApConfigUtil.remove6gBandForUnsupportedSecurity(
-                                        mContext.getResources(),
+                                        mResourceCache,
                                         mCurrentSoftApConfiguration, isBridgedMode());
                         if (tempConfig == null) {
                             handleStartSoftApFailure(START_RESULT_FAILURE_UNSUPPORTED_CONFIG);
