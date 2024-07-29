@@ -5170,8 +5170,9 @@ public class WifiManager {
      * <li>Device Owner (DO), Profile Owner (PO) and system apps.
      * </ul>
      *
-     * Starting with {@link android.os.Build.VERSION_CODES#TIRAMISU}, DO/COPE may set
-     * a user restriction (DISALLOW_CHANGE_WIFI_STATE) to only allow DO/PO to use this API.
+     * Starting with {@link android.os.Build.VERSION_CODES#TIRAMISU}, DO and a profile owner of
+     * an organization owned device may set a user restriction (DISALLOW_CHANGE_WIFI_STATE)
+     * to only allow DO/PO to use this API.
      */
     @Deprecated
     public boolean setWifiEnabled(boolean enabled) {
@@ -12454,18 +12455,19 @@ public class WifiManager {
     /**
      * This API allows a privileged application to set roaming mode per SSID.
      *
-     * Available for DO/COPE apps.
+     * Available for Device Owner (DO) and profile owner of an organization owned device.
      * Other apps require {@code android.Manifest.permission#NETWORK_SETTINGS} or
      * {@code android.Manifest.permission#MANAGE_WIFI_NETWORK_SELECTION} permission.
      *
      * @param ssid SSID to be mapped to apply roaming policy
-     * @param roamingMode refer {@link RoamingMode} for supported modes.
-     * @throws IllegalArgumentException if mode value is not in {@link RoamingMode}.
+     * @param roamingMode One of the {@code ROAMING_MODE_} values.
+     * @throws IllegalArgumentException if input is invalid.
      * @throws NullPointerException if the caller provided a null input.
      * @throws SecurityException if caller does not have the required permission.
-     * @throws UnsupportedOperationException if the set operation is not supported on this SDK or
-     *                                       if the feature is not available
-     *                                       {@link #isAggressiveRoamingModeSupported()}.
+     * @throws UnsupportedOperationException if the API is not supported on this SDK version or
+     *                                       {@link #isAggressiveRoamingModeSupported()} returns
+     *                                       false, but input roaming mode is
+     *                                       {@code ROAMING_MODE_AGGRESSIVE}.
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
@@ -12486,16 +12488,14 @@ public class WifiManager {
      * This API allows a privileged application to remove roaming mode policy
      * configured using the {@link #setPerSsidRoamingMode(WifiSsid, int)}.
      *
-     * Available for DO/COPE apps.
+     * Available for Device Owner (DO) and profile owner of an organization owned device.
      * Other apps require {@code android.Manifest.permission#NETWORK_SETTINGS} or
      * {@code android.Manifest.permission#MANAGE_WIFI_NETWORK_SELECTION} permission.
      *
      * @param ssid SSID to be removed from the roaming mode policy.
      * @throws NullPointerException if the caller provided a null input.
      * @throws SecurityException if caller does not have the required permission.
-     * @throws UnsupportedOperationException if the set operation is not supported on this SDK or
-     *                                       if the feature is not available
-     *                                       {@link #isAggressiveRoamingModeSupported()}.
+     * @throws UnsupportedOperationException if the API is not supported on this SDK version.
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
@@ -12513,7 +12513,7 @@ public class WifiManager {
      * This API allows a privileged application to get roaming mode policies
      * configured using the {@link #setPerSsidRoamingMode(WifiSsid, int)}.
      *
-     * Available for DO/COPE apps.
+     * Available for Device Owner (DO) and profile owner of an organization owned device.
      * Other apps require {@code android.Manifest.permission#NETWORK_SETTINGS} or
      * {@code android.Manifest.permission#MANAGE_WIFI_NETWORK_SELECTION} permission.
      *
@@ -12521,9 +12521,7 @@ public class WifiManager {
      * @param resultsCallback An asynchronous callback that will return the corresponding
      *                        roaming policies for the API caller.
      * @throws SecurityException if caller does not have the required permission.
-     * @throws UnsupportedOperationException if the get operation is not supported on this SDK or
-     *                                       if the feature is not available
-     *                                       {@link #isAggressiveRoamingModeSupported()}.
+     * @throws UnsupportedOperationException if the API is not supported on this SDK version.
      */
     @FlaggedApi(Flags.FLAG_ANDROID_V_WIFI_API)
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
