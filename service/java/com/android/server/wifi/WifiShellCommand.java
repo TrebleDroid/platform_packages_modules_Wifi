@@ -517,28 +517,70 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                             + mWifiGlobals.getIpReachabilityDisconnectEnabled());
                     return 0;
                 case "set-poll-rssi-interval-msecs":
-                    int newPollIntervalMsecs;
-                    try {
-                        newPollIntervalMsecs = Integer.parseInt(getNextArgRequired());
-                    } catch (NumberFormatException e) {
-                        pw.println(
+                    List<Integer> newPollIntervals = new ArrayList<>();
+                    while (getRemainingArgsCount() > 0) {
+                        int newPollIntervalMsecs;
+                        try {
+                            newPollIntervalMsecs = Integer.parseInt(getNextArgRequired());
+                        } catch (NumberFormatException e) {
+                            pw.println(
                                 "Invalid argument to 'set-poll-rssi-interval-msecs' "
-                                        + "- must be a positive integer");
-                        return -1;
+                                    + "- must be a positive integer");
+                            return -1;
+                        }
+
+                        if (newPollIntervalMsecs < 1) {
+                            pw.println(
+                                "Invalid argument to 'set-poll-rssi-interval-msecs' "
+                                    + "- must be a positive integer");
+                            return -1;
+                        }
+
+                        newPollIntervals.add(newPollIntervalMsecs);
                     }
 
-                    if (newPollIntervalMsecs < 1) {
-                        pw.println(
-                                "Invalid argument to 'set-poll-rssi-interval-msecs' "
-                                        + "- must be a positive integer");
-                        return -1;
+                    switch (newPollIntervals.size()) {
+                        case 0:
+                            throw new IllegalArgumentException(
+                                "Need at least one valid rssi polling interval");
+                        case 1:
+                            mActiveModeWarden.getPrimaryClientModeManager()
+                                    .setLinkLayerStatsPollingInterval(newPollIntervals.get(0));
+                            break;
+                        case 2:
+                            int newShortIntervalMsecs = newPollIntervals.get(0);
+                            int newLongIntervalMsecs = newPollIntervals.get(1);
+                            if (newShortIntervalMsecs >= newLongIntervalMsecs) {
+                                pw.println(
+                                        "Invalid argument to 'set-poll-rssi-interval-msecs' "
+                                                + "- the long polling interval must be greater "
+                                                + "than the short polling interval");
+                                return -1;
+                            }
+                            mWifiGlobals.setPollRssiShortIntervalMillis(newShortIntervalMsecs);
+                            mWifiGlobals.setPollRssiLongIntervalMillis(newLongIntervalMsecs);
+                            mWifiGlobals.setPollRssiIntervalMillis(newShortIntervalMsecs);
+                            mActiveModeWarden.getPrimaryClientModeManager()
+                                    .setLinkLayerStatsPollingInterval(0);
+                            break;
+                        default:
+                            pw.println("Too many arguments, need at most two valid rssi polling "
+                                    + "intervals");
+                            return -1;
                     }
-
-                    mWifiGlobals.setPollRssiIntervalMillis(newPollIntervalMsecs);
                     return 0;
                 case "get-poll-rssi-interval-msecs":
-                    pw.println("WifiGlobals.getPollRssiIntervalMillis() = "
+                    pw.println("Current interval between RSSI polls (milliseconds) = "
                             + mWifiGlobals.getPollRssiIntervalMillis());
+                    if (mWifiGlobals.isAdjustPollRssiIntervalEnabled()
+                            && mDeviceConfig.isAdjustPollRssiIntervalEnabled()
+                            && !mWifiGlobals.isPollRssiIntervalOverridden()) {
+                        pw.println("Auto adjustment of poll rssi is enabled");
+                        pw.println("Regular (short) interval between RSSI polls (milliseconds) = "
+                                + mWifiGlobals.getPollRssiShortIntervalMillis());
+                        pw.println("Long interval between RSSI polls (milliseconds) = "
+                                + mWifiGlobals.getPollRssiLongIntervalMillis());
+                    }
                     return 0;
                 case "force-hi-perf-mode": {
                     boolean enabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
@@ -3020,8 +3062,15 @@ public class WifiShellCommand extends BasicShellCommandHandler {
     }
 
     private void onHelpPrivileged(PrintWriter pw) {
-        pw.println("  set-poll-rssi-interval-msecs <int>");
-        pw.println("    Sets the interval between RSSI polls to <int> milliseconds.");
+        pw.println("  set-poll-rssi-interval-msecs <int> [<int>]");
+        pw.println("    Sets the interval between RSSI polls to the specified value(s), in "
+                + "milliseconds.");
+        pw.println("    When only one value is specified, set the interval to that value. "
+                + "When two values are specified, set the regular (short) interval to the first "
+                + "value, and set the long interval to the second value. Note that the "
+                + "enabling/disabling of auto adjustment between the two intervals is handled by "
+                + "the respective flags. If the auto adjustment is disabled, it is equivalent to "
+                + "only specifying the first value, and then setting the interval to that value");
         pw.println("  get-poll-rssi-interval-msecs");
         pw.println("    Gets current interval between RSSI polls, in milliseconds.");
         pw.println("  force-hi-perf-mode enabled|disabled");

@@ -52,6 +52,9 @@ public class WifiGlobals {
     private final WifiResourceCache mWifiResourceCache;
 
     private final AtomicInteger mPollRssiIntervalMillis = new AtomicInteger(-1);
+    private final AtomicInteger mPollRssiShortIntervalMillis = new AtomicInteger();
+    private final AtomicInteger mPollRssiLongIntervalMillis = new AtomicInteger();
+    private boolean mIsPollRssiIntervalOverridden = false;
     private final AtomicBoolean mIpReachabilityDisconnectEnabled = new AtomicBoolean(true);
     private final AtomicBoolean mIsBluetoothConnected = new AtomicBoolean(false);
     // Set default to false to check if the value will be overridden by WifiSettingConfigStore.
@@ -77,6 +80,10 @@ public class WifiGlobals {
                 .getBoolean(R.bool.config_wifiSaeUpgradeOffloadEnabled);
         mPollRssiIntervalMillis.set(mWifiResourceCache.getInteger(
                 R.integer.config_wifiPollRssiIntervalMilliseconds));
+        mPollRssiShortIntervalMillis.set(mWifiResourceCache.getInteger(
+                R.integer.config_wifiPollRssiIntervalMilliseconds));
+        mPollRssiLongIntervalMillis.set(mWifiResourceCache.getInteger(
+                R.integer.config_wifiPollRssiLongIntervalMilliseconds));
         Set<String> unsupportedSsidPrefixes = new ArraySet<>(mWifiResourceCache.getStringArray(
                 R.array.config_wifiForceDisableMacRandomizationSsidPrefixList));
         mCountryCodeToAfcServers = getCountryCodeToAfcServersMap();
@@ -464,8 +471,12 @@ public class WifiGlobals {
 
     /** Get the regular (short) interval between RSSI polls, in milliseconds. */
     public int getPollRssiShortIntervalMillis() {
-        return mWifiResourceCache.getInteger(
-                R.integer.config_wifiPollRssiIntervalMilliseconds);
+        return mPollRssiShortIntervalMillis.get();
+    }
+
+    /** Set the regular (short) interval between RSSI polls, in milliseconds. */
+    public void setPollRssiShortIntervalMillis(int newPollIntervalMillis) {
+        mPollRssiShortIntervalMillis.set(newPollIntervalMillis);
     }
 
     /**
@@ -474,8 +485,16 @@ public class WifiGlobals {
      * interval.
      */
     public int getPollRssiLongIntervalMillis() {
-        return mWifiResourceCache.getInteger(
-                R.integer.config_wifiPollRssiLongIntervalMilliseconds);
+        return mPollRssiLongIntervalMillis.get();
+    }
+
+    /**
+     * Set the long interval between RSSI polls, in milliseconds. The long interval is to
+     * reduce power consumption of the polls. This value should be greater than the regular
+     * interval.
+     */
+    public void setPollRssiLongIntervalMillis(int newPollIntervalMillis) {
+        mPollRssiLongIntervalMillis.set(newPollIntervalMillis);
     }
 
     /**
@@ -505,6 +524,16 @@ public class WifiGlobals {
     public boolean isAdjustPollRssiIntervalEnabled() {
         return mWifiResourceCache.getBoolean(
                 R.bool.config_wifiAdjustPollRssiIntervalEnabled);
+    }
+
+    /** Set whether the RSSI polling interval is overridden to a fixed value **/
+    public void setPollRssiIntervalOverridden(boolean isPollRssiIntervalOverridden) {
+        mIsPollRssiIntervalOverridden = isPollRssiIntervalOverridden;
+    }
+
+    /** Get whether the RSSI polling interval is overridden to a fixed value **/
+    public boolean isPollRssiIntervalOverridden() {
+        return mIsPollRssiIntervalOverridden;
     }
 
     /**
@@ -614,6 +643,9 @@ public class WifiGlobals {
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("Dump of WifiGlobals");
         pw.println("mPollRssiIntervalMillis=" + mPollRssiIntervalMillis.get());
+        pw.println("mIsPollRssiIntervalOverridden=" + mIsPollRssiIntervalOverridden);
+        pw.println("mPollRssiShortIntervalMillis=" + mPollRssiShortIntervalMillis.get());
+        pw.println("mPollRssiLongIntervalMillis=" + mPollRssiLongIntervalMillis.get());
         pw.println("mIpReachabilityDisconnectEnabled=" + mIpReachabilityDisconnectEnabled.get());
         pw.println("mIsBluetoothConnected=" + mIsBluetoothConnected.get());
         pw.println("mIsWpa3SaeUpgradeOffloadEnabled=" + mIsWpa3SaeUpgradeOffloadEnabled);

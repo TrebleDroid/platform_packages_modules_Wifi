@@ -42,7 +42,6 @@ public class RssiMonitor {
     private final DeviceConfigFacade mDeviceConfigFacade;
 
     private boolean mEnableClientRssiMonitor = false;
-    private boolean mIsPollRssiIntervalOverridden = false;
     private int[] mAppThresholds = {};
     private byte[] mRssiRanges = {};
 
@@ -138,7 +137,7 @@ public class RssiMonitor {
         mEnableClientRssiMonitor = false;
         mAppThresholds = new int[] {};
         mRssiRanges = new byte[] {};
-        if (!mIsPollRssiIntervalOverridden) {
+        if (!mWifiGlobals.isPollRssiIntervalOverridden()) {
             int shortInterval = mWifiGlobals.getPollRssiShortIntervalMillis();
             mWifiGlobals.setPollRssiIntervalMillis(shortInterval);
         }
@@ -162,7 +161,7 @@ public class RssiMonitor {
     public void updatePollRssiInterval(@DeviceMobilityState int state) {
         if (!mWifiGlobals.isAdjustPollRssiIntervalEnabled()
                 || !mDeviceConfigFacade.isAdjustPollRssiIntervalEnabled()
-                || mIsPollRssiIntervalOverridden) {
+                || mWifiGlobals.isPollRssiIntervalOverridden()) {
             return;
         }
         int curRssi = mWifiInfo.getRssi();
@@ -192,7 +191,7 @@ public class RssiMonitor {
      * Change the RSSI polling interval to the short interval and disable client mode RSSI monitor
      */
     public void setShortPollRssiInterval() {
-        if (mIsPollRssiIntervalOverridden) {
+        if (mWifiGlobals.isPollRssiIntervalOverridden()) {
             return;
         }
         int shortInterval = mWifiGlobals.getPollRssiShortIntervalMillis();
@@ -287,7 +286,7 @@ public class RssiMonitor {
      *                      For automatic handling of the interval, use value 0
      */
     public void overridePollRssiInterval(int newIntervalMs) {
-        if (mIsPollRssiIntervalOverridden && newIntervalMs == 0) {
+        if (mWifiGlobals.isPollRssiIntervalOverridden() && newIntervalMs == 0) {
             setAutoPollRssiInterval();
             return;
         }
@@ -297,13 +296,13 @@ public class RssiMonitor {
     }
 
     private void setAutoPollRssiInterval() {
-        mIsPollRssiIntervalOverridden = false;
+        mWifiGlobals.setPollRssiIntervalOverridden(false);
         int regularInterval = mWifiGlobals.getPollRssiShortIntervalMillis();
         mWifiGlobals.setPollRssiIntervalMillis(regularInterval);
     }
 
     private void setFixedPollRssiInterval(int newIntervalMs) {
-        mIsPollRssiIntervalOverridden = true;
+        mWifiGlobals.setPollRssiIntervalOverridden(true);
         mWifiGlobals.setPollRssiIntervalMillis(newIntervalMs);
         if (mEnableClientRssiMonitor) {
             disableClientRssiMonitorAndUpdateThresholds(mWifiInfo.getRssi());
