@@ -45,6 +45,7 @@ android_test {
         "net-tests-utils",
         "net-utils-framework-common",
         "truth",
+        "wifi_aconfig_flags_lib",
     ],
 
     libs: [
