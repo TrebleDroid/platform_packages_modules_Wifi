@@ -277,7 +277,7 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
                     return ssids;
                 });
         when(mWifiInjector.getSettingsConfigStore()).thenReturn(mWifiSettingsConfigStore);
-        when(Flags.legacyKeystoreToWifiBlobstoreMigration()).thenReturn(true);
+        when(Flags.legacyKeystoreToWifiBlobstoreMigrationReadOnly()).thenReturn(true);
         mDut = new SupplicantStaIfaceHalSpy();
     }
 
