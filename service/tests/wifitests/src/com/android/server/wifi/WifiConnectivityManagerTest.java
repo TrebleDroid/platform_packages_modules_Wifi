@@ -2990,6 +2990,26 @@ public class WifiConnectivityManagerTest extends WifiBaseTest {
         verify(mOpenNetworkNotifier).handleScreenStateChanged(true);
     }
 
+    @Test
+    public void testInitialFastScanAfterStartup() {
+        // Enable the fast initial scan feature
+        mResources.setBoolean(R.bool.config_wifiEnablePartialInitialScan, true);
+        // return 2 available frequencies
+        when(mWifiScoreCard.lookupNetwork(anyString())).thenReturn(mPerNetwork);
+        when(mPerNetwork.getFrequencies(anyLong())).thenReturn(new ArrayList<>(
+                Arrays.asList(TEST_FREQUENCY_1, TEST_FREQUENCY_2)));
+
+        // Simulate wifi toggle
+        setScreenState(true);
+        setWifiEnabled(false);
+        setWifiEnabled(true);
+
+        // verify initial fast scan is triggered
+        assertEquals(WifiConnectivityManager.INITIAL_SCAN_STATE_AWAITING_RESPONSE,
+                mWifiConnectivityManager.getInitialScanState());
+        verify(mWifiMetrics).incrementInitialPartialScanCount();
+    }
+
     /**
      * Verify that the initial fast scan schedules the scan timer just like regular scans.
      */
