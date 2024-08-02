@@ -87,7 +87,6 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -562,10 +561,8 @@ public class WifiVendorHalTest extends WifiBaseTest {
         when(mWifiStaIface.getCapabilities()).thenReturn(staIfaceCaps);
         when(mWifiChip.getCapabilitiesAfterIfacesExist()).thenReturn(chipCapsResponse);
 
-        Set<Integer> halDeviceManagerSupportedIfaces = new HashSet<Integer>() {{
-                add(WifiChip.IFACE_TYPE_STA);
-                add(WifiChip.IFACE_TYPE_P2P);
-            }};
+        Set<Integer> halDeviceManagerSupportedIfaces =
+                Set.of(WifiChip.IFACE_TYPE_STA, WifiChip.IFACE_TYPE_P2P);
         when(mHalDeviceManager.getSupportedIfaceTypes())
                 .thenReturn(halDeviceManagerSupportedIfaces);
         when(mWifiGlobals.isWpa3SaeH2eSupported()).thenReturn(true);
