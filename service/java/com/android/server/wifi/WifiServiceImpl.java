@@ -7583,7 +7583,8 @@ public class WifiServiceImpl extends BaseWifiService {
                     true, TAG + " getUsableChannels");
         }
         if (mVerboseLoggingEnabled) {
-            mLog.info("getUsableChannels uid=%").c(Binder.getCallingUid()).flush();
+            mLog.info("getUsableChannels uid=% band=% mode=% filter=%").c(Binder.getCallingUid()).c(
+                    band).c(mode).c(filter).flush();
         }
         if (!isValidBandForGetUsableChannels(band)) {
             throw new IllegalArgumentException("Unsupported band: " + band);

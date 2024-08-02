@@ -4049,7 +4049,7 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
 
             // TODO: Use SdkLevel API when it exists, rather than the SDK_INT
             if (!mHasMigratedLegacyKeystoreAliases && SDK_INT >= 36
-                    && Flags.legacyKeystoreToWifiBlobstoreMigration()) {
+                    && Flags.legacyKeystoreToWifiBlobstoreMigrationReadOnly()) {
                 WifiMigration.migrateLegacyKeystoreToWifiBlobstore();
                 mHasMigratedLegacyKeystoreAliases = true;
             }

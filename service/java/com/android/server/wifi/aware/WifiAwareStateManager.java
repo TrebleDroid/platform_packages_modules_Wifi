@@ -457,7 +457,6 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
             boolean vDbg) {
         mVerboseLoggingEnabled = verboseEnabled;
         mDataPathMgr.enableVerboseLogging(verboseEnabled, vDbg);
-        mSm.setDbg(halVerboseLogging);
         mVdbg = vDbg;
     }
 
