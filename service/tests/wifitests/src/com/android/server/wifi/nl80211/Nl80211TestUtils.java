@@ -16,6 +16,13 @@
 
 package com.android.server.wifi.nl80211;
 
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_MCAST_GROUPS;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_MCAST_GRP_ID;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_MCAST_GRP_NAME;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_MLME;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_REG;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_SCAN;
+
 import com.android.net.module.util.netlink.StructNlAttr;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
 
@@ -61,5 +68,34 @@ public class Nl80211TestUtils {
             msg.addAttribute(attribute);
         }
         return msg;
+    }
+
+    private static void removeNestedAttributeFlag(StructNlAttr attribute) {
+        // Flag is set by default by the StructNlAttr nested attribute constructor,
+        // but is not set in nested attributes received from Nl80211
+        attribute.nla_type ^= StructNlAttr.NLA_F_NESTED;
+    }
+
+    private static StructNlAttr createMulticastGroupAttribute(
+            int index, String groupName, int groupId) {
+        StructNlAttr nameAttr = new StructNlAttr(CTRL_ATTR_MCAST_GRP_NAME, groupName);
+        StructNlAttr idAttr = new StructNlAttr(CTRL_ATTR_MCAST_GRP_ID, groupId);
+        StructNlAttr multicastGroupAttr = new StructNlAttr((short) index, nameAttr, idAttr);
+        removeNestedAttributeFlag(multicastGroupAttr);
+        return multicastGroupAttr;
+    }
+
+    /**
+     * Create a valid multicast groups attribute. Contains a nested inner attribute for each of
+     * the required multicast groups.
+     */
+    public static StructNlAttr createMulticastGroupsAttribute() {
+        StructNlAttr scanAttr = createMulticastGroupAttribute(1, NL80211_MULTICAST_GROUP_SCAN, 10);
+        StructNlAttr regAttr = createMulticastGroupAttribute(2, NL80211_MULTICAST_GROUP_REG, 11);
+        StructNlAttr mlmeAttr = createMulticastGroupAttribute(3, NL80211_MULTICAST_GROUP_MLME, 12);
+        StructNlAttr multicastGroupsAttr =
+                new StructNlAttr(CTRL_ATTR_MCAST_GROUPS, scanAttr, regAttr, mlmeAttr);
+        removeNestedAttributeFlag(multicastGroupsAttr);
+        return multicastGroupsAttr;
     }
 }

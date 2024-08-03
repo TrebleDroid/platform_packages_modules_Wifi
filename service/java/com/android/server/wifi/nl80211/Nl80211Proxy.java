@@ -18,17 +18,24 @@ package com.android.server.wifi.nl80211;
 
 import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_FAMILY_ID;
 import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_FAMILY_NAME;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_MCAST_GROUPS;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_MCAST_GRP_ID;
+import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_ATTR_MCAST_GRP_NAME;
 import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_CMD_GETFAMILY;
 import static com.android.server.wifi.nl80211.NetlinkConstants.CTRL_CMD_NEWFAMILY;
 import static com.android.server.wifi.nl80211.NetlinkConstants.GENL_ID_CTRL;
 import static com.android.server.wifi.nl80211.NetlinkConstants.NETLINK_GENERIC;
 import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_GENL_NAME;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_MLME;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_REG;
+import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST_GROUP_SCAN;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.system.ErrnoException;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.net.module.util.netlink.NetlinkUtils;
 import com.android.net.module.util.netlink.StructNlAttr;
 import com.android.net.module.util.netlink.StructNlMsgHdr;
@@ -38,7 +45,9 @@ import java.io.InterruptedIOException;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Wrapper around Nl80211 functionality. Allows sending and receiving Nl80211 messages.
@@ -46,10 +55,17 @@ import java.util.List;
 public class Nl80211Proxy {
     private static final String TAG = "Nl80211Proxy";
 
+    private static final String[] sRequiredMulticastGroups = new String[]{
+            NL80211_MULTICAST_GROUP_SCAN,
+            NL80211_MULTICAST_GROUP_REG,
+            NL80211_MULTICAST_GROUP_MLME};
+
     private boolean mIsInitialized;
     private FileDescriptor mNetlinkFd;
     private short mNl80211FamilyId;
     private int mSequenceNumber;
+
+    private Map<String, Integer> mMulticastGroups = new HashMap<>();
 
     public Nl80211Proxy() {}
 
@@ -178,7 +194,8 @@ public class Nl80211Proxy {
         request.addAttribute(new StructNlAttr(CTRL_ATTR_FAMILY_NAME, NL80211_GENL_NAME));
 
         GenericNetlinkMsg response = sendMessageAndReceiveResponse(request);
-        if (response == null || !response.verifyFields(CTRL_CMD_NEWFAMILY, CTRL_ATTR_FAMILY_ID)) {
+        if (response == null || !response.verifyFields(CTRL_CMD_NEWFAMILY,
+                CTRL_ATTR_FAMILY_ID, CTRL_ATTR_MCAST_GROUPS)) {
             Log.e(TAG, "Unable to request family information");
             return false;
         }
@@ -189,7 +206,59 @@ public class Nl80211Proxy {
             return false;
         }
         mNl80211FamilyId = familyId;
+
+        Map<String, Integer> multicastGroups =
+                parseMulticastGroupsAttribute(response.getAttribute(CTRL_ATTR_MCAST_GROUPS));
+        for (String groupName : sRequiredMulticastGroups) {
+            if (!multicastGroups.containsKey(groupName)) {
+                Log.e(TAG, "Missing required multicast group. Retrieved=" + multicastGroups);
+                return false;
+            }
+        }
+        mMulticastGroups = multicastGroups;
+
+        Log.i(TAG, "Successfully retrieved Nl80211 family information");
         return true;
+    }
+
+    /**
+     * Parse the nested multicast groups attribute.
+     *
+     * Expected structure is:
+     *  - ID=CTRL_ATTR_MCAST_GROUPS, VAL={nested}                              ---
+     *     - ID=1, VAL={nested}                              ---                |
+     *        - ID=CTRL_ATTR_MCAST_GRP_NAME, VAL={string}     |   groupAttr     |
+     *        - ID=CTRL_ATTR_MCAST_GRP_ID, VAL={int}         ---                |  rootAttr
+     *     - ID=2, ATTR={nested}                                                |
+     *     - ID=3, ATTR={nested}                                                |
+     *     ...                                                                 ---
+     */
+    @VisibleForTesting
+    protected static @NonNull Map<String, Integer> parseMulticastGroupsAttribute(
+            StructNlAttr rootAttribute) {
+        Map<Short, StructNlAttr> groupAttributes =
+                GenericNetlinkMsg.getInnerNestedAttributes(rootAttribute);
+        if (groupAttributes == null) return new HashMap<>();
+
+        Map<String, Integer> multicastGroups = new HashMap<>();
+        for (StructNlAttr groupAttribute : groupAttributes.values()) {
+            Map<Short, StructNlAttr> groupInnerAttributes =
+                    GenericNetlinkMsg.getInnerNestedAttributes(groupAttribute);
+            if (groupInnerAttributes == null
+                    || !groupInnerAttributes.containsKey(CTRL_ATTR_MCAST_GRP_NAME)
+                    || !groupInnerAttributes.containsKey(CTRL_ATTR_MCAST_GRP_ID)) {
+                continue;
+            }
+
+            String groupName =
+                    groupInnerAttributes.get(CTRL_ATTR_MCAST_GRP_NAME).getValueAsString();
+            Integer groupId = groupInnerAttributes.get(CTRL_ATTR_MCAST_GRP_ID).getValueAsInteger();
+            if (groupName == null || groupId == null) {
+                continue;
+            }
+            multicastGroups.put(groupName, groupId);
+        }
+        return multicastGroups;
     }
 
     /**
