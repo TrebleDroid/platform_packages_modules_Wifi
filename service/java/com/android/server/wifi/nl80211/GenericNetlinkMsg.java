@@ -110,6 +110,22 @@ public class GenericNetlinkMsg {
     }
 
     /**
+     * Retrieve the inner attributes from a nested attribute.
+     *
+     * @param outerAttribute containing nested inner attributes
+     * @return Inner attributes if valid, or null otherwise.
+     *         Attributes will be represented as an (attributeId -> attribute) map.
+     */
+    public static @Nullable Map<Short, StructNlAttr> getInnerNestedAttributes(
+            @NonNull StructNlAttr outerAttribute) {
+        if (outerAttribute == null) return null;
+        // Outer attribute's payload is a byte buffer containing additional attributes
+        ByteBuffer innerBytes = outerAttribute.getValueAsByteBuffer();
+        if (innerBytes == null) return null;
+        return parseAttributesToMap(innerBytes, innerBytes.remaining());
+    }
+
+    /**
      * Check that this message contains the expected fields.
      */
     public boolean verifyFields(short command, short... attributeIds) {
