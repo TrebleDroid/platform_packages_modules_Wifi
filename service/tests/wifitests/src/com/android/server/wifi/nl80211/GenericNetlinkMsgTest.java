@@ -146,4 +146,21 @@ public class GenericNetlinkMsgTest {
         assertTrue(invalidSize < buffer.remaining());
         assertNull(GenericNetlinkMsg.parseAttributesToMap(buffer, buffer.remaining()));
     }
+
+    /**
+     * Test that {@link GenericNetlinkMsg#getInnerNestedAttributes(StructNlAttr)} can parse
+     * nested attributes.
+     */
+    @Test
+    public void testGetInnerNestedAttributes() {
+        // Invalid nested attributes are expected to return null
+        assertNull(GenericNetlinkMsg.getInnerNestedAttributes(null));
+        StructNlAttr intAttribute = new StructNlAttr(
+                Nl80211TestUtils.TEST_ATTRIBUTE_ID, Nl80211TestUtils.TEST_ATTRIBUTE_VALUE);
+        assertNull(GenericNetlinkMsg.getInnerNestedAttributes(intAttribute));
+
+        // The multicast groups attribute is nested and should be parsed correctly
+        StructNlAttr nestedAttribute = Nl80211TestUtils.createMulticastGroupsAttribute();
+        assertNotNull(GenericNetlinkMsg.getInnerNestedAttributes(nestedAttribute));
+    }
 }
