@@ -29,6 +29,9 @@ import static android.net.wifi.WifiManager.VERBOSE_LOGGING_LEVEL_DISABLED;
 import static android.net.wifi.WifiManager.VERBOSE_LOGGING_LEVEL_WIFI_AWARE_ENABLED_ONLY;
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
+import static android.net.wifi.WifiManager.ROAMING_MODE_NONE;
+import static android.net.wifi.WifiManager.ROAMING_MODE_NORMAL;
+import static android.net.wifi.WifiManager.ROAMING_MODE_AGGRESSIVE;
 
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
@@ -2247,6 +2250,32 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 case "get-overlay-config-values":
                     mContext.getResourceCache().dump(pw);
                     return 0;
+                case "set-ssid-roaming-mode":
+                    String ssid = getNextArgRequired();
+                    String roamingMode = getNextArgRequired();
+                    String option = getNextOption();
+
+                    WifiSsid wifiSsid;
+                    if (option != null && option.equals("-x")) {
+                        wifiSsid = WifiSsid.fromString(ssid);
+                    } else {
+                        wifiSsid = WifiSsid.fromString("\"" + ssid + "\"");
+                    }
+
+                    int mode;
+                    if (roamingMode.equals("none")) {
+                        mode = ROAMING_MODE_NONE;
+                    } else if (roamingMode.equals("normal")) {
+                        mode = ROAMING_MODE_NORMAL;
+                    } else if (roamingMode.equals("aggressive")) {
+                        mode = ROAMING_MODE_AGGRESSIVE;
+                    } else {
+                        pw.println("Unsupported roaming mode");
+                        return -1;
+                    }
+
+                    mWifiService.setPerSsidRoamingMode(wifiSsid, mode, SHELL_PACKAGE_NAME);
+                    return 0;
                 default:
                     return handleDefaultCommands(cmd);
             }
@@ -3335,6 +3364,10 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                 + "option provided or no arguments provided after the -r option, then set the "
                 + "request properties to none in the request.");
         pw.println("    Example: configure-afc-server https://testURL -r key1 value1 key2 value2");
+        pw.println("  set-ssid-roaming-mode <ssid> none|normal|aggressive [-x]");
+        pw.println("    Sets the roaming mode for the given SSID.");
+        pw.println("    -x - Specifies the SSID as hex digits instead of plain text.");
+        pw.println("    Example: set-ssid-roaming-mode test_ssid aggressive");
     }
 
     @Override

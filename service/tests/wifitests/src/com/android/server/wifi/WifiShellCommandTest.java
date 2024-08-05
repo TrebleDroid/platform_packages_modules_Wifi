@@ -23,6 +23,9 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_TRUSTED;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.wifi.WifiManager.ACTION_REMOVE_SUGGESTION_DISCONNECT;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
+import static android.net.wifi.WifiManager.ROAMING_MODE_NONE;
+import static android.net.wifi.WifiManager.ROAMING_MODE_NORMAL;
+import static android.net.wifi.WifiManager.ROAMING_MODE_AGGRESSIVE;
 
 import static com.android.server.wifi.WifiShellCommand.SHELL_PACKAGE_NAME;
 
@@ -57,6 +60,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.net.wifi.WifiNetworkSuggestion;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.WifiSsid;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.PatternMatcher;
@@ -1068,5 +1072,52 @@ public class WifiShellCommandTest extends WifiBaseTest {
         verify(mWifiService, times(6)).getUsableChannels(eq(WifiScanner.WIFI_BAND_BOTH_WITH_DFS),
                 anyInt(), eq(WifiAvailableChannel.FILTER_REGULATORY), eq(SHELL_PACKAGE_NAME),
                 any());
+    }
+
+    @Test
+    public void testSetSsidRoamingMode() {
+        BinderUtil.setUid(Process.ROOT_UID);
+        final String testSsid = "testssid";
+        final String hexSsid = "68656c6c6f20776f726c64";
+        ArgumentCaptor<WifiSsid> wifiSsidCaptor = ArgumentCaptor.forClass(
+                WifiSsid.class);
+
+        // Unsupported mode
+        mWifiShellCommand.exec(
+                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
+                new String[]{"set-ssid-roaming-mode", testSsid, "abcd"});
+        verify(mWifiService, never()).setPerSsidRoamingMode(any(), anyInt(), anyString());
+
+        // None mode
+        mWifiShellCommand.exec(
+                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
+                new String[]{"set-ssid-roaming-mode", testSsid, "none"});
+        verify(mWifiService).setPerSsidRoamingMode(
+                wifiSsidCaptor.capture(), eq(ROAMING_MODE_NONE), eq(SHELL_PACKAGE_NAME));
+        assertEquals("\"" + testSsid + "\"", wifiSsidCaptor.getValue().toString());
+
+        // Normal mode
+        mWifiShellCommand.exec(
+                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
+                new String[]{"set-ssid-roaming-mode", testSsid, "normal"});
+        verify(mWifiService).setPerSsidRoamingMode(
+                wifiSsidCaptor.capture(), eq(ROAMING_MODE_NORMAL), eq(SHELL_PACKAGE_NAME));
+        assertEquals("\"" + testSsid + "\"", wifiSsidCaptor.getValue().toString());
+
+        // Aggressive mode
+        mWifiShellCommand.exec(
+                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
+                new String[]{"set-ssid-roaming-mode", testSsid, "aggressive"});
+        verify(mWifiService).setPerSsidRoamingMode(
+                wifiSsidCaptor.capture(), eq(ROAMING_MODE_AGGRESSIVE), eq(SHELL_PACKAGE_NAME));
+        assertEquals("\"" + testSsid + "\"", wifiSsidCaptor.getValue().toString());
+
+        // Test with "hello world" SSID encoded in hexadecimal UTF-8
+        mWifiShellCommand.exec(
+                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
+                new String[]{"set-ssid-roaming-mode", hexSsid, "aggressive", "-x"});
+        verify(mWifiService, times(2)).setPerSsidRoamingMode(
+                wifiSsidCaptor.capture(), eq(ROAMING_MODE_AGGRESSIVE), eq(SHELL_PACKAGE_NAME));
+        assertEquals("\"hello world\"", wifiSsidCaptor.getValue().toString());
     }
 }
