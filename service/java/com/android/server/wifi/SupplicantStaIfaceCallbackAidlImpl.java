@@ -1232,6 +1232,9 @@ class SupplicantStaIfaceCallbackAidlImpl extends ISupplicantStaIfaceCallback.Stu
     @Override
     public void onNetworkNotFound(byte[] ssid) {
         mStaIfaceHal.logCallback("onNetworkNotFoundNotification");
+        if (mStaIfaceHal.shouldIgnoreNetworkNotFound(mIfaceName)) {
+            return;
+        }
         if (mStaIfaceHal.connectToFallbackSsid(mIfaceName)) {
             return;
         }

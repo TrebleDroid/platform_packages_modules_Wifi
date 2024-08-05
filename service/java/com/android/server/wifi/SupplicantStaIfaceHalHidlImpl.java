@@ -73,9 +73,7 @@ import com.android.server.wifi.util.NativeUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +99,9 @@ public class SupplicantStaIfaceHalHidlImpl implements ISupplicantStaIfaceHal {
     public static final String HAL_INSTANCE_NAME = "default";
     @VisibleForTesting
     public static final long WAIT_FOR_DEATH_TIMEOUT_MS = 50L;
+    private static final long INVALID_CONNECT_TO_NETWORK_TIMESTAMP = -1L;
+    @VisibleForTesting
+    public static final long IGNORE_NETWORK_NOT_FOUND_DURATION_MS = 1000L;
     /**
      * Regex pattern for extracting the wps device type bytes.
      * Matches a strings like the following: "<categ>-<OUI>-<subcateg>";
@@ -121,8 +122,9 @@ public class SupplicantStaIfaceHalHidlImpl implements ISupplicantStaIfaceHal {
     private Map<String, SupplicantStaNetworkHalHidlImpl> mCurrentNetworkRemoteHandles =
             new HashMap<>();
     private Map<String, WifiConfiguration> mCurrentNetworkLocalConfigs = new HashMap<>();
-    private Map<String, Deque<WifiSsid>> mCurrentNetworkFallbackSsids = new HashMap<>();
-    private Map<String, WifiSsid> mCurrentNetworkFirstSsid = new HashMap<>();
+    private Map<String, Long> mCurrentNetworkConnectTimestamp = new HashMap<>();
+    private Map<String, List<WifiSsid>> mCurrentNetworkFallbackSsids = new HashMap<>();
+    private Map<String, Integer> mCurrentNetworkFallbackSsidIndex = new HashMap<>();
     private Map<String, List<Pair<SupplicantStaNetworkHalHidlImpl, WifiConfiguration>>>
             mLinkedNetworkLocalAndRemoteConfigs = new HashMap<>();
     @VisibleForTesting
@@ -644,6 +646,9 @@ public class SupplicantStaIfaceHalHidlImpl implements ISupplicantStaIfaceHal {
             mCurrentNetworkLocalConfigs.clear();
             mCurrentNetworkRemoteHandles.clear();
             mLinkedNetworkLocalAndRemoteConfigs.clear();
+            mCurrentNetworkConnectTimestamp.clear();
+            mCurrentNetworkFallbackSsidIndex.clear();
+            mCurrentNetworkFallbackSsids.clear();
         }
     }
 
@@ -976,24 +981,48 @@ public class SupplicantStaIfaceHalHidlImpl implements ISupplicantStaIfaceHal {
     }
 
     /**
+     * Returns whether to ignore the NETWORK_NOT_FOUND event in case it is based on stale cached
+     * scans.
+     *
+     * @param ifaceName Name of the interface.
+     * @return true if we should ignore NETWORK_NOT_FOUND, false otherwise
+     */
+    public boolean shouldIgnoreNetworkNotFound(@NonNull String ifaceName) {
+        synchronized (mLock) {
+            return mClock.getElapsedSinceBootMillis()
+                    - mCurrentNetworkConnectTimestamp.getOrDefault(
+                            ifaceName, INVALID_CONNECT_TO_NETWORK_TIMESTAMP)
+                    < IGNORE_NETWORK_NOT_FOUND_DURATION_MS;
+        }
+    }
+
+    /**
      * Connects to the next fallback SSID (if any) of the current network upon a network not found
      * notification. If all the fallback SSIDs have been tried, return to the first SSID and go
      * through the fallbacks again.
      *
-     * Returns false if there's no fallback SSID to connect to, or if we've wrapped back to the
-     * first SSID.
+     * @return true if we're connecting to a fallback SSID, false if there are no fallback SSIDs, or
+     *         we've looped back to the first SSID.
      */
     public boolean connectToFallbackSsid(@NonNull String ifaceName) {
         synchronized (mLock) {
-            Deque<WifiSsid> fallbackSsids = mCurrentNetworkFallbackSsids.get(ifaceName);
+            List<WifiSsid> fallbackSsids = mCurrentNetworkFallbackSsids.get(ifaceName);
             if (fallbackSsids == null || fallbackSsids.isEmpty()) {
                 return false;
             }
-            WifiSsid nextSsid = fallbackSsids.removeFirst();
-            fallbackSsids.addLast(nextSsid);
-            Log.d(TAG, "connectToFallbackSsid " + nextSsid);
+            // Select the next fallback ssid.
+            // Note that the very first SSID we connect to is index 0, so the next SSID (i.e the
+            // first fallback SSID) will start with index 1. Once the entire list has been tried,
+            // wrap back to the first SSID at index 0.
+            int nextIndex = mCurrentNetworkFallbackSsidIndex.getOrDefault(ifaceName, 0) + 1;
+            if (nextIndex >= fallbackSsids.size()) {
+                nextIndex = 0;
+            }
+            mCurrentNetworkFallbackSsidIndex.put(ifaceName, nextIndex);
+            WifiSsid nextSsid = fallbackSsids.get(nextIndex);
+            Log.d(TAG, "connectToFallbackSsid " + nextSsid + " at index " + nextIndex);
             connectToNetwork(ifaceName, getCurrentNetworkLocalConfig(ifaceName), nextSsid);
-            return !Objects.equals(nextSsid, mCurrentNetworkFirstSsid.get(ifaceName));
+            return nextIndex != 0;
         }
     }
 
@@ -1049,7 +1078,7 @@ public class SupplicantStaIfaceHalHidlImpl implements ISupplicantStaIfaceHal {
                     supplicantConfig.SSID = actualSsid.toString();
                 } else {
                     mCurrentNetworkFallbackSsids.remove(ifaceName);
-                    mCurrentNetworkFirstSsid.remove(ifaceName);
+                    mCurrentNetworkFallbackSsidIndex.remove(ifaceName);
                     if (config.SSID != null) {
                         // No actual SSID supplied, so select from the network selection BSSID
                         // or the latest candidate BSSID.
@@ -1059,15 +1088,15 @@ public class SupplicantStaIfaceHalHidlImpl implements ISupplicantStaIfaceHal {
                             Log.d(TAG, "Selecting supplicant SSID " + supplicantSsid);
                             supplicantConfig.SSID = supplicantSsid.toString();
 
-                            Deque<WifiSsid> fallbackSsids = new ArrayDeque<>(mSsidTranslator
-                                    .getAllPossibleOriginalSsids(configSsid));
+                            List<WifiSsid> fallbackSsids = mSsidTranslator
+                                    .getAllPossibleOriginalSsids(configSsid);
                             fallbackSsids.remove(supplicantSsid);
                             if (!fallbackSsids.isEmpty()) {
                                 // Store the unused SSIDs to fallback on in
                                 // connectToFallbackSsid(String) if the chosen SSID isn't found.
-                                fallbackSsids.addLast(supplicantSsid);
+                                fallbackSsids.add(0, supplicantSsid);
                                 mCurrentNetworkFallbackSsids.put(ifaceName, fallbackSsids);
-                                mCurrentNetworkFirstSsid.put(ifaceName, supplicantSsid);
+                                mCurrentNetworkFallbackSsidIndex.put(ifaceName, 0);
                             }
                         }
                         // Set the actual translation of the original SSID in case the untranslated
@@ -1111,6 +1140,7 @@ public class SupplicantStaIfaceHalHidlImpl implements ISupplicantStaIfaceHal {
                 loge("Failed to select network configuration: " + config.getProfileKey());
                 return false;
             }
+            mCurrentNetworkConnectTimestamp.put(ifaceName, mClock.getElapsedSinceBootMillis());
             return true;
         }
     }
@@ -1224,7 +1254,7 @@ public class SupplicantStaIfaceHalHidlImpl implements ISupplicantStaIfaceHal {
             if (networkHandle == null) return false;
             Log.d(TAG, "Remove fallback ssids to avoid endless loop");
             mCurrentNetworkFallbackSsids.remove(ifaceName);
-            mCurrentNetworkFirstSsid.remove(ifaceName);
+            mCurrentNetworkFallbackSsidIndex.remove(ifaceName);
             return networkHandle.disable();
         }
     }
