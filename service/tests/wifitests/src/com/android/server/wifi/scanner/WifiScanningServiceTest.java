@@ -2922,6 +2922,28 @@ public class WifiScanningServiceTest extends WifiBaseTest {
         client.verifyPnoNetworkFoundReceived(scanResults.getRawScanResults());
     }
 
+    @Test
+    public void testPnoStartStopBackToBack() throws Exception {
+        mWifiScanningServiceImpl.startService();
+        mLooper.dispatchAll();
+        assertTrue(mWifiScanningServiceImpl.setScanningEnabled(true, 0, TEST_PACKAGE_NAME));
+        mLooper.dispatchAll();
+
+        TestClient client = new TestClient();
+
+        // removing a unregistered client should not crash
+        mWifiScanningServiceImpl.stopPnoScan(client.listener, TEST_PACKAGE_NAME, null);
+        mLooper.dispatchAll();
+
+        // back to back start and stop should work
+        mWifiScanningServiceImpl.startPnoScan(client.listener, new WifiScanner.ScanSettings(),
+                new WifiScanner.PnoSettings(), TEST_PACKAGE_NAME, null);
+        mWifiScanningServiceImpl.stopPnoScan(client.listener, TEST_PACKAGE_NAME, null);
+        mLooper.dispatchAll();
+        client.verifyLinkedToDeath();
+        client.verifyUnlinkedToDeath();
+    }
+
     /**
      * Verifies that only clients with NETWORK_STACK permission can call restricted APIs.
      *
