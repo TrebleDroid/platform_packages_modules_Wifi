@@ -229,9 +229,9 @@ public class WifiUriParserTest {
         uri = WifiUriParser.parseUri("WIFI:T:ADB;S:myname;P:mypass;;");
         verifyZxParsing(
                 uri,
-                "\"myname\"",
+                "myname",
                 Collections.emptyList(),
-                "\"mypass\"",
+                "mypass",
                 false);
         // Test transition disable value
         expectedSecurityParamsList =
