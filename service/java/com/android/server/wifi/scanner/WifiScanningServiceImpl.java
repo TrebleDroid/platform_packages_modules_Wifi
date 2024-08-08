@@ -528,12 +528,7 @@ public class WifiScanningServiceImpl extends IWifiScanner.Stub {
             return;
         }
         mWifiThreadRunner.post(() -> {
-            ExternalClientInfo client = (ExternalClientInfo) mClients.get(listener);
-            if (client == null) {
-                Log.e(TAG, "listener not found " + listener);
-                return;
-            }
-            localLog("stop pno scan: " + client + " AttributionTag " + featureId);
+            localLog("stop pno scan: " + packageName + " AttributionTag " + featureId);
             Message msg = Message.obtain();
             msg.what = WifiScanner.CMD_STOP_PNO_SCAN;
             msg.obj = new ScanParams(listener, null, null);

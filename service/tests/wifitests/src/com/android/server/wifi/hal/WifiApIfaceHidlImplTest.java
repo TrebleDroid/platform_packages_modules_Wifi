@@ -178,8 +178,9 @@ public class WifiApIfaceHidlImplTest extends WifiBaseTest {
             public void answer(
                     android.hardware.wifi.V1_5.IWifiApIface.getBridgedInstancesCallback cb)
                     throws RemoteException {
-                cb.onValues(mWifiStatusSuccess,
-                        new ArrayList<String>() {{ add(TEST_IFACE_NAME); }});
+                ArrayList<String> values = new ArrayList<>();
+                values.add(TEST_IFACE_NAME);
+                cb.onValues(mWifiStatusSuccess, values);
             }
         }).when(mIWifiApIfaceMockV15).getBridgedInstances(any(
                 android.hardware.wifi.V1_5.IWifiApIface.getBridgedInstancesCallback.class));

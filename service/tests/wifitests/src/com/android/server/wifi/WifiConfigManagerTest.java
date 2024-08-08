@@ -3514,17 +3514,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         final WifiConfiguration sharedNetwork2 = WifiConfigurationTestUtil.createPskNetwork();
 
         // Set up the store data that is loaded initially.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork1);
-                add(sharedNetwork2);
-            }
-        };
-        List<WifiConfiguration> user1Networks = new ArrayList<WifiConfiguration>() {
-            {
-                add(user1Network);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(sharedNetwork1, sharedNetwork2);
+        List<WifiConfiguration> user1Networks = List.of(user1Network);
         setupStoreDataForRead(sharedNetworks, user1Networks);
         assertTrue(mWifiConfigManager.loadFromStore());
         verify(mWifiConfigStore).read();
@@ -3547,11 +3538,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         assertFalse(mWifiConfigManager.isNetworkTemporarilyDisabledByUser(TEST_SSID));
 
         // Set up the user 2 store data that is loaded at user switch.
-        List<WifiConfiguration> user2Networks = new ArrayList<WifiConfiguration>() {
-            {
-                add(user2Network);
-            }
-        };
+        List<WifiConfiguration> user2Networks = List.of(user2Network);
         setupStoreDataForUserRead(user2Networks, new HashMap<>());
         // Now switch the user to user 2 and ensure that shared network's IDs have not changed.
         when(mUserManager.isUserUnlockingOrUnlocked(UserHandle.of(user2))).thenReturn(true);
@@ -3601,16 +3588,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         final WifiConfiguration sharedNetwork = WifiConfigurationTestUtil.createPskNetwork();
 
         // Set up the store data that is loaded initially.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork);
-            }
-        };
-        List<WifiConfiguration> user1Networks = new ArrayList<WifiConfiguration>() {
-            {
-                add(user1Network);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(sharedNetwork);
+        List<WifiConfiguration> user1Networks = List.of(user1Network);
         setupStoreDataForRead(sharedNetworks, user1Networks);
         assertTrue(mWifiConfigManager.loadFromStore());
         verify(mWifiConfigStore).read();
@@ -3626,11 +3605,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         }
 
         // Set up the user 2 store data that is loaded at user switch.
-        List<WifiConfiguration> user2Networks = new ArrayList<WifiConfiguration>() {
-            {
-                add(user2Network);
-            }
-        };
+        List<WifiConfiguration> user2Networks = List.of(user2Network);
         setupStoreDataForUserRead(user2Networks, new HashMap<>());
         // Now switch the user to user 2 and ensure that user 1's private network has been removed.
         when(mUserManager.isUserUnlockingOrUnlocked(UserHandle.of(user2))).thenReturn(true);
@@ -3642,12 +3617,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         verify(mWcmListener).onNetworkRemoved(any());
 
         // Set the expected networks to be |sharedNetwork| and |user2Network|.
-        List<WifiConfiguration> expectedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork);
-                add(user2Network);
-            }
-        };
+        List<WifiConfiguration> expectedNetworks = List.of(sharedNetwork, user2Network);
         WifiConfigurationTestUtil.assertConfigurationsEqualForConfigManagerAddOrUpdate(
                 expectedNetworks, mWifiConfigManager.getConfiguredNetworksWithPasswords());
 
@@ -3670,11 +3640,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         final WifiConfiguration sharedNetwork = WifiConfigurationTestUtil.createPskNetwork();
 
         // Set up the store data that is loaded initially.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(sharedNetwork);
         setupStoreDataForRead(sharedNetworks, Collections.EMPTY_LIST);
         assertTrue(mWifiConfigManager.loadFromStore());
         verify(mWifiConfigStore).read();
@@ -3703,11 +3669,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
 
 
         // Set the expected networks to be |sharedNetwork|.
-        List<WifiConfiguration> expectedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork);
-            }
-        };
+        List<WifiConfiguration> expectedNetworks = List.of(sharedNetwork);
         WifiConfigurationTestUtil.assertConfigurationsEqualForConfigManagerAddOrUpdate(
                 expectedNetworks, mWifiConfigManager.getConfiguredNetworksWithPasswords());
 
@@ -3740,21 +3702,13 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         final WifiConfiguration sharedNetwork = WifiConfigurationTestUtil.createPskNetwork();
 
         // Set up the store data that is loaded initially.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(sharedNetwork);
         setupStoreDataForRead(sharedNetworks, new ArrayList<>());
         assertTrue(mWifiConfigManager.loadFromStore());
         verify(mWifiConfigStore).read();
 
         // Set up the user 2 store data that is loaded at user switch.
-        List<WifiConfiguration> user2Networks = new ArrayList<WifiConfiguration>() {
-            {
-                add(user2Network);
-            }
-        };
+        List<WifiConfiguration> user2Networks = List.of(user2Network);
         setupStoreDataForUserRead(user2Networks, new HashMap<>());
         // Now switch the user to user 2 and ensure that no private network has been removed.
         when(mUserManager.isUserUnlockingOrUnlocked(UserHandle.of(user2))).thenReturn(true);
@@ -3797,22 +3751,13 @@ public class WifiConfigManagerTest extends WifiBaseTest {
 
         // Set up the shared store data that is loaded at bootup. User 2's private network
         // is still in shared store because they have not yet logged-in after upgrade.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork);
-                add(user2Network);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(sharedNetwork, user2Network);
         setupStoreDataForRead(sharedNetworks, new ArrayList<>());
         assertTrue(mWifiConfigManager.loadFromStore());
         verify(mWifiConfigStore).read();
 
         // Set up the user store data that is loaded at user unlock.
-        List<WifiConfiguration> userNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(user1Network);
-            }
-        };
+        List<WifiConfiguration> userNetworks = List.of(user1Network);
         setupStoreDataForUserRead(userNetworks, new HashMap<>());
         when(mWifiPermissionsUtil.doesUidBelongToUser(user1Network.creatorUid, user1))
                 .thenReturn(true);
@@ -3838,17 +3783,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         // Note: In the real world, user1Network will no longer be visible now because it should
         // already be in user1's private store file. But, we're purposefully exposing it
         // via |loadStoreData| to test if other user's private networks are pushed to shared store.
-        List<WifiConfiguration> expectedSharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork);
-                add(user1Network);
-            }
-        };
-        List<WifiConfiguration> expectedUserNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(user2Network);
-            }
-        };
+        List<WifiConfiguration> expectedSharedNetworks = List.of(sharedNetwork, user1Network);
+        List<WifiConfiguration> expectedUserNetworks = List.of(user2Network);
         // Capture the first written data triggered for saving the old user's network
         // configurations.
         writtenNetworkList = captureWriteNetworksListStoreData();
@@ -3884,11 +3820,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         passpointConfig.isLegacyPasspointConfig = true;
 
         // Set up the shared store data to contain one legacy Passpoint configuration.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(passpointConfig);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(passpointConfig);
         setupStoreDataForRead(sharedNetworks, new ArrayList<>());
         assertTrue(mWifiConfigManager.loadFromStore());
         verify(mWifiConfigStore).read();
@@ -4014,16 +3946,8 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         final WifiConfiguration sharedNetwork = WifiConfigurationTestUtil.createPskNetwork();
 
         // Set up the store data that is loaded initially.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(sharedNetwork);
-            }
-        };
-        List<WifiConfiguration> user1Networks = new ArrayList<WifiConfiguration>() {
-            {
-                add(user1Network);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(sharedNetwork);
+        List<WifiConfiguration> user1Networks = List.of(user1Network);
         setupStoreDataForRead(sharedNetworks, user1Networks);
         assertTrue(mWifiConfigManager.loadFromStore());
         verify(mWifiConfigStore).read();
@@ -4554,9 +4478,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
 
         assertTrue(mWifiConfigManager.removeAllEphemeralOrPasspointConfiguredNetworks());
 
-        List<WifiConfiguration> expectedConfigsAfterRemove = new ArrayList<WifiConfiguration>() {{
-                add(savedOpenNetwork);
-            }};
+        List<WifiConfiguration> expectedConfigsAfterRemove = List.of(savedOpenNetwork);
         WifiConfigurationTestUtil.assertConfigurationsEqualForConfigManagerAddOrUpdate(
                 expectedConfigsAfterRemove, mWifiConfigManager.getConfiguredNetworks());
 
@@ -5206,9 +5128,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 .thenReturn(TelephonyManager.SIM_STATE_LOADED);
         when(mDataTelephonyManager.getSimOperator()).thenReturn("321456");
         when(mDataTelephonyManager.getCarrierInfoForImsiEncryption(anyInt())).thenReturn(null);
-        List<SubscriptionInfo> subList = new ArrayList<>() {{
-                add(mock(SubscriptionInfo.class));
-            }};
+        List<SubscriptionInfo> subList = List.of(mock(SubscriptionInfo.class));
         when(mSubscriptionManager.getCompleteActiveSubscriptionInfoList()).thenReturn(subList);
         when(mSubscriptionManager.getActiveSubscriptionIdList())
                 .thenReturn(new int[]{DATA_SUBID});
@@ -5263,9 +5183,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
                 .thenReturn(TelephonyManager.SIM_STATE_LOADED);
         when(mDataTelephonyManager.getSimOperator()).thenReturn("");
         when(mDataTelephonyManager.getCarrierInfoForImsiEncryption(anyInt())).thenReturn(null);
-        List<SubscriptionInfo> subList = new ArrayList<>() {{
-                add(mock(SubscriptionInfo.class));
-            }};
+        List<SubscriptionInfo> subList = List.of(mock(SubscriptionInfo.class));
         when(mSubscriptionManager.getCompleteActiveSubscriptionInfoList()).thenReturn(subList);
         when(mSubscriptionManager.getActiveSubscriptionIdList())
                 .thenReturn(new int[]{DATA_SUBID});
@@ -5335,12 +5253,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         peapSimNetwork.enterpriseConfig.setAnonymousIdentity("anonymous_identity");
 
         // Set up the store data.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(simNetwork);
-                add(peapSimNetwork);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(simNetwork, peapSimNetwork);
         setupStoreDataForRead(sharedNetworks, new ArrayList<>());
 
         // read from store now
@@ -7196,12 +7109,7 @@ public class WifiConfigManagerTest extends WifiBaseTest {
         WifiConfigurationUtil.addUpgradableSecurityTypeIfNecessary(baseConfig);
 
         // Set up the store data.
-        List<WifiConfiguration> sharedNetworks = new ArrayList<WifiConfiguration>() {
-            {
-                add(baseConfig);
-                add(upgradableConfig);
-            }
-        };
+        List<WifiConfiguration> sharedNetworks = List.of(baseConfig, upgradableConfig);
         setupStoreDataForRead(sharedNetworks, new ArrayList<>());
 
         // read from store now
