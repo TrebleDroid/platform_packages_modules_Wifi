@@ -19,7 +19,10 @@ package com.android.server.wifi;
 import static android.net.wifi.WifiConfiguration.INVALID_NETWORK_ID;
 import static android.net.wifi.WifiConfiguration.SECURITY_TYPE_EAP;
 import static android.net.wifi.WifiConfiguration.SECURITY_TYPE_EAP_WPA3_ENTERPRISE;
+import static android.net.wifi.WifiConfiguration.SECURITY_TYPE_NUM;
 import static android.net.wifi.WifiManager.ALL_ZEROS_MAC_ADDRESS;
+import static android.net.wifi.hotspot2.PasspointConfiguration.MAX_NUMBER_OF_OI;
+import static android.net.wifi.hotspot2.PasspointConfiguration.MAX_OI_VALUE;
 
 import static com.android.server.wifi.util.NativeUtil.addEnclosingQuotes;
 
@@ -34,6 +37,8 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.net.wifi.WifiScanner;
+import android.net.wifi.WifiSsid;
+import android.net.wifi.hotspot2.PasspointConfiguration;
 import android.os.PatternMatcher;
 import android.text.TextUtils;
 import android.util.Log;
@@ -49,8 +54,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * WifiConfiguration utility for any {@link android.net.wifi.WifiConfiguration} related operations.
@@ -75,6 +82,7 @@ public class WifiConfigurationUtil {
     private static final int PSK_SAE_HEX_LEN = 64;
     private static final int WEP104_KEY_BYTES_LEN = 13;
     private static final int WEP40_KEY_BYTES_LEN = 5;
+    private static final int MAX_STRING_LENGTH = 512;
 
     @VisibleForTesting
     public static final String PASSWORD_MASK = "*";
@@ -681,7 +689,8 @@ public class WifiConfigurationUtil {
         if (!validateSsid(config.SSID, isAdd)) {
             return false;
         }
-        if (!validateBssid(config.BSSID)) {
+        if (!validateBssid(config.BSSID) || !validateBssid(config.dhcpServer)
+                || !validateBssid(config.defaultGwMacAddress)) {
             return false;
         }
         if (!validateBitSets(config)) {
@@ -690,9 +699,22 @@ public class WifiConfigurationUtil {
         if (!validateKeyMgmt(config.allowedKeyManagement)) {
             return false;
         }
-        if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_WEP)
-                && config.wepKeys != null
-                && !validateWepKeys(config.wepKeys, config.wepTxKeyIndex, isAdd)) {
+        if (!validateSecurityParameters(config.getSecurityParamsList())) {
+            return false;
+        }
+        if (!validatePasspoint(config)) {
+            return false;
+        }
+        if (!validateNetworkSelectionStatus(config.getNetworkSelectionStatus())) {
+            return false;
+        }
+
+        if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_WEP)) {
+            if (config.wepKeys != null
+                    && !validateWepKeys(config.wepKeys, config.wepTxKeyIndex, isAdd)) {
+                return false;
+            }
+        } else if (!validateWepKeys(config.wepKeys, config.wepTxKeyIndex, false)) {
             return false;
         }
         if (config.isSecurityType(WifiConfiguration.SECURITY_TYPE_PSK)
@@ -721,6 +743,81 @@ public class WifiConfigurationUtil {
         }
         // TBD: Validate some enterprise params as well in the future here.
         return true;
+    }
+
+    private static boolean validateStringField(String field, int maxLength) {
+        return field == null || field.length() <= maxLength;
+    }
+
+    private static boolean validatePasspoint(WifiConfiguration config) {
+        if (!validateStringField(config.FQDN, PasspointConfiguration.MAX_STRING_LENGTH)) {
+            return false;
+        }
+        if (!validateStringField(config.providerFriendlyName,
+                PasspointConfiguration.MAX_STRING_LENGTH)) {
+            return false;
+        }
+        if (!validateRoamingConsortiumIds(config.roamingConsortiumIds)) {
+            return false;
+        }
+        if (!validateUpdateIdentifier(config.updateIdentifier)) {
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean validateUpdateIdentifier(String updateIdentifier) {
+        if (TextUtils.isEmpty(updateIdentifier)) {
+            return true;
+        }
+        try {
+            Integer.valueOf(updateIdentifier);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean validateNetworkSelectionStatus(
+            WifiConfiguration.NetworkSelectionStatus status) {
+        if (status == null) {
+            return false;
+        }
+        return validateStringField(status.getConnectChoice(), MAX_STRING_LENGTH)
+                    && validateBssid(status.getNetworkSelectionBSSID());
+    }
+
+    private static boolean validateRoamingConsortiumIds(long[] roamingConsortiumIds) {
+        if (roamingConsortiumIds != null) {
+            if (roamingConsortiumIds.length > MAX_NUMBER_OF_OI) {
+                Log.d(TAG, "too many Roaming Consortium Organization Identifiers in the "
+                        + "profile");
+                return false;
+            }
+            for (long oi : roamingConsortiumIds) {
+                if (oi < 0 || oi > MAX_OI_VALUE) {
+                    Log.d(TAG, "Organization Identifiers is out of range");
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean validateSecurityParameters(List<SecurityParams> paramsList) {
+        Set<Integer> uniqueSecurityTypes = new HashSet<>(SECURITY_TYPE_NUM + 1);
+        for (SecurityParams params : paramsList) {
+            int securityType = params.getSecurityType();
+            if (securityType < 0 || securityType > SECURITY_TYPE_NUM) {
+                return false;
+            }
+            if (uniqueSecurityTypes.contains(securityType)) {
+                return false;
+            }
+            uniqueSecurityTypes.add(securityType);
+        }
+        return true;
+
     }
 
     private static boolean validateBssidPattern(
