@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_wifi_hal",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -32,4 +33,21 @@ android_test {
     ],
     min_sdk_version: "30",
     target_sdk_version: "35",
+}
+
+android_test {
+    name: "wifi_aware_snippet_new",
+    sdk_version: "current",
+    srcs: [
+        "PermissionUtils.java",
+        "WifiAwareManagerSnippet.java",
+    ],
+    manifest: "AndroidManifestNew.xml",
+    static_libs: [
+        "androidx.test.runner",
+        "compatibility-device-util-axt",
+        "guava",
+        "mobly-snippet-lib",
+    ],
+    min_sdk_version: "30",
 }
