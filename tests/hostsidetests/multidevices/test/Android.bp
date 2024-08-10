@@ -13,7 +13,13 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_fwk_wifi_hal",
     default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+python_library_host {
+    name: "wifi_aware_constants",
+    srcs: ["aware/constants.py"],
 }
 
 python_defaults {
@@ -40,12 +46,34 @@ python_test_host {
     data: [
         // Package the snippet with the mobly test
         ":wifi_aware_snippet",
-	    "requirements.txt",
+        "requirements.txt",
     ],
     test_options: {
         unit_test: false,
     },
     defaults: ["CtsWifiMultiDevicePythonDefaults"],
+}
+
+python_test_host {
+    name: "WifiAwareManagerTestCases",
+    main: "aware/wifi_aware_manager_test.py",
+    srcs: ["aware/wifi_aware_manager_test.py"],
+    data: [
+        // Package the snippet with the mobly test
+        ":wifi_aware_snippet_new",
+        "requirements.txt",
+    ],
+    libs: [
+        "mobly",
+        "wifi_aware_constants",
+    ],
+    test_suites: [
+        "general-tests",
+    ],
+    test_options: {
+        unit_test: false,
+        tags: ["mobly"],
+    },
 }
 
 python_library_host {
@@ -73,4 +101,3 @@ python_test_host {
         },
     },
 }
-
