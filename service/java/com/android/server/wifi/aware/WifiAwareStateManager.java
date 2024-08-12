@@ -717,16 +717,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                         }
 
                         if (action.equals(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)) {
-                            if (mSettableParameters.get(PARAM_ON_IDLE_DISABLE_AWARE) != 0) {
-                                if (mPowerManager.isDeviceIdleMode()
-                                        && !isAnyCallerIgnoringBatteryOptimizations()) {
-                                    disableUsage(false);
-                                } else {
-                                    enableUsage();
-                                }
-                            } else {
-                                reconfigure();
-                            }
+                            reconfigure();
                         }
                     }
                 },
@@ -1449,13 +1440,6 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
      * only happens when a connection is created.
      */
     public void enableUsage() {
-        if (mSettableParameters.get(PARAM_ON_IDLE_DISABLE_AWARE) != 0
-                && mPowerManager.isDeviceIdleMode()) {
-            if (mVerboseLoggingEnabled) {
-                Log.d(TAG, "enableUsage(): while device is in IDLE mode - ignoring");
-            }
-            return;
-        }
         if (!SdkLevel.isAtLeastT() && !mWifiPermissionsUtil.isLocationModeEnabled()) {
             if (mVerboseLoggingEnabled) {
                 Log.d(TAG, "enableUsage(): while location is disabled - ignoring");
