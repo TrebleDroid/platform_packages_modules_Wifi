@@ -38,7 +38,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.app.test.MockAnswerUtil;
-import android.content.Context;
 import android.hardware.wifi.hostapd.ApInfo;
 import android.hardware.wifi.hostapd.BandMask;
 import android.hardware.wifi.hostapd.ChannelBandwidth;
@@ -57,8 +56,10 @@ import android.net.MacAddress;
 import android.net.wifi.OuiKeyedData;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
 import android.net.wifi.util.PersistableBundleUtils;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -105,7 +106,7 @@ public class HostapdHalAidlImpTest extends WifiBaseTest {
     private final int mBand256G = SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
             | SoftApConfiguration.BAND_6GHZ;
 
-    private @Mock Context mContext;
+    private @Mock WifiContext mContext;
     private @Mock IHostapd mIHostapdMock;
     private @Mock IBinder mServiceBinderMock;
     private @Mock WifiNative.HostapdDeathEventHandler mHostapdHalDeathHandler;
@@ -192,6 +193,7 @@ public class HostapdHalAidlImpTest extends WifiBaseTest {
         mResources.setString(R.string.config_wifiSoftap6gChannelList, "");
 
         when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(new WifiResourceCache(mContext));
         doNothing().when(mIHostapdMock).addAccessPoint(
                 mIfaceParamsCaptor.capture(), mNetworkParamsCaptor.capture());
         doNothing().when(mIHostapdMock).removeAccessPoint(any());

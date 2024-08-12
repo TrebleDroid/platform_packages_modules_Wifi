@@ -16,9 +16,9 @@
 package com.android.server.wifi;
 
 import android.annotation.NonNull;
-import android.content.Context;
 import android.net.MacAddress;
 import android.net.wifi.SoftApConfiguration;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.util.Log;
@@ -42,13 +42,13 @@ public class HostapdHal {
     private final Object mLock = new Object();
     private boolean mVerboseLoggingEnabled = false;
     private boolean mVerboseHalLoggingEnabled = false;
-    private final Context mContext;
+    private final WifiContext mContext;
     private final Handler mEventHandler;
 
     // Hostapd HAL interface object - might be implemented by HIDL or AIDL
     private IHostapdHal mIHostapd;
 
-    public HostapdHal(Context context, Handler handler) {
+    public HostapdHal(WifiContext context, Handler handler) {
         mContext = context;
         mEventHandler = handler;
     }

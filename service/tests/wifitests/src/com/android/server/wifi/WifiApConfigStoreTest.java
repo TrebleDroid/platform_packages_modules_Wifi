@@ -42,7 +42,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.MacAddress;
@@ -50,6 +49,7 @@ import android.net.wifi.SoftApCapability;
 import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.Builder;
 import android.net.wifi.SoftApInfo;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiInfo;
 import android.os.Build;
 import android.os.Handler;
@@ -100,7 +100,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
     private final int mBand25660G = SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
             | SoftApConfiguration.BAND_6GHZ | SoftApConfiguration.BAND_60GHZ;
 
-    @Mock private Context mContext;
+    @Mock private WifiContext mContext;
     @Mock private WifiInjector mWifiInjector;
     @Mock private WifiNative mWifiNative;
     @Mock private WifiMetrics mWifiMetrics;
@@ -116,7 +116,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
     @Mock private WifiSettingsConfigStore mWifiSettingsConfigStore;
 
     private Random mRandom;
-    private MockResources mResources;
+    private MockResourceCache mResources;
     @Mock private ApplicationInfo mMockApplInfo;
     @Mock private MacAddressUtil mMacAddressUtil;
     private SoftApStoreData.DataSource mDataStoreSource;
@@ -138,7 +138,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         // Default assume true for all old test cases.
         when(mHalDeviceManager.isConcurrencyComboLoadedFromDriver()).thenReturn(true);
         /* Setup expectations for Resources to return some default settings. */
-        mResources = new MockResources();
+        mResources = new MockResourceCache(mContext);
         mResources.setString(R.string.config_wifiSoftap2gChannelList,
                              TEST_DEFAULT_2G_CHANNEL_LIST);
         mResources.setString(R.string.wifi_tether_configure_ssid_default,
@@ -148,7 +148,7 @@ public class WifiApConfigStoreTest extends WifiBaseTest {
         mResources.setBoolean(R.bool.config_wifiSoftapPassphraseAsciiEncodableCheck, true);
         setupAllBandsSupported();
 
-        when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(mResources);
         when(mContext.getPackageManager()).thenReturn(mPackageManager);
 
         // build the known good 2G channel list: TEST_DEFAULT_2G_CHANNEL_LIST
