@@ -92,6 +92,7 @@ import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -319,6 +320,8 @@ public class WifiNativeTest extends WifiBaseTest {
         when(mStaIfaceHal.initialize()).thenReturn(true);
         when(mStaIfaceHal.startDaemon()).thenReturn(true);
         when(mStaIfaceHal.setupIface(any())).thenReturn(true);
+        when(mStaIfaceHal.getAdvancedCapabilities(anyString())).thenReturn(new BitSet());
+        when(mStaIfaceHal.getWpaDriverFeatureSet(anyString())).thenReturn(new BitSet());
 
         when(mHostapdHal.isInitializationStarted()).thenReturn(true);
         when(mHostapdHal.startDaemon()).thenReturn(true);

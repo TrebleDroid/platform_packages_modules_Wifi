@@ -15,6 +15,8 @@
  */
 package com.android.server.wifi;
 
+import static com.android.server.wifi.util.GeneralUtil.longToBitset;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -96,7 +98,7 @@ public class SupplicantStaNetworkHalHidlImplTest extends WifiBaseTest {
     @Mock private Context mContext;
     @Mock private WifiMonitor mWifiMonitor;
     @Mock private WifiGlobals mWifiGlobals;
-    private long mAdvanceKeyMgmtFeatures = 0;
+    private BitSet mAdvanceKeyMgmtFeatures = new BitSet();
 
     private SupplicantNetworkVariables mSupplicantVariables;
     private MockResources mResources;
@@ -121,7 +123,7 @@ public class SupplicantStaNetworkHalHidlImplTest extends WifiBaseTest {
         SupplicantStaNetworkHalSpyV1_2(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
                 Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
-                long advanceKeyMgmtFeatures) {
+                BitSet advanceKeyMgmtFeatures) {
             super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals,
                     advanceKeyMgmtFeatures);
         }
@@ -141,7 +143,7 @@ public class SupplicantStaNetworkHalHidlImplTest extends WifiBaseTest {
         SupplicantStaNetworkHalSpyV1_3(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
                 Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
-                long advanceKeyMgmtFeatures) {
+                BitSet advanceKeyMgmtFeatures) {
             super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals,
                     advanceKeyMgmtFeatures);
         }
@@ -161,7 +163,7 @@ public class SupplicantStaNetworkHalHidlImplTest extends WifiBaseTest {
         SupplicantStaNetworkHalSpyV1_4(ISupplicantStaNetwork iSupplicantStaNetwork,
                 String ifaceName,
                 Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
-                long advanceKeyMgmtFeatures) {
+                BitSet advanceKeyMgmtFeatures) {
             super(iSupplicantStaNetwork, ifaceName, context, monitor, wifiGlobals,
                     advanceKeyMgmtFeatures);
         }
@@ -190,7 +192,7 @@ public class SupplicantStaNetworkHalHidlImplTest extends WifiBaseTest {
         when(mWifiGlobals.isWpa3SaeUpgradeOffloadEnabled()).thenReturn(true);
         when(mWifiGlobals.isWpaPersonalDeprecated()).thenReturn(false);
 
-        mAdvanceKeyMgmtFeatures |= WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
+        mAdvanceKeyMgmtFeatures = longToBitset(WifiManager.WIFI_FEATURE_WPA3_SUITE_B);
         createSupplicantStaNetwork(SupplicantStaNetworkVersion.V1_0);
     }
 
@@ -1608,7 +1610,7 @@ public class SupplicantStaNetworkHalHidlImplTest extends WifiBaseTest {
     @Test
     public void testUnsupportingGcmp256Ciphers1_2OrHigher()
             throws Exception {
-        mAdvanceKeyMgmtFeatures = 0;
+        mAdvanceKeyMgmtFeatures.clear();
         createSupplicantStaNetwork(SupplicantStaNetworkVersion.V1_2);
         WifiConfiguration config = WifiConfigurationTestUtil.createSaeNetwork();
         int expectedHalPairwiseCiphers =

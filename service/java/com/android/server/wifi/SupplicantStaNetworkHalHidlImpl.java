@@ -15,6 +15,10 @@
  */
 package com.android.server.wifi;
 
+import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
+
+import static com.android.server.wifi.util.GeneralUtil.getCapabilityIndex;
+
 import android.content.Context;
 import android.hardware.wifi.supplicant.V1_0.ISupplicantStaNetwork;
 import android.hardware.wifi.supplicant.V1_0.ISupplicantStaNetworkCallback;
@@ -24,7 +28,6 @@ import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
 import android.net.wifi.WifiEnterpriseConfig.Ocsp;
-import android.net.wifi.WifiManager;
 import android.net.wifi.WifiSsid;
 import android.os.RemoteException;
 import android.text.TextUtils;
@@ -134,11 +137,11 @@ public class SupplicantStaNetworkHalHidlImpl {
     private String mEapDomainSuffixMatch;
     private @Ocsp int mOcsp;
     private String mWapiCertSuite;
-    private long mAdvanceKeyMgmtFeatures;
+    private BitSet mAdvanceKeyMgmtFeatures;
 
     SupplicantStaNetworkHalHidlImpl(ISupplicantStaNetwork iSupplicantStaNetwork, String ifaceName,
             Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
-            long advanceKeyMgmtFeature) {
+            BitSet advanceKeyMgmtFeature) {
         mISupplicantStaNetwork = iSupplicantStaNetwork;
         mContext = context;
         mIfaceName = ifaceName;
@@ -991,7 +994,8 @@ public class SupplicantStaNetworkHalHidlImpl {
                         Log.d(TAG, "Ignore GCMP_256 cipher for the HAL older than 1.2.");
                         break;
                     }
-                    if (0 == (mAdvanceKeyMgmtFeatures & WifiManager.WIFI_FEATURE_WPA3_SUITE_B)) {
+                    if (!mAdvanceKeyMgmtFeatures.get(
+                            getCapabilityIndex(WIFI_FEATURE_WPA3_SUITE_B))) {
                         Log.d(TAG, "Ignore unsupporting GCMP_256 cipher.");
                         break;
                     }
@@ -1068,7 +1072,8 @@ public class SupplicantStaNetworkHalHidlImpl {
                         Log.d(TAG, "Ignore GCMP_256 cipher for the HAL older than 1.2.");
                         break;
                     }
-                    if (0 == (mAdvanceKeyMgmtFeatures & WifiManager.WIFI_FEATURE_WPA3_SUITE_B)) {
+                    if (!mAdvanceKeyMgmtFeatures.get(
+                            getCapabilityIndex(WIFI_FEATURE_WPA3_SUITE_B))) {
                         Log.d(TAG, "Ignore unsupporting GCMP_256 cipher.");
                         break;
                     }

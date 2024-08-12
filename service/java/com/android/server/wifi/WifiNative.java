@@ -26,6 +26,7 @@ import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_NATIVE_SUPPORTED_FEATURES;
 import static com.android.server.wifi.p2p.WifiP2pNative.P2P_IFACE_NAME;
 import static com.android.server.wifi.p2p.WifiP2pNative.P2P_INTERFACE_PROPERTY;
+import static com.android.server.wifi.util.GeneralUtil.bitsetToLong;
 import static com.android.wifi.flags.Flags.rsnOverriding;
 
 import android.annotation.IntDef;
@@ -3978,9 +3979,11 @@ public class WifiNative {
      * @return bitmask defined by WifiManager.WIFI_FEATURE_*
      */
     private long getSupportedFeatureSetInternal(@NonNull String ifaceName) {
-        long featureSet = mSupplicantStaIfaceHal.getAdvancedCapabilities(ifaceName)
-                | mWifiVendorHal.getSupportedFeatureSet(ifaceName)
-                | mSupplicantStaIfaceHal.getWpaDriverFeatureSet(ifaceName);
+        BitSet featureBitset = mSupplicantStaIfaceHal.getAdvancedCapabilities(ifaceName);
+        featureBitset.or(mSupplicantStaIfaceHal.getWpaDriverFeatureSet(ifaceName));
+        // TODO: Convert vendor HAL feature set to a BitSet
+        long featureSet = bitsetToLong(featureBitset);
+        featureSet |= mWifiVendorHal.getSupportedFeatureSet(ifaceName);
         if (SdkLevel.isAtLeastT()) {
             if (((featureSet & WifiManager.WIFI_FEATURE_DPP) != 0)
                     && mContext.getResources().getBoolean(R.bool.config_wifiDppAkmSupported)) {
