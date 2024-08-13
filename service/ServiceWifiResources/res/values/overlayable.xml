@@ -346,6 +346,7 @@
           <item type="array" name="config_wifiTwtBlockedOuiList" />
           <item type="bool" name="config_wifiSoftApSingleLinkMloInBridgedModeSupported" />
           <item type="bool" name="config_wifiTwtSupported" />
+          <item type="bool" name="config_wifiNetworkSelectionSetTargetBssid" />
           <item type="bool" name="config_wifiWepAllowedControlSupported" />
           <item type="array" name="config_wifiDelayedSelectionCarrierIds" />
           <item type="integer" name="config_wifiDelayedCarrierSelectionTimeMs" />
