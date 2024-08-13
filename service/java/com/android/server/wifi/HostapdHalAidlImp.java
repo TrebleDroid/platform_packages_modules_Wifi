@@ -16,7 +16,6 @@
 package com.android.server.wifi;
 
 import android.annotation.NonNull;
-import android.content.Context;
 import android.hardware.wifi.hostapd.ApInfo;
 import android.hardware.wifi.hostapd.BandMask;
 import android.hardware.wifi.hostapd.ChannelBandwidth;
@@ -39,7 +38,9 @@ import android.net.wifi.SoftApConfiguration;
 import android.net.wifi.SoftApConfiguration.BandType;
 import android.net.wifi.SoftApInfo;
 import android.net.wifi.WifiAnnotations;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiManager;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.IBinder.DeathRecipient;
@@ -84,7 +85,7 @@ public class HostapdHalAidlImp implements IHostapdHal {
     private final Object mLock = new Object();
     private boolean mVerboseLoggingEnabled = false;
     private boolean mVerboseHalLoggingEnabled = false;
-    private final Context mContext;
+    private final WifiContext mContext;
     private final Handler mEventHandler;
 
     // Hostapd HAL interface objects
@@ -96,6 +97,7 @@ public class HostapdHalAidlImp implements IHostapdHal {
     private boolean mServiceDeclared = false;
     private int mServiceVersion;
     private CountDownLatch mWaitForDeathLatch;
+    private final WifiResourceCache mResourceCache;
 
     /**
      * Default death recipient. Called any time the service dies.
@@ -127,9 +129,10 @@ public class HostapdHalAidlImp implements IHostapdHal {
         }
     }
 
-    public HostapdHalAidlImp(@NonNull Context context, @NonNull Handler handler) {
+    public HostapdHalAidlImp(@NonNull WifiContext context, @NonNull Handler handler) {
         mContext = context;
         mEventHandler = handler;
+        mResourceCache = mContext.getResourceCache();
         Log.d(TAG, "init HostapdHalAidlImp");
     }
 
@@ -697,15 +700,15 @@ public class HostapdHalAidlImp implements IHostapdHal {
         String oemConfig;
         switch (band) {
             case SoftApConfiguration.BAND_2GHZ:
-                oemConfig = mContext.getResources().getString(
+                oemConfig = mResourceCache.getString(
                         R.string.config_wifiSoftap2gChannelList);
                 break;
             case SoftApConfiguration.BAND_5GHZ:
-                oemConfig = mContext.getResources().getString(
+                oemConfig = mResourceCache.getString(
                         R.string.config_wifiSoftap5gChannelList);
                 break;
             case SoftApConfiguration.BAND_6GHZ:
-                oemConfig = mContext.getResources().getString(
+                oemConfig = mResourceCache.getString(
                         R.string.config_wifiSoftap6gChannelList);
                 break;
             default:
@@ -910,20 +913,20 @@ public class HostapdHalAidlImp implements IHostapdHal {
     private HwModeParams prepareHwModeParams(SoftApConfiguration config) {
         HwModeParams hwModeParams = new HwModeParams();
         hwModeParams.enable80211N = true;
-        hwModeParams.enable80211AC = mContext.getResources().getBoolean(
+        hwModeParams.enable80211AC = mResourceCache.getBoolean(
                 R.bool.config_wifi_softap_ieee80211ac_supported);
         hwModeParams.enable80211AX = ApConfigUtil.isIeee80211axSupported(mContext);
         //Update 80211ax support with the configuration.
         hwModeParams.enable80211AX &= config.isIeee80211axEnabledInternal();
         hwModeParams.enable6GhzBand = ApConfigUtil.isBandSupported(
                 SoftApConfiguration.BAND_6GHZ, mContext);
-        hwModeParams.enableHeSingleUserBeamformer = mContext.getResources().getBoolean(
+        hwModeParams.enableHeSingleUserBeamformer = mResourceCache.getBoolean(
                 R.bool.config_wifiSoftapHeSuBeamformerSupported);
-        hwModeParams.enableHeSingleUserBeamformee = mContext.getResources().getBoolean(
+        hwModeParams.enableHeSingleUserBeamformee = mResourceCache.getBoolean(
                 R.bool.config_wifiSoftapHeSuBeamformeeSupported);
-        hwModeParams.enableHeMultiUserBeamformer = mContext.getResources().getBoolean(
+        hwModeParams.enableHeMultiUserBeamformer = mResourceCache.getBoolean(
                 R.bool.config_wifiSoftapHeMuBeamformerSupported);
-        hwModeParams.enableHeTargetWakeTime = mContext.getResources().getBoolean(
+        hwModeParams.enableHeTargetWakeTime = mResourceCache.getBoolean(
                 R.bool.config_wifiSoftapHeTwtSupported);
 
         if (SdkLevel.isAtLeastT()) {
@@ -963,7 +966,7 @@ public class HostapdHalAidlImp implements IHostapdHal {
             channelParamsList[i].bandMask = getHalBandMask(band);
             channelParamsList[i].acsChannelFreqRangesMhz = new FrequencyRange[0];
             if (channelParamsList[i].enableAcs) {
-                channelParamsList[i].acsShouldExcludeDfs = !mContext.getResources()
+                channelParamsList[i].acsShouldExcludeDfs = !mResourceCache
                         .getBoolean(R.bool.config_wifiSoftapAcsIncludeDfs);
                 if (ApConfigUtil.isSendFreqRangesNeeded(band, mContext, config)) {
                     prepareAcsChannelFreqRangesMhz(channelParamsList[i], band, config);

@@ -40,6 +40,7 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.WifiSsid;
 import android.net.wifi.nl80211.DeviceWiphyCapabilities;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -73,6 +74,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -181,6 +183,7 @@ public class SoftApManager implements ActiveModeManager {
     private final SoftApNotifier mSoftApNotifier;
     private final InterfaceConflictManager mInterfaceConflictManager;
     private final WifiInjector mWifiInjector;
+    private final WifiResourceCache mResourceCache;
 
     @VisibleForTesting
     static final long SOFT_AP_PENDING_DISCONNECTION_CHECK_DELAY_MS = 1000;
@@ -448,6 +451,7 @@ public class SoftApManager implements ActiveModeManager {
         mWifiInjector = wifiInjector;
         mCoexManager = coexManager;
         mInterfaceConflictManager = interfaceConflictManager;
+        mResourceCache = mContext.getResourceCache();
         if (SdkLevel.isAtLeastS()) {
             mCoexListener = new CoexListener() {
                 @Override
@@ -494,12 +498,12 @@ public class SoftApManager implements ActiveModeManager {
         mWifiDiagnostics = wifiDiagnostics;
         mStateMachine = new SoftApStateMachine(looper);
         configureInternalConfiguration();
-        mDefaultShutdownTimeoutMillis = mContext.getResources().getInteger(
+        mDefaultShutdownTimeoutMillis = mResourceCache.getInteger(
                 R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
-        mDefaultShutdownIdleInstanceInBridgedModeTimeoutMillis = mContext.getResources().getInteger(
-                R.integer
+        mDefaultShutdownIdleInstanceInBridgedModeTimeoutMillis = mResourceCache
+                .getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
-        mIsDisableShutDownBridgedModeIdleInstanceTimerWhenPlugged = mContext.getResources()
+        mIsDisableShutDownBridgedModeIdleInstanceTimerWhenPlugged = mResourceCache
                 .getBoolean(R.bool
                 .config_wifiFrameworkSoftApDisableBridgedModeShutdownIdleInstanceWhenCharging);
         mCmiMonitor = cmiMonitor;
@@ -854,7 +858,7 @@ public class SoftApManager implements ActiveModeManager {
                 new SoftApConfiguration.Builder(mCurrentSoftApConfiguration);
 
         startResult = ApConfigUtil.updateApChannelConfig(
-                mWifiNative, mCoexManager, mContext.getResources(), mCountryCode,
+                mWifiNative, mCoexManager, mResourceCache, mCountryCode,
                 localConfigBuilder, mCurrentSoftApConfiguration, mCurrentSoftApCapability);
         if (startResult != START_RESULT_SUCCESS) {
             Log.e(getTag(), "Failed to update AP band and channel");
@@ -1064,7 +1068,7 @@ public class SoftApManager implements ActiveModeManager {
         SoftApStateMachine(Looper looper) {
             super(TAG, looper);
 
-            final int threshold =  mContext.getResources().getInteger(
+            final int threshold =  mResourceCache.getInteger(
                     R.integer.config_wifiConfigurationWifiRunnerThresholdInMs);
             mIdleState = new IdleState(threshold);
             mWaitingForDriverCountryCodeChangedState =
@@ -1181,8 +1185,9 @@ public class SoftApManager implements ActiveModeManager {
                             handleStartSoftApFailure(START_RESULT_FAILURE_GENERAL);
                             break;
                         }
-                        if (TextUtils.isEmpty(mCountryCode) && mContext.getResources().getBoolean(
-                                R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)) {
+                        if (TextUtils.isEmpty(mCountryCode) && mResourceCache
+                                .getBoolean(
+                                        R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)) {
                             Log.i(getTag(), "No country code set in the framework."
                                     + " Should Wait for driver country code update to start AP");
                             shouldwaitForDriverCountryCodeIfNoCountryToSet = true;
@@ -1196,43 +1201,8 @@ public class SoftApManager implements ActiveModeManager {
                                     + ", base country in SoftApCapability = "
                                     + mCurrentSoftApCapability.getCountryCode());
                         }
+
                         if (isBridgedMode()) {
-                            boolean isFallbackToSingleAp = false;
-                            final List<ClientModeManager> cmms =
-                                    mActiveModeWarden.getClientModeManagers();
-                            // Checking STA status only when device supports STA + AP concurrency
-                            // since STA would be dropped when device doesn't support it.
-                            if (cmms.size() != 0 && mWifiNative.isStaApConcurrencySupported()) {
-                                if (ApConfigUtil.isStaWithBridgedModeSupported(mContext,
-                                        mWifiNative)) {
-                                    for (ClientModeManager cmm
-                                            : mActiveModeWarden.getClientModeManagers()) {
-                                        WifiInfo wifiConnectedInfo = cmm.getConnectionInfo();
-                                        int wifiFrequency = wifiConnectedInfo.getFrequency();
-                                        if (wifiFrequency > 0
-                                                && !mSafeChannelFrequencyList.contains(
-                                                wifiFrequency)) {
-                                            Log.d(getTag(), "Wifi connected to unavailable freq: "
-                                                    + wifiFrequency);
-                                            isFallbackToSingleAp = true;
-                                            break;
-                                        }
-                                    }
-                                } else {
-                                    // The client mode exist but DUT doesn't support
-                                    // STA + bridged AP, we should fallback to single AP mode.
-                                    Log.d(getTag(), " STA iface exist but device doesn't support"
-                                            + " STA + Bridged AP");
-                                    isFallbackToSingleAp = true;
-                                }
-                            }
-                            if (isCountryCodeChanged && mCountryCode.equalsIgnoreCase(
-                                    mContext.getResources().getString(
-                                            R.string.config_wifiDriverWorldModeCountryCode))) {
-                                Log.i(getTag(), "Country code changed to world mode"
-                                        + " - fallback to single AP");
-                                isFallbackToSingleAp = true;
-                            }
                             if (!isCountryCodeChanged) {
                                 SoftApConfiguration tempConfig =
                                         ApConfigUtil.removeUnavailableBandsFromConfig(
@@ -1246,26 +1216,9 @@ public class SoftApManager implements ActiveModeManager {
                                     break;
                                 }
                                 mCurrentSoftApConfiguration = tempConfig;
-                                if (mCurrentSoftApConfiguration.getBands().length == 1) {
-                                    isFallbackToSingleAp = true;
-                                    Log.i(
-                                            getTag(),
-                                            "Removed unavailable bands"
-                                                    + " - fallback to single AP");
-                                }
                             }
-                            // Fall back to Single AP if it's not possible to create a Bridged AP.
-                            if (!mWifiNative.isItPossibleToCreateBridgedApIface(mRequestorWs)) {
-                                isFallbackToSingleAp = true;
-                            }
-                            // Fall back to single AP if creating a single AP does not require
-                            // destroying an existing iface, but creating a bridged AP does.
-                            if (mWifiNative.shouldDowngradeToSingleApForConcurrency(mRequestorWs)) {
-                                Log.d(getTag(), "Creating bridged AP will destroy an existing"
-                                        + " iface, but single AP will not.");
-                                isFallbackToSingleAp = true;
-                            }
-                            if (isFallbackToSingleAp) {
+                            if (!isBridgedApAvailable()
+                                    || mCurrentSoftApConfiguration.getBands().length == 1) {
                                 int newSingleApBand = 0;
                                 for (int configuredBand : mCurrentSoftApConfiguration.getBands()) {
                                     newSingleApBand |= configuredBand;
@@ -1276,16 +1229,27 @@ public class SoftApManager implements ActiveModeManager {
                                         + newSingleApBand);
                                 mCurrentSoftApConfiguration =
                                         new SoftApConfiguration.Builder(mCurrentSoftApConfiguration)
-                                        .setBand(newSingleApBand)
-                                        .build();
+                                                .setBand(newSingleApBand)
+                                                .build();
                             }
+                        } else if (!isCountryCodeChanged
+                                && mRole == ROLE_SOFTAP_TETHERED && isBridgedApAvailable()) {
+                            // Try upgrading config to 2 + 5 GHz Dual Band if the available config
+                            // bands only include 2 or 5 Ghz. This is to handle cases where the
+                            // config was previously set to single band in a CC that didn't support
+                            // DBS, but the current one does.
+                            mCurrentSoftApConfiguration =
+                                    ApConfigUtil.upgradeTo2g5gBridgedIfAvailableBandsAreSubset(
+                                            mCurrentSoftApConfiguration,
+                                            mCurrentSoftApCapability,
+                                            mContext);
                         }
 
                         // Remove 6GHz from requested bands if security type is restricted
                         // Note: 6GHz only band is already handled by initial validation
                         SoftApConfiguration tempConfig =
                                 ApConfigUtil.remove6gBandForUnsupportedSecurity(
-                                        mContext.getResources(),
+                                        mResourceCache,
                                         mCurrentSoftApConfiguration, isBridgedMode());
                         if (tempConfig == null) {
                             handleStartSoftApFailure(START_RESULT_FAILURE_UNSUPPORTED_CONFIG);
@@ -1401,6 +1365,64 @@ public class SoftApManager implements ActiveModeManager {
             }
         }
 
+        private boolean isBridgedApAvailable() {
+            // Skip if bridged mode isn't supported.
+            if (!ApConfigUtil.isBridgedModeSupported(mContext, mWifiNative)) {
+                return false;
+            }
+
+            // Checking STA status only when device supports STA + AP concurrency
+            // since STA would be dropped when device doesn't support it.
+            final List<ClientModeManager> cmms =
+                    mActiveModeWarden.getClientModeManagers();
+            if (cmms.size() != 0 && mWifiNative.isStaApConcurrencySupported()) {
+                if (ApConfigUtil.isStaWithBridgedModeSupported(mContext,
+                        mWifiNative)) {
+                    for (ClientModeManager cmm
+                            : mActiveModeWarden.getClientModeManagers()) {
+                        WifiInfo wifiConnectedInfo = cmm.getConnectionInfo();
+                        int wifiFrequency = wifiConnectedInfo.getFrequency();
+                        if (wifiFrequency > 0
+                                && !mSafeChannelFrequencyList.contains(
+                                wifiFrequency)) {
+                            Log.d(getTag(), "Wifi connected to unavailable freq: "
+                                    + wifiFrequency);
+                            return false;
+                        }
+                    }
+                } else {
+                    // The client mode exist but DUT doesn't support
+                    // STA + bridged AP, we should fallback to single AP mode.
+                    Log.d(getTag(), " STA iface exist but device doesn't support STA + Bridged AP");
+                    return false;
+                }
+            }
+
+            // Fallback if the target country code is world mode.
+            if (mCountryCode != null && mCountryCode.equalsIgnoreCase(
+                    mResourceCache.getString(
+                            R.string.config_wifiDriverWorldModeCountryCode))) {
+                Log.i(getTag(), "Country code changed to world mode - fallback to single AP");
+                return false;
+            }
+
+            // Fall back to Single AP if it's not possible to create a Bridged AP.
+            if (!mWifiNative.isItPossibleToCreateBridgedApIface(mRequestorWs)) {
+                Log.i(getTag(), "Not possible to create bridged AP iface - fallback to single AP");
+                return false;
+            }
+
+            // Fall back to single AP if creating a single AP does not require
+            // destroying an exististng iface, but creating a bridged AP does.
+            if (mWifiNative.shouldDowngradeToSingleApForConcurrency(mRequestorWs)) {
+                Log.d(getTag(), "Creating bridged AP will destroy an existing"
+                        + " iface, but single AP will not.");
+                return false;
+            }
+
+            return true;
+        }
+
         private class WaitingForDriverCountryCodeChangedState extends RunnerState {
             private static final int TIMEOUT_MS = 5_000;
 
@@ -1439,6 +1461,14 @@ public class SoftApManager implements ActiveModeManager {
                             ApConfigUtil.updateSoftApCapabilityWithAvailableChannelList(
                                     mCurrentSoftApCapability, mContext, mWifiNative, null);
                     updateSafeChannelFrequencyList();
+                    int[] oldBands = mCurrentSoftApConfiguration.getBands();
+                    if (mRole == ROLE_SOFTAP_TETHERED && isBridgedApAvailable()) {
+                        mCurrentSoftApConfiguration =
+                                ApConfigUtil.upgradeTo2g5gBridgedIfAvailableBandsAreSubset(
+                                        mCurrentSoftApConfiguration,
+                                        mCurrentSoftApCapability,
+                                        mContext);
+                    }
                     if (isBridgedMode()) {
                         SoftApConfiguration tempConfig =
                                 ApConfigUtil.removeUnavailableBandsFromConfig(
@@ -1450,9 +1480,10 @@ public class SoftApManager implements ActiveModeManager {
                             return HANDLED;
                         }
                         mCurrentSoftApConfiguration = tempConfig;
-                        if (mCurrentSoftApConfiguration.getBands().length == 1) {
-                            Log.i(getTag(), "Moving to single AP after updating the CC and band."
-                                    + " Teardown bridged interface and setup single AP interface");
+                        if (mCurrentSoftApConfiguration.getBands().length != oldBands.length) {
+                            Log.i(getTag(), "Restarting AP interface to accommodate band change"
+                                    + " from " + Arrays.toString(oldBands) + " to "
+                                    + Arrays.toString(mCurrentSoftApConfiguration.getBands()));
                             mWifiNative.teardownInterface(mApInterfaceName);
                             mApInterfaceName = mWifiNative.setupInterfaceForSoftApMode(
                                     mWifiNativeInterfaceCallback, mRequestorWs,

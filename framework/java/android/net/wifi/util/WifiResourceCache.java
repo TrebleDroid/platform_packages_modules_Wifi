@@ -19,6 +19,7 @@ package android.net.wifi.util;
 import android.content.Context;
 
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -291,13 +292,20 @@ public class WifiResourceCache {
                 for (Map m : mValueMapList) {
                     if (m.containsKey(resourceEntry.getValue())) {
                         pw.println("Resource Name: " + resourceEntry.getKey()
-                                + ", value: " + m.get(resourceEntry.getValue()));
+                                + ", value: " + valueToString(m.get(resourceEntry.getValue())));
                         break;
                     }
                 }
             }
         }
         pw.println("WifiResourceCache - resource value End ----");
+    }
+
+    private String valueToString(Object input) {
+        if (input instanceof Object[]) {
+            return Arrays.deepToString((Object[]) input);
+        }
+        return input.toString();
     }
 
     /**

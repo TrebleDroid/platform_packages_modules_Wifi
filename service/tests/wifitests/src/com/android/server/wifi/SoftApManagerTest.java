@@ -61,7 +61,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Resources;
 import android.net.MacAddress;
 import android.net.TetheringManager;
 import android.net.wifi.CoexUnsafeChannel;
@@ -79,6 +78,7 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
 import android.net.wifi.nl80211.DeviceWiphyCapabilities;
 import android.net.wifi.nl80211.NativeWifiClient;
+import android.net.wifi.util.WifiResourceCache;
 import android.os.BatteryManager;
 import android.os.Message;
 import android.os.UserHandle;
@@ -195,7 +195,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     private List<ClientModeManager> mTestClientModeManagers = new ArrayList<>();
 
     @Mock WifiContext mContext;
-    @Mock Resources mResources;
+    @Mock WifiResourceCache mResourceCache;
     @Mock WifiNative mWifiNative;
     @Mock CoexManager mCoexManager;
     @Mock WifiServiceImpl.SoftApCallbackInternal mCallback;
@@ -340,24 +340,25 @@ public class SoftApManagerTest extends WifiBaseTest {
         mAlarmManager = new TestAlarmManager();
         when(mContext.getSystemService(Context.ALARM_SERVICE))
                 .thenReturn(mAlarmManager.getAlarmManager());
-        when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(mResourceCache);
         when(mContext.getWifiOverlayApkPkgName()).thenReturn("test.com.android.wifi.resources");
         when(mContext.registerReceiver(any(), any())).thenReturn(new Intent());
 
-        when(mResources.getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds))
+        when(mResourceCache.getInteger(
+                R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds))
                 .thenReturn((int) TEST_DEFAULT_SHUTDOWN_TIMEOUT_MILLIS);
-        when(mResources.getInteger(R.integer
+        when(mResourceCache.getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond))
                 .thenReturn(
                 (int) TEST_DEFAULT_SHUTDOWN_IDLE_INSTANCE_IN_BRIDGED_MODE_TIMEOUT_MILLIS);
-        when(mResources.getBoolean(R.bool.config_wifiBridgedSoftApSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiBridgedSoftApSupported))
                 .thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
                 .thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi24ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap24ghzSupported)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifi5ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap5ghzSupported)).thenReturn(true);
         when(mWifiNative.setApCountryCode(
                 TEST_INTERFACE_NAME, TEST_COUNTRY_CODE.toUpperCase(Locale.ROOT)))
                 .thenReturn(true);
@@ -392,7 +393,7 @@ public class SoftApManagerTest extends WifiBaseTest {
                 any(), any(), anyInt(), any(), anyBoolean())).thenReturn(
                 InterfaceConflictManager.ICM_EXECUTE_COMMAND);
         // Default init STA enabled
-        when(mResources.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
                 .thenReturn(true);
         when(mWifiNative.isStaApConcurrencySupported()).thenReturn(true);
         when(mActiveModeWarden.getClientModeManagers())
@@ -1079,7 +1080,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         // reset to clear verified Intents for ap state change updates
         reset(mContext);
-        when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(mResourceCache);
 
         InOrder order = inOrder(mCallback, mListener, mContext);
 
@@ -1157,7 +1158,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         // reset to clear verified Intents for ap state change updates
         reset(mContext, mCallback, mWifiNative);
-        when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(mResourceCache);
 
         InOrder order = inOrder(mCallback, mListener, mContext);
 
@@ -1225,7 +1226,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
         // reset to clear verified Intents for ap state change updates
         reset(mContext, mCallback, mWifiNative);
-        when(mContext.getResources()).thenReturn(mResources);
+        when(mContext.getResourceCache()).thenReturn(mResourceCache);
 
         InOrder order = inOrder(mCallback, mListener, mContext);
         mSoftApHalCallbackCaptor.getValue().onFailure();
@@ -1972,9 +1973,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         startSoftApAndVerifyEnabled(apConfig);
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
 
@@ -2536,10 +2537,6 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiNative, never()).isItPossibleToCreateApIface(any());
         ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
         verify(mFakeSoftApNotifier).dismissSoftApShutdownTimeoutExpiredNotification();
-        order.verify(mWifiNative).setupInterfaceForSoftApMode(
-                mWifiNativeInterfaceCallbackCaptor.capture(), eq(TEST_WORKSOURCE),
-                eq(expectedConfig.getBand()), eq(expectedConfig.getBands().length > 1),
-                eq(mSoftApManager), anyList());
         ArgumentCaptor<SoftApConfiguration> configCaptor =
                 ArgumentCaptor.forClass(SoftApConfiguration.class);
         if (!TextUtils.isEmpty(softApConfig.getCountryCode())
@@ -2581,6 +2578,10 @@ public class SoftApManagerTest extends WifiBaseTest {
             assertThat(mSoftApManager.getSoftApModeConfiguration().getCapability().getCountryCode())
                     .isEqualTo("some country");
         }
+        order.verify(mWifiNative).setupInterfaceForSoftApMode(
+                mWifiNativeInterfaceCallbackCaptor.capture(), eq(TEST_WORKSOURCE),
+                eq(expectedConfig.getBand()), eq(expectedConfig.getBands().length > 1),
+                eq(mSoftApManager), anyList());
         order.verify(mCallback).onStateChanged(eq(new SoftApState(
                 WifiManager.WIFI_AP_STATE_ENABLING, 0,
                 softApConfig.getTetheringRequest(), TEST_INTERFACE_NAME)));
@@ -3180,9 +3181,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         startSoftApAndVerifyEnabled(apConfig);
 
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
 
@@ -3216,9 +3217,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         startSoftApAndVerifyEnabled(apConfig);
 
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
 
@@ -3327,9 +3328,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         startSoftApAndVerifyEnabled(apConfig);
 
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
 
@@ -3361,9 +3362,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         startSoftApAndVerifyEnabled(apConfig);
 
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
 
@@ -3538,8 +3539,8 @@ public class SoftApManagerTest extends WifiBaseTest {
             throws Exception {
         assumeTrue(SdkLevel.isAtLeastS());
         String worldModeCC = "00";
-        when(mContext.getResources()
-                .getString(R.string.config_wifiDriverWorldModeCountryCode)).thenReturn(worldModeCC);
+        when(mResourceCache.getString(R.string.config_wifiDriverWorldModeCountryCode))
+                .thenReturn(worldModeCC);
 
         SoftApCapability testCapability = new SoftApCapability(mTestSoftApCapability);
         Builder configBuilder = new SoftApConfiguration.Builder(
@@ -3778,7 +3779,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     public void testBridgedModeKeepIfMovingFromUnsupportedCCtoSupportedCC() throws Exception {
         assumeTrue(SdkLevel.isAtLeastS());
         String worldModeCC = "00";
-        when(mContext.getResources().getString(R.string.config_wifiDriverWorldModeCountryCode))
+        when(mResourceCache.getString(R.string.config_wifiDriverWorldModeCountryCode))
                 .thenReturn(worldModeCC);
 
         // Simulate stale world mode CC without 5GHz band
@@ -3801,7 +3802,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
     @Test
     public void testWaitForDriverCountryCode() throws Exception {
-        when(mResources.getBoolean(
+        when(mResourceCache.getBoolean(
                 R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)).thenReturn(true);
         mIsDriverSupportedRegChangedEvent = true;
         SoftApModeConfiguration apConfig =
@@ -3812,7 +3813,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
     @Test
     public void testWaitForDriverCountryCodeTimedOut() throws Exception {
-        when(mResources.getBoolean(
+        when(mResourceCache.getBoolean(
                 R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)).thenReturn(true);
         mIsDriverSupportedRegChangedEvent = true;
         SoftApModeConfiguration apConfig =
@@ -3834,7 +3835,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
     @Test
     public void testWaitForDriverCountryCodeWhenNoInitialCountryCodeFor5GHz() throws Exception {
-        when(mResources.getBoolean(
+        when(mResourceCache.getBoolean(
                 R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)).thenReturn(true);
         mIsDriverSupportedRegChangedEvent = true;
         Builder configBuilder = new SoftApConfiguration.Builder();
@@ -3851,7 +3852,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
     @Test
     public void testUpdateCountryCodeWhenConfigDisabled() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifiSoftApDynamicCountryCodeUpdateSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftApDynamicCountryCodeUpdateSupported))
                 .thenReturn(false);
         SoftApModeConfiguration apConfig =
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
@@ -3865,7 +3866,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
     @Test
     public void testUpdateCountryCodeWhenConfigEnabled() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifiSoftApDynamicCountryCodeUpdateSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftApDynamicCountryCodeUpdateSupported))
                 .thenReturn(true);
         SoftApModeConfiguration apConfig =
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
@@ -3879,7 +3880,7 @@ public class SoftApManagerTest extends WifiBaseTest {
 
     @Test
     public void testUpdateSameCountryCodeWhenConfigEnabled() throws Exception {
-        when(mResources.getBoolean(R.bool.config_wifiSoftApDynamicCountryCodeUpdateSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftApDynamicCountryCodeUpdateSupported))
                 .thenReturn(true);
         SoftApModeConfiguration apConfig =
                 new SoftApModeConfiguration(WifiManager.IFACE_IP_MODE_TETHERED, null,
@@ -3895,7 +3896,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     public void testFallbackToSingleModeDueToStaExistButStaWithBridgedApNotSupportedByOverlay()
             throws Exception {
         assumeTrue(SdkLevel.isAtLeastS());
-        when(mResources.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
                 .thenReturn(false);
         Builder configBuilder = new SoftApConfiguration.Builder(
                 generateBridgedModeSoftApConfig(null));
@@ -3913,7 +3914,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     public void testFallbackToSingleModeDueToStaExistButStaWithBridgedApNotSupportedByDriver()
             throws Exception {
         assumeTrue(SdkLevel.isAtLeastS());
-        when(mResources.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiStaWithBridgedSoftApConcurrencySupported))
                 .thenReturn(true);
         mApBridgeWithStaIfaceCombinationSupported = false;
         Builder configBuilder = new SoftApConfiguration.Builder(
@@ -3982,7 +3983,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testSchedulesTimeoutTimerWhenPluggedChanged() throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
-        when(mResources.getBoolean(R.bool
+        when(mResourceCache.getBoolean(R.bool
                   .config_wifiFrameworkSoftApDisableBridgedModeShutdownIdleInstanceWhenCharging))
                 .thenReturn(true);
 
@@ -3991,9 +3992,9 @@ public class SoftApManagerTest extends WifiBaseTest {
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         startSoftApAndVerifyEnabled(apConfig);
 
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer.config_wifiFrameworkSoftApShutDownTimeoutMilliseconds);
-        verify(mResources)
+        verify(mResourceCache)
                 .getInteger(R.integer
                 .config_wifiFrameworkSoftApShutDownIdleInstanceInBridgedModeTimeoutMillisecond);
 
@@ -4062,7 +4063,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApRemoves11BEIfNotSupportedByDeviceCapabilities() throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
-        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
                 .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(false);
@@ -4086,7 +4087,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApRemoves11BEIfNotSupportedByOverlay() throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
-        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
                 .thenReturn(false);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(true);
@@ -4110,7 +4111,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApRemoves11BEInWpa2()throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
-        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
                 .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(true);
@@ -4136,9 +4137,9 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApRemoves11BEInBridgedModeIfNotSupportedByOverlay()throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
-        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
                 .thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
                 .thenReturn(false);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(true);
@@ -4165,9 +4166,9 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApInBridgedMode11BEConfiguration()throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
-        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
                 .thenReturn(true);
-        when(mResources.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftApSingleLinkMloInBridgedModeSupported))
                 .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(true);
@@ -4192,7 +4193,7 @@ public class SoftApManagerTest extends WifiBaseTest {
     @Test
     public void testStartSoftApInSingleAp11BEConfiguration()throws Exception {
         assumeTrue(SdkLevel.isAtLeastT());
-        when(mResources.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftapIeee80211beSupported))
                 .thenReturn(true);
         when(mDeviceWiphyCapabilities.isWifiStandardSupported(ScanResult.WIFI_STANDARD_11BE))
                 .thenReturn(true);
@@ -4207,5 +4208,113 @@ public class SoftApManagerTest extends WifiBaseTest {
                 WifiManager.IFACE_IP_MODE_TETHERED, configBuilder.build(),
                 mTestSoftApCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
         startSoftApAndVerifyEnabled(apConfig, configBuilder.build(), false);
+    }
+
+    @Test
+    public void testStartSoftApAutoUpgradeTo2g5gDbs() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mResourceCache.getBoolean(
+                R.bool.config_wifiSoftapUpgradeTetheredTo2g5gBridgedIfBandsAreSubset))
+                .thenReturn(true);
+        int[] dual_bands = {SoftApConfiguration.BAND_2GHZ,
+                SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ};
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder().setSsid(TEST_SSID)
+                .setSsid(TEST_SSID)
+                .setBand(SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
+                        | SoftApConfiguration.BAND_6GHZ)
+                .build();
+        SoftApConfiguration dualBandConfig = new SoftApConfiguration.Builder(config)
+                .setBands(dual_bands)
+                .build();
+
+        SoftApCapability no6GhzCapability = new SoftApCapability(mTestSoftApCapability);
+        no6GhzCapability.setSupportedChannelList(WifiScanner.WIFI_BAND_6_GHZ, new int[0]);
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, config,
+                no6GhzCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
+        startSoftApAndVerifyEnabled(apConfig, dualBandConfig, false);
+    }
+
+    @Test
+    public void testStartSoftApDoesNotAutoUpgradeTo2g5gDbsWhen6GhzAvailable() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mResourceCache.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(true);
+        when(mResourceCache.getBoolean(
+                R.bool.config_wifiSoftapUpgradeTetheredTo2g5gBridgedIfBandsAreSubset))
+                .thenReturn(true);
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder().setSsid(TEST_SSID)
+                .setSsid(TEST_SSID)
+                .setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA3_SAE)
+                .setBand(SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
+                        | SoftApConfiguration.BAND_6GHZ)
+                .build();
+
+        SoftApCapability with6GhzCapability = new SoftApCapability(mTestSoftApCapability);
+        with6GhzCapability.setSupportedChannelList(
+                SoftApConfiguration.BAND_6GHZ, new int[]{5, 21});
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, config,
+                with6GhzCapability, TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
+        startSoftApAndVerifyEnabled(apConfig, config, false);
+    }
+
+    @Test
+    public void testStartSoftApAutoUpgradeTo2g5gDbsWithCountryCodeChange() throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mResourceCache.getBoolean(
+                R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)).thenReturn(true);
+        mIsDriverSupportedRegChangedEvent = true;
+        when(mResourceCache.getBoolean(
+                R.bool.config_wifiSoftapUpgradeTetheredTo2g5gBridgedIfBandsAreSubset))
+                .thenReturn(true);
+        int[] dual_bands = {SoftApConfiguration.BAND_2GHZ,
+                SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ};
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder().setSsid(TEST_SSID)
+                .setSsid(TEST_SSID)
+                .setBand(SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
+                        | SoftApConfiguration.BAND_6GHZ)
+                .build();
+        SoftApConfiguration dualBandConfig = new SoftApConfiguration.Builder(config)
+                .setBands(dual_bands)
+                .build();
+
+        when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_6_GHZ))
+                .thenReturn(new int[0]);
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, config,
+                mTestSoftApCapability, "Not " + TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
+        startSoftApAndVerifyEnabled(apConfig, dualBandConfig, false);
+    }
+
+    @Test
+    public void testStartSoftApDoesNotAutoUpgradeTo2g5gDbsWhen6GhzAvailableWithCountryCodeChange()
+            throws Exception {
+        assumeTrue(SdkLevel.isAtLeastS());
+        when(mResourceCache.getBoolean(R.bool.config_wifi6ghzSupport)).thenReturn(true);
+        when(mResourceCache.getBoolean(R.bool.config_wifiSoftap6ghzSupported)).thenReturn(true);
+        when(mResourceCache.getBoolean(
+                R.bool.config_wifiDriverSupportedNl80211RegChangedEvent)).thenReturn(true);
+        mIsDriverSupportedRegChangedEvent = true;
+        when(mResourceCache.getBoolean(
+                R.bool.config_wifiSoftapUpgradeTetheredTo2g5gBridgedIfBandsAreSubset))
+                .thenReturn(true);
+
+        SoftApConfiguration config = new SoftApConfiguration.Builder().setSsid(TEST_SSID)
+                .setSsid(TEST_SSID)
+                .setPassphrase("somepassword", SoftApConfiguration.SECURITY_TYPE_WPA3_SAE)
+                .setBand(SoftApConfiguration.BAND_2GHZ | SoftApConfiguration.BAND_5GHZ
+                        | SoftApConfiguration.BAND_6GHZ)
+                .build();
+
+        when(mWifiNative.getChannelsForBand(WifiScanner.WIFI_BAND_6_GHZ))
+                .thenReturn(ALLOWED_6G_FREQS);
+        SoftApModeConfiguration apConfig = new SoftApModeConfiguration(
+                WifiManager.IFACE_IP_MODE_TETHERED, config,
+                mTestSoftApCapability, "Not " + TEST_COUNTRY_CODE, TEST_TETHERING_REQUEST);
+        startSoftApAndVerifyEnabled(apConfig, config, false);
     }
 }
