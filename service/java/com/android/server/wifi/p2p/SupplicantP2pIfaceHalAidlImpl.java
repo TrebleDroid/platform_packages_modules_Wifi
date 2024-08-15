@@ -2627,6 +2627,9 @@ public class SupplicantP2pIfaceHalAidlImpl implements ISupplicantP2pIfaceHal {
      */
     public boolean configureEapolIpAddressAllocationParams(int ipAddressGo, int ipAddressMask,
             int ipAddressStart, int ipAddressEnd) {
+        if (getCachedServiceVersion() < 2) {
+            return false;
+        }
         synchronized (mLock) {
             String methodStr = "configureEapolIpAddressAllocationParams";
             if (!checkP2pIfaceAndLogFailure(methodStr)) {
