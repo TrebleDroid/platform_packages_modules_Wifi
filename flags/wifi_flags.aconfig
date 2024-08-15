@@ -17,6 +17,14 @@ flag {
 }
 
 flag {
+    name: "p2p_dual"
+    namespace: "wifi"
+    description: "Control the dual P2P group feature"
+    bug: "296063280"
+    is_fixed_read_only: true
+}
+
+flag {
     name: "delay_save_to_store"
     namespace: "wifi"
     description: "Control the feature delay the save to store in batch to reduce the blocking time"

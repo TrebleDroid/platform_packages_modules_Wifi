@@ -34,6 +34,7 @@ import android.os.Handler;
 import android.os.WorkSource;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SparseArray;
 
 import com.android.server.wifi.HalDeviceManager;
 import com.android.server.wifi.PropertyService;
@@ -992,6 +993,18 @@ public class WifiP2pNative {
             if (mP2pIfaceName == null) return false;
             if (!mHalDeviceManager.isSupported()) return false;
             return mHalDeviceManager.is5g6gDbsSupportedOnP2pIface(mP2pIfaceName);
+        }
+    }
+
+    /**
+     * Returns whether P2P + P2P concurrency is supported or not.
+     */
+    public boolean isP2pP2pConcurrencySupported() {
+        synchronized (mLock) {
+            return mWifiVendorHal.canDeviceSupportCreateTypeCombo(
+                    new SparseArray<Integer>() {{
+                        put(HDM_CREATE_IFACE_P2P, 2);
+                    }});
         }
     }
 
