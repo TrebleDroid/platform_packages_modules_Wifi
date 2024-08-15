@@ -32,6 +32,8 @@ import static com.android.server.wifi.nl80211.NetlinkConstants.NL80211_MULTICAST
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.system.ErrnoException;
 import android.util.Log;
 
@@ -48,6 +50,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * Wrapper around Nl80211 functionality. Allows sending and receiving Nl80211 messages.
@@ -64,10 +67,25 @@ public class Nl80211Proxy {
     private FileDescriptor mNetlinkFd;
     private short mNl80211FamilyId;
     private int mSequenceNumber;
+    private Handler mAsyncHandler;
 
     private Map<String, Integer> mMulticastGroups = new HashMap<>();
 
-    public Nl80211Proxy() {}
+    /**
+     * Listener to receive Netlink responses asynchronously.
+     */
+    public interface NetlinkResponseListener {
+        /**
+         * Called when responses have been received.
+         *
+         * @param responses List of received responses, or null if an error occurred
+         */
+        void onResponse(@Nullable List<GenericNetlinkMsg> responses);
+    }
+
+    public Nl80211Proxy(HandlerThread asyncHandlerThread) {
+        mAsyncHandler = new Handler(asyncHandlerThread.getLooper());
+    }
 
     private int getSequenceNumber() {
         return mSequenceNumber++;
@@ -180,6 +198,34 @@ public class Nl80211Proxy {
             return null;
         }
         return responses.get(0);
+    }
+
+    /**
+     * Asynchronously send a GenericNetlinkMsg and receive several responses.
+     *
+     * All interactions with Netlink will be handled on a separate handler, and the responses
+     * will be sent to the provided listener once received.
+     *
+     * @param request Netlink message to be sent.
+     * @param executor Executor on which to invoke the response listener.
+     * @param listener Listener to invoke once the responses have been received.
+     * @return true if the request was posted successfully, false otherwise
+     */
+    public boolean sendMessageAndReceiveResponsesAsync(@NonNull GenericNetlinkMsg request,
+            @NonNull Executor executor, @NonNull NetlinkResponseListener listener) {
+        if (!mIsInitialized) {
+            Log.e(TAG, "Instance has not been initialized");
+            return false;
+        }
+        if (request == null || executor == null || listener == null) {
+            Log.e(TAG, "Null argument was provided");
+            return false;
+        }
+        mAsyncHandler.post(() -> {
+            List<GenericNetlinkMsg> responses = sendMessageAndReceiveResponses(request);
+            executor.execute(() -> listener.onResponse(responses));
+        });
+        return true;
     }
 
     /**
