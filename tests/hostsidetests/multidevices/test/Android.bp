@@ -58,11 +58,7 @@ python_test_host {
     name: "WifiAwareManagerTestCases",
     main: "aware/wifi_aware_manager_test.py",
     srcs: ["aware/wifi_aware_manager_test.py"],
-    data: [
-        // Package the snippet with the mobly test
-        ":wifi_aware_snippet_new",
-        "requirements.txt",
-    ],
+    data: [":wifi_aware_snippet_new"],
     libs: [
         "mobly",
         "wifi_aware_constants",
