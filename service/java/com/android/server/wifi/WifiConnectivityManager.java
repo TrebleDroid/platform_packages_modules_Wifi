@@ -1958,8 +1958,10 @@ public class WifiConnectivityManager {
         // Need to connect to a different network id
         // Framework specifies the connection target BSSID if firmware doesn't support
         // {@link android.net.wifi.WifiManager#WIFI_FEATURE_CONTROL_ROAMING} or the
-        // candidate configuration contains a specified BSSID.
+        // candidate configuration contains a specified BSSID, or the feature to set target BSSID
+        // is enabled.
         if (mConnectivityHelper.isFirmwareRoamingSupported()
+                && !mWifiGlobals.isNetworkSelectionSetTargetBssid()
                 && (targetNetwork.BSSID == null
                 || targetNetwork.BSSID.equals(ClientModeImpl.SUPPLICANT_BSSID_ANY))) {
             targetBssid = ClientModeImpl.SUPPLICANT_BSSID_ANY;

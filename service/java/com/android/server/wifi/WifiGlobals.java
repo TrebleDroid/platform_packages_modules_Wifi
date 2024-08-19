@@ -615,6 +615,10 @@ public class WifiGlobals {
                 && !mIsD2dStaConcurrencySupported.get();
     }
 
+    public boolean isNetworkSelectionSetTargetBssid() {
+        return mWifiResourceCache.getBoolean(R.bool.config_wifiNetworkSelectionSetTargetBssid);
+    }
+
     /**
      * Set the global dhcp hostname restriction.
      */
