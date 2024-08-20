@@ -306,6 +306,7 @@ public class WifiNativeTest extends WifiBaseTest {
                 .thenReturn(WIFI_IFACE_NAME);
         when(mWifiVendorHal.createApIface(any(), any(), anyInt(), anyBoolean(), any(), anyList()))
                 .thenReturn(WIFI_IFACE_NAME);
+        when(mWifiVendorHal.getSupportedFeatureSet(anyString())).thenReturn(new BitSet());
 
         when(mBuildProperties.isEngBuild()).thenReturn(false);
         when(mBuildProperties.isUserdebugBuild()).thenReturn(false);

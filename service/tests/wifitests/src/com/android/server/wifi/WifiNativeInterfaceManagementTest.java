@@ -181,6 +181,7 @@ public class WifiNativeInterfaceManagementTest extends WifiBaseTest {
                 new ArrayList<>());
         when(mWifiVendorHal.enableStaChannelForPeerNetwork(anyBoolean(), anyBoolean())).thenReturn(
                 true);
+        when(mWifiVendorHal.getSupportedFeatureSet(anyString())).thenReturn(new BitSet());
 
         when(mBuildProperties.isEngBuild()).thenReturn(false);
         when(mBuildProperties.isUserdebugBuild()).thenReturn(false);

@@ -19,6 +19,7 @@ package com.android.server.wifi;
 import static com.android.server.wifi.HalDeviceManagerUtil.jsonToStaticChipInfo;
 import static com.android.server.wifi.HalDeviceManagerUtil.staticChipInfoToJson;
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_STATIC_CHIP_INFO;
+import static com.android.server.wifi.util.GeneralUtil.bitsetToLong;
 
 import android.annotation.IntDef;
 import android.annotation.NonNull;
@@ -64,6 +65,7 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -2856,12 +2858,12 @@ public class HalDeviceManager {
      * @param wifiChip WifiChip to get the features for.
      * @return Bitset of WifiManager.WIFI_FEATURE_* values.
      */
-    public long getChipCapabilities(@NonNull WifiChip wifiChip) {
+    private long getChipCapabilities(@NonNull WifiChip wifiChip) {
         if (wifiChip == null) return 0;
 
-        WifiChip.Response<Long> capsResp = wifiChip.getCapabilitiesBeforeIfacesExist();
+        WifiChip.Response<BitSet> capsResp = wifiChip.getCapabilitiesBeforeIfacesExist();
         if (capsResp.getStatusCode() == WifiHal.WIFI_STATUS_SUCCESS) {
-            return capsResp.getValue();
+            return bitsetToLong(capsResp.getValue());
         } else if (capsResp.getStatusCode() != WifiHal.WIFI_STATUS_ERROR_REMOTE_EXCEPTION) {
             // Non-remote exception here is likely because HIDL HAL < v1.5
             // does not support getting capabilities before creating an interface.

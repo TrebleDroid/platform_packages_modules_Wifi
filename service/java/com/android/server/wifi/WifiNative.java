@@ -3981,9 +3981,8 @@ public class WifiNative {
     private long getSupportedFeatureSetInternal(@NonNull String ifaceName) {
         BitSet featureBitset = mSupplicantStaIfaceHal.getAdvancedCapabilities(ifaceName);
         featureBitset.or(mSupplicantStaIfaceHal.getWpaDriverFeatureSet(ifaceName));
-        // TODO: Convert vendor HAL feature set to a BitSet
+        featureBitset.or(mWifiVendorHal.getSupportedFeatureSet(ifaceName));
         long featureSet = bitsetToLong(featureBitset);
-        featureSet |= mWifiVendorHal.getSupportedFeatureSet(ifaceName);
         if (SdkLevel.isAtLeastT()) {
             if (((featureSet & WifiManager.WIFI_FEATURE_DPP) != 0)
                     && mContext.getResources().getBoolean(R.bool.config_wifiDppAkmSupported)) {
