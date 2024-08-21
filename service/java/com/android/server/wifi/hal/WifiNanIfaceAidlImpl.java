@@ -846,7 +846,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.baseConfigs.securityConfig.securityType = NanDataPathSecurityType.OPEN;
         WifiAwareDataPathSecurityConfig securityConfig = publishConfig.getSecurityConfig();
         if (securityConfig != null) {
-            req.baseConfigs.securityConfig.cipherType = getHalCipherSuiteType(
+            req.baseConfigs.securityConfig.cipherType = getHalCipherSuites(
                     securityConfig.getCipherSuite());
             if (securityConfig.getPmk() != null && securityConfig.getPmk().length != 0) {
                 req.baseConfigs.securityConfig.securityType = NanDataPathSecurityType.PMK;
@@ -869,6 +869,10 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.publishType = publishConfig.mPublishType;
         req.txType = NanTxType.BROADCAST;
         req.pairingConfig = createAidlPairingConfig(publishConfig.getPairingConfig());
+        if (publishConfig.getPairingConfig() != null) {
+            req.baseConfigs.securityConfig.cipherType |= getHalCipherSuites(
+                    publishConfig.getPairingConfig().getSupportedCipherSuites());
+        }
         req.identityKey = copyArray(nik, 16);
 
         if (SdkLevel.isAtLeastV() && !publishConfig.getVendorData().isEmpty()) {
@@ -937,6 +941,10 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
 
         req.subscribeType = subscribeConfig.mSubscribeType;
         req.pairingConfig = createAidlPairingConfig(subscribeConfig.getPairingConfig());
+        if (subscribeConfig.getPairingConfig() != null) {
+            req.baseConfigs.securityConfig.cipherType |= getHalCipherSuites(
+                    subscribeConfig.getPairingConfig().getSupportedCipherSuites());
+        }
         req.identityKey = copyArray(nik, 16);
         req.intfAddr = new android.hardware.wifi.MacAddress[0];
 
@@ -997,7 +1005,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.securityConfig.scid = new byte[16];
         req.securityConfig.securityType = NanDataPathSecurityType.OPEN;
         if (securityConfig != null) {
-            req.securityConfig.cipherType = getHalCipherSuiteType(securityConfig.getCipherSuite());
+            req.securityConfig.cipherType = getHalCipherSuites(securityConfig.getCipherSuite());
             if (securityConfig.getPmk() != null && securityConfig.getPmk().length != 0) {
                 req.securityConfig.securityType = NanDataPathSecurityType.PMK;
                 req.securityConfig.pmk = copyArray(securityConfig.getPmk());
@@ -1034,7 +1042,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
                 : NanPairingRequestType.NAN_PAIRING_VERIFICATION;
         request.securityConfig = new NanPairingSecurityConfig();
         request.securityConfig.pmk = new byte[32];
-        request.securityConfig.cipherType = getHalCipherSuiteType(cipherSuite);
+        request.securityConfig.cipherType = getHalCipherSuites(cipherSuite);
         request.securityConfig.passphrase = new byte[0];
         if (pmk != null && pmk.length != 0) {
             request.securityConfig.securityType = NanPairingSecurityType.PMK;
@@ -1067,7 +1075,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         request.securityConfig = new NanPairingSecurityConfig();
         request.securityConfig.pmk = new byte[32];
         request.securityConfig.passphrase = new byte[0];
-        request.securityConfig.cipherType = getHalCipherSuiteType(cipherSuite);
+        request.securityConfig.cipherType = getHalCipherSuites(cipherSuite);
         if (pmk != null && pmk.length != 0) {
             request.securityConfig.securityType = NanPairingSecurityType.PMK;
             request.securityConfig.pmk = copyArray(pmk);
@@ -1099,7 +1107,7 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         req.securityConfig.scid = new byte[16];
         req.securityConfig.securityType = NanDataPathSecurityType.OPEN;
         if (securityConfig != null) {
-            req.securityConfig.cipherType = getHalCipherSuiteType(securityConfig.getCipherSuite());
+            req.securityConfig.cipherType = getHalCipherSuites(securityConfig.getCipherSuite());
             if (securityConfig.getPmk() != null && securityConfig.getPmk().length != 0) {
                 req.securityConfig.securityType = NanDataPathSecurityType.PMK;
                 req.securityConfig.pmk = copyArray(securityConfig.getPmk());
@@ -1121,22 +1129,27 @@ public class WifiNanIfaceAidlImpl implements IWifiNanIface {
         return req;
     }
 
-    private static int getHalCipherSuiteType(int frameworkCipherSuites) {
-        switch (frameworkCipherSuites) {
-            case WIFI_AWARE_CIPHER_SUITE_NCS_SK_128:
-                return NanCipherSuiteType.SHARED_KEY_128_MASK;
-            case WIFI_AWARE_CIPHER_SUITE_NCS_SK_256:
-                return NanCipherSuiteType.SHARED_KEY_256_MASK;
-            case WIFI_AWARE_CIPHER_SUITE_NCS_PK_128:
-                return NanCipherSuiteType.PUBLIC_KEY_2WDH_128_MASK;
-            case WIFI_AWARE_CIPHER_SUITE_NCS_PK_256:
-                return NanCipherSuiteType.PUBLIC_KEY_2WDH_256_MASK;
-            case WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128:
-                return NanCipherSuiteType.PUBLIC_KEY_PASN_128_MASK;
-            case WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_256:
-                return NanCipherSuiteType.PUBLIC_KEY_PASN_256_MASK;
+    private static int getHalCipherSuites(int frameworkCipherSuites) {
+        int cipherSuites = NanCipherSuiteType.NONE;
+        if ((frameworkCipherSuites & WIFI_AWARE_CIPHER_SUITE_NCS_SK_128) != 0) {
+            cipherSuites |= NanCipherSuiteType.SHARED_KEY_128_MASK;
         }
-        return NanCipherSuiteType.NONE;
+        if ((frameworkCipherSuites & WIFI_AWARE_CIPHER_SUITE_NCS_SK_256) != 0) {
+            cipherSuites |= NanCipherSuiteType.SHARED_KEY_256_MASK;
+        }
+        if ((frameworkCipherSuites & WIFI_AWARE_CIPHER_SUITE_NCS_PK_128) != 0) {
+            cipherSuites |= NanCipherSuiteType.PUBLIC_KEY_2WDH_128_MASK;
+        }
+        if ((frameworkCipherSuites & WIFI_AWARE_CIPHER_SUITE_NCS_PK_256) != 0) {
+            cipherSuites |= NanCipherSuiteType.PUBLIC_KEY_2WDH_256_MASK;
+        }
+        if ((frameworkCipherSuites & WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128) != 0) {
+            cipherSuites |= NanCipherSuiteType.PUBLIC_KEY_PASN_128_MASK;
+        }
+        if ((frameworkCipherSuites & WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_256) != 0) {
+            cipherSuites |= NanCipherSuiteType.PUBLIC_KEY_PASN_256_MASK;
+        }
+        return cipherSuites;
     }
 
     private static byte[] copyArray(byte[] source) {

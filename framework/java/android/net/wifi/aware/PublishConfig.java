@@ -302,6 +302,9 @@ public final class PublishConfig implements Parcelable {
             if (mPairingConfig != null && !characteristics.isAwarePairingSupported()) {
                 throw new IllegalArgumentException("Aware Pairing is not supported");
             }
+            if (mPairingConfig != null && !mPairingConfig.assertValid(characteristics)) {
+                throw new IllegalArgumentException("Unsupported pairing config");
+            }
         }
 
         if (!rttSupported && mEnableRanging) {
