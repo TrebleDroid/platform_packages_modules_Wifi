@@ -6790,12 +6790,15 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                             && mLastNetworkId != WifiConfiguration.INVALID_NETWORK_ID) {
                         WifiConfiguration config =
                                 mWifiConfigManager.getConfiguredNetwork(mLastNetworkId);
-                        if (config != null
-                            && ((message.arg1 == RESET_SIM_REASON_DEFAULT_DATA_SIM_CHANGED
+                        if (config == null) {
+                            break;
+                        }
+                        boolean isSimBasedNetwork = config.enterpriseConfig != null
+                                && config.enterpriseConfig.isAuthenticationSimBased();
+                        boolean isLastSubReady = mWifiCarrierInfoManager.isSimReady(mLastSubId);
+                        if ((message.arg1 == RESET_SIM_REASON_DEFAULT_DATA_SIM_CHANGED
                                 && config.carrierId != TelephonyManager.UNKNOWN_CARRIER_ID)
-                                || (config.enterpriseConfig != null
-                                && config.enterpriseConfig.isAuthenticationSimBased()
-                                && !mWifiCarrierInfoManager.isSimReady(mLastSubId)))) {
+                                || (isSimBasedNetwork && !isLastSubReady)) {
                             mWifiMetrics.logStaEvent(mInterfaceName,
                                     StaEvent.TYPE_FRAMEWORK_DISCONNECT,
                                     StaEvent.DISCONNECT_RESET_SIM_NETWORKS);
@@ -6803,7 +6806,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                             mWifiNative.removeNetworkCachedData(mLastNetworkId);
                             // remove network so that supplicant's PMKSA cache is cleared
                             mWifiNative.removeAllNetworks(mInterfaceName);
-                            if (isPrimary() && !mWifiCarrierInfoManager.isSimReady(mLastSubId)) {
+                            if (isPrimary() && isSimBasedNetwork && !isLastSubReady) {
                                 mSimRequiredNotifier.showSimRequiredNotification(
                                         config, mLastSimBasedConnectionCarrierName);
                             }
