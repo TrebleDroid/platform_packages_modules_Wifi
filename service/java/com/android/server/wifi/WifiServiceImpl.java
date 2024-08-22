@@ -1197,6 +1197,54 @@ public class WifiServiceImpl extends BaseWifiService {
     }
 
     /**
+     * Validates if the calling user is valid.
+     *
+     * @throws a {@link SecurityException} if the calling user is not valid.
+     */
+    private void enforceValidCallingUser() {
+        if (!isValidCallingUser()) {
+            throw new SecurityException(
+                    "Calling user " + Binder.getCallingUserHandle() + " is not the SYSTEM user, "
+                            + "the current user, or a profile of the current user, "
+                            + "thus not allowed to make changes to WIFI.");
+        }
+    }
+
+    /**
+     * Checks if the calling user is valid on Automotive devices..
+     *
+     * @return true if any of the following conditions are true:
+     *     <li>The device is not an Automotive device.
+     *     <li>the calling user is the system user.
+     *     <li>the calling user is the current user.
+     *     <li>the calling user belongs to the same profile group as the current user.
+     */
+    private boolean isValidCallingUser() {
+        // TODO(b/360488316): Ideally UserManager#isVisibleBackgroundUsersEnabled() should be used
+        // but it is a hidden API. We rely on FEATURE_AUTOMOTIVE only, because we cannot access
+        // the RRO config for R.bool.config_multiuserVisibleBackgroundUsers.
+        if (!mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) {
+            return true;
+        }
+        UserHandle callingUser = Binder.getCallingUserHandle();
+
+        final long ident = Binder.clearCallingIdentity();
+        try {
+            UserHandle currentUser =
+                    UserHandle.of(mWifiInjector.getWifiPermissionsWrapper().getCurrentUser());
+            if (UserHandle.SYSTEM.equals(callingUser)
+                    || callingUser.equals(currentUser)
+                    || mUserManager.isSameProfileGroup(callingUser, currentUser)) {
+                return true;
+            }
+        } finally {
+            Binder.restoreCallingIdentity(ident);
+        }
+
+        return false;
+    }
+
+    /**
      * Helper method to check if the app is allowed to access public API's deprecated in
      * {@link Build.VERSION_CODES#Q}.
      * Note: Invoke mAppOps.checkPackage(uid, packageName) before to ensure correct package name.
@@ -1265,7 +1313,7 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public synchronized boolean setWifiEnabled(String packageName, boolean enable) {
-        if (enforceChangePermission(packageName) != MODE_ALLOWED) {
+        if (!isValidCallingUser() || enforceChangePermission(packageName) != MODE_ALLOWED) {
             return false;
         }
         int callingUid = Binder.getCallingUid();
@@ -1757,6 +1805,8 @@ public class WifiServiceImpl extends BaseWifiService {
     @Override
     public boolean startTetheredHotspot(@Nullable SoftApConfiguration softApConfig,
             @NonNull String packageName) {
+        enforceValidCallingUser();
+
         // NETWORK_STACK is a signature only permission.
         enforceNetworkStackPermission();
         int callingUid = Binder.getCallingUid();
@@ -1792,6 +1842,7 @@ public class WifiServiceImpl extends BaseWifiService {
             throw new IllegalArgumentException("callback must not be null");
         }
 
+        enforceValidCallingUser();
         // NETWORK_STACK is a signature only permission.
         enforceNetworkStackPermission();
         int callingUid = Binder.getCallingUid();
@@ -1898,6 +1949,8 @@ public class WifiServiceImpl extends BaseWifiService {
      */
     @Override
     public boolean stopSoftAp() {
+        enforceValidCallingUser();
+
         // NETWORK_STACK is a signature only permission.
         enforceNetworkStackPermission();
 
