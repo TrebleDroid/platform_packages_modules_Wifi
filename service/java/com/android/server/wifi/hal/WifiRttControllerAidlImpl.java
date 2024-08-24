@@ -56,6 +56,8 @@ import java.util.Set;
 public class WifiRttControllerAidlImpl implements IWifiRttController {
     private static final String TAG = "WifiRttControllerAidl";
     private boolean mVerboseLoggingEnabled = false;
+    private static final int CONVERSION_MICROS_TO_10_MILLIS = 10000;
+    private static final int CONVERSION_MICROS_TO_100_MICROS = 100;
 
     private android.hardware.wifi.IWifiRttController mWifiRttController;
     private WifiRttController.Capabilities mRttCapabilities;
@@ -292,8 +294,10 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                     .setMeasurementChannelFrequencyMHz(rttResult.channelFreqMHz)
                     .setMeasurementBandwidth(halToFrameworkChannelBandwidth(rttResult.packetBw))
                     .set80211azNtbMeasurement(rttResult.type == RttType.TWO_SIDED_11AZ_NTB)
-                    .setMinTimeBetweenNtbMeasurementsMicros(rttResult.ntbMinMeasurementTime)
-                    .setMaxTimeBetweenNtbMeasurementsMicros(rttResult.ntbMaxMeasurementTime)
+                    .setMinTimeBetweenNtbMeasurementsMicros(rttResult.ntbMinMeasurementTime
+                            * CONVERSION_MICROS_TO_100_MICROS)
+                    .setMaxTimeBetweenNtbMeasurementsMicros(rttResult.ntbMaxMeasurementTime
+                            * CONVERSION_MICROS_TO_10_MILLIS)
                     .set80211azInitiatorTxLtfRepetitionsCount(rttResult.i2rTxLtfRepetitionCount)
                     .set80211azResponderTxLtfRepetitionsCount(rttResult.r2iTxLtfRepetitionCount)
                     .set80211azNumberOfTxSpatialStreams(rttResult.numTxSpatialStreams)
@@ -486,11 +490,11 @@ public class WifiRttControllerAidlImpl implements IWifiRttController {
                 }
                 validateBwAndPreambleCombination(config.bw, config.preamble);
                 // ResponderConfig#ntbMaxMeasurementTime is in units of 10 milliseconds
-                config.ntbMaxMeasurementTime =
-                        responder.getNtbMaxTimeBetweenMeasurementsMicros() / 10000;
+                config.ntbMaxMeasurementTime = responder.getNtbMaxTimeBetweenMeasurementsMicros()
+                        / CONVERSION_MICROS_TO_10_MILLIS;
                 // ResponderConfig#ntbMinMeasurementTime is in units of 100 microseconds
-                config.ntbMinMeasurementTime =
-                        responder.getNtbMinTimeBetweenMeasurementsMicros() / 100;
+                config.ntbMinMeasurementTime = responder.getNtbMinTimeBetweenMeasurementsMicros()
+                        / CONVERSION_MICROS_TO_100_MICROS;
 
                 if (config.peer == RttPeerType.NAN_TYPE) {
                     config.mustRequestLci = false;

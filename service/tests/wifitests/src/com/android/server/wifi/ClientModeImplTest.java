@@ -7811,12 +7811,14 @@ public class ClientModeImplTest extends WifiBaseTest {
         final IpClientCallbacks callback = mIpClientCallback;
         final ReachabilityLossInfoParcelable lossInfo =
                 new ReachabilityLossInfoParcelable("", lossReason);
+        assertNull(mCmi.getConnectingWifiConfiguration());
         callback.onReachabilityFailure(lossInfo);
         callback.onProvisioningFailure(new LinkProperties());
         mLooper.dispatchAll();
         verify(mWifiNetworkAgent).unregisterAfterReplacement(anyInt());
         verify(mWifiNative, never()).disconnect(WIFI_IFACE_NAME);
         assertEquals("L3ProvisioningState", getCurrentState().getName());
+        assertEquals(FRAMEWORK_NETWORK_ID, mCmi.getConnectingWifiConfiguration().networkId);
 
         // Verify that onProvisioningFailure from the current IpClientCallbacks instance
         // triggers wifi disconnection.

@@ -4148,6 +4148,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
         // processing the posted message sent from the legacy IpClientCallbacks instance,
         // see b/286338765.
         maybeShutdownIpclient();
+        mTargetNetworkId = config.networkId;
         transitionTo(mWaitBeforeL3ProvisioningState);
 
         updateCurrentConnectionInfo();
