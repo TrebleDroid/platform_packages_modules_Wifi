@@ -20,6 +20,8 @@ import static android.net.wifi.WifiScanner.WIFI_BAND_24_GHZ;
 import static android.net.wifi.WifiScanner.WIFI_BAND_5_GHZ;
 
 import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_NATIVE_SUPPORTED_FEATURES;
+import static com.android.server.wifi.WifiSettingsConfigStore.WIFI_NATIVE_EXTENDED_SUPPORTED_FEATURES;
+import static com.android.server.wifi.util.GeneralUtil.longToBitset;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -254,7 +256,7 @@ public class WifiNativeTest extends WifiBaseTest {
         return result;
     }
 
-    public static final long WIFI_TEST_FEATURE = 0x800000000L;
+    private static final BitSet WIFI_TEST_FEATURE = longToBitset(0x800000000L);
 
     private static final RadioChainInfo MOCK_NATIVE_RADIO_CHAIN_INFO_1 = new RadioChainInfo(1, -89);
     private static final RadioChainInfo MOCK_NATIVE_RADIO_CHAIN_INFO_2 = new RadioChainInfo(0, -78);
@@ -339,8 +341,8 @@ public class WifiNativeTest extends WifiBaseTest {
         mResources = getMockResources();
         mResources.setBoolean(R.bool.config_wifiNetworkCentricQosPolicyFeatureEnabled, false);
         when(mContext.getResources()).thenReturn(mResources);
-        when(mSettingsConfigStore.get(eq(WIFI_NATIVE_SUPPORTED_FEATURES)))
-                .thenReturn(WIFI_TEST_FEATURE);
+        when(mSettingsConfigStore.get(eq(WIFI_NATIVE_EXTENDED_SUPPORTED_FEATURES)))
+                .thenReturn(WIFI_TEST_FEATURE.toLongArray());
         when(mSsidTranslator.getTranslatedSsidAndRecordBssidCharset(any(), any()))
                 .thenAnswer((Answer<WifiSsid>) invocation ->
                         getTranslatedSsid(invocation.getArgument(0)));
@@ -1597,13 +1599,34 @@ public class WifiNativeTest extends WifiBaseTest {
 
     /**
      * Tests that getSupportedFeatureSet() guaranteed to include the feature set stored in config
-     * store even when interface doesn't exist.
-     *
+     * store even when interface doesn't exist. If both legacy and extended features are stored in
+     * the config store, then the extended features should be returned.
      */
     @Test
-    public void testGetSupportedFeatureSetWhenInterfaceDoesntExist() throws Exception {
-        long featureSet = mWifiNative.getSupportedFeatureSet(null);
-        assertEquals(featureSet, WIFI_TEST_FEATURE);
+    public void testGetExtendedFeaturesWhenInterfaceDoesntExist() throws Exception {
+        long legacyFeatures = 0x321;
+        when(mSettingsConfigStore.get(eq(WIFI_NATIVE_SUPPORTED_FEATURES)))
+                .thenReturn(legacyFeatures);
+        when(mSettingsConfigStore.get(eq(WIFI_NATIVE_EXTENDED_SUPPORTED_FEATURES)))
+                .thenReturn(WIFI_TEST_FEATURE.toLongArray());
+        BitSet featureSet = longToBitset(mWifiNative.getSupportedFeatureSet(null));
+        assertTrue(featureSet.equals(WIFI_TEST_FEATURE));
+    }
+
+    /**
+     * Tests that getSupportedFeatureSet() guaranteed to include the feature set stored in config
+     * store even when interface doesn't exist. If only legacy features are stored in the
+     * config store, then they should be returned.
+     */
+    @Test
+    public void testGetLegacyFeaturesWhenInterfaceDoesntExist() throws Exception {
+        long legacyFeatures = 0x321;
+        when(mSettingsConfigStore.get(eq(WIFI_NATIVE_SUPPORTED_FEATURES)))
+                .thenReturn(legacyFeatures);
+        when(mSettingsConfigStore.get(eq(WIFI_NATIVE_EXTENDED_SUPPORTED_FEATURES)))
+                .thenReturn(new long[0]); // no extended features
+        BitSet featureSet = longToBitset(mWifiNative.getSupportedFeatureSet(null));
+        assertTrue(featureSet.equals(longToBitset(legacyFeatures)));
     }
 
     /**
