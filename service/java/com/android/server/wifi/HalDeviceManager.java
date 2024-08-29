@@ -950,6 +950,14 @@ public class HalDeviceManager {
     public List<Pair<Integer, WorkSource>> reportImpactToCreateIface(
             @HdmIfaceTypeForCreation int createIfaceType, boolean queryForNewInterface,
             WorkSource requestorWs) {
+        if (!isWifiStarted()) {
+            if (canDeviceSupportCreateTypeCombo(new SparseArray<>() {{
+                    put(createIfaceType, 1);
+                }})) {
+                return Collections.emptyList();
+            }
+            return null;
+        }
         List<WifiIfaceInfo> ifaces = getIfacesToDestroyForRequest(createIfaceType,
                 queryForNewInterface, CHIP_CAPABILITY_ANY, requestorWs);
         if (ifaces == null) {
