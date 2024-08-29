@@ -9544,7 +9544,8 @@ public class WifiMetrics {
             boolean isStaApSupported,
             boolean isStaDbsSupported,
             int staFreqMhz,
-            @SoftApConfiguration.SecurityType int securityType) {
+            @SoftApConfiguration.SecurityType int securityType,
+            WorkSource source) {
         WifiStatsLog.write(WifiStatsLog.SOFT_AP_STARTED,
                 getSoftApStartedStartResult(startResult),
                 getSoftApStartedRole(role),
@@ -9553,7 +9554,8 @@ public class WifiMetrics {
                 isDbsSupported,
                 getSoftApStartedStaApConcurrency(isStaApSupported, isStaDbsSupported),
                 getSoftApStartedStaStatus(staFreqMhz),
-                getSoftApStartedAuthType(securityType));
+                getSoftApStartedAuthType(securityType),
+                source.getUid(0));
         if (startResult == SoftApManager.START_RESULT_SUCCESS) {
             WifiStatsLog.write(WifiStatsLog.SOFT_AP_STATE_CHANGED,
                     WifiStatsLog.SOFT_AP_STATE_CHANGED__HOTSPOT_ON__STATE_ON);

@@ -538,7 +538,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_INTERFACE_CONFLICT_USER_REJECTED),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     /** Verifies startSoftAp will skip checking for user approval for the Tethering case. */
@@ -615,7 +615,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_GENERAL),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     /**
@@ -653,7 +653,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_GENERAL),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     /**
@@ -695,7 +695,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_INTERFACE_CONFLICT),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     /**
@@ -734,7 +734,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_CREATE_INTERFACE),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     /**
@@ -768,7 +768,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_SET_COUNTRY_CODE),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     /**
@@ -1013,7 +1013,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_ADD_AP_HOSTAPD),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     /**
@@ -2723,7 +2723,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_UNSUPPORTED_CONFIG),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     @Test
@@ -2751,7 +2751,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_UNSUPPORTED_CONFIG),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     @Test
@@ -2787,7 +2787,7 @@ public class SoftApManagerTest extends WifiBaseTest {
         verify(mWifiMetrics).writeSoftApStartedEvent(
                 eq(SoftApManager.START_RESULT_FAILURE_UNSUPPORTED_CONFIG),
                 any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean(), anyInt(),
-                anyInt());
+                anyInt(), eq(TEST_WORKSOURCE));
     }
 
     @Test
