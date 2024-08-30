@@ -28,6 +28,12 @@ import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESUL
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_OFF;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_CELLULAR_UNAVAILABLE;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__DEVICE_STATE__STATE_OTHERS;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_DS__UNKNOWN;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_DS__TRUE;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_DS__FALSE;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_US__UNKNOWN;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_US__TRUE;
+import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_US__FALSE;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FRAMEWORK_DATA_STALL;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FIRMWARE_ALERT;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_IP_REACHABILITY_LOST;
@@ -48,6 +54,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.wifi.EAPConstants;
 import android.net.wifi.IOnWifiUsabilityStatsListener;
@@ -259,6 +267,9 @@ public class WifiMetrics {
     // Number of WME Access Categories
     private static final int NUM_WME_ACCESS_CATEGORIES = 4;
     private static final int MBB_LINGERING_DURATION_MAX_SECONDS = 30;
+    public static final int MIN_DOWNSTREAM_BANDWIDTH_KBPS = 1000;
+    public static final int MIN_UPSTREAM_BANDWIDTH_KBPS = 1000;
+    public static final int INVALID_SPEED = -1;
 
     private Clock mClock;
     private boolean mScreenOn;
@@ -8847,6 +8858,100 @@ public class WifiMetrics {
         return SCORER_PREDICTION_RESULT_REPORTED__WIFI_FRAMEWORK_STATE__FRAMEWORK_STATE_CONNECTED;
     }
 
+    private class ConnectivityManagerCache {
+        ConnectivityManagerCache() { }
+
+        private ConnectivityManager mConnectivityManager;
+
+        /**
+         * Returns the cached ConnectivityManager or performs a system call to fetch it before
+         * returning.
+         *
+         * Note that this function can still return null if getSystemService cannot find the
+         * connectivity manager.
+         */
+        public ConnectivityManager getConnectivityManager() {
+            if (mConnectivityManager == null) {
+                mConnectivityManager = mContext.getSystemService(ConnectivityManager.class);
+            }
+            return mConnectivityManager;
+        }
+    }
+    private final ConnectivityManagerCache mConnectivityManagerCache =
+            new ConnectivityManagerCache();
+
+    @VisibleForTesting
+    public static class Speeds {
+        public int DownstreamKbps = INVALID_SPEED;
+        public int UpstreamKbps = INVALID_SPEED;
+    }
+
+    /**
+     * Returns the NetworkCapabilites based link capacity estimates.
+     */
+    Speeds getNetworkCapabilitiesSpeeds() {
+        Speeds speeds = new Speeds();
+
+        ConnectivityManager connectivityManager =
+                mConnectivityManagerCache.getConnectivityManager();
+        if (connectivityManager == null) {
+            return speeds;
+        }
+
+        Network activeNetwork = connectivityManager.getActiveNetwork();
+        if (activeNetwork == null) {
+            return speeds;
+        }
+
+        NetworkCapabilities networkCapabilities =
+                connectivityManager.getNetworkCapabilities(activeNetwork);
+        if (networkCapabilities == null) {
+            return speeds;
+        }
+
+        // Normally, we will not get called when WiFi is not active. This deals with a corner case
+        // where we have switched to cellular but we end up getting called one last time.
+        if (!networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            return speeds;
+        }
+
+        speeds.DownstreamKbps = networkCapabilities.getLinkDownstreamBandwidthKbps();
+        speeds.UpstreamKbps = networkCapabilities.getLinkUpstreamBandwidthKbps();
+
+        return speeds;
+    }
+
+    @VisibleForTesting
+    public static class SpeedSufficient {
+        public int Downstream = SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_DS__UNKNOWN;
+        public int Upstream = SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_US__UNKNOWN;
+    }
+
+    @VisibleForTesting
+    SpeedSufficient calcSpeedSufficientNetworkCapabilities(Speeds speeds) {
+        // Note that this default initializes to UNKNOWN.
+        SpeedSufficient speedSufficient = new SpeedSufficient();
+
+        if (speeds == null) {
+            return speedSufficient;
+        }
+
+        if (speeds.DownstreamKbps != INVALID_SPEED) {
+            speedSufficient.Downstream = (speeds.DownstreamKbps < MIN_DOWNSTREAM_BANDWIDTH_KBPS)
+                    ? SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_DS__FALSE
+                    : SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_DS__TRUE;
+
+        }
+
+        if (speeds.UpstreamKbps != INVALID_SPEED) {
+            speedSufficient.Upstream = (speeds.UpstreamKbps < MIN_UPSTREAM_BANDWIDTH_KBPS)
+                    ? SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_US__FALSE
+                    : SCORER_PREDICTION_RESULT_REPORTED__SPEED_SUFFICIENT_NETWORK_CAPABILITIES_US__TRUE;
+        }
+
+        return speedSufficient;
+    }
+
     /**
      * Log a ScorerPredictionResultReported atom.
      */
@@ -8865,6 +8970,8 @@ public class WifiMetrics {
                 mAdaptiveConnectivityEnabled);
         int scorerUnusableEvent = convertWifiUnusableTypeForScorer(mUnusableEventType);
         int wifiFrameworkState = getFrameworkStateForScorer(pollingIntervalMs, lingering);
+        SpeedSufficient speedSufficientNetworkCapabilities =
+                calcSpeedSufficientNetworkCapabilities(getNetworkCapabilitiesSpeeds());
 
         WifiStatsLog.write_non_chained(SCORER_PREDICTION_RESULT_REPORTED,
                     Process.WIFI_UID,
@@ -8872,7 +8979,8 @@ public class WifiMetrics {
                     aospScorerPrediction,
                     scorerUnusableEvent,
                     isThroughputSufficient, deviceState, pollingIntervalMs,
-                    wifiFrameworkState);
+                    wifiFrameworkState, speedSufficientNetworkCapabilities.Downstream,
+                    speedSufficientNetworkCapabilities.Upstream);
         if (mScorerUid != Process.WIFI_UID) {
             WifiStatsLog.write_non_chained(SCORER_PREDICTION_RESULT_REPORTED,
                     mScorerUid,
@@ -8880,7 +8988,8 @@ public class WifiMetrics {
                     externalScorerPrediction,
                     scorerUnusableEvent,
                     isThroughputSufficient, deviceState, pollingIntervalMs,
-                    wifiFrameworkState);
+                    wifiFrameworkState, speedSufficientNetworkCapabilities.Downstream,
+                    speedSufficientNetworkCapabilities.Upstream);
         }
 
         // We'd better reset to TYPE_NONE if it is defined in the future.
