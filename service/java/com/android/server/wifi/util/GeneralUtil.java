@@ -16,6 +16,8 @@
 
 package com.android.server.wifi.util;
 
+import java.util.BitSet;
+
 /**
  * Class for general helper methods and objects for Wifi Framework code.
  * @hide
@@ -39,5 +41,38 @@ public class GeneralUtil {
         public Mutable(E value) {
             this.value = value;
         }
+    }
+
+    /**
+     * Convert a capability bitmask to its index in a BitSet.
+     *
+     * TODO: Remove this method once the WifiManager capabilities are
+     *       represented as indexes rather than bitmasks.
+     */
+    public static int getCapabilityIndex(long capability) {
+        // Index of the first enabled bit is the number of trailing zeroes
+        // in the binary representation
+        return Long.numberOfTrailingZeros(capability);
+    }
+
+    /**
+     * Convert a long to a BitSet.
+     *
+     * See TODO in {@link #getCapabilityIndex(long)}.
+     */
+    public static BitSet longToBitset(long longValue) {
+        return BitSet.valueOf(new long[]{longValue});
+    }
+
+    /**
+     * Convert a BitSet to a long.
+     *
+     * See TODO in {@link #getCapabilityIndex(long)}.
+     */
+    public static long bitsetToLong(BitSet bitset) {
+        if (bitset == null || bitset.cardinality() == 0) {
+            return 0L;
+        }
+        return bitset.toLongArray()[0];
     }
 }
