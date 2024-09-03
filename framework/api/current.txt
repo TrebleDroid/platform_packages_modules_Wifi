@@ -847,6 +847,7 @@ package android.net.wifi.aware {
   public final class AwarePairingConfig implements android.os.Parcelable {
     method public int describeContents();
     method public int getBootstrappingMethods();
+    method @FlaggedApi("com.android.wifi.flags.aware_pairing") public int getSupportedCipherSuites();
     method public boolean isPairingCacheEnabled();
     method public boolean isPairingSetupEnabled();
     method public boolean isPairingVerificationEnabled();
@@ -870,6 +871,7 @@ package android.net.wifi.aware {
     method @NonNull public android.net.wifi.aware.AwarePairingConfig.Builder setPairingCacheEnabled(boolean);
     method @NonNull public android.net.wifi.aware.AwarePairingConfig.Builder setPairingSetupEnabled(boolean);
     method @NonNull public android.net.wifi.aware.AwarePairingConfig.Builder setPairingVerificationEnabled(boolean);
+    method @FlaggedApi("com.android.wifi.flags.aware_pairing") @NonNull public android.net.wifi.aware.AwarePairingConfig.Builder setSupportedCipherSuites(int);
   }
 
   public final class AwareResources implements android.os.Parcelable {

@@ -4590,7 +4590,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         final String alias = "alias";
 
         AwarePairingConfig pairingConfig = new AwarePairingConfig(true, true, true,
-                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN);
+                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN,
+                WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128);
         ConfigRequest configRequest = new ConfigRequest.Builder().build();
         PublishConfig publishConfig = new PublishConfig.Builder()
                 .setPairingConfig(pairingConfig).build();
@@ -4724,7 +4725,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         final String alias = "alias";
 
         AwarePairingConfig pairingConfig = new AwarePairingConfig(true, true, true,
-                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN);
+                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN,
+                WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128);
         ConfigRequest configRequest = new ConfigRequest.Builder().build();
         PublishConfig publishConfig = new PublishConfig.Builder()
                 .setPairingConfig(pairingConfig).build();
@@ -4852,7 +4854,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         final String alias = "alias";
 
         AwarePairingConfig pairingConfig = new AwarePairingConfig(true, true, true,
-                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN);
+                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN,
+                WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128);
 
         ConfigRequest configRequest = new ConfigRequest.Builder().build();
         SubscribeConfig subscribeConfig = new SubscribeConfig.Builder()
@@ -4983,7 +4986,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         final String alias = "alias";
 
         AwarePairingConfig pairingConfig = new AwarePairingConfig(true, true, true,
-                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN);
+                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN,
+                WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128);
 
         ConfigRequest configRequest = new ConfigRequest.Builder().build();
         SubscribeConfig subscribeConfig = new SubscribeConfig.Builder()
@@ -5107,7 +5111,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         final String alias = "alias";
 
         AwarePairingConfig pairingConfig = new AwarePairingConfig(true, true, true,
-                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN);
+                AwarePairingConfig.PAIRING_BOOTSTRAPPING_QR_SCAN,
+                WIFI_AWARE_CIPHER_SUITE_NCS_PK_PASN_128);
 
         ConfigRequest configRequest = new ConfigRequest.Builder().build();
         SubscribeConfig subscribeConfig = new SubscribeConfig.Builder()
