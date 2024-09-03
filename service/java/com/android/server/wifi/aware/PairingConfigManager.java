@@ -186,11 +186,9 @@ public class PairingConfigManager {
     public void removePairedDevice(String packageName, String alias) {
         mAliasToNikMap.remove(alias);
         mAliasToSecurityInfoMap.remove(alias);
-        Set<String> aliasSet = mPerAppPairedAliasMap.remove(packageName);
-        if (aliasSet == null) {
-            return;
+        if (mPerAppPairedAliasMap.containsKey(packageName)) {
+            mPerAppPairedAliasMap.get(packageName).remove(alias);
         }
-        aliasSet.remove(alias);
     }
 
     /**
