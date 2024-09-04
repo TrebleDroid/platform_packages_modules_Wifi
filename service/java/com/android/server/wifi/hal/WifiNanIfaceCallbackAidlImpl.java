@@ -440,18 +440,21 @@ public class WifiNanIfaceCallbackAidlImpl extends IWifiNanIfaceEventCallback.Stu
                         NanRangingIndication.fromAidl(event.rangingIndicationType),
                         event.rangingMeasurementInMm,
                         event.scid,
-                        toPublicDataPathCipherSuites(event.peerCipherType),
+                        toPublicDataPathCipherSuites(event.peerCipherType)
+                                | toPublicPairingCipherSuites(event.peerCipherType),
                         event.peerNira.nonce,
                         event.peerNira.tag,
-                        createPublicPairingConfig(event.peerPairingConfig),
+                        createPublicPairingConfig(event.peerPairingConfig, event.peerCipherType),
                         vendorData);
     }
 
-    private AwarePairingConfig createPublicPairingConfig(NanPairingConfig nativePairingConfig) {
+    private AwarePairingConfig createPublicPairingConfig(NanPairingConfig nativePairingConfig,
+            int cipherSuites) {
         return new AwarePairingConfig(nativePairingConfig.enablePairingSetup,
                 nativePairingConfig.enablePairingCache,
                 nativePairingConfig.enablePairingVerification,
-                toBootStrappingMethods(nativePairingConfig.supportedBootstrappingMethods));
+                toBootStrappingMethods(nativePairingConfig.supportedBootstrappingMethods),
+                toPublicPairingCipherSuites(cipherSuites));
     }
 
     private int toBootStrappingMethods(int nativeMethods) {
@@ -642,7 +645,7 @@ public class WifiNanIfaceCallbackAidlImpl extends IWifiNanIfaceEventCallback.Stu
             NpkSecurityAssociation npksa) {
         return new PairingSecurityAssociationInfo(npksa.peerNanIdentityKey,
                 npksa.localNanIdentityKey, npksa.npk,
-                createPublicPairingAkm(npksa.akm), toPublicDataPathCipherSuites(npksa.cipherType));
+                createPublicPairingAkm(npksa.akm), toPublicPairingCipherSuites(npksa.cipherType));
     }
 
     private static int createPublicPairingAkm(int aidlAkm) {
