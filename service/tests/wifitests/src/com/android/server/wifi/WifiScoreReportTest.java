@@ -426,7 +426,7 @@ public class WifiScoreReportTest extends WifiBaseTest {
         {
             NetworkScore networkScore = networkScoreCaptor.getValue();
             assertEquals(WifiScoreReport.LINGERING_SCORE, networkScore.getLegacyInt());
-            assertFalse(networkScore.isExiting());
+            assertTrue(networkScore.isExiting());
             assertFalse(networkScore.isTransportPrimary());
             assertEquals(NetworkScore.KEEP_CONNECTED_NONE, networkScore.getKeepConnectedReason());
         }
@@ -482,7 +482,7 @@ public class WifiScoreReportTest extends WifiBaseTest {
         {
             NetworkScore networkScore = networkScoreCaptor.getValue();
             assertEquals(WifiScoreReport.LINGERING_SCORE, networkScore.getLegacyInt());
-            assertFalse(networkScore.isExiting());
+            assertTrue(networkScore.isExiting());
             assertFalse(networkScore.isTransportPrimary());
         }
         // upon lingering, send session end to client.

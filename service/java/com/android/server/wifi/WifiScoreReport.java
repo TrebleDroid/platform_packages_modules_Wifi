@@ -1161,7 +1161,7 @@ public class WifiScoreReport {
         return new NetworkScore.Builder()
                 .setLegacyInt(mShouldReduceNetworkScore ? LINGERING_SCORE : mLegacyIntScore)
                 .setTransportPrimary(mCurrentRole == ActiveModeManager.ROLE_CLIENT_PRIMARY)
-                .setExiting(exiting)
+                .setExiting(exiting | mShouldReduceNetworkScore)
                 .setKeepConnectedReason(keepConnectedReason);
     }
 
