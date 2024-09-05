@@ -14,8 +14,10 @@
 
 # Lint as: python3
 """CTS-V Wi-Fi Aware test reimplemented in Mobly."""
-
+import datetime
 import enum
+import logging
+import random
 import sys
 
 from mobly import asserts
@@ -32,10 +34,22 @@ from aware import constants
 RUNTIME_PERMISSIONS = (
     'android.permission.ACCESS_FINE_LOCATION',
     'android.permission.ACCESS_COARSE_LOCATION',
-    'android.permission.NEARBY_WIFI_DEVICES'
+    'android.permission.NEARBY_WIFI_DEVICES',
 )
 PACKAGE_NAME = constants.WIFI_AWARE_SNIPPET_PACKAGE_NAME
-DEFAULT_TIMEOUT = constants.WAIT_WIFI_STATE_TIME_OUT.total_seconds()
+_DEFAULT_TIMEOUT = constants.WAIT_WIFI_STATE_TIME_OUT.total_seconds()
+_REQUEST_NETWORK_TIMEOUT_MS = 15 * 1000
+_MSG_ID_SUB_TO_PUB = random.randint(1000, 5000)
+_MSG_ID_PUB_TO_SUB = random.randint(5001, 9999)
+_MSG_SUB_TO_PUB = "Let's talk [Random Identifier: %s]" % utils.rand_ascii_str(5)
+_MSG_PUB_TO_SUB = 'Ready [Random Identifier: %s]' % utils.rand_ascii_str(5)
+_PUB_SSI = constants.WifiAwareTestConstants.PUB_SSI
+_MATCH_FILTER = [constants.WifiAwareTestConstants.MATCH_FILTER_BYTES]
+_CALLBACK_NAME = constants.DiscoverySessionCallbackParamsType.CALLBACK_NAME
+_IS_SESSION_INIT = constants.DiscoverySessionCallbackParamsType.IS_SESSION_INIT
+_TRANSPORT_TYPE_WIFI_AWARE = (
+    constants.NetworkCapabilities.Transport.TRANSPORT_WIFI_AWARE
+)
 
 
 @enum.unique
@@ -44,10 +58,9 @@ class AttachCallBackMethodType(enum.StrEnum):
 
     https://developer.android.com/reference/android/net/wifi/aware/AttachCallback
     """
-
-    ATTACHED = "onAttached"
-    ATTACH_FAILED = "onAttachFailed"
-    AWARE_SESSION_TERMINATED = "onAwareSessionTerminated"
+    ATTACHED = 'onAttached'
+    ATTACH_FAILED = 'onAttachFailed'
+    AWARE_SESSION_TERMINATED = 'onAwareSessionTerminated'
 
 
 class WifiAwareManagerTest(base_test.BaseTestClass):
@@ -82,72 +95,202 @@ class WifiAwareManagerTest(base_test.BaseTestClass):
             raise_on_exception=True,
         )
 
-    def start_attach(self, ad: android_device.AndroidDevice) -> None:
+    def test_create_wifi_aware_network(self) -> None:
+        """Test that creates a Wi-Fi Aware network.
+
+        This test case tests against WiFi Aware with security type OPEN,
+        unsolicited publish type, and passive subscribe type.
+
+        Test steps:
+        1. Attach a Wi-Fi Aware session on each Android device.
+        2. Publisher creates a publish discovery session.
+        3. Subscriber creates a subscribe discovery session.
+        4. Waits for subscriber to discover the published discovery session.
+        5. Sends messages between the publisher and subscriber.
+        6. Creates a Wi-Fi Aware network between the publisher and subscriber.
+        """
+        utils.concurrent_exec(
+            self._start_attach,
+            ((self.publisher,), (self.subscriber,)),
+            max_workers=2,
+            raise_on_exception=True,
+        )
+        pub_aware_session_cb_handler = self._start_publish(
+            publish_type=constants.PublishType.UNSOLICITED,
+            service_specific_info=_PUB_SSI,
+            match_filter=_MATCH_FILTER,
+            is_ranging_enabled=False,
+        )
+        self.publisher.log.info('Created the publish session.')
+
+        sub_aware_session_cb_handler = self._start_subscribe(
+            subscribe_type=constants.SubscribeType.PASSIVE,
+            match_filter=_MATCH_FILTER,
+        )
+        self.subscriber.log.info('Created the subscribe session.')
+
+        # Wait for discovery.
+        self._wait_for_discovery(
+            sub_aware_session_cb_handler,
+            pub_service_specific_info=_PUB_SSI,
+            is_ranging_enabled=False,
+        )
+        self.subscriber.log.info('Discovered the published session.')
+
+        # Subscriber sends a message to publisher.
+        self._send_msg_and_check_received(
+            sender=self.subscriber,
+            sender_aware_session_cb_handler=sub_aware_session_cb_handler,
+            receiver=self.publisher,
+            receiver_aware_session_cb_handler=pub_aware_session_cb_handler,
+            send_message=_MSG_SUB_TO_PUB,
+            send_message_id=_MSG_ID_SUB_TO_PUB,
+        )
+        logging.info(
+            'The subscriber sent a message and the publisher received it.'
+        )
+
+        # Publisher sends a message to subscriber.
+        self._send_msg_and_check_received(
+            sender=self.publisher,
+            sender_aware_session_cb_handler=pub_aware_session_cb_handler,
+            receiver=self.subscriber,
+            receiver_aware_session_cb_handler=sub_aware_session_cb_handler,
+            send_message=_MSG_PUB_TO_SUB,
+            send_message_id=_MSG_ID_PUB_TO_SUB,
+        )
+        logging.info(
+            'The publisher sent a message and the subscriber received it.'
+        )
+
+        # Request network.
+        pub_network_cb_handler = self._request_network(ad=self.publisher)
+        sub_network_cb_handler = self._request_network(ad=self.subscriber)
+        # Wait for network.
+        self._wait_for_network(
+            ad=self.publisher,
+            request_network_cb_handler=pub_network_cb_handler,
+        )
+        self._wait_for_network(
+            ad=self.subscriber,
+            request_network_cb_handler=sub_network_cb_handler,
+        )
+        logging.info('Wi-Fi Aware network created successfully.')
+
+    def _start_attach(self, ad: android_device.AndroidDevice) -> None:
         """Starts the attach process on the provided device."""
         handler = ad.wifi_aware_snippet.wifiAwareAttach()
         handler.waitAndGet(
             event_name=AttachCallBackMethodType.ATTACHED,
-            timeout=DEFAULT_TIMEOUT,
+            timeout=_DEFAULT_TIMEOUT,
         )
         asserts.assert_true(
             ad.wifi_aware_snippet.wifiAwareIsSessionAttached(),
             f'{ad} attach succeeded, but Wi-Fi Aware session is still null.'
         )
+        ad.log.info('Attach Wi-Fi Aware session succeeded.')
 
-    def test_discovery(self) -> None:
-        utils.concurrent_exec(
-            self.start_attach,
-            ((self.publisher,), (self.subscriber,)),
-            max_workers=2,
-            raise_on_exception=True,
+    def _start_publish(
+        self,
+        *,
+        publish_type,
+        service_name=constants.WifiAwareTestConstants.SERVICE_NAME,
+        service_specific_info=constants.WifiAwareTestConstants.PUB_SSI,
+        match_filter=_MATCH_FILTER,
+        is_ranging_enabled=False,
+    ) -> callback_event.CallbackEvent:
+        """Starts a publish session with the given configuration."""
+        config = constants.PublishConfig(
+            service_name=service_name,
+            service_specific_info=service_specific_info,
+            match_filter=match_filter,
+            publish_type=publish_type,
+            terminate_notification_enabled=True,
+            ranging_enabled=is_ranging_enabled,
         )
 
-        is_unsolicited = True
-        is_ranging_required = False
-        is_pairing_required = False
-        publish_handler = self._start_publish(
-            is_unsolicited, is_ranging_required,
-            is_pairing_required
+        # Start the publishing session and return the handler.
+        publish_handler = self.publisher.wifi_aware_snippet.wifiAwarePublish(
+            config.to_dict()
         )
-        subscribe_handler = self._start_subscribe(
-            is_unsolicited, is_ranging_required,
-            is_pairing_required
-        )
-        # Wait for discovery.
-        self._wait_for_discovery(subscribe_handler, is_ranging_required)
 
-        #  Check if the subscriber received the message.
-        self.subscriber.wifi_aware_snippet.wifiAwareSendMessage(
-            constants.WifiAwareTestConstants.MESSAGE_ID,
-            constants.WifiAwareTestConstants.TEST_MESSAGE,
+        # Wait for publish session to start.
+        discovery_event = publish_handler.waitAndGet(
+            event_name=constants.DiscoverySessionCallbackMethodType.DISCOVER_RESULT,
+            timeout=_DEFAULT_TIMEOUT
         )
-        discover_data =publish_handler.waitAndGet(
-            event_name=constants.DiscoverySessionCallbackMethodType.MESSAGE_RECEIVED,
-            timeout=DEFAULT_TIMEOUT,
-        )
-        message = discover_data.data[
-            constants.WifiAwareSnippetParams.RECEIVED_MESSAGE
-        ]
-        str_message = bytes(message).decode('utf-8')
+        callback_name = discovery_event.data[_CALLBACK_NAME]
         asserts.assert_equal(
-            str_message,
-            constants.WifiAwareTestConstants.TEST_MESSAGE,
-            'Message received by publisher does not match the message sent by subscriber.'
+            constants.DiscoverySessionCallbackMethodType.PUBLISH_STARTED,
+            callback_name,
+            f'{self.publisher} publish failed, got callback: {callback_name}.',
         )
 
+        is_session_init = discovery_event.data[_IS_SESSION_INIT]
+        asserts.assert_true(
+            is_session_init,
+            f'{self.publisher} publish succeeded, but null discovery session returned.'
+        )
+        return publish_handler
+
+    def _start_subscribe(
+        self,
+        *,
+        subscribe_type,
+        service_name=constants.WifiAwareTestConstants.SERVICE_NAME,
+        service_specific_info=constants.WifiAwareTestConstants.SUB_SSI,
+        match_filter=_MATCH_FILTER,
+        max_distance_mm=None,
+    ) -> callback_event.CallbackEvent:
+        """Starts a subscribing session with the given configuration."""
+        # Create subscription configuration.
+        config = constants.SubscribeConfig(
+            service_name=service_name,
+            service_specific_info=service_specific_info,
+            match_filter=match_filter,
+            subscribe_type=subscribe_type,
+            terminate_notification_enabled=True,
+            max_distance_mm=max_distance_mm,
+        )
+
+        # Start the subscription session and return the handler.
+        subscribe_handler = self.subscriber.wifi_aware_snippet.wifiAwareSubscribe(
+            config.to_dict()
+        )
+
+        # Wait for subscribe session to start.
+        discovery_event = subscribe_handler.waitAndGet(
+            event_name=constants.DiscoverySessionCallbackMethodType.DISCOVER_RESULT,
+            timeout=_DEFAULT_TIMEOUT
+        )
+        callback_name = discovery_event.data[_CALLBACK_NAME]
+        asserts.assert_equal(
+            constants.DiscoverySessionCallbackMethodType.SUBSCRIBE_STARTED,
+            callback_name,
+            f'{self.subscriber} subscribe failed, got callback: {callback_name}.'
+        )
+        is_session_init = discovery_event.data[_IS_SESSION_INIT]
+        asserts.assert_true(
+            is_session_init,
+            f'{self.subscriber} subscribe succeeded, but null session returned.'
+        )
+        return subscribe_handler
 
     def _wait_for_discovery(
         self,
-        subscribe_handler: callback_handler_v2.CallbackHandlerV2,
-        is_ranging_required: bool,
+        sub_aware_session_cb_handler: callback_handler_v2.CallbackHandlerV2,
+        pub_service_specific_info: str,
+        is_ranging_enabled: bool,
     ) -> None:
+        """Waits for the subscriber to discover the published service."""
         event_name = constants.DiscoverySessionCallbackMethodType.SERVICE_DISCOVERED
-        if is_ranging_required:
+        if is_ranging_enabled:
             event_name = (
                 constants.DiscoverySessionCallbackMethodType.SERVICE_DISCOVERED_WITHIN_RANGE
             )
-        discover_data = subscribe_handler.waitAndGet(event_name=event_name, timeout=DEFAULT_TIMEOUT)
-        self.subscriber.log.debug('Discovery data: %s', discover_data.data)
+        discover_data = sub_aware_session_cb_handler.waitAndGet(
+            event_name=event_name, timeout=_DEFAULT_TIMEOUT
+        )
 
         service_info = bytes(
             discover_data.data[constants.WifiAwareSnippetParams.SERVICE_SPECIFIC_INFO]
@@ -158,149 +301,127 @@ class WifiAwareManagerTest(base_test.BaseTestClass):
         asserts.assert_equal(
             service_info,
             str_expected_service_info,
-            f'Got unexpected service info in discovery callback event "{event_name}".'
+            f'{self.subscriber} got unexpected service info in discovery'
+            f' callback event "{event_name}".'
         )
-        match_filters = discover_data.data[constants.WifiAwareSnippetParams.MATCH_FILTER]
-        match_filters = [bytes(filter[constants.WifiAwareSnippetParams.MATCH_FILTER_VALUE]) for filter in match_filters]
+        match_filters = discover_data.data[
+            constants.WifiAwareSnippetParams.MATCH_FILTER]
+        match_filters = [
+            bytes(filter[constants.WifiAwareSnippetParams.MATCH_FILTER_VALUE])
+            for filter in match_filters
+        ]
         asserts.assert_equal(
             match_filters,
             [constants.WifiAwareTestConstants.MATCH_FILTER_BYTES],
-            f'Got unexpected match filter data in discovery callback event "{event_name}".'
+            f'{self.subscriber} got unexpected match filter data in discovery'
+            f' callback event "{event_name}".'
         )
-        self.subscriber.log.info('Discover success.')
 
-    def _start_subscribe(
-        self, is_unsolicited: bool, is_ranging_required: bool, is_pairing_required: bool
-    ) -> callback_event.CallbackEvent:
-        """Starts a subscribing session with the given configuration."""
-        # Determine the type of subscription (active or passive)
-        if is_unsolicited:
-            subscribe_type = constants.SubscribeType.PASSIVE
-        else:
-            subscribe_type = constants.SubscribeType.ACTIVE
+    def _send_msg_and_check_received(
+        self,
+        *,
+        sender: android_device.AndroidDevice,
+        sender_aware_session_cb_handler: callback_handler_v2.CallbackHandlerV2,
+        receiver: android_device.AndroidDevice,
+        receiver_aware_session_cb_handler: callback_handler_v2.CallbackHandlerV2,
+        send_message: str,
+        send_message_id: int,
+    ):
+        sender.wifi_aware_snippet.wifiAwareSendMessage(
+            send_message_id, send_message
+        )
+        message_send_result = sender_aware_session_cb_handler.waitAndGet(
+            event_name=constants.DiscoverySessionCallbackMethodType.MESSAGE_SEND_RESULT,
+            timeout=_DEFAULT_TIMEOUT,
+        )
+        callback_name = message_send_result.data[
+            constants.DiscoverySessionCallbackParamsType.CALLBACK_NAME
+        ]
+        asserts.assert_equal(
+            callback_name,
+            constants.DiscoverySessionCallbackMethodType.MESSAGE_SEND_SUCCEEDED,
+            f'{sender} failed to send message with an unexpected callback.',
+        )
+        actual_send_message_id = message_send_result.data[
+            constants.DiscoverySessionCallbackParamsType.MESSAGE_ID
+        ]
+        asserts.assert_equal(
+            actual_send_message_id,
+            send_message_id,
+            f'{sender} send message succeeded but message ID mismatched.'
+        )
+        receive_message_event = receiver_aware_session_cb_handler.waitAndGet(
+            event_name=constants.DiscoverySessionCallbackMethodType.MESSAGE_RECEIVED,
+            timeout=_DEFAULT_TIMEOUT,
+        )
+        received_message_raw = receive_message_event.data[
+            constants.WifiAwareSnippetParams.RECEIVED_MESSAGE
+        ]
+        received_message = bytes(received_message_raw).decode('utf-8')
+        asserts.assert_equal(
+            received_message,
+            send_message,
+            f'{receiver} received the message but message content mismatched.'
+        )
 
-        # Set maximum distance for ranging if required
-        if is_ranging_required:
-            max_distance_mm = constants.WifiAwareTestConstants.LARGE_ENOUGH_DISTANCE_MM
-        else:
-            max_distance_mm = None
+    def _request_network(
+        self,
+        ad: android_device.AndroidDevice,
+    ) -> callback_handler_v2.CallbackHandlerV2:
+        """Requests a Wi-Fi Aware network."""
+        network_specifier_parcel = (
+            ad.wifi_aware_snippet.wifiAwareCreateNetworkSpecifier()
+        )
+        network_request_dict = constants.NetworkRequest(
+            transport_type=_TRANSPORT_TYPE_WIFI_AWARE,
+            network_specifier_parcel=network_specifier_parcel,
+        ).to_dict()
+        return ad.wifi_aware_snippet.connectivityRequestNetwork(
+            network_request_dict, _REQUEST_NETWORK_TIMEOUT_MS
+        )
 
-        # Configure pairing settings if required.
-        if is_pairing_required:
-            pairing_config = constants.AwarePairingConfig(
-                pairing_cache_enabled=True,
-                pairing_setup_enabled=True,
-                pairing_verification_enabled=True,
-                bootstrapping_methods=constants.BootstrappingMethod.OPPORTUNISTIC,
+    def _wait_for_network(
+        self,
+        ad: android_device.AndroidDevice,
+        request_network_cb_handler: callback_handler_v2.CallbackHandlerV2,
+    ):
+        """Waits for network to be available."""
+        network_callback_event = request_network_cb_handler.waitAndGet(
+            event_name=constants.NetworkCbEventName.NETWORK_CALLBACK,
+            timeout=_DEFAULT_TIMEOUT,
+        )
+        callback_name = network_callback_event.data[_CALLBACK_NAME]
+        if callback_name == constants.NetworkCbName.ON_UNAVAILABLE:
+            asserts.fail(
+                f'{ad} failed to request the network, got callback'
+                f' {callback_name}.'
+            )
+        elif callback_name == constants.NetworkCbName.ON_CAPABILITIES_CHANGED:
+            # `network` is the network whose capabilities have changed.
+            network = network_callback_event.data[
+                constants.NetworkCbEventKey.NETWORK]
+            network_capabilities = network_callback_event.data[
+                constants.NetworkCbEventKey.NETWORK_CAPABILITIES]
+            asserts.assert_true(
+                network and network_capabilities,
+                f'{ad} received a null Network or NetworkCapabilities!?.'
+            )
+            transport_info_class_name = network_callback_event.data[
+                constants.NetworkCbEventKey.TRANSPORT_INFO_CLASS_NAME]
+            asserts.assert_equal(
+                transport_info_class_name,
+                constants.AWARE_NETWORK_INFO_CLASS_NAME,
+                f'{ad} network capabilities changes but it is not a WiFi Aware'
+                ' network.',
             )
         else:
-            pairing_config = None
-
-        # Create subscription configuration.
-        subscribe_config = constants.SubscribeConfig(
-            service_name=constants.WifiAwareTestConstants.SERVICE_NAME,
-            service_specific_info=constants.WifiAwareTestConstants.SUB_SSI,
-            match_filter=[constants.WifiAwareTestConstants.MATCH_FILTER_BYTES],
-            subscribe_type=subscribe_type,
-            terminate_notification_enabled=True,
-            max_distance_mm=max_distance_mm,
-            pairing_config=pairing_config,
-        )
-
-        # Start the subscription session and return the handler.
-        subscribe_handler = self.subscriber.wifi_aware_snippet.wifiAwareSubscribe(
-            subscribe_config.to_dict()
-        )
-
-        # Wait for subscribe session to start.
-        subscribe_handler_data = subscribe_handler.waitAndGet(
-            event_name=constants.DiscoverySessionCallbackMethodType.DISCOVER_RESULT,
-            timeout=DEFAULT_TIMEOUT
-        )
-        callback_name = subscribe_handler_data.data[
-            constants.DiscoverySessionCallbackParamsType.CALLBACK_NAME]
-        asserts.assert_equal(
-            constants.DiscoverySessionCallbackMethodType.SUBSCRIBE_STARTED,
-            callback_name,
-            f'{self.subscriber} subscribe failed, got event: {callback_name}.'
-        )
-        is_session_init = subscribe_handler_data.data[
-            constants.DiscoverySessionCallbackParamsType.IS_SESSION_INIT]
-        asserts.assert_true(
-            is_session_init,
-            f'{self.subscriber} subscriber succeeded, but null session returned.'
-        )
-        self.subscriber.log.info('Subscribe succeeded.')
-        return subscribe_handler
-
-    def _start_publish(
-        self, is_unsolicited: bool, is_ranging_required: bool, is_pairing_required: bool
-    ) -> callback_event.CallbackEvent:
-        """Starts a publish session with the given configuration."""
-        # Determine the type of publishing (solicited or unsolicited)
-        if is_unsolicited:
-            publish_type = constants.PublishType.UNSOLICITED
-        else:
-            publish_type = constants.PublishType.SOLICITED
-
-        # Configure pairing settings if required.
-        if is_pairing_required:
-            pairing_config = constants.AwarePairingConfig(
-                pairing_cache_enabled=True,
-                pairing_setup_enabled=True,
-                pairing_verification_enabled=True,
-                bootstrapping_methods=constants.BootstrappingMethod.OPPORTUNISTIC,
+            asserts.fail(
+                f'{ad} got unknown request network callback {callback_name}.'
             )
-        else:
-            pairing_config = None
-
-        # Create publishing configuration.
-        publish_config = constants.PublishConfig(
-            service_name=constants.WifiAwareTestConstants.SERVICE_NAME,
-            service_specific_info=constants.WifiAwareTestConstants.PUB_SSI,
-            match_filter=[constants.WifiAwareTestConstants.MATCH_FILTER_BYTES],
-            publish_type=publish_type,
-            terminate_notification_enabled=True,
-            pairing_config=pairing_config,
-            ranging_enabled=is_ranging_required,
-        )
-
-        # Start the publishing session and return the handler.
-        publish_handler = self.publisher.wifi_aware_snippet.wifiAwarePublish(
-            publish_config.to_dict()
-        )
-
-        # Wait for publish session to start.
-        publish_handler_data = publish_handler.waitAndGet(
-            event_name=constants.DiscoverySessionCallbackMethodType.DISCOVER_RESULT,
-            timeout=DEFAULT_TIMEOUT
-        )
-        callback_name = publish_handler_data.data[
-            constants.DiscoverySessionCallbackParamsType.CALLBACK_NAME]
-        asserts.assert_equal(
-            constants.DiscoverySessionCallbackMethodType.PUBLISH_STARTED,
-            callback_name,
-            f'{self.publisher} publish failed, got event: {callback_name}.',
-        )
-
-        is_session_init = publish_handler_data.data[
-            constants.DiscoverySessionCallbackParamsType.IS_SESSION_INIT]
-        asserts.assert_true(
-            is_session_init,
-            f'{self.publisher} publish succeeded, but null session returned.'
-        )
-        self.publisher.log.info('Publish succeeded.')
-        return publish_handler
-
-    def _tardown_test(self, ad: android_device.AndroidDevice) -> None:
-        """Test completed, release resources."""
-        ad.wifi_aware_snippet.wifiAwareDetach()
-        ad.wifi_aware_snippet.wifiAwareCloseDiscoverSession()
-
 
     def teardown_test(self):
         utils.concurrent_exec(
-            self._tardown_test,
+            self._teardown_test_on_device,
             ((self.publisher,), (self.subscriber,)),
             max_workers=2,
             raise_on_exception=True,
@@ -310,6 +431,11 @@ class WifiAwareManagerTest(base_test.BaseTestClass):
             param_list=[[ad] for ad in self.ads],
             raise_on_exception=True,
         )
+
+    def _teardown_test_on_device(self, ad: android_device.AndroidDevice) -> None:
+        ad.wifi_aware_snippet.connectivityUnregisterNetwork()
+        ad.wifi_aware_snippet.wifiAwareCloseDiscoverSession()
+        ad.wifi_aware_snippet.wifiAwareDetach()
 
     def on_fail(self, record: records.TestResult) -> None:
         android_device.take_bug_reports(self.ads, destination=self.current_test_info.output_path)
