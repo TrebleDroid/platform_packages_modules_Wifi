@@ -555,8 +555,8 @@ public class WifiVendorHalTest extends WifiBaseTest {
      */
     @Test
     public void testGetSupportedFeatures() throws Exception {
-        long staIfaceCaps =
-                WifiManager.WIFI_FEATURE_SCANNER | WifiManager.WIFI_FEATURE_LINK_LAYER_STATS;
+        BitSet staIfaceCaps = longToBitset(
+                WifiManager.WIFI_FEATURE_SCANNER | WifiManager.WIFI_FEATURE_LINK_LAYER_STATS);
         BitSet chipCaps = longToBitset(WifiManager.WIFI_FEATURE_TX_POWER_LIMIT);
         WifiChip.Response<BitSet> chipCapsResponse = new WifiChip.Response<>(chipCaps);
         chipCapsResponse.setStatusCode(WifiHal.WIFI_STATUS_SUCCESS);

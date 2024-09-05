@@ -19,7 +19,6 @@ import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDGE;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
 import static com.android.server.wifi.util.GeneralUtil.getCapabilityIndex;
-import static com.android.server.wifi.util.GeneralUtil.longToBitset;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -896,7 +895,7 @@ public class WifiVendorHal {
 
             WifiStaIface iface = getStaIface(ifaceName);
             if (iface != null) {
-                featureSet.or(longToBitset(iface.getCapabilities()));
+                featureSet.or(iface.getCapabilities());
                 if (mHalDeviceManager.is24g5gDbsSupported(iface)
                         || mHalDeviceManager.is5g6gDbsSupported(iface)) {
                     featureSet.set(

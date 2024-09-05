@@ -37,6 +37,7 @@ import com.android.server.wifi.WifiLinkLayerStats;
 import com.android.server.wifi.WifiNative;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -253,8 +254,8 @@ public class WifiStaIface implements WifiHal.WifiInterface {
     /**
      * See comments for {@link IWifiStaIface#getCapabilities()}
      */
-    public long getCapabilities() {
-        return validateAndCall("getCapabilities", 0L,
+    public BitSet getCapabilities() {
+        return validateAndCall("getCapabilities", new BitSet(),
                 () -> mWifiStaIface.getCapabilities());
     }
 
