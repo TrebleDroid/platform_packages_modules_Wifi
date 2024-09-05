@@ -323,7 +323,7 @@ public class WifiAwareSnippet implements Snippet {
         if (!callbackData.pairingAccept) {
             throw new WifiAwareSnippetException("initiatePairingSetup: pairing reject");
         }
-        mWifiAwareManager.removePairedDevice(ALIAS_PUBLISH);
+        mWifiAwareManager.removePairedDevice(ALIAS_SUBSCRIBE);
         AtomicReference<List<String>> aliasList = new AtomicReference<>();
         Consumer<List<String>> consumer = value -> {
             synchronized (mLock) {
@@ -338,7 +338,7 @@ public class WifiAwareSnippet implements Snippet {
         if (aliasList.get().size() != 1 || !ALIAS_PUBLISH.equals(aliasList.get().get(0))) {
             throw new WifiAwareSnippetException("initiatePairingSetup: pairing alias mismatch");
         }
-        mWifiAwareManager.removePairedDevice(ALIAS_SUBSCRIBE);
+        mWifiAwareManager.removePairedDevice(ALIAS_PUBLISH);
         mWifiAwareManager.getPairedDevices(Executors.newSingleThreadScheduledExecutor(), consumer);
         synchronized (mLock) {
             mLock.wait(TEST_WAIT_DURATION_MS);
@@ -410,7 +410,7 @@ public class WifiAwareSnippet implements Snippet {
         synchronized (mLock) {
             mLock.wait(TEST_WAIT_DURATION_MS);
         }
-        if (aliasList.get().size() != 1 || !ALIAS_PUBLISH.equals(aliasList.get().get(0))) {
+        if (aliasList.get().size() != 1 || !ALIAS_SUBSCRIBE.equals(aliasList.get().get(0))) {
             throw new WifiAwareSnippetException("respondToPairingSetup: pairing alias mismatch");
         }
         mWifiAwareManager.removePairedDevice(ALIAS_SUBSCRIBE);
