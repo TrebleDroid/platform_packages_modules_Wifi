@@ -59,9 +59,9 @@ android_test {
         // if sdk_version="" this gets automatically included, but here we need to add manually.
         "framework-res",
 
-        "android.test.runner",
-        "android.test.base",
-        "android.test.mock",
+        "android.test.runner.stubs",
+        "android.test.base.stubs",
+        "android.test.mock.stubs",
         // load the resources from the resources APK.
         "ServiceWifiResources",
         "auto_value_annotations",
