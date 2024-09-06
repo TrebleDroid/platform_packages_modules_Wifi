@@ -800,6 +800,9 @@ public class WifiConfigurationTestUtil {
                 expected.getNetworkSelectionStatus(), actual.getNetworkSelectionStatus());
         assertWifiEnterpriseConfigEqualForConfigStore(
                 expected.enterpriseConfig, actual.enterpriseConfig);
+        if (SdkLevel.isAtLeastV()) {
+            assertEquals(expected.getVendorData(), actual.getVendorData());
+        }
     }
 
     /**

@@ -306,7 +306,7 @@ public class PasspointManager {
             }
         });
         if (modified.get()) {
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
         }
     }
 
@@ -322,7 +322,7 @@ public class PasspointManager {
         if (provider != null) {
             provider.setUserConnectChoice(null, 0);
         }
-        mWifiConfigManager.saveToStore(true);
+        mWifiConfigManager.saveToStore();
     }
 
     /**
@@ -581,7 +581,7 @@ public class PasspointManager {
         mProviders.put(config.getUniqueId(), newProvider);
         if (!isFromSuggestion) {
             // Suggestions will be handled by the WifiNetworkSuggestionsManager
-            mWifiConfigManager.saveToStore(true /* forceWrite */);
+            mWifiConfigManager.saveToStore();
         }
         if (!isFromSuggestion && newProvider.getPackageName() != null) {
             startTrackingAppOpsChange(newProvider.getPackageName(), uid);
@@ -632,7 +632,7 @@ public class PasspointManager {
         mWifiConfigManager.removeConnectChoiceFromAllNetworks(uniqueId);
         if (!provider.isFromSuggestion()) {
             // Suggestions will be handled by the WifiNetworkSuggestionsManager
-            mWifiConfigManager.saveToStore(true /* forceWrite */);
+            mWifiConfigManager.saveToStore();
         }
 
         // Stop monitoring the package if there is no Passpoint profile installed by the package
@@ -728,7 +728,7 @@ public class PasspointManager {
                         provider.getPackageName(), provider.isFromSuggestion());
             }
 
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
             return true;
         }
 
@@ -752,7 +752,7 @@ public class PasspointManager {
             }
         }
         if (found) {
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
         }
         return found;
     }
@@ -783,7 +783,7 @@ public class PasspointManager {
             }
         }
         if (found) {
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
         }
         return found;
     }
@@ -811,7 +811,7 @@ public class PasspointManager {
             }
         }
         if (found) {
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
         }
         return found;
     }
@@ -953,7 +953,7 @@ public class PasspointManager {
             }
         }
         if (anyProviderUpdated) {
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
         }
         if (allMatches.size() != 0) {
             for (Pair<PasspointProvider, PasspointMatch> match : allMatches) {
@@ -1644,7 +1644,7 @@ public class PasspointManager {
         PasspointProvider provider = mProviders.get(configuration.getProfileKey());
         if (provider != null) {
             provider.setAnonymousIdentity(configuration.enterpriseConfig.getAnonymousIdentity());
-            mWifiConfigManager.saveToStore(true);
+            mWifiConfigManager.saveToStore();
         }
     }
 
@@ -1653,7 +1653,7 @@ public class PasspointManager {
      */
     public void resetSimPasspointNetwork() {
         mProviders.values().forEach(p -> p.setAnonymousIdentity(null));
-        mWifiConfigManager.saveToStore(true);
+        mWifiConfigManager.saveToStore();
     }
 
     /**

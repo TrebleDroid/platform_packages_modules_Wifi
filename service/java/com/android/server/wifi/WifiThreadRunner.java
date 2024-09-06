@@ -16,12 +16,17 @@
 
 package com.android.server.wifi;
 
+import static com.android.server.wifi.RunnerHandler.KEY_SIGNATURE;
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
+
+import androidx.annotation.Keep;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.wifi.util.GeneralUtil.Mutable;
@@ -37,6 +42,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * their corresponding main thread for servicing incoming AIDL calls.
  */
 @ThreadSafe
+@Keep
 public class WifiThreadRunner {
     private static final String TAG = "WifiThreadRunner";
 
@@ -76,11 +82,11 @@ public class WifiThreadRunner {
      *         handling nulls.
      */
     @Nullable
-    public <T> T call(@NonNull Supplier<T> supplier, T valueToReturnOnTimeout) {
+    public <T> T call(@NonNull Supplier<T> supplier, T valueToReturnOnTimeout, String taskName) {
         Mutable<T> result = new Mutable<>();
         boolean runWithScissorsSuccess = runWithScissors(mHandler,
                 () -> result.value = supplier.get(),
-                RUN_WITH_SCISSORS_TIMEOUT_MILLIS, false);
+                RUN_WITH_SCISSORS_TIMEOUT_MILLIS, false, taskName);
         if (runWithScissorsSuccess) {
             return result.value;
         } else {
@@ -99,6 +105,13 @@ public class WifiThreadRunner {
     }
 
     /**
+     * TODO(b/342976570): remove when we are sure no more usage
+     */
+    public <T> T call(@NonNull Supplier<T> supplier, T valueToReturnOnTimeout) {
+        return call(supplier, valueToReturnOnTimeout, null);
+    }
+
+    /**
      * Runs a Runnable on the main Wifi thread and <b>blocks</b> the calling thread until the
      * Runnable completes execution on the main Wifi thread.
      *
@@ -106,9 +119,10 @@ public class WifiThreadRunner {
      *
      * @return true if the runnable executed successfully, false otherwise
      */
-    public boolean run(@NonNull Runnable runnable) {
+    public boolean run(@NonNull Runnable runnable, String taskName) {
         boolean runWithScissorsSuccess =
-                runWithScissors(mHandler, runnable, RUN_WITH_SCISSORS_TIMEOUT_MILLIS, false);
+                runWithScissors(mHandler, runnable, RUN_WITH_SCISSORS_TIMEOUT_MILLIS, false,
+                        taskName);
         if (runWithScissorsSuccess) {
             return true;
         } else {
@@ -122,6 +136,13 @@ public class WifiThreadRunner {
     }
 
     /**
+     * TODO(b/342976570): remove when we are sure no more usage
+     */
+    public boolean run(@NonNull Runnable runnable) {
+        return run(runnable, null);
+    }
+
+    /**
      * Runs a Runnable on the main Wifi thread on the next iteration and <b>blocks</b> the calling
      * thread until the Runnable completes execution on the main Wifi thread.
      *
@@ -129,9 +150,10 @@ public class WifiThreadRunner {
      *
      * @return true if the runnable executed successfully, false otherwise
      */
-    public boolean runAtFront(@NonNull Runnable runnable) {
+    public boolean runAtFront(@NonNull Runnable runnable, String taskName) {
         boolean runWithScissorsSuccess =
-                runWithScissors(mHandler, runnable, RUN_WITH_SCISSORS_TIMEOUT_MILLIS, true);
+                runWithScissors(mHandler, runnable, RUN_WITH_SCISSORS_TIMEOUT_MILLIS, true,
+                        taskName);
         if (runWithScissorsSuccess) {
             return true;
         } else {
@@ -176,26 +198,39 @@ public class WifiThreadRunner {
     }
 
     /**
-     * Asynchronously runs a Runnable on the main Wifi thread.
-     *
+     * Asynchronously runs a Runnable on the main Wifi thread. With specified task name for metrics
+     * logging
      * @return true if the runnable was successfully posted <b>(not executed)</b> to the main Wifi
      * thread, false otherwise
+     * @param runnable The Runnable that will be executed.
+     * @param taskName The task name for performance logging
+     */
+    public boolean post(@NonNull Runnable runnable, @Nullable String taskName) {
+        Message m = Message.obtain(mHandler, runnable);
+        m.getData().putString(KEY_SIGNATURE, taskName);
+        return mHandler.sendMessage(m);
+    }
+
+    /**
+     * TODO(b/342976570): remove when we are sure no more usage
      */
     public boolean post(@NonNull Runnable runnable) {
-        return mHandler.post(runnable);
+        return post(runnable, null);
     }
 
     /**
      * Asynchronously runs a Runnable on the main Wifi thread with delay.
      *
-     * @param runnable The Runnable that will be executed.
+     * @param runnable    The Runnable that will be executed.
      * @param delayMillis The delay (in milliseconds) until the Runnable
-     *        will be executed.
+     *                    will be executed.
      * @return true if the runnable was successfully posted <b>(not executed)</b> to the main Wifi
      * thread, false otherwise
      */
-    public boolean postDelayed(@NonNull Runnable runnable, long delayMillis) {
-        return mHandler.postDelayed(runnable, delayMillis);
+    public boolean postDelayed(@NonNull Runnable runnable, long delayMillis, String taskName) {
+        Message m = Message.obtain(mHandler, runnable);
+        m.getData().putString(KEY_SIGNATURE, taskName);
+        return mHandler.sendMessageDelayed(m, delayMillis);
     }
 
     /**
@@ -255,20 +290,18 @@ public class WifiThreadRunner {
      * (TODO: We should fix this by making MessageQueue aware of blocking runnables.)
      * </p>
      *
-     * @param r The Runnable that will be executed synchronously.
+     * @param r       The Runnable that will be executed synchronously.
      * @param timeout The timeout in milliseconds, or 0 to wait indefinitely.
      * @param atFront Message needs to be posted at the front of the queue or not.
-     *
      * @return Returns true if the Runnable was successfully executed.
-     *         Returns false on failure, usually because the
-     *         looper processing the message queue is exiting.
-     *
+     * Returns false on failure, usually because the
+     * looper processing the message queue is exiting.
      * @hide This method is prone to abuse and should probably not be in the API.
      * If we ever do make it part of the API, we might want to rename it to something
      * less funny like runUnsafe().
      */
     private boolean runWithScissors(@NonNull Handler handler, @NonNull Runnable r,
-            long timeout, boolean atFront) {
+            long timeout, boolean atFront, String taskName) {
         if (r == null) {
             throw new IllegalArgumentException("runnable must not be null");
         }
@@ -287,7 +320,7 @@ public class WifiThreadRunner {
         }
 
         BlockingRunnable br = new BlockingRunnable(r);
-        return br.postAndWait(handler, timeout, atFront);
+        return br.postAndWait(handler, timeout, atFront, taskName);
     }
 
     private static final class BlockingRunnable implements Runnable {
@@ -310,13 +343,16 @@ public class WifiThreadRunner {
             }
         }
 
-        public boolean postAndWait(Handler handler, long timeout, boolean atFront) {
+        public boolean postAndWait(Handler handler, long timeout, boolean atFront,
+                String taskName) {
+            Message m = Message.obtain(handler, this);
+            m.getData().putString(KEY_SIGNATURE, taskName);
             if (atFront) {
-                if (!handler.postAtFrontOfQueue(this)) {
+                if (!handler.sendMessageAtFrontOfQueue(m)) {
                     return false;
                 }
             } else {
-                if (!handler.post(this)) {
+                if (!handler.sendMessage(m)) {
                     return false;
                 }
             }

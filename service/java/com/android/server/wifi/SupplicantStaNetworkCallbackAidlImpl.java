@@ -177,7 +177,7 @@ class SupplicantStaNetworkCallbackAidlImpl extends ISupplicantStaNetworkCallback
                 return;
             }
             String certHash = byteArrayToString(certHashBytes);
-            if (null == subject) {
+            if (null == certHash) {
                 mNetworkHal.logCallback(
                         "onServerCertificateAvailable: cannot convert cert hash bytes to string.");
                 return;

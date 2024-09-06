@@ -43,6 +43,7 @@ import androidx.annotation.RequiresApi;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.server.wifi.ActiveModeManager.ClientRole;
+import com.android.server.wifi.util.RssiUtil;
 import com.android.server.wifi.util.StringUtil;
 import com.android.wifi.resources.R;
 
@@ -204,7 +205,7 @@ public class WifiScoreReport {
             // redundant codes below and in ClientModeImpl#fetchRssiLinkSpeedAndFrequencyNative.
             WifiSignalPollResults pollResults = mWifiNative.signalPoll(mInterfaceName);
             if (pollResults != null) {
-                int newRssi = pollResults.getRssi();
+                int newRssi = RssiUtil.calculateAdjustedRssi(pollResults.getRssi());
                 int newTxLinkSpeed = pollResults.getTxLinkSpeed();
                 int newFrequency = pollResults.getFrequency();
                 int newRxLinkSpeed = pollResults.getRxLinkSpeed();
@@ -220,14 +221,8 @@ public class WifiScoreReport {
                     link.setBand(ScanResult.toBand(pollResults.getFrequency(linkId)));
                 }
 
-                if (newRssi > WifiInfo.INVALID_RSSI && newRssi < WifiInfo.MAX_RSSI) {
-                    if (newRssi > (WifiInfo.INVALID_RSSI + 256)) {
-                        Log.wtf(TAG, "Error! +ve value RSSI: " + newRssi);
-                        newRssi -= 256;
-                    }
+                if (newRssi > WifiInfo.INVALID_RSSI) {
                     mWifiInfo.setRssi(newRssi);
-                } else {
-                    mWifiInfo.setRssi(WifiInfo.INVALID_RSSI);
                 }
                 /*
                  * set Tx link speed only if it is valid
@@ -459,7 +454,8 @@ public class WifiScoreReport {
          */
         @Override
         public void binderDied() {
-            mWifiThreadRunner.post(() -> revertToDefaultConnectedScorer());
+            mWifiThreadRunner.post(() -> revertToDefaultConnectedScorer(),
+                    "WifiConnectedNetworkScorerHolder#binderDied");
         }
 
         /**

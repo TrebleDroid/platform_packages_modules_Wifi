@@ -652,7 +652,7 @@ public class ApplicationQosPolicyRequestHandlerTest {
 
     /**
      * Tests that uplink policies are only included in the queueAllPolicies request
-     * if the includeUplink parameter is true.
+     * if the current AP supports QosCharacteristics.
      */
     @Test
     public void testQueueAllPoliciesRequest_mixedDirection() {
@@ -665,7 +665,8 @@ public class ApplicationQosPolicyRequestHandlerTest {
         addPoliciesToTable(createUplinkPolicyList(numUplinkPolicies,
                 TEST_POLICY_ID_START + numDownlinkPolicies));
 
-        // Only downlink policies.
+        // Expect that only the downlink policies are sent to the HAL
+        // if the current AP does not support QosCharacteristics.
         mDut.queueAllPoliciesOnIface(TEST_IFACE_NAME_0, false);
         verify(mWifiNative, atLeastOnce()).addQosPolicyRequestForScs(
                 eq(TEST_IFACE_NAME_0), mPolicyListCaptor.capture());
@@ -675,10 +676,19 @@ public class ApplicationQosPolicyRequestHandlerTest {
         triggerAndVerifyApCallback(TEST_IFACE_NAME_0, mPolicyListCaptor.getValue(),
                 SupplicantStaIfaceHal.QOS_POLICY_SCS_RESPONSE_STATUS_SUCCESS);
 
-        // Both uplink and downlink policies included in the request.
+        // If the current AP supports QosCharacteristics, expect that both uplink
+        // and downlink policies are sent (albeit in separate transactions).
+        // Downlink policies will be sent first.
         mDut.queueAllPoliciesOnIface(TEST_IFACE_NAME_0, true);
         verify(mWifiNative, atLeastOnce()).addQosPolicyRequestForScs(
                 eq(TEST_IFACE_NAME_0), mPolicyListCaptor.capture());
-        assertEquals(numDownlinkPolicies + numUplinkPolicies, mPolicyListCaptor.getValue().size());
+        assertEquals(numDownlinkPolicies, mPolicyListCaptor.getValue().size());
+
+        // Trigger callback and check that the uplink policies are sent next.
+        triggerAndVerifyApCallback(TEST_IFACE_NAME_0, mPolicyListCaptor.getValue(),
+                SupplicantStaIfaceHal.QOS_POLICY_SCS_RESPONSE_STATUS_SUCCESS);
+        verify(mWifiNative, atLeastOnce()).addQosPolicyRequestForScs(
+                eq(TEST_IFACE_NAME_0), mPolicyListCaptor.capture());
+        assertEquals(numUplinkPolicies, mPolicyListCaptor.getValue().size());
     }
 }

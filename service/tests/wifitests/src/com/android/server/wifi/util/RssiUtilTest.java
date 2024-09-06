@@ -27,6 +27,7 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.res.Resources;
 import android.net.wifi.IWifiManager;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Looper;
@@ -120,5 +121,15 @@ public class RssiUtilTest extends WifiBaseTest {
 
         int level = wifiManager.getMaxSignalLevel();
         assertThat(level).isEqualTo(4);
+    }
+
+    @Test
+    public void testCalculateAdjustedRssi() {
+        assertThat(RssiUtil.calculateAdjustedRssi(WifiInfo.INVALID_RSSI - 1))
+                .isEqualTo(WifiInfo.INVALID_RSSI);
+        assertThat(RssiUtil.calculateAdjustedRssi(WifiInfo.INVALID_RSSI + 1))
+                .isEqualTo(WifiInfo.INVALID_RSSI + 1);
+        assertThat(RssiUtil.calculateAdjustedRssi(150))
+                .isEqualTo(150 - 256);
     }
 }

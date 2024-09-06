@@ -188,6 +188,9 @@ java_sdk_library {
             "framework-tethering.stubs.module_lib",
         ],
     },
+    api_srcs: [
+        ":wifi_javadoc_only_files",
+    ],
 
     jarjar_rules: ":wifi-jarjar-rules",
 

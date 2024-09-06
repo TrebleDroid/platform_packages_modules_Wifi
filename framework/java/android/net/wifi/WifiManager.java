@@ -4518,12 +4518,26 @@ public class WifiManager {
      * {@link android.Manifest.permission#ACCESS_FINE_LOCATION ACCESS_FINE_LOCATION} permission
      * and {@link android.Manifest.permission#ACCESS_WIFI_STATE} permission
      * in order to get valid results.
+     *
+     * <p>
+     * When an Access Point’s beacon or probe response includes a Multi-BSSID Element, the
+     * returned scan results should include separate scan result for each BSSID within the
+     * Multi-BSSID Information Element. This includes both transmitted and non-transmitted BSSIDs.
+     * Original Multi-BSSID Element will be included in the Information Elements attached to
+     * each of the scan results.
+     * Note: This is the expected behavior for devices supporting 11ax (WiFi-6) and above, and an
+     * optional requirement for devices running with older WiFi generations.
+     * </p>
      */
     @RequiresPermission(allOf = {ACCESS_WIFI_STATE, ACCESS_FINE_LOCATION})
     public List<ScanResult> getScanResults() {
         try {
-            return mService.getScanResults(mContext.getOpPackageName(),
-                    mContext.getAttributionTag());
+            ParceledListSlice<ScanResult> parceledList = mService
+                    .getScanResults(mContext.getOpPackageName(), mContext.getAttributionTag());
+            if (parceledList == null) {
+                return Collections.emptyList();
+            }
+            return parceledList.getList();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -7413,7 +7427,7 @@ public class WifiManager {
      * <li> This API will cause reconnect if the current active connection is marked metered.</li>
      *
      * @param networkId the ID of the network as returned by {@link #addNetwork} or {@link
-     *        getConfiguredNetworks}.
+     *        #getConfiguredNetworks()}.
      * @param listener for callbacks on success or failure. Can be null.
      * @throws IllegalStateException if the WifiManager instance needs to be
      * initialized again
@@ -9604,6 +9618,44 @@ public class WifiManager {
     }
 
     /**
+     * Gets the list of BSSIDs which are currently disabled for Wi-Fi auto-join connections.
+     *
+     * @param ssids If empty, then get all currently disabled BSSIDs.
+     *              If non-empty, then only get currently disabled BSSIDs with matching SSIDs.
+     * @param executor The executor to execute the callback of the {@code resultListener} object.
+     * @param resultListener callback to retrieve the blocked BSSIDs
+     *
+     * @hide
+     */
+    @SystemApi
+    @FlaggedApi(Flags.FLAG_GET_BSSID_BLOCKLIST_API)
+    @RequiresPermission(anyOf = {
+            android.Manifest.permission.NETWORK_SETTINGS,
+            android.Manifest.permission.NETWORK_SETUP_WIZARD})
+    public void getBssidBlocklist(@NonNull List<WifiSsid> ssids,
+            @NonNull @CallbackExecutor Executor executor,
+            @NonNull Consumer<List<MacAddress>> resultListener) {
+        Objects.requireNonNull(ssids, "ssids cannot be null");
+        Objects.requireNonNull(executor, "executor cannot be null");
+        Objects.requireNonNull(resultListener, "resultsCallback cannot be null");
+        try {
+            mService.getBssidBlocklist(
+                    new ParceledListSlice<>(ssids),
+                    new IMacAddressListListener.Stub() {
+                        @Override
+                        public void onResult(ParceledListSlice<MacAddress> value) {
+                            Binder.clearCallingIdentity();
+                            executor.execute(() -> {
+                                resultListener.accept(value.getList());
+                            });
+                        }
+                    });
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Abstract class for scan results callback. Should be extended by applications and set when
      * calling {@link WifiManager#registerScanResultsCallback(Executor, ScanResultsCallback)}.
      */
@@ -11581,10 +11633,6 @@ public class WifiManager {
     })
     public void addCustomDhcpOptions(@NonNull WifiSsid ssid, @NonNull byte[] oui,
             @NonNull List<DhcpOption> options) {
-        if (mVerboseLoggingEnabled) {
-            Log.v(TAG, "addCustomDhcpOptions: ssid="
-                    + ssid + ", oui=" + Arrays.toString(oui) + ", options=" + options);
-        }
         try {
             mService.addCustomDhcpOptions(ssid, oui, options);
         } catch (RemoteException e) {
@@ -11607,9 +11655,6 @@ public class WifiManager {
             android.Manifest.permission.OVERRIDE_WIFI_CONFIG
     })
     public void removeCustomDhcpOptions(@NonNull WifiSsid ssid, @NonNull byte[] oui) {
-        if (mVerboseLoggingEnabled) {
-            Log.v(TAG, "removeCustomDhcpOptions: ssid=" + ssid + ", oui=" + Arrays.toString(oui));
-        }
         try {
             mService.removeCustomDhcpOptions(ssid, oui);
         } catch (RemoteException e) {

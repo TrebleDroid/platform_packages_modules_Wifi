@@ -484,7 +484,7 @@ public class AvailableNetworkNotifier {
     private void addNetworkToBlocklist(String ssid) {
         mBlocklistedSsids.add(ssid);
         mWifiMetrics.setNetworkRecommenderBlocklistSize(mTag, mBlocklistedSsids.size());
-        mConfigManager.saveToStore(false /* forceWrite */);
+        mConfigManager.saveToStore();
         Log.d(mTag, "Network is added to the network notification blocklist: "
                 + "\"" + ssid + "\"");
     }
@@ -497,7 +497,7 @@ public class AvailableNetworkNotifier {
             return;
         }
         mWifiMetrics.setNetworkRecommenderBlocklistSize(mTag, mBlocklistedSsids.size());
-        mConfigManager.saveToStore(false /* forceWrite */);
+        mConfigManager.saveToStore();
         Log.d(mTag, "Network is removed from the network notification blocklist: "
                 + "\"" + ssid + "\"");
     }

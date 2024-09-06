@@ -24,6 +24,7 @@ flag {
 
 flag {
     name: "network_provider_battery_charging_status"
+    is_exported: true
     namespace: "wifi"
     description: "Control the API that allows setting / reading the NetworkProviderInfo's battery charging status"
     bug: "305067231"
@@ -31,6 +32,7 @@ flag {
 
 flag {
     name: "shared_connectivity_broadcast_receiver_test_api"
+    is_exported: true
     namespace: "wifi"
     description: "Control the test API for SharedConnectivityManager's getBroadcastReceiver() method"
     bug: "305067231"
@@ -45,6 +47,7 @@ flag {
 
 flag {
     name: "android_v_wifi_api"
+    is_exported: true
     namespace: "wifi"
     description: "For new API added to Android V"
     bug: "319927407"
@@ -56,5 +59,30 @@ flag {
     namespace: "wifi"
     description: "Add new API to configure d2d when infra sta is off"
     bug: "295792510"
+    is_fixed_read_only: true
+}
+
+flag {
+    name: "get_channel_width_api"
+    namespace: "wifi"
+    description: "Add new API to get channel width"
+    bug: "335358378"
+    is_fixed_read_only: true
+}
+
+flag {
+    name: "voip_detection"
+    namespace: "wifi"
+    description: "Detect VoIP over Wifi and execute optimization"
+    bug: "295885471"
+    is_fixed_read_only: true
+}
+
+flag {
+    name: "get_bssid_blocklist_api"
+    is_exported: true
+    namespace: "wifi"
+    description: "Add new API to get BSSID blocklist"
+    bug: "336109216"
     is_fixed_read_only: true
 }

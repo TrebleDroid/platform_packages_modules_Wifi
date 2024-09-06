@@ -58,8 +58,10 @@ import android.net.wifi.WifiNetworkSpecifier;
 import android.net.wifi.WifiNetworkSuggestion;
 import android.net.wifi.WifiScanner;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.PatternMatcher;
 import android.os.Process;
+import android.os.test.TestLooper;
 
 import androidx.test.filters.SmallTest;
 
@@ -74,6 +76,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.FileDescriptor;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -100,16 +103,17 @@ public class WifiShellCommandTest extends WifiBaseTest {
     @Mock WifiCarrierInfoManager mWifiCarrierInfoManager;
     @Mock WifiNetworkFactory mWifiNetworkFactory;
     @Mock WifiGlobals mWifiGlobals;
-    @Mock WifiThreadRunner mWifiThreadRunner;
     @Mock ScanRequestProxy mScanRequestProxy;
     @Mock WifiDiagnostics mWifiDiagnostics;
     @Mock DeviceConfigFacade mDeviceConfig;
     @Mock WifiScanner mWifiScanner;
     WifiShellCommand mWifiShellCommand;
+    TestLooper mLooper;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        mLooper = new TestLooper();
 
         when(mWifiInjector.getActiveModeWarden()).thenReturn(mActiveModeWarden);
         when(mActiveModeWarden.getPrimaryClientModeManager()).thenReturn(mPrimaryClientModeManager);
@@ -131,9 +135,10 @@ public class WifiShellCommandTest extends WifiBaseTest {
         when(mWifiInjector.getWifiDiagnostics()).thenReturn(mWifiDiagnostics);
         when(mWifiInjector.getDeviceConfigFacade()).thenReturn(mDeviceConfig);
         when(mContext.getSystemService(WifiScanner.class)).thenReturn(mWifiScanner);
+        when(mScanRequestProxy.getScanResults()).thenReturn(new ArrayList<>());
 
         mWifiShellCommand = new WifiShellCommand(mWifiInjector, mWifiService, mContext,
-                mWifiGlobals, mWifiThreadRunner);
+                mWifiGlobals, new WifiThreadRunner(new Handler(mLooper.getLooper())));
 
         // by default emulate shell uid.
         BinderUtil.setUid(Process.SHELL_UID);
@@ -310,6 +315,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"network-suggestions-set-user-approved", TEST_PACKAGE, "yes"});
+        mLooper.dispatchAll();
         verify(mWifiNetworkSuggestionsManager, never()).setHasUserApprovedForApp(
                 anyBoolean(), anyInt(), anyString());
         assertFalse(mWifiShellCommand.getErrPrintWriter().toString().isEmpty());
@@ -319,12 +325,14 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"network-suggestions-set-user-approved", TEST_PACKAGE, "yes"});
+        mLooper.dispatchAll();
         verify(mWifiNetworkSuggestionsManager).setHasUserApprovedForApp(
                 eq(true), anyInt(), eq(TEST_PACKAGE));
 
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"network-suggestions-set-user-approved", TEST_PACKAGE, "no"});
+        mLooper.dispatchAll();
         verify(mWifiNetworkSuggestionsManager).setHasUserApprovedForApp(
                 eq(false), anyInt(), eq(TEST_PACKAGE));
     }
@@ -525,6 +533,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
 
     @Test
     public void testStartSoftAp() {
+        BinderUtil.setUid(Process.ROOT_UID);
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"start-softap", "ap1", "wpa2", "xyzabc321", "-b", "5"});
@@ -542,6 +551,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
 
     @Test
     public void testStopSoftAp() {
+        BinderUtil.setUid(Process.ROOT_UID);
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"stop-softap"});
@@ -858,26 +868,12 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"connect-network", "012345", "open", "-x"});
-        verify(mWifiService, never()).connect(argThat(wifiConfiguration ->
-                (wifiConfiguration.SSID.equals("012345"))), eq(-1), any(), any(), any());
-
-        BinderUtil.setUid(Process.ROOT_UID);
-        mWifiShellCommand.exec(
-                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
-                new String[]{"connect-network", "012345", "open", "-x"});
         verify(mWifiService).connect(argThat(wifiConfiguration ->
                 (wifiConfiguration.SSID.equals("012345"))), eq(-1), any(), any(), any());
     }
 
     @Test
     public void testAddNetworkWithHexSsid() {
-        mWifiShellCommand.exec(
-                new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
-                new String[]{"add-network", "012345", "open", "-x"});
-        verify(mWifiService, never()).save(argThat(wifiConfiguration ->
-                (wifiConfiguration.SSID.equals("012345"))), any());
-
-        BinderUtil.setUid(Process.ROOT_UID);
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-network", "012345", "open", "-x"});
@@ -914,6 +910,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "open"});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -922,12 +919,13 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setSsid(testSsid)
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // OWE
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
-                new String[]{"add-request", testSsid, "owe", testPassphrase});
+                new String[]{"add-request", testSsid, "owe"});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -937,12 +935,13 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setIsEnhancedOpen(true)
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // WPA2
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "wpa2", testPassphrase});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -952,12 +951,13 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setWpa2Passphrase(testPassphrase)
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // WPA3
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "wpa3", testPassphrase});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -967,12 +967,13 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setWpa3Passphrase(testPassphrase)
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // Test bssid flag
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", testSsid, "open", "-b", testBssid});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -982,12 +983,13 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                 .setBssid(MacAddress.fromString(testBssid))
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
 
         // Test glob flag
         mWifiShellCommand.exec(
                 new Binder(), new FileDescriptor(), new FileDescriptor(), new FileDescriptor(),
                 new String[]{"add-request", "-g", testSsid, "open"});
+        mLooper.dispatchAll();
         verify(mConnectivityManager).requestNetwork(eq(
                 new NetworkRequest.Builder()
                         .addTransportType(TRANSPORT_WIFI)
@@ -997,7 +999,7 @@ public class WifiShellCommandTest extends WifiBaseTest {
                                         testSsid, PatternMatcher.PATTERN_ADVANCED_GLOB))
                                 .build())
                         .build()),
-                (ConnectivityManager.NetworkCallback) any());
+                any(ConnectivityManager.NetworkCallback.class));
     }
 
     @Test

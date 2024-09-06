@@ -65,7 +65,7 @@
     <string name="wifi_cannot_connect_with_randomized_mac_title" msgid="2344570489693915253">"<xliff:g id="SSID">%1$s</xliff:g>-д холбогдож чадсангүй"</string>
     <string name="wifi_cannot_connect_with_randomized_mac_message" msgid="4834133226521813352">"Нууцлалын тохиргоог өөрчлөхийн тулд товшоод, дахин оролдоно уу"</string>
     <string name="wifi_disable_mac_randomization_dialog_title" msgid="2054540994993681606">"Нууцлалын тохиргоог өөрчлөх үү?"</string>
-    <string name="wifi_disable_mac_randomization_dialog_message" msgid="8874064864332248988">"Холбогдохын тулд <xliff:g id="SSID">%1$s</xliff:g> нь таны төхөөрөмжийн өвөрмөц таниулбар болох MAC хаягийг ашиглах хэрэгтэй байна. Одоогоор энэ сүлжээнд зориулсан таны нууцлалын тохиргоо нь санамсаргүй сонгосон таниулбарыг ашиглаж байна. \n\nЭнэ нь ойролцоох төхөөрөмжүүдэд таны төхөөрөмжийн байршлыг тандахыг зөвшөөрч болзошгүй."</string>
+    <string name="wifi_disable_mac_randomization_dialog_message" msgid="8874064864332248988">"Холбогдохын тулд <xliff:g id="SSID">%1$s</xliff:g> нь таны төхөөрөмжийн өвөрмөц танигч болох MAC хаягийг ашиглах хэрэгтэй байна. Одоогоор энэ сүлжээнд зориулсан таны нууцлалын тохиргоо нь санамсаргүй сонгосон таниулбарыг ашиглаж байна. \n\nЭнэ нь ойролцоох төхөөрөмжүүдэд таны төхөөрөмжийн байршлыг тандахыг зөвшөөрч болзошгүй."</string>
     <string name="wifi_disable_mac_randomization_dialog_confirm_text" msgid="6954419863076751626">"Тохиргоог өөрчлөх"</string>
     <string name="wifi_disable_mac_randomization_dialog_success" msgid="5849155828154391387">"Тохиргоог шинэчиллээ. Дахин холбогдохыг оролдоно уу."</string>
     <string name="wifi_disable_mac_randomization_dialog_failure" msgid="2894643619143813096">"Нууцлалын тохиргоог өөрчлөх боломжгүй байна"</string>

@@ -379,7 +379,8 @@ public class WifiNetworkSuggestionsManager {
             config.shared = false;
             config.allowAutojoin = isAutojoinEnabled;
             if (config.enterpriseConfig
-                    != null && config.enterpriseConfig.isAuthenticationSimBased()) {
+                    != null && config.enterpriseConfig.isAuthenticationSimBased()
+                    && anonymousIdentity != null) {
                 config.enterpriseConfig.setAnonymousIdentity(anonymousIdentity);
             }
             config.getNetworkSelectionStatus().setConnectChoice(connectChoice);
@@ -466,6 +467,7 @@ public class WifiNetworkSuggestionsManager {
     private boolean mIsLastUserApprovalUiDialog = false;
 
     private boolean mUserDataLoaded = false;
+    private boolean mIsDeviceShuttingDown = false;
 
     /**
      * Keep a set of packageNames which is treated as carrier provider.
@@ -708,7 +710,7 @@ public class WifiNetworkSuggestionsManager {
     private void saveToStore() {
         // Set the flag to let WifiConfigStore that we have new data to write.
         mHasNewDataToSerialize = true;
-        if (!mWifiConfigManager.saveToStore(true)) {
+        if (!mWifiConfigManager.saveToStore()) {
             Log.w(TAG, "Failed to save to store");
         }
     }
@@ -900,8 +902,9 @@ public class WifiNetworkSuggestionsManager {
             Log.e(TAG, "UID " + uid + " not visible to the current user");
             return WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_INTERNAL;
         }
-        if (!mUserDataLoaded) {
-            Log.e(TAG, "Add Network suggestion before boot complete is not allowed.");
+        if (!mUserDataLoaded || mIsDeviceShuttingDown) {
+            Log.e(TAG, "Add Network suggestion before boot complete or when device is "
+                    + "shutting down is not allowed.");
             return WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_INTERNAL;
         }
         if (networkSuggestions == null || networkSuggestions.isEmpty()) {
@@ -1392,8 +1395,9 @@ public class WifiNetworkSuggestionsManager {
             Log.e(TAG, "UID " + uid + " not visible to the current user");
             return WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_INTERNAL;
         }
-        if (!mUserDataLoaded) {
-            Log.e(TAG, "Remove Network suggestion before boot complete is not allowed.");
+        if (!mUserDataLoaded || mIsDeviceShuttingDown) {
+            Log.e(TAG, "Remove Network suggestion before boot complete or when device is "
+                    + "shutting down is not allowed.");
             return WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_INTERNAL;
         }
         if (networkSuggestions == null) {
@@ -2873,5 +2877,12 @@ public class WifiNetworkSuggestionsManager {
             addToScanResultMatchInfoMap(ewns);
         }
         saveToStore();
+    }
+
+    /**
+     * Handle device shut down
+     */
+    public void handleShutDown() {
+        mIsDeviceShuttingDown = true;
     }
 }

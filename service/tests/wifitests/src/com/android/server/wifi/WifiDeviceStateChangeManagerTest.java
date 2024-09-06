@@ -74,7 +74,7 @@ public class WifiDeviceStateChangeManagerTest extends WifiBaseTest {
         verify(mStateChangeCallback, never()).onScreenStateChanged(anyBoolean());
         mWifiDeviceStateChangeManager.handleBootCompleted();
         verify(mContext, atLeastOnce())
-                .registerReceiver(mBroadcastReceiverCaptor.capture(), any(), any(), any());
+                .registerReceiver(mBroadcastReceiverCaptor.capture(), any());
         verify(mStateChangeCallback).onScreenStateChanged(true);
         reset(mStateChangeCallback);
         setScreenState(true);
@@ -91,7 +91,7 @@ public class WifiDeviceStateChangeManagerTest extends WifiBaseTest {
     public void testRegisterAfterBootCompleted() {
         mWifiDeviceStateChangeManager.handleBootCompleted();
         verify(mContext, atLeastOnce())
-                .registerReceiver(mBroadcastReceiverCaptor.capture(), any(), any(), any());
+                .registerReceiver(mBroadcastReceiverCaptor.capture(), any());
         mWifiDeviceStateChangeManager.registerStateChangeCallback(mStateChangeCallback);
         // Register after boot completed should immediately get a callback
         verify(mStateChangeCallback).onScreenStateChanged(true);
@@ -102,5 +102,6 @@ public class WifiDeviceStateChangeManagerTest extends WifiBaseTest {
         assertNotNull(broadcastReceiver);
         Intent intent = new Intent(screenOn ? ACTION_SCREEN_ON : ACTION_SCREEN_OFF);
         broadcastReceiver.onReceive(mContext, intent);
+        mLooper.dispatchAll();
     }
 }

@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 /** Unit tests for {@link com.android.server.wifi.WifiUriParser}. */
@@ -44,7 +45,6 @@ public class WifiUriParserTest {
     private void verifyZxParsing(
             UriParserResults uri,
             String expectedSSID,
-            int expectedAuthType,
             List<SecurityParams> expectedSecurityParamsList,
             String expectedPreShareKey,
             boolean isWep) {
@@ -52,7 +52,6 @@ public class WifiUriParserTest {
         WifiConfiguration config = uri.getWifiConfiguration();
         assertNotNull(config);
         assertThat(config.SSID).isEqualTo(expectedSSID);
-        assertThat(config.getAuthType()).isEqualTo(expectedAuthType);
         if (isWep) {
             assertThat(config.wepKeys[0]).isEqualTo(expectedPreShareKey);
         } else {
@@ -78,7 +77,6 @@ public class WifiUriParserTest {
         verifyZxParsing(
                 uri,
                 "\"testAbC\"",
-                WifiConfiguration.KeyMgmt.NONE,
                 expectedSecurityParamsList,
                 null,
                 false);
@@ -87,7 +85,6 @@ public class WifiUriParserTest {
         verifyZxParsing(
                 uri,
                 "\"testAbC\"",
-                WifiConfiguration.KeyMgmt.NONE,
                 expectedSecurityParamsList,
                 null,
                 false);
@@ -101,7 +98,6 @@ public class WifiUriParserTest {
         verifyZxParsing(
                 uri,
                 "\"reallyLONGone\"",
-                WifiConfiguration.KeyMgmt.NONE,
                 expectedSecurityParamsList,
                 "\"somepasswo#%^**123rd\"",
                 true);
@@ -110,7 +106,6 @@ public class WifiUriParserTest {
         verifyZxParsing(
                 uri,
                 "\"reallyLONGone\"",
-                WifiConfiguration.KeyMgmt.NONE,
                 expectedSecurityParamsList,
                 "\"somepassword\"",
                 true);
@@ -124,7 +119,6 @@ public class WifiUriParserTest {
         verifyZxParsing(
                 uri,
                 "\"anotherone\"",
-                WifiConfiguration.KeyMgmt.WPA_PSK,
                 expectedSecurityParamsList,
                 "\"3#=3j9asicla\"",
                 false);
@@ -133,7 +127,6 @@ public class WifiUriParserTest {
         verifyZxParsing(
                 uri,
                 "\"anotherone\"",
-                WifiConfiguration.KeyMgmt.WPA_PSK,
                 expectedSecurityParamsList,
                 "\"abcdefghihklmn\"",
                 false);
@@ -147,7 +140,6 @@ public class WifiUriParserTest {
         verifyZxParsing(
                 uri,
                 "\"xx\"",
-                WifiConfiguration.KeyMgmt.SAE,
                 expectedSecurityParamsList,
                 "\"a\"",
                 false);
@@ -156,9 +148,43 @@ public class WifiUriParserTest {
         verifyZxParsing(
                 uri,
                 "\"xx\"",
-                WifiConfiguration.KeyMgmt.SAE,
                 expectedSecurityParamsList,
                 "\"a\"",
+                false);
+        // Test ADB
+        uri = WifiUriParser.parseUri("WIFI:T:ADB;S:myname;P:mypass;;");
+        verifyZxParsing(
+                uri,
+                "\"myname\"",
+                Collections.emptyList(),
+                "\"mypass\"",
+                false);
+        // Test transition disable value
+        expectedSecurityParamsList =
+                ImmutableList.of(
+                        SecurityParams.createSecurityParamsBySecurityType(
+                                WifiConfiguration.SECURITY_TYPE_PSK));
+        uri = WifiUriParser.parseUri("WIFI:S:anotherone;T:WPA;R:0;P:3#=3j9asicla");
+        verifyZxParsing(
+                uri,
+                "\"anotherone\"",
+                expectedSecurityParamsList,
+                "\"3#=3j9asicla\"",
+                false);
+
+        SecurityParams pskButDisableed = SecurityParams.createSecurityParamsBySecurityType(
+                                WifiConfiguration.SECURITY_TYPE_PSK);
+        pskButDisableed.setEnabled(false);
+        expectedSecurityParamsList =
+                ImmutableList.of(pskButDisableed,
+                        SecurityParams.createSecurityParamsBySecurityType(
+                                WifiConfiguration.SECURITY_TYPE_SAE));
+        uri = WifiUriParser.parseUri("WIFI:S:anotherone;T:WPA;R:1;P:3#=3j9asicla");
+        verifyZxParsing(
+                uri,
+                "\"anotherone\"",
+                expectedSecurityParamsList,
+                "\"3#=3j9asicla\"",
                 false);
     }
 

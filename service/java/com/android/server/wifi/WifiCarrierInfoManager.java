@@ -54,6 +54,10 @@ import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
+import android.telephony.ims.ImsManager;
+import android.telephony.ims.ImsMmTelManager;
+import android.telephony.ims.feature.MmTelFeature;
+import android.telephony.ims.stub.ImsRegistrationImplBase;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Base64;
@@ -188,6 +192,9 @@ public class WifiCarrierInfoManager {
     private final WifiMetrics mWifiMetrics;
     private final Clock mClock;
     private final WifiPseudonymManager mWifiPseudonymManager;
+
+    private ImsManager mImsManager;
+    private Map<Integer, ImsMmTelManager> mImsMmTelManagerMap = new HashMap<>();
     /**
      * Cached Map of <subscription ID, CarrierConfig PersistableBundle> since retrieving the
      * PersistableBundle from CarrierConfigManager is somewhat expensive as it has hundreds of
@@ -526,6 +533,7 @@ public class WifiCarrierInfoManager {
         @Override
         public void onSubscriptionsChanged() {
             mActiveSubInfos = mSubscriptionManager.getCompleteActiveSubscriptionInfoList();
+            mImsMmTelManagerMap.clear();
             updateSubIdsInNetworkFactoryFilters(mActiveSubInfos);
             mSubIdToSimInfoSparseArray.clear();
             mSubscriptionGroupMap.clear();
@@ -1545,22 +1553,26 @@ public class WifiCarrierInfoManager {
             Log.v(TAG, "Raw Response - " + tmResponse);
         }
 
-        boolean goodReponse = false;
+        boolean goodResponse = false;
         if (tmResponse != null && tmResponse.length() > 4) {
             byte[] result = Base64.decode(tmResponse, Base64.DEFAULT);
             Log.e(TAG, "Hex Response - " + makeHex(result));
             byte tag = result[0];
             if (tag == (byte) 0xdb) {
                 Log.v(TAG, "successful 3G authentication ");
-                int resLen = result[1];
-                String res = makeHex(result, 2, resLen);
-                int ckLen = result[resLen + 2];
-                String ck = makeHex(result, resLen + 3, ckLen);
-                int ikLen = result[resLen + ckLen + 3];
-                String ik = makeHex(result, resLen + ckLen + 4, ikLen);
-                sb.append(":" + ik + ":" + ck + ":" + res);
-                Log.v(TAG, "ik:" + ik + "ck:" + ck + " res:" + res);
-                goodReponse = true;
+                try {
+                    int resLen = result[1];
+                    String res = makeHex(result, 2, resLen);
+                    int ckLen = result[resLen + 2];
+                    String ck = makeHex(result, resLen + 3, ckLen);
+                    int ikLen = result[resLen + ckLen + 3];
+                    String ik = makeHex(result, resLen + ckLen + 4, ikLen);
+                    sb.append(":" + ik + ":" + ck + ":" + res);
+                    Log.v(TAG, "ik:" + ik + "ck:" + ck + " res:" + res);
+                    goodResponse = true;
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    Log.e(TAG, "ArrayIndexOutOfBoundsException in get3GAuthResponse: " + e);
+                }
             } else if (tag == (byte) 0xdc) {
                 Log.e(TAG, "synchronisation failure");
                 int autsLen = result[1];
@@ -1568,7 +1580,7 @@ public class WifiCarrierInfoManager {
                 resType = WifiNative.SIM_AUTH_RESP_TYPE_UMTS_AUTS;
                 sb.append(":" + auts);
                 Log.v(TAG, "auts:" + auts);
-                goodReponse = true;
+                goodResponse = true;
             } else {
                 Log.e(TAG, "bad response - unknown tag = " + tag);
             }
@@ -1576,7 +1588,7 @@ public class WifiCarrierInfoManager {
             Log.e(TAG, "bad response - " + tmResponse);
         }
 
-        if (goodReponse) {
+        if (goodResponse) {
             String response = sb.toString();
             Log.v(TAG, "Supplicant Response -" + response);
             return new SimAuthResponseData(resType, response);
@@ -2170,7 +2182,7 @@ public class WifiCarrierInfoManager {
         // Set the flag to let WifiConfigStore that we have new data to write.
         mHasNewUserDataToSerialize = true;
         mHasNewSharedDataToSerialize = true;
-        if (!mWifiInjector.getWifiConfigManager().saveToStore(true)) {
+        if (!mWifiInjector.getWifiConfigManager().saveToStore()) {
             Log.w(TAG, "Failed to save to store");
         }
     }
@@ -2327,6 +2339,40 @@ public class WifiCarrierInfoManager {
         boolean ret = isOobPseudonymFeatureEnabledInResource(carrierId);
         vlogd("isOobPseudonymFeatureEnabled(" + carrierId + ") = " + ret);
         return ret;
+    }
+
+    /**
+     * Check if wifi calling is being available.
+     */
+    public boolean isWifiCallingAvailable() {
+        if (mActiveSubInfos == null || mActiveSubInfos.isEmpty()) {
+            return false;
+        }
+        if (mImsManager == null) {
+            mImsManager = mContext.getSystemService(ImsManager.class);
+        }
+        for (SubscriptionInfo subInfo : mActiveSubInfos) {
+            int subscriptionId = subInfo.getSubscriptionId();
+            try {
+                if (mImsManager != null) {
+                    ImsMmTelManager imsMmTelManager = mImsMmTelManagerMap.get(subscriptionId);
+                    if (imsMmTelManager == null) {
+                        imsMmTelManager = mImsManager.getImsMmTelManager(subscriptionId);
+                        mImsMmTelManagerMap.put(subscriptionId, imsMmTelManager);
+                    }
+                    if (imsMmTelManager != null
+                            && imsMmTelManager.isAvailable(
+                                    MmTelFeature.MmTelCapabilities.CAPABILITY_TYPE_VOICE,
+                                    ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN)) {
+                        Log.d(TAG, "WifiCalling is available on subId " + subscriptionId);
+                        return true;
+                    }
+                }
+            } catch (RuntimeException e) {
+                Log.d(TAG, "RuntimeException while checking if wifi calling is available: " + e);
+            }
+        }
+        return false;
     }
 
     private boolean isOobPseudonymFeatureEnabledInResource(int carrierId) {

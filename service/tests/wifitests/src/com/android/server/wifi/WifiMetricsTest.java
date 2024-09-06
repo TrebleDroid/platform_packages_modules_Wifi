@@ -2235,6 +2235,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         mWifiMetrics.setConnectionScanDetail("nonexistentIface", mock(ScanDetail.class));
         mWifiMetrics.setConnectionPmkCache("nonexistentIface", false);
         mWifiMetrics.setConnectionMaxSupportedLinkSpeedMbps("nonexistentIface", 100, 50);
+        mWifiMetrics.setConnectionChannelWidth("nonexistentIface", ScanResult.CHANNEL_WIDTH_160MHZ);
         mWifiMetrics.endConnectionEvent("nonexistentIface",
                 WifiMetrics.ConnectionEvent.FAILURE_ASSOCIATION_REJECTION,
                 WifiMetricsProto.ConnectionEvent.HLF_DHCP,
@@ -6611,7 +6612,7 @@ public class WifiMetricsTest extends WifiBaseTest {
                 eq((int) wifiDisconnectTimeMs / 1000),
                 eq((int) (wifiDisconnectTimeMs - connectionEndTimeMs) / 1000),
                 eq(WifiStatsLog.WIFI_CONNECTION_RESULT_REPORTED__ROLE__ROLE_CLIENT_PRIMARY),
-                anyInt(), anyInt(), anyInt(), anyInt()));
+                anyInt(), anyInt(), anyInt(), anyInt(), anyInt()));
     }
 
     @Test
@@ -6639,7 +6640,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         ExtendedMockito.verify(() -> WifiStatsLog.write(
                 eq(WifiStatsLog.WIFI_DISCONNECT_REPORTED),
                 anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(),
-                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()),
+                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()),
                 times(0));
     }
 
@@ -6650,7 +6651,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         ExtendedMockito.verify(() -> WifiStatsLog.write(
                 eq(WifiStatsLog.WIFI_DISCONNECT_REPORTED),
                 anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(),
-                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()),
+                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()),
                 times(0));
     }
 
@@ -7256,7 +7257,8 @@ public class WifiMetricsTest extends WifiBaseTest {
         when(networkDetail.isIndividualTwtSupported()).thenReturn(true);
         when(networkDetail.isTwtRequired()).thenReturn(true);
         when(networkDetail.isFilsCapable()).thenReturn(true);
-        when(networkDetail.is11azSupported()).thenReturn(true);
+        when(networkDetail.is80211azNtbResponder()).thenReturn(true);
+        when(networkDetail.is80211azTbResponder()).thenReturn(false);
         when(networkDetail.is80211McResponderSupport()).thenReturn(true);
         when(networkDetail.isEpcsPriorityAccessSupported()).thenReturn(true);
         when(networkDetail.getHSRelease()).thenReturn(NetworkDetail.HSRelease.Unknown);
@@ -7277,6 +7279,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         mWifiMetrics.logBugReport();
         mWifiMetrics.logStaEvent(TEST_IFACE_NAME, StaEvent.TYPE_CMD_START_ROAM,
                 StaEvent.DISCONNECT_UNKNOWN, null);
+        mWifiMetrics.setConnectionChannelWidth(TEST_IFACE_NAME, ScanResult.CHANNEL_WIDTH_160MHZ);
         mWifiMetrics.endConnectionEvent(TEST_IFACE_NAME,
                 WifiMetrics.ConnectionEvent.FAILURE_NONE,
                 WifiMetricsProto.ConnectionEvent.HLF_NONE,
@@ -7310,6 +7313,7 @@ public class WifiMetricsTest extends WifiBaseTest {
                         eq(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__PASSPOINT_RELEASE__PASSPOINT_RELEASE_UNKNOWN),
                         eq(false), // isPasspointHomeProvider
                         eq(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__AP_TYPE_6GHZ__AP_TYPE_6GHZ_STANDARD_POWER),
-                        eq(true))); // mIsEcpsPriorityAccessSupported
+                        eq(true), // mIsEcpsPriorityAccessSupported
+                        eq(WifiStatsLog.WIFI_AP_CAPABILITIES_REPORTED__CHANNEL_WIDTH_MHZ__CHANNEL_WIDTH_160MHZ))); // mChannelWidth
     }
 }

@@ -37,9 +37,9 @@ public class BackupRestoreControllerTest extends WifiBaseTest {
 
     public static final String TEST_WIFI_UNION_BACKUP_DATA_WITH_SETTINGS_IN_V =
             XML_GENERAL_BEGINNING
-            + "<WifiBackupDataUnion>\n"
+            + "<WifiSettingsBackupData>\n"
             + WifiSettingsBackupRestoreTest.generateTestWifiSettingsTestingXml("")
-            + "</WifiBackupDataUnion>\n";
+            + "</WifiSettingsBackupData>\n";
 
     @Mock WifiSettingsBackupRestore mWifiSettingsBackupRestore;
     @Mock Clock mClock;

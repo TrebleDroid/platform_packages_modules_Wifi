@@ -54,7 +54,7 @@ import java.util.function.Consumer;
 /** An example snippet class with a simple Rpc. */
 public class WifiAwareSnippet implements Snippet {
 
-    private Object mLock;
+    private final Object mLock = new Object();
 
     private static class WifiAwareSnippetException extends Exception {
         private static final long SERIAL_VERSION_UID = 1;

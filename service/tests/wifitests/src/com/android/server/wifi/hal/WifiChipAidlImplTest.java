@@ -16,6 +16,8 @@
 
 package com.android.server.wifi.hal;
 
+import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -24,13 +26,17 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.hardware.wifi.AfcChannelAllowance;
 import android.hardware.wifi.IWifiChip;
+import android.hardware.wifi.IWifiChip.FeatureSetMask;
+import android.hardware.wifi.IWifiChip.VoipMode;
 import android.hardware.wifi.WifiDebugHostWakeReasonRxIcmpPacketDetails;
 import android.hardware.wifi.WifiDebugHostWakeReasonRxMulticastPacketDetails;
 import android.hardware.wifi.WifiDebugHostWakeReasonRxPacketDetails;
@@ -49,12 +55,14 @@ import com.android.server.wifi.WifiBaseTest;
 import com.android.server.wifi.WifiNative;
 import com.android.server.wifi.WlanWakeReasonAndCounts;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.MockitoSession;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +70,8 @@ import java.util.Random;
 
 public class WifiChipAidlImplTest extends WifiBaseTest {
     private WifiChipAidlImpl mDut;
+    private MockitoSession mSession;
+
     @Mock private IWifiChip mIWifiChipMock;
     @Mock private Context mContextMock;
     @Mock private SsidTranslator mSsidTranslatorMock;
@@ -70,6 +80,14 @@ public class WifiChipAidlImplTest extends WifiBaseTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         mDut = new WifiChipAidlImpl(mIWifiChipMock, mContextMock, mSsidTranslatorMock);
+        mSession = mockitoSession()
+                .mockStatic(WifiHalAidlImpl.class)
+                .startMocking();
+    }
+
+    @After
+    public void tearDown() {
+        mSession.finishMocking();
     }
 
     @Test
@@ -435,5 +453,35 @@ public class WifiChipAidlImplTest extends WifiBaseTest {
         }
 
         return afcChannelAllowance;
+    }
+
+    /**
+     * Test that setVoipMode() results in calling into WifiChip
+     */
+    @Test
+    public void testVoipMode() throws Exception {
+        // Old Hal should not execute the call.
+        when(mIWifiChipMock.getFeatureSet()).thenReturn(FeatureSetMask.SET_VOIP_MODE);
+        lenient().when(WifiHalAidlImpl.isServiceVersionAtLeast(2))
+                .thenReturn(false);
+        // Update feature set to support VOIP.
+        mDut.getCapabilitiesAfterIfacesExist();
+        // Old Hal should not execute the call.
+        assertFalse(mDut.setVoipMode(VoipMode.VOICE));
+        assertFalse(mDut.setVoipMode(VoipMode.OFF));
+        verify(mIWifiChipMock, never()).setVoipMode(anyInt());
+        // Call HAL when hal is V2 or above.
+        lenient().when(WifiHalAidlImpl.isServiceVersionAtLeast(2))
+                .thenReturn(true);
+        assertTrue(mDut.setVoipMode(WifiChip.WIFI_VOIP_MODE_VOICE));
+        verify(mIWifiChipMock).setVoipMode(VoipMode.VOICE);
+        assertTrue(mDut.setVoipMode(VoipMode.OFF));
+        // Don't call HAL when feature is not supported
+        reset(mIWifiChipMock);
+        // Update feature set
+        mDut.getCapabilitiesAfterIfacesExist();
+        assertFalse(mDut.setVoipMode(VoipMode.VOICE));
+        assertFalse(mDut.setVoipMode(VoipMode.OFF));
+        verify(mIWifiChipMock, never()).setVoipMode(anyInt());
     }
 }

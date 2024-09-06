@@ -16,6 +16,11 @@
 
 package com.android.server.wifi.hal;
 
+import static android.hardware.wifi.V1_6.WifiChannelWidthInMhz.WIDTH_160;
+import static android.hardware.wifi.V1_6.WifiChannelWidthInMhz.WIDTH_320;
+import static android.hardware.wifi.V1_6.WifiChannelWidthInMhz.WIDTH_40;
+import static android.hardware.wifi.V1_6.WifiChannelWidthInMhz.WIDTH_80;
+import static android.hardware.wifi.V1_6.WifiChannelWidthInMhz.WIDTH_80P80;
 import static android.net.wifi.CoexUnsafeChannel.POWER_CAP_NONE;
 
 import android.annotation.NonNull;
@@ -37,6 +42,8 @@ import android.hardware.wifi.V1_6.WifiRadioCombination;
 import android.hardware.wifi.V1_6.WifiRadioConfiguration;
 import android.net.wifi.CoexUnsafeChannel;
 import android.net.wifi.OuiKeyedData;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiAnnotations;
 import android.net.wifi.WifiAvailableChannel;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiScanner;
@@ -1042,7 +1049,8 @@ public class WifiChipHidlImpl implements IWifiChip {
                                 channelResp.value = new ArrayList<>();
                                 for (android.hardware.wifi.V1_6.WifiUsableChannel ch : channels) {
                                     channelResp.value.add(new WifiAvailableChannel(ch.channel,
-                                            halToFrameworkIfaceMode(ch.ifaceModeMask)));
+                                            halToFrameworkIfaceMode(ch.ifaceModeMask),
+                                            halToFrameworkChannelWidth(ch.channelBandwidth)));
                                 }
                             }
                         });
@@ -1056,7 +1064,8 @@ public class WifiChipHidlImpl implements IWifiChip {
                                 channelResp.value = new ArrayList<>();
                                 for (android.hardware.wifi.V1_5.WifiUsableChannel ch : channels) {
                                     channelResp.value.add(new WifiAvailableChannel(ch.channel,
-                                            halToFrameworkIfaceMode(ch.ifaceModeMask)));
+                                            halToFrameworkIfaceMode(ch.ifaceModeMask),
+                                            halToFrameworkChannelWidth(ch.channelBandwidth)));
                                 }
                             }
                         });
@@ -1065,6 +1074,23 @@ public class WifiChipHidlImpl implements IWifiChip {
             handleRemoteException(e, methodStr);
         }
         return channelResp.value;
+    }
+
+    private @WifiAnnotations.ChannelWidth int halToFrameworkChannelWidth(int channelBandwidth) {
+        switch (channelBandwidth) {
+            case WIDTH_40:
+                return ScanResult.CHANNEL_WIDTH_40MHZ;
+            case WIDTH_80:
+                return ScanResult.CHANNEL_WIDTH_80MHZ;
+            case WIDTH_160:
+                return ScanResult.CHANNEL_WIDTH_160MHZ;
+            case WIDTH_80P80:
+                return ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ;
+            case WIDTH_320:
+                return ScanResult.CHANNEL_WIDTH_320MHZ;
+            default:
+                return ScanResult.CHANNEL_WIDTH_20MHZ;
+        }
     }
 
     private boolean registerCallbackInternal(String methodStr, WifiChip.Callback callback) {
