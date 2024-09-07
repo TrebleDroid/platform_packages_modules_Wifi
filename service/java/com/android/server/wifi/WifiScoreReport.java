@@ -1156,12 +1156,12 @@ public class WifiScoreReport {
                 shouldForceKeepConnected
                         ? NetworkScore.KEEP_CONNECTED_FOR_HANDOVER
                         : NetworkScore.KEEP_CONNECTED_NONE;
-        boolean exiting = SdkLevel.isAtLeastS() && mWifiConnectedNetworkScorerHolder != null
+        boolean exiting = (SdkLevel.isAtLeastS() && mWifiConnectedNetworkScorerHolder != null)
                 ? !mIsUsable : mLegacyIntScore < ConnectedScore.WIFI_TRANSITION_SCORE;
         return new NetworkScore.Builder()
                 .setLegacyInt(mShouldReduceNetworkScore ? LINGERING_SCORE : mLegacyIntScore)
                 .setTransportPrimary(mCurrentRole == ActiveModeManager.ROLE_CLIENT_PRIMARY)
-                .setExiting(exiting)
+                .setExiting(exiting | mShouldReduceNetworkScore)
                 .setKeepConnectedReason(keepConnectedReason);
     }
 
@@ -1251,5 +1251,13 @@ public class WifiScoreReport {
         if (mAggressiveConnectedScore != null) mAggressiveConnectedScore.onRoleChanged(role);
         if (mVelocityBasedConnectedScore != null) mVelocityBasedConnectedScore.onRoleChanged(role);
         sendNetworkScore();
+    }
+
+    /**
+     * Get whether we are in the lingering state or not.
+     */
+    public boolean getLingering() {
+        return (SdkLevel.isAtLeastS() && mWifiConnectedNetworkScorerHolder != null)
+                ? !mIsUsable : mLegacyIntScore < ConnectedScore.WIFI_TRANSITION_SCORE;
     }
 }
