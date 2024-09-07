@@ -2407,11 +2407,20 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
                 eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
         validateConnectSequence(false, 2, SUPPLICANT_SSID);
 
-        // Fallback SSID was not found, broadcast the network not found event now.
+        // Fallback SSID was not found, finally broadcast NETWORK_NOT_FOUND and try the first SSID
+        // again.
         mISupplicantStaIfaceCallback.onNetworkNotFound(NativeUtil.byteArrayFromArrayList(
                 NativeUtil.decodeSsid(SUPPLICANT_SSID)));
         verify(mWifiMonitor).broadcastNetworkNotFoundEvent(
                 eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
+        validateConnectSequence(false, 3, TRANSLATED_SUPPLICANT_SSID.toString());
+
+        // First SSID not found, try the fallback without broadcasting NETWORK_NOT_FOUND.
+        mISupplicantStaIfaceCallback.onNetworkNotFound(NativeUtil.byteArrayFromArrayList(
+                NativeUtil.decodeSsid(TRANSLATED_SUPPLICANT_SSID.toString())));
+        verify(mWifiMonitor, times(1)).broadcastNetworkNotFoundEvent(
+                eq(WLAN0_IFACE_NAME), eq(TRANSLATED_SUPPLICANT_SSID.toString()));
+        validateConnectSequence(false, 4, SUPPLICANT_SSID);
     }
 
     /**
@@ -3352,5 +3361,39 @@ public class SupplicantStaIfaceHalAidlImplTest extends WifiBaseTest {
         assertEquals((byte) userPriorityLimit, halParams.upLimit);
         assertEquals(streamTimeoutUs, halParams.streamTimeoutUs);
         assertEquals(halFrameClassifierMask, halParams.frameClassifierMask);
+    }
+
+    /**
+     * Test that MSCS params set through {@link SupplicantStaIfaceHalAidlImpl#enableMscs(
+     * MscsParams, String)} are cached for later resends.
+     */
+    @Test
+    public void testEnableAndResendMscs() throws Exception {
+        executeAndValidateInitializationSequence();
+        mDut.setupIface(WLAN0_IFACE_NAME);
+
+        doNothing().when(mISupplicantStaIfaceMock).configureMscs(any());
+        MscsParams defaultParams = new MscsParams.Builder().build();
+
+        ArgumentCaptor<android.hardware.wifi.supplicant.MscsParams> halParamsCaptor =
+                ArgumentCaptor.forClass(android.hardware.wifi.supplicant.MscsParams.class);
+        mDut.enableMscs(defaultParams, WLAN0_IFACE_NAME);
+        verify(mISupplicantStaIfaceMock).configureMscs(halParamsCaptor.capture());
+        android.hardware.wifi.supplicant.MscsParams initialParams = halParamsCaptor.getValue();
+
+        // Resend should use the params cached during the initial send.
+        mDut.resendMscs(WLAN0_IFACE_NAME);
+        verify(mISupplicantStaIfaceMock, times(2)).configureMscs(halParamsCaptor.capture());
+        android.hardware.wifi.supplicant.MscsParams resendParams = halParamsCaptor.getValue();
+
+        assertEquals(initialParams.upBitmap, resendParams.upBitmap);
+        assertEquals(initialParams.upLimit, resendParams.upLimit);
+        assertEquals(initialParams.streamTimeoutUs, resendParams.streamTimeoutUs);
+        assertEquals(initialParams.frameClassifierMask, resendParams.frameClassifierMask);
+
+        // Disabling MSCS should clear the cached params and prevent future resends.
+        mDut.disableMscs(WLAN0_IFACE_NAME);
+        mDut.resendMscs(WLAN0_IFACE_NAME);
+        verify(mISupplicantStaIfaceMock, times(2)).configureMscs(halParamsCaptor.capture());
     }
 }

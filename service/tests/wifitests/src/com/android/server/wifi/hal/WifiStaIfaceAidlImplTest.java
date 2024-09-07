@@ -83,8 +83,8 @@ public class WifiStaIfaceAidlImplTest extends WifiBaseTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        mDut = new WifiStaIfaceAidlImpl(mIWifiStaIfaceMock, mContextMock, mSsidTranslatorMock);
         when(mContextMock.getResources()).thenReturn(mResourcesMock);
+        mDut = new WifiStaIfaceAidlImpl(mIWifiStaIfaceMock, mContextMock, mSsidTranslatorMock);
     }
 
     /**
@@ -137,6 +137,7 @@ public class WifiStaIfaceAidlImplTest extends WifiBaseTest {
     public void testTwoRadioStatsAggregation() throws Exception {
         when(mResourcesMock.getBoolean(R.bool.config_wifiLinkLayerAllRadiosStatsAggregationEnabled))
                 .thenReturn(true);
+        mDut = new WifiStaIfaceAidlImpl(mIWifiStaIfaceMock, mContextMock, mSsidTranslatorMock);
         Random r = new Random(245786856);
         StaLinkLayerStats stats = new StaLinkLayerStats();
         // Fill stats in two radios

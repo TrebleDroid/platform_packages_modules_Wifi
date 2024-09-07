@@ -161,8 +161,9 @@ public class NetworkDetail {
     // 6 GHz Access Point Type
     private final InformationElementUtil.ApType6GHz mApType6GHz;
 
-    // IEEE 802.11az
-    private final boolean mIs11azSupported;
+    // IEEE 802.11az non-trigger based & trigger based
+    private final boolean mIs11azNtbResponder;
+    private final boolean mIs11azTbResponder;
 
     // MLO Attributes
     private MacAddress mMldMacAddress = null;
@@ -372,8 +373,8 @@ public class NetworkDetail {
         mEpcsPriorityAccessSupported = ehtCapabilities.isEpcsPriorityAccessSupported();
         mFilsCapable = extendedCapabilities.isFilsCapable();
         mApType6GHz = heOperation.getApType6GHz();
-        mIs11azSupported = extendedCapabilities.isTriggerBasedRangingRespSupported()
-                || extendedCapabilities.isNonTriggerBasedRangingRespSupported();
+        mIs11azNtbResponder =  extendedCapabilities.is80211azNtbResponder();
+        mIs11azTbResponder = extendedCapabilities.is80211azTbResponder();
         int channelWidth = ScanResult.UNSPECIFIED;
         int centerFreq0 = mPrimaryFreq;
         int centerFreq1 = 0;
@@ -564,7 +565,8 @@ public class NetworkDetail {
         mEpcsPriorityAccessSupported = base.mEpcsPriorityAccessSupported;
         mFilsCapable = base.mFilsCapable;
         mApType6GHz = base.mApType6GHz;
-        mIs11azSupported = base.mIs11azSupported;
+        mIs11azNtbResponder = base.mIs11azNtbResponder;
+        mIs11azTbResponder = base.mIs11azTbResponder;
     }
 
     public NetworkDetail complete(Map<Constants.ANQPElementType, ANQPElement> anqpElements) {
@@ -794,10 +796,16 @@ public class NetworkDetail {
         return mOceSupported;
     }
 
-    /** Return whether the AP supports IEEE 802.11az **/
-    public boolean is11azSupported() {
-        return mIs11azSupported;
+    /** Return whether the AP supports IEEE 802.11az non-trigger based ranging **/
+    public boolean is80211azNtbResponder() {
+        return mIs11azNtbResponder;
     }
+
+    /** Return whether the AP supports IEEE 802.11az trigger based ranging **/
+    public boolean is80211azTbResponder() {
+        return mIs11azTbResponder;
+    }
+
     /**
      * Return whether the AP requires HE stations to participate either in individual TWT
      * agreements or Broadcast TWT operation.

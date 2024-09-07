@@ -16,16 +16,16 @@
 
 package android.net.wifi.rtt;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
+
 import android.location.Address;
 import android.location.Location;
 import android.net.MacAddress;
 import android.os.Parcel;
 import android.util.SparseArray;
 import android.webkit.MimeTypeMap;
-
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertTrue;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -85,6 +85,17 @@ public class ResponderLocationTest {
             (byte) 0x2c,
             (byte) 0x00, // MSB Height(m)
             (byte) 0x0e, // STA Height Uncertainty
+    };
+
+    private static final byte[] sTestZHeightSEUncertaintyUnset = {
+            (byte) 0x04, // Subelement Z
+            (byte) 6, // Length always 6
+            (byte) 0x00, // LSB STA Floor Info (2 bytes)
+            (byte) 0x01, // MSB
+            (byte) 0xcd, // LSB Height(m) (3 bytes)
+            (byte) 0x2c,
+            (byte) 0x00, // MSB Height(m)
+            (byte) 0x00, // STA Height Uncertainty
     };
 
     private static final byte[] sTestUsageSE1 = {
@@ -400,6 +411,32 @@ public class ResponderLocationTest {
         assertEquals(4.0, staFloorNumber);
         assertEquals(2.8, staHeightAboveFloorMeters, HEIGHT_TOLERANCE_METERS);
         assertEquals(0.125, staHeightAboveFloorUncertaintyMeters);
+    }
+
+    /**
+     * Test for a valid Z (Height) subelement with unset uncertainty following an LCI subelement.
+     */
+    @Test
+    public void testLciValidZBufferSEAfterLciWithUnsetUncertainty() {
+        byte[] testBufferTmp = concatenateArrays(sTestLciIeHeader, sTestLciSE);
+        byte[] testBuffer = concatenateArrays(testBufferTmp, sTestZHeightSEUncertaintyUnset);
+        ResponderLocation responderLocation =
+                new ResponderLocation(testBuffer, sTestLcrBufferHeader);
+
+        boolean isValid = responderLocation.isValid();
+        boolean isZValid = responderLocation.isZaxisSubelementValid();
+        boolean isLciValid = responderLocation.isLciSubelementValid();
+        double staFloorNumber = responderLocation.getFloorNumber();
+        double staHeightAboveFloorMeters = responderLocation.getHeightAboveFloorMeters();
+        double staHeightAboveFloorUncertaintyMeters =
+                responderLocation.getHeightAboveFloorUncertaintyMeters();
+
+        assertTrue(isValid);
+        assertTrue(isZValid);
+        assertTrue(isLciValid);
+        assertEquals(4.0, staFloorNumber);
+        assertEquals(2.8, staHeightAboveFloorMeters, HEIGHT_TOLERANCE_METERS);
+        assertEquals(0.0, staHeightAboveFloorUncertaintyMeters);
     }
 
     /**

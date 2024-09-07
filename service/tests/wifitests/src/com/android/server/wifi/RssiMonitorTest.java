@@ -23,7 +23,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import android.content.Context;
+import android.net.wifi.WifiContext;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
@@ -61,7 +61,7 @@ public class RssiMonitorTest extends WifiBaseTest {
     private RssiMonitor mRssiMonitor;
     private WifiGlobals mWifiGlobals;
     private TestLooper mLooper;
-    @Mock Context mContext;
+    @Mock WifiContext mContext;
     MockResources mMockResources = new MockResources();
     private final WifiInfo mWifiInfo = new ExtendedWifiInfo(mWifiGlobals, TEST_INTERFACE_NAME);
     @Mock WifiNative mWifiNative;

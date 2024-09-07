@@ -28,15 +28,15 @@ import android.net.wifi.p2p.WifiP2pGroupList;
  */
 oneway interface IWifiP2pListener
 {
-    void onStateChanged(boolean p2pEnabled);
-    void onDiscoveryStateChanged(boolean started);
-    void onListenStateChanged(boolean started);
+    void onP2pStateChanged(int state);
+    void onDiscoveryStateChanged(int state);
+    void onListenStateChanged(int state);
     void onDeviceConfigurationChanged(in WifiP2pDevice p2pDevice);
     void onPeerListChanged(in WifiP2pDeviceList p2pDeviceList);
     void onPersistentGroupsChanged(in WifiP2pGroupList p2pGroupList);
     void onGroupCreating();
     void onGroupNegotiationRejectedByUser();
-    void onGroupCreationFailed();
+    void onGroupCreationFailed(int reason);
     void onGroupCreated(in WifiP2pInfo p2pInfo, in WifiP2pGroup p2pGroup);
     void onPeerClientJoined(in WifiP2pInfo p2pInfo, in WifiP2pGroup p2pGroup);
     void onPeerClientDisconnected(in WifiP2pInfo p2pInfo, in WifiP2pGroup p2pGroup);

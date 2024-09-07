@@ -97,7 +97,7 @@ public class WifiSettingsConfigStoreTest extends WifiBaseTest {
         mWifiSettingsConfigStore.put(WIFI_VERBOSE_LOGGING_ENABLED, true);
         mLooper.dispatchAll();
         assertTrue(mWifiSettingsConfigStore.get(WIFI_VERBOSE_LOGGING_ENABLED));
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
     }
 
     @Test
@@ -152,7 +152,7 @@ public class WifiSettingsConfigStoreTest extends WifiBaseTest {
 
         assertTrue(mWifiSettingsConfigStore.get(WIFI_VERBOSE_LOGGING_ENABLED));
         // Trigger store file write after migration.
-        verify(mWifiConfigManager).saveToStore(true);
+        verify(mWifiConfigManager).saveToStore();
     }
 
     private XmlPullParser createSettingsTestXmlForParsing(Key key, Object value)

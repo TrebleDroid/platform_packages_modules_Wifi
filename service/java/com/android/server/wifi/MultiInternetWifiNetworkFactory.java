@@ -243,7 +243,6 @@ public class MultiInternetWifiNetworkFactory extends NetworkFactory {
                     + " Uid " + state.networkRequest.getRequestorUid()
                     + " PackageName " + state.networkRequest.getRequestorPackageName());
         }
-        mLocalLog.dump(fd, pw, args);
         mMultiInternetManager.dump(fd, pw, args);
     }
 }

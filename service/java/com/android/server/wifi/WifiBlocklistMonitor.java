@@ -20,6 +20,7 @@ import static android.net.wifi.WifiConfiguration.NetworkSelectionStatus.DISABLE_
 
 import android.annotation.IntDef;
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.Context;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
@@ -279,12 +280,14 @@ public class WifiBlocklistMonitor {
      */
     private long getBlocklistDurationWithExponentialBackoff(int failureStreak,
             int baseBlocklistDurationMs) {
+        long disableDurationMs = baseBlocklistDurationMs;
         failureStreak = Math.min(failureStreak, mContext.getResources().getInteger(
                 R.integer.config_wifiBssidBlocklistMonitorFailureStreakCap));
-        if (failureStreak < 1) {
-            return baseBlocklistDurationMs;
+        if (failureStreak >= 1) {
+            disableDurationMs =
+                (long) (Math.pow(2.0, (double) failureStreak) * baseBlocklistDurationMs);
         }
-        return (long) (Math.pow(2.0, (double) failureStreak) * baseBlocklistDurationMs);
+        return Math.min(disableDurationMs, mWifiGlobals.getWifiConfigMaxDisableDurationMs());
     }
 
     /**
@@ -887,6 +890,23 @@ public class WifiBlocklistMonitor {
     }
 
     /**
+     * Gets the currently blocked BSSIDs without causing any updates.
+     * @param ssids The set of SSIDs to get blocked BSSID for, or null to get this information for
+     *              all SSIDs.
+     * @return The list of currently blocked BSSIDs.
+     */
+    public List<String> getBssidBlocklistForSsids(@Nullable Set<String> ssids) {
+        List<String> results = new ArrayList<>();
+        for (Map.Entry<String, BssidStatus> entryMap : mBssidStatusMap.entrySet()) {
+            BssidStatus bssidStatus = entryMap.getValue();
+            if (bssidStatus.isInBlocklist && (ssids == null || ssids.contains(bssidStatus.ssid))) {
+                results.add(bssidStatus.bssid);
+            }
+        }
+        return results;
+    }
+
+    /**
      * Sends the BSSIDs belonging to the input SSID down to the firmware to prevent auto-roaming
      * to those BSSIDs.
      * @param ssids
@@ -1391,7 +1411,8 @@ public class WifiBlocklistMonitor {
                 break;
             }
         }
-        return mClock.getElapsedSinceBootMillis() + disableDurationMs;
+        return mClock.getElapsedSinceBootMillis() + Math.min(
+            disableDurationMs, mWifiGlobals.getWifiConfigMaxDisableDurationMs());
     }
 
     /**

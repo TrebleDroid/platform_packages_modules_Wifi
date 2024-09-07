@@ -87,7 +87,7 @@ public class ExternalScoreUpdateObserverProxy extends IScoreUpdateObserver.Stub 
             }
             mCountNullCallback = 0;
             mCallback.notifyScoreUpdate(sessionId, score);
-        });
+        }, TAG + "#notifyScoreUpdate");
     }
 
     @Override
@@ -100,7 +100,7 @@ public class ExternalScoreUpdateObserverProxy extends IScoreUpdateObserver.Stub 
             }
             mCountNullCallback = 0;
             mCallback.triggerUpdateOfWifiUsabilityStats(sessionId);
-        });
+        }, TAG + "#triggerUpdateOfWifiUsabilityStats");
     }
 
     @Override
@@ -115,7 +115,7 @@ public class ExternalScoreUpdateObserverProxy extends IScoreUpdateObserver.Stub 
             }
             mCountNullCallback = 0;
             mCallback.notifyStatusUpdate(sessionId, isUsable);
-        });
+        }, TAG + "#notifyStatusUpdate");
     }
 
     @Override
@@ -130,7 +130,7 @@ public class ExternalScoreUpdateObserverProxy extends IScoreUpdateObserver.Stub 
             }
             mCountNullCallback = 0;
             mCallback.requestNudOperation(sessionId);
-        });
+        }, TAG + "#requestNudOperation");
     }
 
     @Override
@@ -145,6 +145,6 @@ public class ExternalScoreUpdateObserverProxy extends IScoreUpdateObserver.Stub 
             }
             mCountNullCallback = 0;
             mCallback.blocklistCurrentBssid(sessionId);
-        });
+        }, TAG + "#blocklistCurrentBssid");
     }
 }

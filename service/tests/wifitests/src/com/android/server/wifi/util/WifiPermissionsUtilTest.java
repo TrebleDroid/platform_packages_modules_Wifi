@@ -870,52 +870,6 @@ public class WifiPermissionsUtilTest extends WifiBaseTest {
     }
 
     /**
-     * Verifies the helper method exposed for checking SYSTERM_ALERT_WINDOW permission.
-     */
-    @Test
-    public void testCheckSystemAlertWindowPermissionWithModeDefaultAppOps() throws Exception {
-        setupMocks();
-        WifiPermissionsUtil wifiPermissionsUtil = new WifiPermissionsUtil(mMockPermissionsWrapper,
-                mMockContext, mMockUserManager, mWifiInjector);
-        wifiPermissionsUtil.enableVerboseLogging(true);
-
-        when(mMockAppOps.noteOpNoThrow(AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW, MANAGED_PROFILE_UID,
-                TEST_PACKAGE_NAME, null, null))
-                .thenReturn(AppOpsManager.MODE_DEFAULT);
-        when(mMockPermissionsWrapper.getUidPermission(
-                Manifest.permission.SYSTEM_ALERT_WINDOW, MANAGED_PROFILE_UID))
-                .thenReturn(PackageManager.PERMISSION_DENIED);
-        assertFalse(wifiPermissionsUtil.checkSystemAlertWindowPermission(
-                MANAGED_PROFILE_UID, TEST_PACKAGE_NAME));
-
-        when(mMockAppOps.noteOpNoThrow(AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW, MANAGED_PROFILE_UID,
-                TEST_PACKAGE_NAME, null, null))
-                .thenReturn(AppOpsManager.MODE_DEFAULT);
-        when(mMockPermissionsWrapper.getUidPermission(
-                Manifest.permission.SYSTEM_ALERT_WINDOW, MANAGED_PROFILE_UID))
-                .thenReturn(PackageManager.PERMISSION_GRANTED);
-        assertTrue(wifiPermissionsUtil.checkSystemAlertWindowPermission(
-                MANAGED_PROFILE_UID, TEST_PACKAGE_NAME));
-    }
-
-    /**
-     * Verifies the helper method exposed for checking SYSTERM_ALERT_WINDOW permission.
-     */
-    @Test
-    public void testCheckSystemAlertWindowPermissionWithModeAllowedAppOps() throws Exception {
-        setupMocks();
-        WifiPermissionsUtil wifiPermissionsUtil = new WifiPermissionsUtil(mMockPermissionsWrapper,
-                mMockContext, mMockUserManager, mWifiInjector);
-        wifiPermissionsUtil.enableVerboseLogging(true);
-
-        when(mMockAppOps.noteOpNoThrow(
-                AppOpsManager.OP_SYSTEM_ALERT_WINDOW, MANAGED_PROFILE_UID, TEST_PACKAGE_NAME))
-                .thenReturn(AppOpsManager.MODE_ALLOWED);
-        assertTrue(wifiPermissionsUtil.checkSystemAlertWindowPermission(
-                MANAGED_PROFILE_UID, TEST_PACKAGE_NAME));
-    }
-
-    /**
      * Verifies the helper method exposed for checking if the app is a DeviceOwner.
      */
     @Test

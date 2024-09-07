@@ -181,6 +181,13 @@ public class HalDeviceManager {
     }
 
     /**
+     * Returns whether or not the concurrency combo is loaded from the driver.
+     */
+    public boolean isConcurrencyComboLoadedFromDriver() {
+        return mIsConcurrencyComboLoadedFromDriver;
+    }
+
+    /**
      * Enables verbose logging.
      */
     public void enableVerboseLogging(boolean verboseEnabled) {
@@ -1546,7 +1553,7 @@ public class HalDeviceManager {
     private void managerStatusListenerDispatch() {
         synchronized (mLock) {
             for (ManagerStatusListenerProxy cb : mManagerStatusListeners) {
-                cb.trigger(false);
+                cb.action();
             }
         }
     }
@@ -2497,11 +2504,6 @@ public class HalDeviceManager {
                 return false;
             }
 
-            // dispatch listeners on other threads to prevent race conditions in case the HAL is
-            // blocking and they get notification about destruction from HAL before cleaning up
-            // status.
-            dispatchDestroyedListeners(name, type, true);
-
             boolean success = false;
             switch (type) {
                 case WifiChip.IFACE_TYPE_STA:
@@ -2523,7 +2525,7 @@ public class HalDeviceManager {
             }
 
             // dispatch listeners no matter what status
-            dispatchDestroyedListeners(name, type, false);
+            dispatchDestroyedListeners(name, type);
             if (validateRttController) {
                 // Try to update the RttController
                 updateRttControllerWhenInterfaceChanges();
@@ -2542,12 +2544,10 @@ public class HalDeviceManager {
     // cache entries for the called listeners
     // onlyOnOtherThreads = true: only call listeners on other threads
     // onlyOnOtherThreads = false: call all listeners
-    private void dispatchDestroyedListeners(String name, int type, boolean onlyOnOtherThreads) {
+    private void dispatchDestroyedListeners(String name, int type) {
         if (VDBG) Log.d(TAG, "dispatchDestroyedListeners: iface(name)=" + name);
-
-        List<InterfaceDestroyedListenerProxy> triggerList = new ArrayList<>();
         synchronized (mLock) {
-            InterfaceCacheEntry entry = mInterfaceInfoCache.get(Pair.create(name, type));
+            InterfaceCacheEntry entry = mInterfaceInfoCache.remove(Pair.create(name, type));
             if (entry == null) {
                 Log.e(TAG, "dispatchDestroyedListeners: no cache entry for iface(name)=" + name);
                 return;
@@ -2557,18 +2557,9 @@ public class HalDeviceManager {
                     entry.destroyedListeners.iterator();
             while (iterator.hasNext()) {
                 InterfaceDestroyedListenerProxy listener = iterator.next();
-                if (!onlyOnOtherThreads || !listener.requestedToRunInCurrentThread()) {
-                    triggerList.add(listener);
-                    iterator.remove();
-                }
+                iterator.remove();
+                listener.action();
             }
-            if (!onlyOnOtherThreads) { // leave entry until final call to *all* callbacks
-                mInterfaceInfoCache.remove(Pair.create(name, type));
-            }
-        }
-
-        for (InterfaceDestroyedListenerProxy listener : triggerList) {
-            listener.trigger(isWaitForDestroyedListenersMockable());
         }
     }
 
@@ -2588,7 +2579,7 @@ public class HalDeviceManager {
         }
 
         for (InterfaceDestroyedListenerProxy listener : triggerList) {
-            listener.trigger(false);
+            listener.action();
         }
     }
 
@@ -2625,46 +2616,6 @@ public class HalDeviceManager {
         @Override
         public int hashCode() {
             return mListener.hashCode();
-        }
-
-        public boolean requestedToRunInCurrentThread() {
-            if (mHandler == null) return true;
-            long currentTid = mWifiInjector.getCurrentThreadId();
-            long handlerTid = mHandler.getLooper().getThread().getId();
-            return currentTid == handlerTid;
-        }
-
-        void trigger(boolean isRunAtFront) {
-            // TODO(b/199792691): The thread check is needed to preserve the existing
-            //  assumptions of synchronous execution of the "onDestroyed" callback as much as
-            //  possible. This is needed to prevent regressions caused by posting to the handler
-            //  thread changing the code execution order.
-            //  When all wifi services (ie. WifiAware, WifiP2p) get moved to the wifi handler
-            //  thread, remove this thread check and the Handler#post() and simply always
-            //  invoke the callback directly.
-            if (mFeatureFlags.singleWifiThread()) {
-                action();
-                return;
-            }
-            if (requestedToRunInCurrentThread()) {
-                // Already running on the same handler thread. Trigger listener synchronously.
-                action();
-            } else if (isRunAtFront) {
-                // Current thread is not the thread the listener should be invoked on.
-                // Post action to the intended thread and run synchronously.
-                new WifiThreadRunner(mHandler).runAtFront(() -> {
-                    action();
-                });
-            } else {
-                // Current thread is not the thread the listener should be invoked on.
-                // Post action to the intended thread.
-                if (mHandler instanceof RunnerHandler) {
-                    RunnerHandler rh = (RunnerHandler) mHandler;
-                    rh.postToFront(() -> action());
-                } else {
-                    mHandler.postAtFrontOfQueue(() -> action());
-                }
-            }
         }
 
         protected void action() {}

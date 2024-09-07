@@ -281,53 +281,53 @@ public class ApplicationQosPolicyTrackingTableTest {
     }
 
     /**
-     * Tests the {@link ApplicationQosPolicyTrackingTable#getAllPolicies(int)} method when
-     * all policies have the same direction.
+     * Tests the {@link ApplicationQosPolicyTrackingTable#getAllPolicies(boolean)} method when
+     * no policies contain QosCharacteristics.
      */
     @Test
-    public void testGetAllPoliciesSameDirection() {
+    public void testGetAllPolicies_noQosChars() {
         // Empty table should return an empty list.
-        List<QosPolicyParams> retrievedPolicies =
-                mDut.getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK);
+        List<QosPolicyParams> retrievedPolicies = mDut.getAllPolicies(false);
         assertTrue(retrievedPolicies.isEmpty());
 
         // Fill table with downlink policies from multiple requesters.
+        // No policies contain QosCharacteristics.
         List<QosPolicyParams> policyList = generatePolicyList(
                 NUM_VIRTUAL_POLICY_IDS / 2, TEST_PHYSICAL_POLICY_ID_START);
         mDut.addPolicies(policyList, TEST_UID);
         mDut.addPolicies(policyList, TEST_UID + 1);
 
         // getAllPolicies should return all policies across all requesters.
-        retrievedPolicies = mDut.getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK);
+        retrievedPolicies = mDut.getAllPolicies(false);
         assertEquals(NUM_VIRTUAL_POLICY_IDS, retrievedPolicies.size());
     }
 
     /**
-     * Tests the {@link ApplicationQosPolicyTrackingTable#getAllPolicies(int)} method when
-     * the policies in the table have different directions.
+     * Tests the {@link ApplicationQosPolicyTrackingTable#getAllPolicies(boolean)} method when
+     * some policies in the table contain QosCharacteristics and others do not.
      */
     @Test
-    public void testGetAllPoliciesDifferentDirection() {
+    public void testGetAllPolicies_filteredByQosChars() {
         assumeTrue(SdkLevel.isAtLeastV());
-        List<QosPolicyParams> downlinkPolicies = generatePolicyList(
+        List<QosPolicyParams> policiesWithoutQosChars = generatePolicyList(
                 NUM_VIRTUAL_POLICY_IDS / 2, TEST_PHYSICAL_POLICY_ID_START);
-        mDut.addPolicies(downlinkPolicies, TEST_UID);
+        mDut.addPolicies(policiesWithoutQosChars, TEST_UID);
 
-        // Table should contain several downlink and no uplink policies.
-        List<QosPolicyParams> retrievedPolicies =
-                mDut.getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK);
-        assertEquals(downlinkPolicies.size(), retrievedPolicies.size());
-        retrievedPolicies = mDut.getAllPolicies(QosPolicyParams.DIRECTION_UPLINK);
+        // Table should contain no policies with QosCharacteristics.
+        List<QosPolicyParams> retrievedPolicies = mDut.getAllPolicies(false);
+        assertEquals(policiesWithoutQosChars.size(), retrievedPolicies.size());
+        retrievedPolicies = mDut.getAllPolicies(true);
         assertEquals(0, retrievedPolicies.size());
 
-        List<QosPolicyParams> uplinkPolicies = generateUplinkPolicyList(
+        // Uplink policies are guaranteed to contain QosCharacteristics.
+        List<QosPolicyParams> policiesWithQosChars = generateUplinkPolicyList(
                 NUM_VIRTUAL_POLICY_IDS / 2, TEST_PHYSICAL_POLICY_ID_START);
-        mDut.addPolicies(uplinkPolicies, TEST_UID + 1);
+        mDut.addPolicies(policiesWithQosChars, TEST_UID + 1);
 
-        // Table should contain both uplink and downlink policies.
-        retrievedPolicies = mDut.getAllPolicies(QosPolicyParams.DIRECTION_DOWNLINK);
-        assertEquals(downlinkPolicies.size(), retrievedPolicies.size());
-        retrievedPolicies = mDut.getAllPolicies(QosPolicyParams.DIRECTION_UPLINK);
-        assertEquals(uplinkPolicies.size(), retrievedPolicies.size());
+        // Table should contain both policies with and without QosCharacteristics.
+        retrievedPolicies = mDut.getAllPolicies(false);
+        assertEquals(policiesWithoutQosChars.size(), retrievedPolicies.size());
+        retrievedPolicies = mDut.getAllPolicies(true);
+        assertEquals(policiesWithQosChars.size(), retrievedPolicies.size());
     }
 }

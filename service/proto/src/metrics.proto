@@ -3071,6 +3071,9 @@ message P2pConnectionEvent {
 
   // The try count of connection
   optional int32 try_count = 13;
+
+  // The Attribution tag to identify the caller
+  optional string attribution_tag = 14;
 }
 
 // GroupEvent tracking group information from GroupStarted to GroupRemoved.

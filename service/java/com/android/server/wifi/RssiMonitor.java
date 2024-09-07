@@ -81,9 +81,11 @@ public class RssiMonitor {
             // the actions are same as calling handleRssiBreachRestartRssiMonitor(curRssi) directly.
             if (mEnableClientRssiMonitor && curRssi
                     <= mWifiGlobals.getClientRssiMonitorThresholdDbm()) {
-                mWifiThreadRunner.post(() -> processClientRssiThresholdBreached(curRssi));
+                mWifiThreadRunner.post(() -> processClientRssiThresholdBreached(curRssi),
+                        TAG + "#processClientRssiThresholdBreached");
             } else {
-                mWifiThreadRunner.post(() -> handleRssiBreachRestartRssiMonitor(curRssi));
+                mWifiThreadRunner.post(() -> handleRssiBreachRestartRssiMonitor(curRssi),
+                        TAG + "#handleRssiBreachRestartRssiMonitor");
             }
         }
     }
