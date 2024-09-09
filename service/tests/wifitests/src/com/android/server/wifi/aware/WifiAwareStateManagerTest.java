@@ -761,7 +761,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         IWifiAwareEventCallback mockCallback1 = mock(IWifiAwareEventCallback.class);
         IWifiAwareEventCallback mockCallback2 = mock(IWifiAwareEventCallback.class);
         ArgumentCaptor<Short> transactionIdCapture = ArgumentCaptor.forClass(Short.class);
-        InOrder inOrder = inOrder(mockCallback1, mockCallback2, mMockNative);
+        InOrder inOrder = inOrder(mockCallback1, mockCallback2, mMockNative, mMockNativeManager);
 
         mDut.enableUsage();
         mMockLooper.dispatchAll();
@@ -827,7 +827,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
 
         validateInternalClientInfoCleanedUp(clientId1);
         validateInternalClientInfoCleanedUp(clientId2);
-
+        mMockLooper.dispatchAll();
+        inOrder.verify(mMockNativeManager).releaseAware();
         verifyNoMoreInteractions(mockCallback1, mockCallback2, mMockNative);
     }
 
@@ -4093,6 +4094,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         inOrder.verify(mockCallback).onAttachTerminate();
         collector.checkThat("usage enabled", mDut.isUsageEnabled(), equalTo(true));
         assertFalse(mDut.isDeviceAttached());
+        mMockLooper.dispatchAll();
         validateCorrectAwareStatusChangeBroadcast(inOrder);
 
         // (3) try reconnect client
@@ -5796,7 +5798,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         IWifiAwareEventCallback mockCallback1 = mock(IWifiAwareEventCallback.class);
         IWifiAwareEventCallback mockCallback2 = mock(IWifiAwareEventCallback.class);
         ArgumentCaptor<Short> transactionIdCapture = ArgumentCaptor.forClass(Short.class);
-        InOrder inOrder = inOrder(mockCallback1, mockCallback2, mMockNative);
+        InOrder inOrder = inOrder(mockCallback1, mockCallback2, mMockNative, mMockNativeManager);
 
         mDut.enableUsage();
         mMockLooper.dispatchAll();
@@ -5835,7 +5837,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
 
         validateInternalClientInfoCleanedUp(clientId1);
         validateInternalClientInfoCleanedUp(clientId2);
-
+        mMockLooper.dispatchAll();
+        inOrder.verify(mMockNativeManager).releaseAware();
         verifyNoMoreInteractions(mockCallback1, mockCallback2, mMockNative);
     }
 
@@ -5864,7 +5867,7 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         IWifiAwareEventCallback mockCallback1 = mock(IWifiAwareEventCallback.class);
         IWifiAwareEventCallback mockCallback2 = mock(IWifiAwareEventCallback.class);
         ArgumentCaptor<Short> transactionIdCapture = ArgumentCaptor.forClass(Short.class);
-        InOrder inOrder = inOrder(mockCallback1, mockCallback2, mMockNative);
+        InOrder inOrder = inOrder(mockCallback1, mockCallback2, mMockNative, mMockNativeManager);
 
         mDut.enableUsage();
         mMockLooper.dispatchAll();
@@ -5915,7 +5918,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
 
         validateInternalClientInfoCleanedUp(clientId1);
         validateInternalClientInfoCleanedUp(clientId2);
-
+        mMockLooper.dispatchAll();
+        inOrder.verify(mMockNativeManager).releaseAware();
         verifyNoMoreInteractions(mockCallback1, mockCallback2, mMockNative);
     }
 
@@ -5976,7 +5980,8 @@ public class WifiAwareStateManagerTest extends WifiBaseTest {
         inOrder.verify(mockCallback1).onAttachTerminate();
 
         validateInternalClientInfoCleanedUp(clientId1);
-
+        mMockLooper.dispatchAll();
+        inOrder.verify(mMockNativeManager).releaseAware();
         verifyNoMoreInteractions(mockCallback1, mMockNative);
     }
 }
