@@ -2664,6 +2664,7 @@ public class WifiAwareStateManager implements WifiAwareShellCommand.DelegatedShe
                     if (reason != NanStatusCode.SUCCESS) {
                         sendAwareStateChangedBroadcast(false);
                     }
+                    releaseAwareInterface();
                     break;
                 }
                 case NOTIFICATION_TYPE_ON_MESSAGE_SEND_SUCCESS: {

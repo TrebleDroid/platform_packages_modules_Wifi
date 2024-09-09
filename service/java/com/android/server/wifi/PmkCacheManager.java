@@ -217,6 +217,9 @@ public class PmkCacheManager {
             for (int i = 0; i < mPmkCacheEntries.size(); i++) {
                 int networkId = mPmkCacheEntries.keyAt(i);
                 List<PmkCacheStoreData> list = mPmkCacheEntries.get(networkId);
+                if (null == list) {
+                    continue;
+                }
                 list.removeIf(pmkData -> !pmkData.isValid(elapseTimeInSecond));
                 if (list.size() == 0) {
                     emptyStoreDataList.add(networkId);
