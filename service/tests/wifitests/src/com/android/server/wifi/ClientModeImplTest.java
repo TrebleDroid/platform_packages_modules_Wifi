@@ -11201,4 +11201,21 @@ public class ClientModeImplTest extends WifiBaseTest {
                 eq(WifiMetricsProto.ConnectionEvent.AUTH_FAILURE_EAP_FAILURE),
                 anyInt(), eq(ClientModeImpl.EAP_FAILURE_CODE_CERTIFICATE_EXPIRED));
     }
+
+    /**
+     * Verify that the Sae H2E Feature is set even though config_wifiSaeH2eSupported
+     * is not enabled through overlay.
+     */
+    @Test
+    public void testSaeH2eSetEvenThoughConfigForSaeH2eIsNotTrue() throws Exception {
+        when(mWifiNative.isSupplicantAidlServiceVersionAtLeast(3)).thenReturn(true);
+        when(mWifiNative.getSupportedFeatureSet(WIFI_IFACE_NAME)).thenReturn(
+                WifiManager.WIFI_FEATURE_WPA3_SAE);
+        initializeCmi();
+        if (SdkLevel.isAtLeastV()) {
+            verify(mWifiGlobals).enableWpa3SaeH2eSupport();
+        } else {
+            verify(mWifiGlobals, never()).enableWpa3SaeH2eSupport();
+        }
+    }
 }
