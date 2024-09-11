@@ -19,7 +19,7 @@
     <string name="wifiResourcesAppLabel" product="default" msgid="3120115613525263696">"Sistemaren wifi-baliabideak"</string>
     <string name="wifi_available_title" msgid="3899472737467127635">"Konektatu wifi-sare irekira"</string>
     <string name="wifi_available_title_connecting" msgid="7233590022728579868">"Wi‑Fi sarera konektatzen"</string>
-    <string name="wifi_available_title_connected" msgid="6329493859989844201">"Wi‑Fi sare irekira konektatuta"</string>
+    <string name="wifi_available_title_connected" msgid="6329493859989844201">"Wifi-sare irekira konektatuta"</string>
     <string name="wifi_available_title_failed_to_connect" msgid="4840833680513368639">"Ezin izan da konektatu wifi-sare irekira"</string>
     <string name="wifi_available_content_failed_to_connect" msgid="4330035988269701861">"Sakatu hau sare guztiak ikusteko"</string>
     <string name="wifi_available_action_connect" msgid="5636634933476946222">"Konektatu"</string>
