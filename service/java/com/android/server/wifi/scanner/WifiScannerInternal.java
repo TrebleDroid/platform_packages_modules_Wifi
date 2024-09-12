@@ -93,6 +93,12 @@ public abstract class WifiScannerInternal {
         }
 
         @Override
+        public void onFullResults(List<ScanResult> fullScanResult) {
+            mWifiThreadRunner.post(() -> fullScanResult.forEach(mScanListener::onFullResult),
+                    TAG + "#onFullResults");
+        }
+
+        @Override
         public void onSingleScanCompleted() {
             // Internal scan listener doesn't need to handle this.
         }

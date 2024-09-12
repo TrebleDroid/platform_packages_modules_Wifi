@@ -3623,6 +3623,11 @@ public class WifiNative {
          * See WifiScanner.REASON_* for possible values.
          */
         void onScanRequestFailed(int errorCode);
+
+        /**
+         * Callback for all APs ScanResult
+         */
+        void onFullScanResults(List<ScanResult> fullScanResult, int bucketsScanned);
     }
 
     /**

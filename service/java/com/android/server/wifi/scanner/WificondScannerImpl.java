@@ -422,12 +422,10 @@ public class WificondScannerImpl extends WifiScannerImpl implements Handler.Call
 
             if (mLastScanSettings.singleScanEventHandler != null) {
                 if (mLastScanSettings.reportSingleScanFullResults) {
-                    for (ScanResult scanResult : singleScanResults) {
-                        // ignore buckets scanned since there is only one bucket for a single scan
-                        mLastScanSettings.singleScanEventHandler.onFullScanResult(scanResult,
-                                /* bucketsScanned */ 0);
-                    }
+                    mLastScanSettings.singleScanEventHandler
+                            .onFullScanResults(singleScanResults, 0);
                 }
+
                 Collections.sort(singleScanResults, SCAN_RESULT_SORT_COMPARATOR);
                 mLatestSingleScanResult = new WifiScanner.ScanData(0, 0, 0,
                         getScannedBandsInternal(mLastScanSettings.singleScanFreqs),
