@@ -266,8 +266,6 @@ public class PasspointNetworkNominateHelperTest extends WifiBaseTest {
         assertEquals(RANDOMIZATION_NONE, addedConfig.getValue().macRandomizationSetting);
         verify(mWifiConfigManager).enableNetwork(
                 eq(TEST_NETWORK_ID), eq(false), eq(TEST_UID), any());
-        verify(mWifiConfigManager).setNetworkCandidateScanResult(
-                eq(TEST_NETWORK_ID), any(ScanResult.class), anyInt(), any());
         verify(mWifiConfigManager).updateScanDetailForNetwork(
                 eq(TEST_NETWORK_ID), any(ScanDetail.class));
 
@@ -320,8 +318,6 @@ public class PasspointNetworkNominateHelperTest extends WifiBaseTest {
         assertTrue(addedConfig.getValue().isHomeProviderNetwork);
         verify(mWifiConfigManager).enableNetwork(
                 eq(TEST_NETWORK_ID), eq(false), eq(TEST_UID), any());
-        verify(mWifiConfigManager).setNetworkCandidateScanResult(
-                eq(TEST_NETWORK_ID), any(ScanResult.class), anyInt(), any());
         verify(mWifiConfigManager).updateScanDetailForNetwork(
                 eq(TEST_NETWORK_ID), any(ScanDetail.class));
     }
@@ -363,8 +359,6 @@ public class PasspointNetworkNominateHelperTest extends WifiBaseTest {
         assertFalse(addedConfig.getValue().isHomeProviderNetwork);
         verify(mWifiConfigManager).enableNetwork(
                 eq(TEST_NETWORK_ID), eq(false), eq(TEST_UID), any());
-        verify(mWifiConfigManager).setNetworkCandidateScanResult(
-                eq(TEST_NETWORK_ID), any(ScanResult.class), anyInt(), any());
         verify(mWifiConfigManager).updateScanDetailForNetwork(
                 eq(TEST_NETWORK_ID), any(ScanDetail.class));
     }
@@ -465,13 +459,6 @@ public class PasspointNetworkNominateHelperTest extends WifiBaseTest {
                 .getPasspointNetworkCandidates(scanDetails);
 
         assertEquals(1, candidates.size());
-
-        // Verify network candidate information is updated.
-        ArgumentCaptor<ScanResult> updatedCandidateScanResult =
-                ArgumentCaptor.forClass(ScanResult.class);
-        verify(mWifiConfigManager).setNetworkCandidateScanResult(eq(TEST_NETWORK_ID),
-                updatedCandidateScanResult.capture(), anyInt(), any());
-        assertEquals(TEST_BSSID2, updatedCandidateScanResult.getValue().BSSID);
         ArgumentCaptor<ScanDetail> updatedCandidateScanDetail =
                 ArgumentCaptor.forClass(ScanDetail.class);
         verify(mWifiConfigManager).updateScanDetailForNetwork(eq(TEST_NETWORK_ID),
@@ -864,8 +851,6 @@ public class PasspointNetworkNominateHelperTest extends WifiBaseTest {
         assertTrue(addedConfig.getValue().isHomeProviderNetwork);
         verify(mWifiConfigManager).enableNetwork(
                 eq(TEST_NETWORK_ID), eq(false), eq(TEST_UID), any());
-        verify(mWifiConfigManager).setNetworkCandidateScanResult(
-                eq(TEST_NETWORK_ID), any(ScanResult.class), anyInt(), any());
         verify(mWifiConfigManager).updateScanDetailForNetwork(
                 eq(TEST_NETWORK_ID), any(ScanDetail.class));
 
@@ -933,10 +918,6 @@ public class PasspointNetworkNominateHelperTest extends WifiBaseTest {
                 .enableNetwork(eq(TEST_NETWORK_ID), eq(false), anyInt(), any());
         verify(mWifiConfigManager)
                 .enableNetwork(eq(TEST_NETWORK_ID2), eq(false), anyInt(), any());
-        verify(mWifiConfigManager)
-                .setNetworkCandidateScanResult(eq(TEST_NETWORK_ID), any(), anyInt(), any());
-        verify(mWifiConfigManager)
-                .setNetworkCandidateScanResult(eq(TEST_NETWORK_ID2), any(), anyInt(), any());
         verify(mWifiConfigManager)
                 .updateScanDetailForNetwork(eq(TEST_NETWORK_ID), eq(scanDetails.get(0)));
         verify(mWifiConfigManager)
