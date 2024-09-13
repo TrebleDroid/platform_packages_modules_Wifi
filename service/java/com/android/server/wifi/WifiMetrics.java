@@ -40,7 +40,6 @@ import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESUL
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_FIRMWARE_ALERT;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_IP_REACHABILITY_LOST;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__UNUSABLE_EVENT__EVENT_NONE;
-import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_FRAMEWORK_STATE__FRAMEWORK_STATE_UNKNOWN;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_FRAMEWORK_STATE__FRAMEWORK_STATE_AWAKENING;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_FRAMEWORK_STATE__FRAMEWORK_STATE_CONNECTED;
 import static com.android.server.wifi.proto.WifiStatsLog.SCORER_PREDICTION_RESULT_REPORTED__WIFI_FRAMEWORK_STATE__FRAMEWORK_STATE_LINGERING;
@@ -644,6 +643,12 @@ public class WifiMetrics {
     private boolean mIsFirstConnectionAttemptComplete = false;
 
     private final WifiToWifiSwitchStats mWifiToWifiSwitchStats = new WifiToWifiSwitchStats();
+
+    private long mLastScreenOnTimeMillis = 0;
+    @VisibleForTesting
+    long mLastScreenOffTimeMillis = 0;
+    @VisibleForTesting
+    long mLastIgnoredPollTimeMillis = 0;
 
     /** Wi-Fi link specific metrics (MLO). */
     public static class LinkMetrics {
@@ -1686,7 +1691,7 @@ public class WifiMetrics {
                 new WifiDeviceStateChangeManager.StateChangeCallback() {
                     @Override
                     public void onScreenStateChanged(boolean screenOn) {
-                        setScreenState(screenOn);
+                        handleScreenStateChanged(screenOn);
                     }
                 });
     }
@@ -6085,11 +6090,16 @@ public class WifiMetrics {
     }
 
     /**
-     *  Set screen state (On/Off)
+     *  Handle screen state changing.
      */
-    private void setScreenState(boolean screenOn) {
+    private void handleScreenStateChanged(boolean screenOn) {
         synchronized (mLock) {
             mScreenOn = screenOn;
+            if (screenOn) {
+                mLastScreenOnTimeMillis = mClock.getElapsedSinceBootMillis();
+            } else {
+                mLastScreenOffTimeMillis = mClock.getElapsedSinceBootMillis();
+            }
         }
     }
 
@@ -8846,13 +8856,10 @@ public class WifiMetrics {
     }
 
     @VisibleForTesting
-    int getFrameworkStateForScorer(int pollingIntervalMs, boolean lingering) {
-        if (mCurrentSession == null) {
-            return SCORER_PREDICTION_RESULT_REPORTED__WIFI_FRAMEWORK_STATE__FRAMEWORK_STATE_UNKNOWN;
-        }
-        // The first pollingIntervalMs*1.5 milliseconds are considered part of the awakening state.
-        if ((mClock.getElapsedSinceBootMillis() - mCurrentSession.mSessionStartTimeMillis
-                + pollingIntervalMs / 2) / pollingIntervalMs <= 1) {
+    int getFrameworkStateForScorer(boolean lingering) {
+        // The first poll after the screen turns on is termed the AWAKENING state.
+        if (mLastIgnoredPollTimeMillis <= mLastScreenOffTimeMillis) {
+            mLastIgnoredPollTimeMillis = mClock.getElapsedSinceBootMillis();
             return SCORER_PREDICTION_RESULT_REPORTED__WIFI_FRAMEWORK_STATE__FRAMEWORK_STATE_AWAKENING;
         }
         if (lingering) {
@@ -9004,7 +9011,7 @@ public class WifiMetrics {
                 hasActiveSubInfo, isMobileDataEnabled, isCellularDataAvailable,
                 mAdaptiveConnectivityEnabled);
         int scorerUnusableEvent = convertWifiUnusableTypeForScorer(mUnusableEventType);
-        int wifiFrameworkState = getFrameworkStateForScorer(pollingIntervalMs, lingering);
+        int wifiFrameworkState = getFrameworkStateForScorer(lingering);
         Speeds speedsNetworkCapabilities = getNetworkCapabilitiesSpeeds();
         SpeedSufficient speedSufficientNetworkCapabilities =
                 calcSpeedSufficientNetworkCapabilities(speedsNetworkCapabilities);
@@ -9022,7 +9029,7 @@ public class WifiMetrics {
                     wifiFrameworkState, speedSufficientNetworkCapabilities.Downstream,
                     speedSufficientNetworkCapabilities.Upstream,
                     speedSufficientThroughputPredictor.Downstream,
-                    speedSufficientThroughputPredictor.Downstream);
+                    speedSufficientThroughputPredictor.Upstream);
         if (mScorerUid != Process.WIFI_UID) {
             WifiStatsLog.write_non_chained(SCORER_PREDICTION_RESULT_REPORTED,
                     mScorerUid,
@@ -9033,7 +9040,7 @@ public class WifiMetrics {
                     wifiFrameworkState, speedSufficientNetworkCapabilities.Downstream,
                     speedSufficientNetworkCapabilities.Upstream,
                     speedSufficientThroughputPredictor.Downstream,
-                    speedSufficientThroughputPredictor.Downstream);
+                    speedSufficientThroughputPredictor.Upstream);
         }
 
         // We'd better reset to TYPE_NONE if it is defined in the future.
