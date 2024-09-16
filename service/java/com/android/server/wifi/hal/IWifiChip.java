@@ -29,6 +29,7 @@ import com.android.server.wifi.SarInfo;
 import com.android.server.wifi.WifiNative;
 import com.android.server.wifi.WlanWakeReasonAndCounts;
 
+import java.util.BitSet;
 import java.util.List;
 
 /** Abstraction of WifiChip */
@@ -153,19 +154,19 @@ public interface IWifiChip {
      * but it is recommended to use {@link #getCapabilitiesAfterIfacesExist()} once
      * any ifaces are up.
      *
-     * @return {@link WifiChip.Response} where the value is a bitset of
+     * @return {@link WifiChip.Response} where the value is a BitSet of
      *         WifiManager.WIFI_FEATURE_* values.
      */
-    WifiChip.Response<Long> getCapabilitiesBeforeIfacesExist();
+    WifiChip.Response<BitSet> getCapabilitiesBeforeIfacesExist();
 
     /**
      * Get the capabilities supported by this chip.
      * Call if interfaces have been created on this chip.
      *
-     * @return {@link WifiChip.Response} where the value is a bitset of
+     * @return {@link WifiChip.Response} where the value is a BitSet of
      *         WifiManager.WIFI_FEATURE_* values.
      */
-    WifiChip.Response<Long> getCapabilitiesAfterIfacesExist();
+    WifiChip.Response<BitSet> getCapabilitiesAfterIfacesExist();
 
     /**
      * Retrieve the Wi-Fi wakeup reason stats for debugging.

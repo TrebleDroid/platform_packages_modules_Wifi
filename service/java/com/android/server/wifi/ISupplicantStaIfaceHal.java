@@ -25,6 +25,7 @@ import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
@@ -563,23 +564,23 @@ interface ISupplicantStaIfaceHal {
     boolean setConcurrencyPriority(boolean isStaHigherPriority);
 
     /**
-     * Returns a bitmask of advanced capabilities: WPA3 SAE/SUITE B and OWE
+     * Returns a BitSet of advanced capabilities: WPA3 SAE/SUITE B and OWE
      * Bitmask used is:
      * - WIFI_FEATURE_WPA3_SAE
      * - WIFI_FEATURE_WPA3_SUITE_B
      * - WIFI_FEATURE_OWE
      *
-     *  On error, or if these features are not supported, 0 is returned.
+     *  On error, or if these features are not supported, an empty BitSet is returned.
      */
-    long getAdvancedCapabilities(@NonNull String ifaceName);
+    @NonNull BitSet getAdvancedCapabilities(@NonNull String ifaceName);
 
     /**
      * Get the driver supported features through supplicant.
      *
      * @param ifaceName Name of the interface.
-     * @return bitmask defined by WifiManager.WIFI_FEATURE_*.
+     * @return BitSet defined by WifiManager.WIFI_FEATURE_*.
      */
-    long getWpaDriverFeatureSet(@NonNull String ifaceName);
+    @NonNull BitSet getWpaDriverFeatureSet(@NonNull String ifaceName);
 
     /**
      * Returns connection capabilities of the current network

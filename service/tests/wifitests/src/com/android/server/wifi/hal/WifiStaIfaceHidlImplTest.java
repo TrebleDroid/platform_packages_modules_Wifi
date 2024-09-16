@@ -16,6 +16,8 @@
 
 package com.android.server.wifi.hal;
 
+import static com.android.server.wifi.util.GeneralUtil.longToBitset;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -68,6 +70,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -143,10 +146,10 @@ public class WifiStaIfaceHidlImplTest extends WifiBaseTest {
                 IWifiStaIface.StaIfaceCapabilityMask.BACKGROUND_SCAN
                         | IWifiStaIface.StaIfaceCapabilityMask.LINK_LAYER_STATS
         );
-        long expected = (
+        BitSet expected = longToBitset(
                 WifiManager.WIFI_FEATURE_SCANNER
                         | WifiManager.WIFI_FEATURE_LINK_LAYER_STATS);
-        assertEquals(expected, mDut.halToFrameworkStaIfaceCapability(caps));
+        assertTrue(expected.equals(mDut.halToFrameworkStaIfaceCapability(caps)));
     }
 
     /**

@@ -16,9 +16,12 @@
 
 package com.android.server.wifi.hal;
 
+import static com.android.server.wifi.util.GeneralUtil.longToBitset;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -68,6 +71,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.nio.charset.StandardCharsets;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
 
@@ -96,10 +100,10 @@ public class WifiStaIfaceAidlImplTest extends WifiBaseTest {
                 IWifiStaIface.FeatureSetMask.BACKGROUND_SCAN
                         | IWifiStaIface.FeatureSetMask.LINK_LAYER_STATS
         );
-        long expected = (
+        BitSet expected = longToBitset(
                 WifiManager.WIFI_FEATURE_SCANNER
                         | WifiManager.WIFI_FEATURE_LINK_LAYER_STATS);
-        assertEquals(expected, mDut.halToFrameworkStaFeatureSet(halFeatures));
+        assertTrue(expected.equals(mDut.halToFrameworkStaFeatureSet(halFeatures)));
     }
 
     /**

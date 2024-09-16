@@ -136,10 +136,17 @@ public class WifiSettingsConfigStore {
             new Key<>("wifi_default_country_code", WifiCountryCode.getOemDefaultCountryCode());
 
     /**
-     * Store the supported features retrieved from WiFi HAL and Supplicant HAL
+     * Store the supported features retrieved from WiFi HAL and Supplicant HAL. Note that this
+     * value is deprecated and is replaced by {@link #WIFI_NATIVE_EXTENDED_SUPPORTED_FEATURES}
      */
     public static final Key<Long> WIFI_NATIVE_SUPPORTED_FEATURES =
             new Key<>("wifi_native_supported_features", 0L);
+
+    /**
+     * Store the extended supported features retrieved from WiFi HAL and Supplicant HAL
+     */
+    public static final Key<long[]> WIFI_NATIVE_EXTENDED_SUPPORTED_FEATURES =
+            new Key<>("wifi_native_extended_supported_features", new long[0]);
 
     /**
      * Store the supported features retrieved from WiFi HAL and Supplicant HAL

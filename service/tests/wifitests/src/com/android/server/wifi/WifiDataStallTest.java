@@ -288,6 +288,23 @@ public class WifiDataStallTest extends WifiBaseTest {
                 WifiDataStall.CELLULAR_DATA_AVAILABLE);
     }
 
+    @Test
+    public void verifyGetThroughputPredictorSpeeds() throws Exception {
+        WifiDataStall.Speeds speeds;
+
+        speeds = mWifiDataStall.getThrouhgputPredictorSpeeds(mWifiInfo, mCapabilities);
+        assertEquals(150_000, speeds.DownstreamKbps);
+        assertEquals(50_000, speeds.UpstreamKbps);
+
+        speeds = mWifiDataStall.getThrouhgputPredictorSpeeds(null, mCapabilities);
+        assertEquals(WifiDataStall.INVALID_THROUGHPUT, speeds.DownstreamKbps);
+        assertEquals(WifiDataStall.INVALID_THROUGHPUT, speeds.UpstreamKbps);
+
+        speeds = mWifiDataStall.getThrouhgputPredictorSpeeds(mWifiInfo, null);
+        assertEquals(WifiDataStall.INVALID_THROUGHPUT, speeds.DownstreamKbps);
+        assertEquals(WifiDataStall.INVALID_THROUGHPUT, speeds.UpstreamKbps);
+    }
+
     /**
      * Verify throughput when Rx link speed is unavailable.
      * Also verify the logging of channel utilization and throughput.
