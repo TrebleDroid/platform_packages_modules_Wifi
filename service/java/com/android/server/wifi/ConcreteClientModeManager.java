@@ -465,6 +465,8 @@ public class ConcreteClientModeManager implements ClientModeManager {
                     return true;
                 }
             }
+        } catch (UnsupportedOperationException ex) {
+            Log.d(TAG, "IMS Manager is not supported.");
         } catch (RuntimeException ex) {
             Log.e(TAG, "IMS Manager is not available.", ex);
         }
