@@ -34,6 +34,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
@@ -1926,37 +1927,28 @@ public class SupplicantStaIfaceHal {
 
 
     /**
-     * Returns a bitmask of advanced capabilities: WPA3 SAE/SUITE B and OWE
-     * Bitmask used is:
-     * - WIFI_FEATURE_WPA3_SAE
-     * - WIFI_FEATURE_WPA3_SUITE_B
-     * - WIFI_FEATURE_OWE
-     *
-     *  On error, or if these features are not supported, 0 is returned.
+     * See comments for {@link ISupplicantStaIfaceHal#getAdvancedCapabilities(String)}
      */
-    public long getAdvancedCapabilities(@NonNull String ifaceName) {
+    public @NonNull BitSet getAdvancedCapabilities(@NonNull String ifaceName) {
         synchronized (mLock) {
             String methodStr = "getAdvancedCapabilities";
             if (mStaIfaceHal == null) {
                 handleNullHal(methodStr);
-                return 0;
+                return new BitSet();
             }
             return mStaIfaceHal.getAdvancedCapabilities(ifaceName);
         }
     }
 
     /**
-     * Get the driver supported features through supplicant.
-     *
-     * @param ifaceName Name of the interface.
-     * @return bitmask defined by WifiManager.WIFI_FEATURE_*.
+     * See comments for {@link ISupplicantStaIfaceHal#getWpaDriverFeatureSet(String)}
      */
-    public long getWpaDriverFeatureSet(@NonNull String ifaceName) {
+    public @NonNull BitSet getWpaDriverFeatureSet(@NonNull String ifaceName) {
         synchronized (mLock) {
             String methodStr = "getWpaDriverFeatureSet";
             if (mStaIfaceHal == null) {
                 handleNullHal(methodStr);
-                return 0;
+                return new BitSet();
             }
             return mStaIfaceHal.getWpaDriverFeatureSet(ifaceName);
         }

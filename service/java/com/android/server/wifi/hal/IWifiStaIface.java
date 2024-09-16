@@ -29,6 +29,7 @@ import com.android.server.wifi.WifiLinkLayerStats;
 import com.android.server.wifi.WifiLoggerHal;
 import com.android.server.wifi.WifiNative;
 
+import java.util.BitSet;
 import java.util.List;
 
 /** Abstraction of WifiStaIface */
@@ -97,9 +98,9 @@ public interface IWifiStaIface {
     /**
      * Get the capabilities supported by this STA iface.
      *
-     * @return Bitset of WifiManager.WIFI_FEATURE_* values.
+     * @return BitSet of WifiManager.WIFI_FEATURE_* values.
      */
-    long getCapabilities();
+    BitSet getCapabilities();
 
     /**
      * Retrieve the fates of inbound packets.

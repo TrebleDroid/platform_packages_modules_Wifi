@@ -23,6 +23,7 @@ import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_AP_BRIDG
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_NAN;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_P2P;
 import static com.android.server.wifi.HalDeviceManager.HDM_CREATE_IFACE_STA;
+import static com.android.server.wifi.util.GeneralUtil.longToBitset;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
@@ -106,6 +107,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -4489,9 +4491,9 @@ public class HalDeviceManagerTest extends WifiBaseTest {
             mChipMockBase = chipMockBase;
         }
 
-        public WifiChip.Response<Long> answer() {
-            WifiChip.Response<Long> response =
-                    new WifiChip.Response<>(mChipMockBase.chipCapabilities);
+        public WifiChip.Response<BitSet> answer() {
+            WifiChip.Response<BitSet> response =
+                    new WifiChip.Response<>(longToBitset(mChipMockBase.chipCapabilities));
             response.setStatusCode(mChipMockBase.allowGetCapsBeforeIfaceCreated
                     ? WifiHal.WIFI_STATUS_SUCCESS : WifiHal.WIFI_STATUS_ERROR_UNKNOWN);
             return response;

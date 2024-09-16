@@ -17,6 +17,7 @@
 package com.android.server.wifi.hal;
 
 import static com.android.dx.mockito.inline.extended.ExtendedMockito.mockitoSession;
+import static com.android.server.wifi.util.GeneralUtil.longToBitset;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -65,6 +66,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.MockitoSession;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
 
@@ -123,12 +125,12 @@ public class WifiChipAidlImplTest extends WifiBaseTest {
                         | android.hardware.wifi.IWifiChip.FeatureSetMask.D2D_RTT
                         | android.hardware.wifi.IWifiChip.FeatureSetMask.D2AP_RTT
         );
-        long expected = (
+        BitSet expected = longToBitset(
                 WifiManager.WIFI_FEATURE_TX_POWER_LIMIT
                         | WifiManager.WIFI_FEATURE_D2D_RTT
                         | WifiManager.WIFI_FEATURE_D2AP_RTT
         );
-        assertEquals(expected, mDut.halToFrameworkChipFeatureSet(halFeatures));
+        assertTrue(expected.equals(mDut.halToFrameworkChipFeatureSet(halFeatures)));
     }
 
     /**

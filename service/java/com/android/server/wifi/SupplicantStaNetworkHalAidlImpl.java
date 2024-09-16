@@ -16,6 +16,11 @@
 
 package com.android.server.wifi;
 
+import static android.net.wifi.WifiManager.WIFI_FEATURE_TLS_V1_3;
+import static android.net.wifi.WifiManager.WIFI_FEATURE_WPA3_SUITE_B;
+
+import static com.android.server.wifi.util.GeneralUtil.getCapabilityIndex;
+
 import android.annotation.NonNull;
 import android.content.Context;
 import android.hardware.wifi.supplicant.AuthAlgMask;
@@ -38,7 +43,6 @@ import android.net.wifi.OuiKeyedData;
 import android.net.wifi.SecurityParams;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiEnterpriseConfig;
-import android.net.wifi.WifiManager;
 import android.net.wifi.WifiSsid;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
@@ -151,13 +155,13 @@ public class SupplicantStaNetworkHalAidlImpl {
     private String mEapDomainSuffixMatch;
     private @WifiEnterpriseConfig.Ocsp int mOcsp;
     private String mWapiCertSuite;
-    private long mAdvanceKeyMgmtFeatures;
-    private long mWpaDriverFeatures;
+    private BitSet mAdvanceKeyMgmtFeatures;
+    private BitSet mWpaDriverFeatures;
 
     SupplicantStaNetworkHalAidlImpl(int serviceVersion,
             ISupplicantStaNetwork staNetwork, String ifaceName,
             Context context, WifiMonitor monitor, WifiGlobals wifiGlobals,
-            long advanceKeyMgmtFeature, long wpaDriverFeatures) {
+            BitSet advanceKeyMgmtFeature, BitSet wpaDriverFeatures) {
         mServiceVersion = serviceVersion;
         mISupplicantStaNetwork = staNetwork;
         mContext = context;
@@ -884,7 +888,7 @@ public class SupplicantStaNetworkHalAidlImpl {
 
     private int getOptimalMinimumTlsVersion(WifiEnterpriseConfig enterpriseConfig) {
         int maxTlsVersionSupported = WifiEnterpriseConfig.TLS_V1_2;
-        if ((mWpaDriverFeatures & WifiManager.WIFI_FEATURE_TLS_V1_3) != 0) {
+        if (mWpaDriverFeatures.get(getCapabilityIndex(WIFI_FEATURE_TLS_V1_3))) {
             maxTlsVersionSupported = WifiEnterpriseConfig.TLS_V1_3;
         }
 
@@ -1044,8 +1048,8 @@ public class SupplicantStaNetworkHalAidlImpl {
                         mask |= GroupCipherMask.GTK_NOT_USED;
                         break;
                     case WifiConfiguration.GroupCipher.GCMP_256:
-                        if (0 == (mAdvanceKeyMgmtFeatures
-                                & WifiManager.WIFI_FEATURE_WPA3_SUITE_B)) {
+                        if (!mAdvanceKeyMgmtFeatures.get(
+                                getCapabilityIndex(WIFI_FEATURE_WPA3_SUITE_B))) {
                             Log.d(TAG, "Ignore unsupported GCMP_256 cipher.");
                             break;
                         }
@@ -1106,8 +1110,8 @@ public class SupplicantStaNetworkHalAidlImpl {
                         mask |= PairwiseCipherMask.CCMP;
                         break;
                     case WifiConfiguration.PairwiseCipher.GCMP_256:
-                        if (0 == (mAdvanceKeyMgmtFeatures
-                                & WifiManager.WIFI_FEATURE_WPA3_SUITE_B)) {
+                        if (!mAdvanceKeyMgmtFeatures.get(
+                                getCapabilityIndex(WIFI_FEATURE_WPA3_SUITE_B))) {
                             Log.d(TAG, "Ignore unsupporting GCMP_256 cipher.");
                             break;
                         }
