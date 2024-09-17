@@ -864,6 +864,12 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                     mWifiService.clearExternalPnoScanRequest();
                     return 0;
                 }
+                case "set-pno-scan": {
+                    boolean enabled = getNextArgRequiredTrueOrFalse("enabled", "disabled");
+                    mWifiService.setPnoScanEnabled(enabled, true /*enablePnoScanAfterWifiToggle*/,
+                            mContext.getOpPackageName());
+                    return 0;
+                }
                 case "start-lohs": {
                     CountDownLatch countDownLatch = new CountDownLatch(2);
                     SoftApConfiguration config = buildSoftApConfiguration(pw);
@@ -3315,6 +3321,8 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("    Requests to include a non-quoted UTF-8 SSID in PNO scans");
         pw.println("  clear-pno-request");
         pw.println("    Clear the PNO scan request.");
+        pw.println("  set-pno-scan enabled|disabled");
+        pw.println("    Set the PNO scan enabled or disabled.");
         pw.println("  start-dpp-enrollee-responder [-i <info>] [-c <curve>]");
         pw.println("    Start DPP Enrollee responder mode.");
         pw.println("    -i - Device Info to be used in DPP Bootstrapping URI");
