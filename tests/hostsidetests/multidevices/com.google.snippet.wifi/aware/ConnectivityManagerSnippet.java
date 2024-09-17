@@ -32,6 +32,9 @@ import com.google.android.mobly.snippet.rpc.AsyncRpc;
 import com.google.android.mobly.snippet.rpc.Rpc;
 import com.google.android.mobly.snippet.util.Log;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ConnectivityManagerSnippet implements Snippet {
     private static final String EVENT_KEY_CB_NAME = "callbackName";
     private static final String EVENT_KEY_NETWORK = "network";
@@ -40,7 +43,7 @@ public class ConnectivityManagerSnippet implements Snippet {
 
     private final Context mContext;
     private final ConnectivityManager mConnectivityManager;
-    private NetworkCallback mNetworkCallBack;
+    private final Map<String, NetworkCallback> mNetworkCallBacks = new HashMap<>();
 
     class ConnectivityManagerSnippetSnippetException extends Exception {
         ConnectivityManagerSnippetSnippetException(String msg) {
@@ -92,7 +95,8 @@ public class ConnectivityManagerSnippet implements Snippet {
     /**
      * Requests a network with given network request.
      *
-     * @param callBackId              Assigned automatically by mobly.
+     * @param callBackId              Assigned automatically by mobly. Will be used as request Id
+     *                                for further operations
      * @param request                 The request object.
      * @param requestNetworkTimeoutMs The timeout in milliseconds.
      */
@@ -100,18 +104,22 @@ public class ConnectivityManagerSnippet implements Snippet {
     public void connectivityRequestNetwork(String callBackId, NetworkRequest request,
                                            int requestNetworkTimeoutMs) {
         Log.v("Requesting network with request: " + request.toString());
-        mNetworkCallBack = new NetworkCallback(callBackId);
-        mConnectivityManager.requestNetwork(request, mNetworkCallBack, requestNetworkTimeoutMs);
+        NetworkCallback callback = new NetworkCallback(callBackId);
+        mNetworkCallBacks.put(callBackId, callback);
+        mConnectivityManager.requestNetwork(request, callback, requestNetworkTimeoutMs);
     }
 
     /**
      * Unregisters the registered network callback and possibly releases requested networks.
+     *
+     * @param requestId Id of the network request.
      */
     @Rpc(description = "Unregister a network request")
-    public void connectivityUnregisterNetwork() {
-        if (mNetworkCallBack == null) {
+    public void connectivityUnregisterNetwork(String requestId) {
+        NetworkCallback callback = mNetworkCallBacks.get(requestId);
+        if (callback == null) {
             return;
         }
-        mConnectivityManager.unregisterNetworkCallback(mNetworkCallBack);
+        mConnectivityManager.unregisterNetworkCallback(callback);
     }
 }
