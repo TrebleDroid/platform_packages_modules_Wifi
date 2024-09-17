@@ -130,6 +130,7 @@ class WifiAwareSnippetParams(enum.StrEnum):
     LAST_MESSAGE_ID = "lastMessageId"
     PAIRING_REQUEST_ID = "pairingRequestId"
     BOOTSTRAPPING_METHOD = "bootstrappingMethod"
+    PEER_ID = "peerId"
 
 
 @enum.unique
