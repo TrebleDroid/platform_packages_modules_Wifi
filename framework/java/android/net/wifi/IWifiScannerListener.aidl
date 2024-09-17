@@ -43,4 +43,8 @@ oneway interface IWifiScannerListener
      * Invoked when one of the PNO networks are found in scan results.
      */
     void onPnoNetworkFound(in ScanResult[] results);
+    /**
+     * reports full scan result for all access points found in scan
+     */
+    void onFullResults(in List<ScanResult> scanResult);
 }

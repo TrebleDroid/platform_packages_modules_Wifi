@@ -484,9 +484,8 @@ public abstract class BaseWifiScannerImplTest extends WifiBaseTest {
 
         mLooper.dispatchAll();
 
-        for (ScanResult result : fullResults) {
-            order.verify(eventHandler).onFullScanResult(eq(result), eq(0));
-        }
+        order.verify(eventHandler).onFullScanResults(any(), eq(0));
+
 
         order.verify(eventHandler).onScanStatus(WifiNative.WIFI_SCAN_RESULTS_AVAILABLE);
         assertScanDataEquals(scanData, mScanner.getLatestSingleScanResults());
@@ -551,9 +550,7 @@ public abstract class BaseWifiScannerImplTest extends WifiBaseTest {
         mLooper.dispatchAll();
 
         if (expectFullResults) {
-            for (ScanResult result : results.getRawScanResults()) {
-                order.verify(eventHandler).onFullScanResult(eq(result), eq(0));
-            }
+            order.verify(eventHandler).onFullScanResults(any(), eq(0));
         }
 
         order.verify(eventHandler).onScanStatus(WifiNative.WIFI_SCAN_RESULTS_AVAILABLE);

@@ -375,12 +375,27 @@ public class WifiScanner {
          */
         @Override
         public void onFullResult(ScanResult fullScanResult) {
+            Log.i(TAG, "onFullResult");
             if (mActionListener == null) return;
             if (!(mActionListener instanceof ScanListener)) return;
             ScanListener scanListener = (ScanListener) mActionListener;
             Binder.clearCallingIdentity();
             mExecutor.execute(
                     () -> scanListener.onFullResult(fullScanResult));
+        }
+
+        /**
+         * reports full scan result for all access points found in scan
+         */
+        @Override
+        public void onFullResults(List<ScanResult> fullScanResult) {
+            Log.i(TAG, "onFullResults");
+            if (mActionListener == null) return;
+            if (!(mActionListener instanceof ScanListener)) return;
+            ScanListener scanListener = (ScanListener) mActionListener;
+            Binder.clearCallingIdentity();
+            mExecutor.execute(
+                    () -> fullScanResult.forEach(scanListener::onFullResult));
         }
 
         @Override
