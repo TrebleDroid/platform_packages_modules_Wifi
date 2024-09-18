@@ -86,6 +86,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import static java.lang.StrictMath.toIntExact;
 
@@ -167,6 +168,7 @@ import com.android.server.wifi.proto.nano.WifiMetricsProto.WifiUsabilityStats;
 import com.android.server.wifi.proto.nano.WifiMetricsProto.WifiUsabilityStatsEntry;
 import com.android.server.wifi.rtt.RttMetrics;
 import com.android.server.wifi.util.InformationElementUtil;
+import com.android.wifi.flags.Flags;
 import com.android.wifi.resources.R;
 
 import org.junit.After;
@@ -317,6 +319,7 @@ public class WifiMetricsTest extends WifiBaseTest {
         mSession = ExtendedMockito.mockitoSession()
                 .strictness(Strictness.LENIENT)
                 .mockStatic(WifiStatsLog.class)
+                .mockStatic(Flags.class, withSettings().lenient())
                 .startMocking();
 
         when(mWifiInfo.getLinkSpeed()).thenReturn(10);
@@ -7822,5 +7825,14 @@ public class WifiMetricsTest extends WifiBaseTest {
         assertEquals(WifiIsUnusableEvent.TYPE_IP_REACHABILITY_LOST, mWifiMetrics.mUnusableEventType);
         mWifiMetrics.resetWifiUnusableEvent();
         assertEquals(WifiIsUnusableEvent.TYPE_UNKNOWN, mWifiMetrics.mUnusableEventType);
+    }
+
+    /** Verifies WiFi Scorer new stats collection flag could be set properly */
+    @Test
+    public void verifyWifiScorerNewStatsCollectionFlagTrue() {
+        when(Flags.wifiScorerNewStatsCollection()).thenReturn(true);
+        assertEquals(mWifiMetrics.isWiFiScorerNewStatsCollected(), true);
+        when(Flags.wifiScorerNewStatsCollection()).thenReturn(false);
+        assertEquals(mWifiMetrics.isWiFiScorerNewStatsCollected(), false);
     }
 }
