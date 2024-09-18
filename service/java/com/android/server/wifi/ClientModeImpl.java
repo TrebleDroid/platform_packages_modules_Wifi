@@ -4870,6 +4870,7 @@ public class ClientModeImpl extends StateMachine implements ClientMode {
                     if (!isTrustOnFirstUseSupported()) {
                         mInsecureEapNetworkHandler.startUserApprovalIfNecessary(mIsUserSelected);
                     }
+                    mFrameworkDisconnectReasonOverride = 0;
                     connectToNetwork(config);
                     break;
                 }
