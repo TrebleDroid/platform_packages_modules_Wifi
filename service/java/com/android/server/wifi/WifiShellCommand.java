@@ -2246,6 +2246,38 @@ public class WifiShellCommand extends BasicShellCommandHandler {
                                 resourceCache.restoreIntegerValue(overlayName);
                             }
                         }
+                        case "string" -> {
+                            String value;
+                            if (isEnabled) {
+                                value = getNextArgRequired();
+                                resourceCache.overrideStringValue(overlayName, value);
+                            } else {
+                                resourceCache.restoreStringValue(overlayName);
+                            }
+                        }
+                        case "string-array" -> {
+                            String[] value;
+                            if (isEnabled) {
+                                value = peekRemainingArgs();
+                                resourceCache.overrideStringArrayValue(overlayName, value);
+                            } else {
+                                resourceCache.restoreStringArrayValue(overlayName);
+                            }
+                        }
+                        case "integer-array" -> {
+                            String[] input;
+                            if (isEnabled) {
+                                input = peekRemainingArgs();
+                                int[] value = new int[input.length];
+                                for (int i = 0; i < input.length; i++) {
+                                    value[i] = Integer.parseInt(input[i]);
+                                }
+
+                                resourceCache.overrideIntArrayValue(overlayName, value);
+                            } else {
+                                resourceCache.restoreIntArrayValue(overlayName);
+                            }
+                        }
                         default -> {
                             pw.print("require a valid type of the overlay");
                             return -1;
@@ -3077,10 +3109,11 @@ public class WifiShellCommand extends BasicShellCommandHandler {
         pw.println("       '31' - band 2.4, 5, 6 and 60 GHz with DFS channels");
         pw.println("  get-cached-scan-data");
         pw.println("    Gets scan data cached by the firmware");
-        pw.println("  force-overlay-config-value bool|integer <overlayName> enabled|disabled"
-                + "<configValue>");
+        pw.println("  force-overlay-config-value bool|integer|string|integer-array|string-array "
+                + "<overlayName> enabled|disabled <configValue>");
         pw.println("    Force overlay to a specified value.");
-        pw.println("    bool|integer   - specified the type of the overlay");
+        pw.println("    bool|integer|string|integer-array|string-array - specified the type of the "
+                + "overlay");
         pw.println("    <overlayName> - name of the overlay whose value is overridden.");
         pw.println("    enabled|disabled: enable the override or disable it and revert to using "
                 + "the built-in value.");

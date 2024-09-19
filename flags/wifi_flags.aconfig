@@ -163,3 +163,10 @@ flag {
     bug: "354820259"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "wifi_scorer_new_stats_collection"
+    namespace: "wifi"
+    description: "Gate WiFi Scorer new stats collection"
+    bug: "367362809"
+}

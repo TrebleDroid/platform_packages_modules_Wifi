@@ -164,6 +164,7 @@ import com.android.server.wifi.util.IntHistogram;
 import com.android.server.wifi.util.MetricsUtils;
 import com.android.server.wifi.util.ObjectCounter;
 import com.android.server.wifi.util.StringUtil;
+import com.android.wifi.flags.Flags;
 import com.android.wifi.resources.R;
 
 import org.json.JSONArray;
@@ -7040,6 +7041,10 @@ public class WifiMetrics {
             default:
                 return WifiStatsLog.WIFI_IS_UNUSABLE_REPORTED__TYPE__TYPE_UNKNOWN;
         }
+    }
+
+    public boolean isWiFiScorerNewStatsCollected() {
+        return Flags.wifiScorerNewStatsCollection();
     }
 
     /**
